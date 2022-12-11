@@ -1,4 +1,4 @@
-package com.example.template.hook
+package org.matrix.chromext.hook
 
 abstract class BaseHook {
     var isInit: Boolean = false

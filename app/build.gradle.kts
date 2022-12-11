@@ -5,9 +5,10 @@ plugins {
 
 android {
     compileSdk = 33
+	namespace = "org.matrix.chromext"
 
     defaultConfig {
-        applicationId = "com.example.template"
+        applicationId = "org.matrix.chromext"
         minSdk = 24
         targetSdk = 33
         versionCode = 1

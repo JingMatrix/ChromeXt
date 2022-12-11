@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">Test Xposed</string>
-    <string name="xposed_desc">EzXHelper template</string>
+    <string name="app_name">ChromeXt</string>
+    <string name="xposed_desc">Add Userscript support for chrome through LSPosed</string>
 </resources>

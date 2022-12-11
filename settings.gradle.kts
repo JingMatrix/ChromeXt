@@ -15,5 +15,5 @@ dependencyResolutionManagement {
 }
 
 include(":app")
-rootProject.name = "EzXHepler-template"
+rootProject.name = "ChromeXt"
 
