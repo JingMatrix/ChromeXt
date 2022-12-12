@@ -14,7 +14,7 @@ private const val TAG = "ChromeXt"
 
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit /* Optional */ {
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
-        if (lpparam.packageName == PACKAGE_NAME_HOOKED) {
+        if (lpparam.packageName == PACKAGE_NAME_HOOKED ) {
             // Init EzXHelper
             EzXHelperInit.initHandleLoadPackage(lpparam)
             EzXHelperInit.setLogTag(TAG)
