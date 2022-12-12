@@ -83,18 +83,15 @@ object ChromeHook : BaseHook() {
           findMethod(tabDelegateImpl) { name == "onUpdateUrl" }
               .hookBefore {
                 val url = it.args[0].invokeMethod() { name == SHOW_URL } as String
-                Log.d("Load ${url}")
                 if (url.startsWith("chrome://xt")) {
                   // Reserve chrome://xt for futur usage
                   it.thisObject.invokeMethod() { name == "closeContents" }
                 } else if (url.startsWith("https://m.youtube.com")) {
                   Log.d("Inject userscript for m.youtube.com")
-                  if (it.thisObject != null) {
-                    tabImpl.get(it.thisObject).invokeMethod(
-                        UrlParams.newInstance("javascript: ${youtubeScript}")) {
-                          name == LOAD_URL
-                        }
-                  }
+                  tabImpl.get(it.thisObject)?.invokeMethod(
+                      UrlParams.newInstance("javascript: ${youtubeScript}")) {
+                        name == LOAD_URL
+                      }
                 }
               }
 
