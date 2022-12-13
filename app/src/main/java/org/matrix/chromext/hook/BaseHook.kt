@@ -17,7 +17,7 @@ abstract class BaseHook {
     const val TAB_FIELD = "a"
 
     // Another way is to hook a NavigationControllerImpl
-    // We can then cut down loading a Url, this will ignore pull-down refreshing
+    // But loadUrl is only called by new tab action or address url input
 
     // The first filed of org/chromium/content_public/browser/LoadUrlParams should
     // be the mUrl

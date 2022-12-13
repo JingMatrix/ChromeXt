@@ -90,9 +90,9 @@ object ChromeHook : BaseHook() {
           findMethod(tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
               .hookBefore {
                 val url = it.args[0].invokeMethod() { name == SHOW_URL } as String
-                Log.d("onUpdateUrl: ${url}")
+                Log.i("onUpdateUrl: ${url}")
                 if (url.startsWith("https://m.youtube.com")) {
-                  Log.d("Inject userscript for m.youtube.com")
+                  Log.i("Inject userscript for m.youtube.com")
                   mTab.get(it.thisObject)?.invokeMethod(
                       loadUrlParams.newInstance("javascript: ${youtubeScript}")) {
                         name == LOAD_URL
@@ -103,13 +103,13 @@ object ChromeHook : BaseHook() {
           findMethod(tabWebContentsDelegateAndroidImpl) { name == "addMessageToConsole" }
               .hookAfter {
                 // addMessageToConsole(int level, String message, int lineNumber, String sourceId)
-                Log.i("[${it.args[0]}] ${it.args[1]} @${it.args[3]}:${it.args[2]}")
+                Log.d("[${it.args[0]}] ${it.args[1]} @${it.args[3]}:${it.args[2]}")
               }
 
           findMethod(navigationControllerImpl) { name == NAVI_LOAD_URL }
               .hookBefore {
                 val url = mUrl.get(it.args[0]) as String
-                Log.d(
+                Log.i(
                     "loadUrl: ${url} from last visited index ${it.thisObject.invokeMethod(){name == NAVI_LAST_INDEX}}")
               }
         }
