@@ -2,67 +2,13 @@ package org.matrix.chromext.hook
 
 import android.content.Context
 import com.github.kyuubiran.ezxhelper.utils.Log
+import com.github.kyuubiran.ezxhelper.utils.findAllMethods
 import com.github.kyuubiran.ezxhelper.utils.findMethod
 import com.github.kyuubiran.ezxhelper.utils.hookAfter
 import com.github.kyuubiran.ezxhelper.utils.hookBefore
 import com.github.kyuubiran.ezxhelper.utils.invokeMethod
 import java.lang.reflect.Field
-
-const val youtubeScript =
-    """
-setTimeout(()=>{
-	const skipAds = () => {
-		let btn = document
-		.getElementsByClassName("ytp-ad-skip-button ytp-button")
-		.item(0);
-		if (btn) {
-			btn.click();
-		}
-
-		const ad = [...document.querySelectorAll(".ad-showing")][0];
-		const vid = document.querySelector("video");
-		if (ad) {
-			vid.muted = true;
-			vid.currentTime = vid.duration;
-		} else {
-			if (vid != undefined) {
-				vid.muted = false;
-			}
-		}
-	};
-	const main = new MutationObserver(() => {
-		let adComponent = document.querySelector("ytd-ad-slot-renderer");
-		if (adComponent) {
-			const node = adComponent.closest('ytd-rich-item-renderer')
-			|| adComponent.closest('ytd-search-pyv-renderer') || adComponent;
-			node.remove();
-		}
-		let shortsNav = document.querySelector("div.pivot-bar-item-tab.pivot-shorts");
-		if (shortsNav) {
-			const node = shortsNav.closest('ytm-pivot-bar-item-renderer') || shortsNav;
-			node.remove();
-		}
-
-		const adContainer = document
-		.getElementsByClassName("video-ads ytp-ad-module")
-		.item(0);
-		if (adContainer) {
-			new MutationObserver(skipAds).observe(adContainer, {
-				attributes: true,
-				characterData: true,
-				childList: true,
-			});
-		}
-	});
-
-	main.observe(document.body, {
-		attributes: false,
-		characterData: false,
-		childList: true,
-		subtree: true,
-	});
-}, 50);
-"""
+import org.matrix.chromext.script.youtubeScript
 
 object ChromeHook : BaseHook() {
   override fun init() {
@@ -71,30 +17,35 @@ object ChromeHook : BaseHook() {
         }
         .hookAfter {
           val ctx: Context = (it.args[0] as Context).createContextForSplit("chrome")
+          val gURL = ctx.getClassLoader().loadClass("org.chromium.url.GURL")
           val loadUrlParams =
-              ctx.getClassLoader()
-                  .loadClass("org.chromium.content_public.browser.LoadUrlParams")
-                  .getDeclaredConstructor(String::class.java)
+              ctx.getClassLoader().loadClass("org.chromium.content_public.browser.LoadUrlParams")
+          // .getDeclaredConstructor(String::class.java)
           val tabWebContentsDelegateAndroidImpl =
               ctx.getClassLoader()
                   .loadClass("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
+          val interceptNavigationDelegateImpl =
+              ctx.getClassLoader().loadClass(INTERCEPTNAVIGATIONDELEGATEIMPL)
           val navigationControllerImpl =
               ctx.getClassLoader()
                   .loadClass("org.chromium.content.browser.framehost.NavigationControllerImpl")
-          val mUrl: Field =
+          val webContentsObserverProxy =
               ctx.getClassLoader()
-                  .loadClass("org.chromium.content_public.browser.LoadUrlParams")
-                  .getDeclaredField(URL_FIELD)
+                  .loadClass("org.chromium.content.browser.webcontents.WebContentsObserverProxy")
+          val mUrl: Field = loadUrlParams.getDeclaredField(URL_FIELD)
           val mTab: Field = tabWebContentsDelegateAndroidImpl.getDeclaredField(TAB_FIELD)
+          val mSpec: Field = gURL.getDeclaredField(SPEC_FIELD)
 
           findMethod(tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
               .hookBefore {
-                val url = it.args[0].invokeMethod() { name == SHOW_URL } as String
+                val url = mSpec.get(it.args[0]) as String
                 Log.i("onUpdateUrl: ${url}")
                 if (url.startsWith("https://m.youtube.com")) {
                   Log.i("Inject userscript for m.youtube.com")
                   mTab.get(it.thisObject)?.invokeMethod(
-                      loadUrlParams.newInstance("javascript: ${youtubeScript}")) {
+                      loadUrlParams
+                          .getDeclaredConstructor(String::class.java)
+                          .newInstance("javascript: ${youtubeScript}")) {
                         name == LOAD_URL
                       }
                 }
@@ -111,6 +62,21 @@ object ChromeHook : BaseHook() {
                 val url = mUrl.get(it.args[0]) as String
                 Log.i(
                     "loadUrl: ${url} from last visited index ${it.thisObject.invokeMethod(){name == NAVI_LAST_INDEX}}")
+                if (url.startsWith("chrome://xt/")) {
+                  mUrl.set(it.args[0], "javascript: 'Page reserved for ChromeXt'")
+                }
+              }
+
+          findAllMethods(webContentsObserverProxy) { name == "didStartLoading" }
+              .hookAfter {
+                val url = mSpec.get(it.args[0]) as String
+                Log.i("Start loading ${url}")
+              }
+
+          findMethod(interceptNavigationDelegateImpl) { name == "shouldIgnoreNavigation" }
+              .hookBefore {
+                val url = mSpec.get(it.args[1]) as String
+                Log.i("ShouldIgnoreNavigation ${url} ?")
               }
         }
   }
