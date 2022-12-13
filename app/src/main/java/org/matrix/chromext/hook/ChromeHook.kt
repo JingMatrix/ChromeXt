@@ -24,10 +24,10 @@ setTimeout(()=>{
 		if (ad) {
 			vid.muted = true;
 			vid.currentTime = vid.duration;
-		} else { 
+		} else {
 			if (vid != undefined) {
 				vid.muted = false;
-			}   
+			}
 		}
 	};
 	const main = new MutationObserver(() => {
@@ -71,34 +71,46 @@ object ChromeHook : BaseHook() {
         }
         .hookAfter {
           val ctx: Context = (it.args[0] as Context).createContextForSplit("chrome")
-          val UrlParams =
+          val loadUrlParams =
               ctx.getClassLoader()
                   .loadClass("org.chromium.content_public.browser.LoadUrlParams")
                   .getDeclaredConstructor(String::class.java)
-          val tabDelegateImpl =
+          val tabWebContentsDelegateAndroidImpl =
               ctx.getClassLoader()
                   .loadClass("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
-          val tabImpl: Field = tabDelegateImpl.getDeclaredField(TAB_FIELD)
-          tabImpl.setAccessible(true)
-          findMethod(tabDelegateImpl) { name == "onUpdateUrl" }
+          val navigationControllerImpl =
+              ctx.getClassLoader()
+                  .loadClass("org.chromium.content.browser.framehost.NavigationControllerImpl")
+          val mUrl: Field =
+              ctx.getClassLoader()
+                  .loadClass("org.chromium.content_public.browser.LoadUrlParams")
+                  .getDeclaredField(URL_FIELD)
+          val mTab: Field = tabWebContentsDelegateAndroidImpl.getDeclaredField(TAB_FIELD)
+
+          findMethod(tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
               .hookBefore {
                 val url = it.args[0].invokeMethod() { name == SHOW_URL } as String
-                if (url.startsWith("chrome://xt")) {
-                  // Reserve chrome://xt for futur usage
-                  it.thisObject.invokeMethod() { name == "closeContents" }
-                } else if (url.startsWith("https://m.youtube.com")) {
+                Log.d("onUpdateUrl: ${url}")
+                if (url.startsWith("https://m.youtube.com")) {
                   Log.d("Inject userscript for m.youtube.com")
-                  tabImpl.get(it.thisObject)?.invokeMethod(
-                      UrlParams.newInstance("javascript: ${youtubeScript}")) {
+                  mTab.get(it.thisObject)?.invokeMethod(
+                      loadUrlParams.newInstance("javascript: ${youtubeScript}")) {
                         name == LOAD_URL
                       }
                 }
               }
 
-          findMethod(tabDelegateImpl) { name == "addMessageToConsole" }
+          findMethod(tabWebContentsDelegateAndroidImpl) { name == "addMessageToConsole" }
               .hookAfter {
-                // addMessageToConsole(int level, String message, int lineNumber, String sourceId) {
+                // addMessageToConsole(int level, String message, int lineNumber, String sourceId)
                 Log.i("[${it.args[0]}] ${it.args[1]} @${it.args[3]}:${it.args[2]}")
+              }
+
+          findMethod(navigationControllerImpl) { name == NAVI_LOAD_URL }
+              .hookBefore {
+                val url = mUrl.get(it.args[0]) as String
+                Log.d(
+                    "loadUrl: ${url} from last visited index ${it.thisObject.invokeMethod(){name == NAVI_LAST_INDEX}}")
               }
         }
   }
