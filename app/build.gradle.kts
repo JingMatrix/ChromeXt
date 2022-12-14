@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 	id("com.ncorti.ktfmt.gradle") version "0.11.0"
+	id("com.google.devtools.ksp") version "1.8.0-RC-1.0.8"
 }
 
 android {
@@ -40,4 +41,11 @@ android {
 dependencies {
     implementation("com.github.kyuubiran:EzXHelper:1.0.3")
     compileOnly("de.robv.android.xposed:api:82")
+
+	val room_version = "2.4.3"
+    implementation("androidx.room:room-runtime:$room_version")
+    annotationProcessor("androidx.room:room-compiler:$room_version")
+
+    // To use Kotlin Symbol Processing (KSP)
+    ksp("androidx.room:room-compiler:$room_version")
 }

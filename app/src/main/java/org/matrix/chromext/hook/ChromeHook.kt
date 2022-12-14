@@ -2,11 +2,13 @@ package org.matrix.chromext.hook
 
 import android.content.Context
 import com.github.kyuubiran.ezxhelper.utils.Log
-import com.github.kyuubiran.ezxhelper.utils.findAllMethods
 import com.github.kyuubiran.ezxhelper.utils.findMethod
 import com.github.kyuubiran.ezxhelper.utils.hookAfter
 import com.github.kyuubiran.ezxhelper.utils.hookBefore
+import org.json.JSONObject
 import org.matrix.chromext.ChromeXt
+import org.matrix.chromext.script.homepageChromeXt
+import org.matrix.chromext.script.promptInstallUserScript
 
 object ChromeHook : BaseHook() {
   override fun init() {
@@ -20,9 +22,8 @@ object ChromeHook : BaseHook() {
           findMethod(chromeXt.tabWebContentsDelegateAndroidImpl!!) { name == "onUpdateUrl" }
               // public void onUpdateUrl(GURL url)
               .hookAfter {
-                val url = chromeXt.parseUrl(it.args[0])!!
-                Log.i("onUpdateUrl: ${url}")
                 chromeXt.updateTabDelegator(it.thisObject)
+                val url = chromeXt.parseUrl(it.args[0])!!
                 chromeXt.didUpdateUrl(url)
               }
 
@@ -31,7 +32,21 @@ object ChromeHook : BaseHook() {
               // String sourceId)
               .hookAfter {
                 // This should be the way to communicate with the front-end of ChromeXt
-                Log.d("[${it.args[0]}] ${it.args[1]} @${it.args[3]}:${it.args[2]}")
+                if (it.args[0] as Int == 0 && it.args[2] as Int == 3 && it.args[3] == "") {
+                  val text = it.args[1] as String
+                  runCatching {
+                        val data = JSONObject(text)
+                        val action = data.getString("action")
+                        val payload = data.getString("payload")
+                        val callback = chromeXt.scriptManager(action, payload)
+                        if (callback != null) {
+                          chromeXt.evaluateJavaScript(callback)
+                        }
+                      }
+                      .onFailure { Log.w("Invalid data received: ${text}") }
+                } else {
+                  Log.d("[${it.args[0]}] ${it.args[1]} @${it.args[3]}:${it.args[2]}")
+                }
               }
 
           findMethod(chromeXt.navigationControllerImpl!!) { name == chromeXt.NAVI_LOAD_URL }
@@ -41,33 +56,37 @@ object ChromeHook : BaseHook() {
                 val url = chromeXt.parseUrl(it.args[0])!!
                 chromeXt.updateNavController(it.thisObject)
                 if (url.startsWith("chrome://xt/")) {
-                  chromeXt.changeUrl(it.args[0], "javascript: 'Page reserved for ChromeXt'")
+                  chromeXt.changeUrl(it.args[0], "javascript: ${homepageChromeXt}")
                 }
               }
 
-          findAllMethods(chromeXt.webContentsObserverProxy!!) { name == "didStartLoading" }
+          findMethod(chromeXt.webContentsObserverProxy!!) { name == "didStartLoading" }
               // public void didStartLoading(GURL url)
               .hookBefore {
                 val url = chromeXt.parseUrl(it.args[0])!!
                 chromeXt.didStartLoading(url)
               }
 
-          findAllMethods(chromeXt.webContentsObserverProxy!!) { name == "didStopLoading" }
+          findMethod(chromeXt.webContentsObserverProxy!!) { name == "didStopLoading" }
               // public void didStopLoading(GURL url, boolean isKnownValid)
               .hookAfter {
                 val url = chromeXt.parseUrl(it.args[0])!!
-                chromeXt.didStopLoading(url)
+                if (url.endsWith(".user.js")) {
+                  chromeXt.evaluateJavaScript(promptInstallUserScript)
+                } else {
+                  chromeXt.didStopLoading(url)
+                }
               }
 
-          findMethod(chromeXt.interceptNavigationDelegateImpl!!) {
-                name == "shouldIgnoreNavigation"
-              }
-              // public boolean shouldIgnoreNavigation(NavigationHandle navigationHandle, GURL
-              // escapedUrl)
-              .hookAfter {
-                // Not using it yet, could help AdAway in the future
-                // Source code not stable yet, we should postpone relevant implements
-              }
+          // findMethod(chromeXt.interceptNavigationDelegateImpl!!) {
+          //       name == "shouldIgnoreNavigation"
+          //     }
+          // public boolean shouldIgnoreNavigation(NavigationHandle navigationHandle, GURL
+          // escapedUrl)
+          // .hookAfter {
+          // Not using it yet, could help AdAway in the future
+          // Source code not stable yet, we should postpone relevant implements
+          // }
         }
   }
 }

@@ -2,10 +2,14 @@ package org.matrix.chromext
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.room.Room
 import com.github.kyuubiran.ezxhelper.utils.Log
 import com.github.kyuubiran.ezxhelper.utils.invokeMethod
 import java.lang.reflect.Field
-import org.matrix.chromext.script.youtubeScript
+import org.matrix.chromext.script.AppDatabase
+import org.matrix.chromext.script.RunAt
+import org.matrix.chromext.script.ScriptDao
+import org.matrix.chromext.script.parseScript
 
 class ChromeXt(ctx: Context) {
   // These smali code names are possible to change when Chrome updates
@@ -108,9 +112,15 @@ class ChromeXt(ctx: Context) {
   private val mShouldClearHistoryList: Field? = null
   private val mNavigationUIDataSupplier: Field? = null
 
+  private var scriptDao: ScriptDao? = null
   init {
     val sharedPref: SharedPreferences = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
     updateSmali(sharedPref)
+    scriptDao =
+        Room.databaseBuilder(ctx, AppDatabase::class.java, "userscript")
+            .allowMainThreadQueries()
+            .build()
+            .init()
     gURL = ctx.getClassLoader().loadClass("org.chromium.url.GURL")
     loadUrlParams =
         ctx.getClassLoader().loadClass("org.chromium.content_public.browser.LoadUrlParams")
@@ -159,7 +169,26 @@ class ChromeXt(ctx: Context) {
         }
   }
 
-  private fun evaluateJavaScript(script: String) {
+  private fun naviUrl(url: String) {
+    navController!!.invokeMethod(
+        loadUrlParams!!.getDeclaredConstructor(String::class.java).newInstance(url)) {
+          name == NAVI_LOAD_URL
+        }
+  }
+
+  private fun invokeScriptAt(runAt: RunAt, url: String) {
+	  Log.i("${runAt.state}: ${url}")
+    scriptDao!!.getAllByRunAt(runAt).forEach {
+      val code = it.code
+      it.match.forEach {
+        if (it.toRegex().matches(url)) {
+          evaluateJavaScript(code)
+        }
+      }
+    }
+  }
+
+  fun evaluateJavaScript(script: String) {
     val alphabet: List<Char> = ('a'..'z') + ('A'..'Z')
     val randomString: String = List(14) { alphabet.random() }.joinToString("")
     loadUrl("javascript: void(globalThis.${randomString} = '')")
@@ -167,13 +196,6 @@ class ChromeXt(ctx: Context) {
       loadUrl("javascript: void(globalThis.${randomString} += '${it.replace("'", "\\'")}')")
     }
     loadUrl("javascript: Function(globalThis.${randomString})();")
-  }
-
-  private fun naviUrl(url: String) {
-    navController!!.invokeMethod(
-        loadUrlParams!!.getDeclaredConstructor(String::class.java).newInstance(url)) {
-          name == NAVI_LOAD_URL
-        }
   }
 
   fun parseUrl(packed: Any): String? {
@@ -184,6 +206,20 @@ class ChromeXt(ctx: Context) {
     }
     Log.e(
         "parseUrl: ${packed::class.qualifiedName} is not ${loadUrlParams!!.getName()} nor ${gURL!!.getName()}")
+    return null
+  }
+
+  fun scriptManager(action: String, payload: String): String? {
+    if (action == "installScript") {
+      val script = parseScript(payload)
+      if (script == null) {
+        return "alert('Invalid UserScript')"
+      } else {
+        Log.i("Install script ${script.id}")
+        scriptDao!!.insertAll(script)
+        return null
+      }
+    }
     return null
   }
 
@@ -222,13 +258,15 @@ class ChromeXt(ctx: Context) {
     return false
   }
 
-  fun didUpdateUrl(url: String) {}
+  fun didUpdateUrl(url: String) {
+    invokeScriptAt(RunAt.IDLE, url)
+  }
 
-  fun didStartLoading(url: String) {}
+  fun didStartLoading(url: String) {
+    invokeScriptAt(RunAt.START, url)
+  }
 
   fun didStopLoading(url: String) {
-    if (url.startsWith("https://m.youtube.com")) {
-      evaluateJavaScript(youtubeScript)
-    }
+    invokeScriptAt(RunAt.END, url)
   }
 }
