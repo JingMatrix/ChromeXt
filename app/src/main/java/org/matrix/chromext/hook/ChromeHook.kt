@@ -6,9 +6,7 @@ import com.github.kyuubiran.ezxhelper.utils.findAllMethods
 import com.github.kyuubiran.ezxhelper.utils.findMethod
 import com.github.kyuubiran.ezxhelper.utils.hookAfter
 import com.github.kyuubiran.ezxhelper.utils.hookBefore
-import com.github.kyuubiran.ezxhelper.utils.invokeMethod
-import java.lang.reflect.Field
-import org.matrix.chromext.script.youtubeScript
+import org.matrix.chromext.ChromeXt
 
 object ChromeHook : BaseHook() {
   override fun init() {
@@ -17,67 +15,52 @@ object ChromeHook : BaseHook() {
         }
         .hookAfter {
           val ctx: Context = (it.args[0] as Context).createContextForSplit("chrome")
-          val gURL = ctx.getClassLoader().loadClass("org.chromium.url.GURL")
-          val loadUrlParams =
-              ctx.getClassLoader().loadClass("org.chromium.content_public.browser.LoadUrlParams")
-          // .getDeclaredConstructor(String::class.java)
-          val tabWebContentsDelegateAndroidImpl =
-              ctx.getClassLoader()
-                  .loadClass("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
-          val interceptNavigationDelegateImpl =
-              ctx.getClassLoader().loadClass(INTERCEPTNAVIGATIONDELEGATEIMPL)
-          val navigationControllerImpl =
-              ctx.getClassLoader()
-                  .loadClass("org.chromium.content.browser.framehost.NavigationControllerImpl")
-          val webContentsObserverProxy =
-              ctx.getClassLoader()
-                  .loadClass("org.chromium.content.browser.webcontents.WebContentsObserverProxy")
-          val mUrl: Field = loadUrlParams.getDeclaredField(URL_FIELD)
-          val mTab: Field = tabWebContentsDelegateAndroidImpl.getDeclaredField(TAB_FIELD)
-          val mSpec: Field = gURL.getDeclaredField(SPEC_FIELD)
+          val chromeXt = ChromeXt(ctx)
 
-          findMethod(tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
-              .hookBefore {
-                val url = mSpec.get(it.args[0]) as String
+          findMethod(chromeXt.tabWebContentsDelegateAndroidImpl!!) { name == "onUpdateUrl" }
+              .hookAfter {
+                val url = chromeXt.parseUrl(it.args[0])!!
                 Log.i("onUpdateUrl: ${url}")
-                if (url.startsWith("https://m.youtube.com")) {
-                  Log.i("Inject userscript for m.youtube.com")
-                  mTab.get(it.thisObject)?.invokeMethod(
-                      loadUrlParams
-                          .getDeclaredConstructor(String::class.java)
-                          .newInstance("javascript: ${youtubeScript}")) {
-                        name == LOAD_URL
-                      }
-                }
+                chromeXt.updateTabDelegator(it.thisObject)
+                chromeXt.didUpdateUrl(url)
               }
 
-          findMethod(tabWebContentsDelegateAndroidImpl) { name == "addMessageToConsole" }
+          findMethod(chromeXt.tabWebContentsDelegateAndroidImpl!!) { name == "addMessageToConsole" }
               .hookAfter {
-                // addMessageToConsole(int level, String message, int lineNumber, String sourceId)
+                // addMessageToConsole(int level, String message, int lineNumber,
+                // String sourceId)
+
+                // This should be the way to communicate with the front-end of ChromeXt
                 Log.d("[${it.args[0]}] ${it.args[1]} @${it.args[3]}:${it.args[2]}")
               }
 
-          findMethod(navigationControllerImpl) { name == NAVI_LOAD_URL }
+          findMethod(chromeXt.navigationControllerImpl!!) { name == chromeXt.NAVI_LOAD_URL }
               .hookBefore {
-                val url = mUrl.get(it.args[0]) as String
-                Log.i(
-                    "loadUrl: ${url} from last visited index ${it.thisObject.invokeMethod(){name == NAVI_LAST_INDEX}}")
+                // Currently we only use it to reserve a page
+                val url = chromeXt.parseUrl(it.args[0])!!
                 if (url.startsWith("chrome://xt/")) {
-                  mUrl.set(it.args[0], "javascript: 'Page reserved for ChromeXt'")
+                  chromeXt.changeUrl(it.args[0], "javascript: 'Page reserved for ChromeXt'")
                 }
               }
 
-          findAllMethods(webContentsObserverProxy) { name == "didStartLoading" }
-              .hookAfter {
-                val url = mSpec.get(it.args[0]) as String
-                Log.i("Start loading ${url}")
+          findAllMethods(chromeXt.webContentsObserverProxy!!) { name == "didStartLoading" }
+              .hookBefore {
+                val url = chromeXt.parseUrl(it.args[0])!!
+                chromeXt.didStartLoading(url)
               }
 
-          findMethod(interceptNavigationDelegateImpl) { name == "shouldIgnoreNavigation" }
-              .hookBefore {
-                val url = mSpec.get(it.args[1]) as String
-                Log.i("ShouldIgnoreNavigation ${url} ?")
+          findAllMethods(chromeXt.webContentsObserverProxy!!) { name == "didStopLoading" }
+              .hookAfter {
+                val url = chromeXt.parseUrl(it.args[0])!!
+                chromeXt.didStopLoading(url)
               }
+
+          // findMethod(chromeXt.interceptNavigationDelegateImpl!!) {
+          //       name == "shouldIgnoreNavigation"
+          //     }
+          //     .hookAfter {
+          //       // Not using it yet, could help AdAway in the future
+          //     }
         }
   }
 }
