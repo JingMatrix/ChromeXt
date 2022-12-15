@@ -22,7 +22,9 @@ object ChromeHook : BaseHook() {
               .hookAfter {
                 chromeXt.updateTabDelegator(it.thisObject)
                 val url = chromeXt.parseUrl(it.args[0])!!
-                if (url.endsWith(".user.js")) {
+                if (url.endsWith("/ChromeXt/")) {
+                  chromeXt.evaluateJavaScript("ChromeXt=console.debug;")
+                } else if (url.endsWith(".user.js")) {
                   chromeXt.evaluateJavaScript(promptInstallUserScript)
                 } else {
                   chromeXt.didUpdateUrl(url)
@@ -34,7 +36,7 @@ object ChromeHook : BaseHook() {
               // String sourceId)
               .hookAfter {
                 // This should be the way to communicate with the front-end of ChromeXt
-                if (it.args[0] as Int == 0 && it.args[3] == "") {
+                if (it.args[0] as Int == 0) {
                   val text = it.args[1] as String
                   runCatching {
                         val data = JSONObject(text)

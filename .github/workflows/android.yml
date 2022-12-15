@@ -24,3 +24,14 @@ jobs:
       run: chmod +x gradlew
     - name: Build with Gradle
       run: ./gradlew build
+
+    - name: Upload builts APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: ChromeXt.apk
+        path: app/build/outputs/apk/debug/app-debug.apk
+
+    - name: Collect builts APK
+      uses: actions/download-artifact@v3
+      with:
+        name: ChromeXt.apk
