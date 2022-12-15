@@ -24,7 +24,11 @@ object ChromeHook : BaseHook() {
               .hookAfter {
                 chromeXt.updateTabDelegator(it.thisObject)
                 val url = chromeXt.parseUrl(it.args[0])!!
-                chromeXt.didUpdateUrl(url)
+                if (url.endsWith(".user.js")) {
+                  chromeXt.evaluateJavaScript(promptInstallUserScript)
+                } else {
+                  chromeXt.didUpdateUrl(url)
+                }
               }
 
           findMethod(chromeXt.tabWebContentsDelegateAndroidImpl!!) { name == "addMessageToConsole" }
@@ -32,7 +36,7 @@ object ChromeHook : BaseHook() {
               // String sourceId)
               .hookAfter {
                 // This should be the way to communicate with the front-end of ChromeXt
-                if (it.args[0] as Int == 0 && it.args[2] as Int == 3 && it.args[3] == "") {
+                if (it.args[0] as Int == 0 && it.args[3] == "") {
                   val text = it.args[1] as String
                   runCatching {
                         val data = JSONObject(text)
@@ -43,7 +47,7 @@ object ChromeHook : BaseHook() {
                           chromeXt.evaluateJavaScript(callback)
                         }
                       }
-                      .onFailure { Log.w("Invalid data received: ${text}") }
+                      .onFailure { Log.w(it.toString()) }
                 } else {
                   Log.d("[${it.args[0]}] ${it.args[1]} @${it.args[3]}:${it.args[2]}")
                 }
@@ -54,29 +58,25 @@ object ChromeHook : BaseHook() {
               .hookBefore {
                 // Currently we only use it to reserve a page
                 val url = chromeXt.parseUrl(it.args[0])!!
-                chromeXt.updateNavController(it.thisObject)
+                // chromeXt.updateNavController(it.thisObject)
                 if (url.startsWith("chrome://xt/")) {
                   chromeXt.changeUrl(it.args[0], "javascript: ${homepageChromeXt}")
                 }
               }
 
-          findMethod(chromeXt.webContentsObserverProxy!!) { name == "didStartLoading" }
-              // public void didStartLoading(GURL url)
-              .hookBefore {
-                val url = chromeXt.parseUrl(it.args[0])!!
-                chromeXt.didStartLoading(url)
-              }
+          // findMethod(chromeXt.webContentsObserverProxy!!) { name == "didStartLoading" }
+          //     // public void didStartLoading(GURL url)
+          //     .hookBefore {
+          //       val url = chromeXt.parseUrl(it.args[0])!!
+          //       chromeXt.didStartLoading(url)
+          //     }
 
-          findMethod(chromeXt.webContentsObserverProxy!!) { name == "didStopLoading" }
-              // public void didStopLoading(GURL url, boolean isKnownValid)
-              .hookAfter {
-                val url = chromeXt.parseUrl(it.args[0])!!
-                if (url.endsWith(".user.js")) {
-                  chromeXt.evaluateJavaScript(promptInstallUserScript)
-                } else {
-                  chromeXt.didStopLoading(url)
-                }
-              }
+          // findMethod(chromeXt.webContentsObserverProxy!!) { name == "didStopLoading" }
+          //     // public void didStopLoading(GURL url, boolean isKnownValid)
+          //     .hookAfter {
+          //       val url = chromeXt.parseUrl(it.args[0])!!
+          //       chromeXt.didStopLoading(url)
+          //     }
 
           // findMethod(chromeXt.interceptNavigationDelegateImpl!!) {
           //       name == "shouldIgnoreNavigation"

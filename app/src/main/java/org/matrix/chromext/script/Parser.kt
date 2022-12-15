@@ -25,7 +25,9 @@ fun parseScript(input: String): Script? {
         var namespace = "ChromeXt"
         var runAt = RunAt.IDLE
         var match = mutableListOf<String>()
+        var grant = mutableListOf<String>()
         val code = blockMatchGroup.get("code")?.value as String
+        val encoded = false
       }
   val metablock = blockMatchGroup.get("metablock")?.value as String
   metablock.split("\n").forEach {
@@ -37,6 +39,10 @@ fun parseScript(input: String): Script? {
         "name" -> script.name = value
         "namespace" -> script.namespace = value
         "match" -> script.match.add(value)
+        "grant" ->
+            if (value.startsWith("GM")) {
+              script.grant.add(value.replace("GM.", "GM_"))
+            }
         "run-at" ->
             when (value) {
               "document-start" -> script.runAt = RunAt.START
@@ -53,7 +59,9 @@ fun parseScript(input: String): Script? {
     return Script(
         script.namespace + ":" + script.name,
         script.match.toTypedArray(),
+        script.grant.toTypedArray(),
         script.code,
-        script.runAt)
+        script.runAt,
+        script.encoded)
   }
 }

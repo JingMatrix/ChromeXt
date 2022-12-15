@@ -15,10 +15,12 @@ import androidx.room.TypeConverters
 @Entity
 data class Script(
     // Must support
-    @PrimaryKey var id: String,
-    var match: Array<String>,
+    @PrimaryKey val id: String,
+    val match: Array<String>,
+    val grant: Array<String>,
     var code: String,
-    val runAt: RunAt
+    val runAt: RunAt,
+    var encoded: Boolean
 )
 
 class Converters {

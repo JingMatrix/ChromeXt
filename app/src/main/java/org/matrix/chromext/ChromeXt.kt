@@ -6,10 +6,13 @@ import androidx.room.Room
 import com.github.kyuubiran.ezxhelper.utils.Log
 import com.github.kyuubiran.ezxhelper.utils.invokeMethod
 import java.lang.reflect.Field
+import java.net.URLEncoder
 import org.matrix.chromext.script.AppDatabase
-import org.matrix.chromext.script.RunAt
+import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDao
+import org.matrix.chromext.script.encodeScript
 import org.matrix.chromext.script.parseScript
+import org.matrix.chromext.script.urlMatch
 
 class ChromeXt(ctx: Context) {
   // These smali code names are possible to change when Chrome updates
@@ -80,9 +83,9 @@ class ChromeXt(ctx: Context) {
   var interceptNavigationDelegateImpl: Class<*>? = null
 
   var navigationControllerImpl: Class<*>? = null
-  private var navController: Any? = null
+  private val navController: Any? = null
 
-  var webContentsObserverProxy: Class<*>? = null
+  val webContentsObserverProxy: Class<*>? = null
 
   private val navigationHandle: Class<*>? = null
 
@@ -132,9 +135,9 @@ class ChromeXt(ctx: Context) {
     navigationControllerImpl =
         ctx.getClassLoader()
             .loadClass("org.chromium.content.browser.framehost.NavigationControllerImpl")
-    webContentsObserverProxy =
-        ctx.getClassLoader()
-            .loadClass("org.chromium.content.browser.webcontents.WebContentsObserverProxy")
+    // webContentsObserverProxy =
+    //     ctx.getClassLoader()
+    //         .loadClass("org.chromium.content.browser.webcontents.WebContentsObserverProxy")
     mUrl = loadUrlParams!!.getDeclaredField("a")
     mTab = tabWebContentsDelegateAndroidImpl!!.getDeclaredField(TAB_FIELD)
     mSpec = gURL!!.getDeclaredField(SPEC_FIELD)
@@ -167,6 +170,7 @@ class ChromeXt(ctx: Context) {
         loadUrlParams!!.getDeclaredConstructor(String::class.java).newInstance(url)) {
           name == LOAD_URL
         }
+    Log.d("loadUrl: ${url}")
   }
 
   private fun naviUrl(url: String) {
@@ -176,26 +180,48 @@ class ChromeXt(ctx: Context) {
         }
   }
 
-  private fun invokeScriptAt(runAt: RunAt, url: String) {
-	  Log.i("${runAt.state}: ${url}")
-    scriptDao!!.getAllByRunAt(runAt).forEach {
-      val code = it.code
+  private fun invokeScript(url: String) {
+    scriptDao!!.getAll().forEach {
+      val script = it
       it.match.forEach {
-        if (it.toRegex().matches(url)) {
-          evaluateJavaScript(code)
+        if (urlMatch(it, url)) {
+          Log.d("${script.id} injected")
+          evaluateJavaScript(script)
         }
       }
     }
   }
 
-  fun evaluateJavaScript(script: String) {
-    val alphabet: List<Char> = ('a'..'z') + ('A'..'Z')
-    val randomString: String = List(14) { alphabet.random() }.joinToString("")
-    loadUrl("javascript: void(globalThis.${randomString} = '')")
-    script.chunked(2090000).forEach {
-      loadUrl("javascript: void(globalThis.${randomString} += '${it.replace("'", "\\'")}')")
+  private fun evaluateJavaScript(script: Script) {
+    if (!script.encoded) {
+      val code = encodeScript(script)
+      if (code != null) {
+        script.code = code
+        script.encoded = true
+        scriptDao!!.insertAll(script)
+      }
     }
-    loadUrl("javascript: Function(globalThis.${randomString})();")
+    evaluateJavaScript(script.code)
+  }
+
+  fun evaluateJavaScript(script: String) {
+    // Encode as Url makes it easier to copy and paste for debugging
+    if (script.length > 200000) {
+      val alphabet: List<Char> = ('a'..'z') + ('A'..'Z')
+      val randomString: String = List(14) { alphabet.random() }.joinToString("")
+      loadUrl("javascript: void(globalThis.${randomString} = '');")
+      script.chunked(2000000).forEach {
+        val code =
+            URLEncoder.encode(
+                    """void(globalThis.${randomString} += `${it.replace("`", "\\`")}`);""", "UTF-8")
+                .replace("+", "%20")
+        loadUrl("javascript: ${code}")
+      }
+      loadUrl("javascript: Function(globalThis.${randomString})();")
+    } else {
+      val code = URLEncoder.encode(script, "UTF-8").replace("+", "%20")
+      loadUrl("javascript: ${code}")
+    }
   }
 
   fun parseUrl(packed: Any): String? {
@@ -245,11 +271,11 @@ class ChromeXt(ctx: Context) {
     return false
   }
 
-  fun updateNavController(controller: Any): Boolean {
+  private fun updateNavController(controller: Any): Boolean {
     if (controller::class.qualifiedName == navigationControllerImpl!!.getName()) {
       if (navController != controller) {
         Log.i("navController updated")
-        navController = controller
+        // navController = controller
       }
       return true
     }
@@ -259,14 +285,16 @@ class ChromeXt(ctx: Context) {
   }
 
   fun didUpdateUrl(url: String) {
-    invokeScriptAt(RunAt.IDLE, url)
+    if (url.startsWith("https://") || url.startsWith("http://") || url.startsWith("file://")) {
+      invokeScript(url)
+    }
   }
 
-  fun didStartLoading(url: String) {
-    invokeScriptAt(RunAt.START, url)
-  }
+  // fun didStartLoading(url: String) {
+  //   invokeScriptAt(RunAt.START, url)
+  // }
 
-  fun didStopLoading(url: String) {
-    invokeScriptAt(RunAt.END, url)
-  }
+  // fun didStopLoading(url: String) {
+  //   invokeScriptAt(RunAt.END, url)
+  // }
 }
