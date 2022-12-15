@@ -13,10 +13,10 @@ The author has tested `ChromeXt` with the latest `Android Chrome 108.0.5359.79`,
 Please consider update your Android Chrome first.
 
 For other vesions, it might not work.
-To adapt to those versions, one only need to find out two method names in its smali code.
+To adapt to those versions, one only need to find out one method name in its smali code.
 First use `apktool` to decompile the `split_chrome.apk` file pulled from the installation of Chrome on your phone,
-then follow the hints in [ChromeXt.kt](app/src/main/java/org/matrix/chromext/ChromeXt.kt) to get correct names
-and modify them in the `SharedPreferences` of Chrome at `/data/data/com.android.chrome/shared_prefs/ChromeXt.xml`.
+then follow the hints in [ChromeXt.kt](app/src/main/java/org/matrix/chromext/ChromeXt.kt) to get the correct name
+and modify it in the `SharedPreferences` of Chrome at `/data/data/com.android.chrome/shared_prefs/ChromeXt.xml`.
 
 ## Usage
 

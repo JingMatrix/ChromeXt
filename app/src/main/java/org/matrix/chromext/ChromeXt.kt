@@ -20,14 +20,14 @@ class ChromeXt(ctx: Context) {
   // User should be able to change them by their own if needed
   // If a field is read-only, i.e., initilized with `val`, meaning that we are not using it yet
 
-  // Grep Android.Omnibox.InputToNavigationControllerStart to get loadUrl in
-  // org/chromium/content/browser/framehost/NavigationControllerImpl.smali
-  var NAVI_LOAD_URL = "h"
-  // ! Note: loadUrl is only called for browser-Initiated navigations
-
   // Grep smali code with Tab.loadUrl to get the loadUrl function in
   // org/chromium/chrome/browser/tab/TabImpl.smali
   var LOAD_URL = "h"
+
+  // Grep Android.Omnibox.InputToNavigationControllerStart to get loadUrl in
+  // org/chromium/content/browser/framehost/NavigationControllerImpl.smali
+  val NAVI_LOAD_URL = "h"
+  // ! Note: loadUrl is only called for browser-Initiated navigations
 
   // It is possible to a HTTP POST with LoadUrlParams Class
   // grep org/chromium/content_public/common/ResourceRequestBody to get setPostData in
@@ -81,7 +81,7 @@ class ChromeXt(ctx: Context) {
   private var mTab: Field? = null
   private var tabDelegator: Any? = null
 
-  var interceptNavigationDelegateImpl: Class<*>? = null
+  val interceptNavigationDelegateImpl: Class<*>? = null
 
   val navigationControllerImpl: Class<*>? = null
   private val navController: Any? = null
@@ -131,8 +131,8 @@ class ChromeXt(ctx: Context) {
     tabWebContentsDelegateAndroidImpl =
         ctx.getClassLoader()
             .loadClass("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
-    interceptNavigationDelegateImpl =
-        ctx.getClassLoader().loadClass(INTERCEPTNAVIGATIONDELEGATEIMPL)
+    // interceptNavigationDelegateImpl =
+    //     ctx.getClassLoader().loadClass(INTERCEPTNAVIGATIONDELEGATEIMPL)
     // navigationControllerImpl =
     //     ctx.getClassLoader()
     //         .loadClass("org.chromium.content.browser.framehost.NavigationControllerImpl")
@@ -144,12 +144,12 @@ class ChromeXt(ctx: Context) {
     mSpec = gURL!!.getDeclaredField(SPEC_FIELD)
   }
   private fun updateSmali(sharedPref: SharedPreferences) {
-    if (sharedPref.contains("NAVI_LOAD_URL")) {
-      NAVI_LOAD_URL = sharedPref.getString("NAVI_LOAD_URL", NAVI_LOAD_URL)!!
-    } else {
-      writeSmali(sharedPref)
-      return
-    }
+    // if (sharedPref.contains("NAVI_LOAD_URL")) {
+    //   NAVI_LOAD_URL = sharedPref.getString("NAVI_LOAD_URL", NAVI_LOAD_URL)!!
+    // } else {
+    //   writeSmali(sharedPref)
+    //   return
+    // }
     if (sharedPref.contains("LOAD_URL")) {
       LOAD_URL = sharedPref.getString("LOAD_URL", LOAD_URL)!!
     } else {
@@ -160,7 +160,7 @@ class ChromeXt(ctx: Context) {
 
   private fun writeSmali(sharedPref: SharedPreferences) {
     with(sharedPref.edit()) {
-      putString("NAVI_LOAD_URL", NAVI_LOAD_URL)
+      // putString("NAVI_LOAD_URL", NAVI_LOAD_URL)
       putString("LOAD_URL", LOAD_URL)
       apply()
     }
@@ -174,12 +174,12 @@ class ChromeXt(ctx: Context) {
     Log.d("loadUrl: ${url}")
   }
 
-  private fun naviUrl(url: String) {
-    navController!!.invokeMethod(
-        loadUrlParams!!.getDeclaredConstructor(String::class.java).newInstance(url)) {
-          name == NAVI_LOAD_URL
-        }
-  }
+  // private fun naviUrl(url: String) {
+  //   navController!!.invokeMethod(
+  //       loadUrlParams!!.getDeclaredConstructor(String::class.java).newInstance(url)) {
+  //         name == NAVI_LOAD_URL
+  //       }
+  // }
 
   private fun invokeScript(url: String) {
     scriptDao!!.getAll().forEach {
