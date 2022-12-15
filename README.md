@@ -15,7 +15,7 @@ Please consider update your Android Chrome first.
 For other vesions, it might not work.
 To adapt to those versions, one only need to find out one method name in its smali code.
 First use `apktool` to decompile the `split_chrome.apk` file pulled from the installation of Chrome on your phone,
-then follow the hints in [ChromeXt.kt](app/src/main/java/org/matrix/chromext/ChromeXt.kt) to get the correct name
+then follow the hints in [UserScript.kt](app/src/main/java/org/matrix/chromext/proxy/UserScript.kt) to get the correct name
 and modify it in the `SharedPreferences` of Chrome at `/data/data/com.android.chrome/shared_prefs/ChromeXt.xml`.
 
 ## Usage
@@ -26,6 +26,15 @@ Currently, ChromeXt supports `@match`, `@run-at` and `@grant GM_addStyle` since 
 
 To manage scripts installed by `ChromeXt`, here is a simple [front-end](https://jingmatrix.github.io/ChromeXt/).
 
+## Bonus
+
+### Solution of system gesture conflicts
+
+To enable forward gesture in chrome, with the help of this module,
+one only need to disble the right back gesture by
+```sh
+adb shell settings put secure back_gesture_inset_scale_right -1
+```
 
 ## Development Plans
 

@@ -1,13 +1,17 @@
 package org.matrix.chromext
 
+import android.content.Context
 import com.github.kyuubiran.ezxhelper.init.EzXHelperInit
 import com.github.kyuubiran.ezxhelper.utils.Log
 import com.github.kyuubiran.ezxhelper.utils.Log.logexIfThrow
+import com.github.kyuubiran.ezxhelper.utils.findMethod
+import com.github.kyuubiran.ezxhelper.utils.hookAfter
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import org.matrix.chromext.hook.BaseHook
-import org.matrix.chromext.hook.ChromeHook
+import org.matrix.chromext.hook.GestureNavHook
+import org.matrix.chromext.hook.UserScriptHook
 
 private const val PACKAGE_NAME_HOOKED = "com.android.chrome"
 private const val TAG = "ChromeXt"
@@ -20,7 +24,13 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit /* Optional */ {
       EzXHelperInit.setLogTag(TAG)
       EzXHelperInit.setToastTag(TAG)
       // Init hooks
-      initHooks(ChromeHook)
+      findMethod("org.chromium.chrome.browser.base.SplitChromeApplication") {
+            name == "attachBaseContext"
+          }
+          .hookAfter {
+            val ctx = (it.args[0] as Context).createContextForSplit("chrome")
+            initHooks(ctx, UserScriptHook, GestureNavHook)
+          }
     }
   }
 
@@ -29,11 +39,11 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit /* Optional */ {
     EzXHelperInit.initZygote(startupParam)
   }
 
-  private fun initHooks(vararg hook: BaseHook) {
+  private fun initHooks(ctx: Context, vararg hook: BaseHook) {
     hook.forEach {
       runCatching {
             if (it.isInit) return@forEach
-            it.init()
+            it.init(ctx)
             it.isInit = true
             Log.i("Inited hook: ${it.javaClass.simpleName}")
           }

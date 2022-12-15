@@ -1,4 +1,4 @@
-package org.matrix.chromext
+package org.matrix.chromext.proxy
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -15,7 +15,7 @@ import org.matrix.chromext.script.encodeScript
 import org.matrix.chromext.script.parseScript
 import org.matrix.chromext.script.urlMatch
 
-class ChromeXt(ctx: Context) {
+class UserScriptProxy(ctx: Context) {
   // These smali code names are possible to change when Chrome updates
   // User should be able to change them by their own if needed
   // If a field is read-only, i.e., initilized with `val`, meaning that we are not using it yet
