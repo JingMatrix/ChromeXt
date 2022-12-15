@@ -4,10 +4,8 @@ import android.content.Context
 import com.github.kyuubiran.ezxhelper.utils.Log
 import com.github.kyuubiran.ezxhelper.utils.findMethod
 import com.github.kyuubiran.ezxhelper.utils.hookAfter
-import com.github.kyuubiran.ezxhelper.utils.hookBefore
 import org.json.JSONObject
 import org.matrix.chromext.ChromeXt
-import org.matrix.chromext.script.homepageChromeXt
 import org.matrix.chromext.script.promptInstallUserScript
 
 object ChromeHook : BaseHook() {
@@ -53,16 +51,16 @@ object ChromeHook : BaseHook() {
                 }
               }
 
-          findMethod(chromeXt.navigationControllerImpl!!) { name == chromeXt.NAVI_LOAD_URL }
-              // public void loadUrl(LoadUrlParams params)
-              .hookBefore {
-                // Currently we only use it to reserve a page
-                val url = chromeXt.parseUrl(it.args[0])!!
-                // chromeXt.updateNavController(it.thisObject)
-                if (url.startsWith("chrome://xt/")) {
-                  chromeXt.changeUrl(it.args[0], "javascript: ${homepageChromeXt}")
-                }
-              }
+          // findMethod(chromeXt.navigationControllerImpl!!) { name == chromeXt.NAVI_LOAD_URL }
+          // public void loadUrl(LoadUrlParams params)
+          // .hookBefore {
+          // We might use it to reserve a page
+          // val url = chromeXt.parseUrl(it.args[0])!!
+          // chromeXt.updateNavController(it.thisObject)
+          // if (url.startsWith("chrome://xt/")) {
+          //   chromeXt.changeUrl(it.args[0], "javascript: ${homepageChromeXt}")
+          // }
+          // }
 
           // findMethod(chromeXt.webContentsObserverProxy!!) { name == "didStartLoading" }
           //     // public void didStartLoading(GURL url)

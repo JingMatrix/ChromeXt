@@ -11,8 +11,6 @@ setTimeout(() => {
 }, 100)
 """
 
-const val homepageChromeXt: String = "'Page reserved for ChromeXt'"
-
 const val GM_addStyle =
     """
 function GM_addStyle(/* String */ styles) {

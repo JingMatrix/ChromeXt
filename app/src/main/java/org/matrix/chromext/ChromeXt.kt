@@ -8,6 +8,7 @@ import com.github.kyuubiran.ezxhelper.utils.invokeMethod
 import java.lang.reflect.Field
 import java.net.URLEncoder
 import org.matrix.chromext.script.AppDatabase
+import org.matrix.chromext.script.RunAt
 import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDao
 import org.matrix.chromext.script.encodeScript
@@ -82,7 +83,7 @@ class ChromeXt(ctx: Context) {
 
   var interceptNavigationDelegateImpl: Class<*>? = null
 
-  var navigationControllerImpl: Class<*>? = null
+  val navigationControllerImpl: Class<*>? = null
   private val navController: Any? = null
 
   val webContentsObserverProxy: Class<*>? = null
@@ -132,9 +133,9 @@ class ChromeXt(ctx: Context) {
             .loadClass("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
     interceptNavigationDelegateImpl =
         ctx.getClassLoader().loadClass(INTERCEPTNAVIGATIONDELEGATEIMPL)
-    navigationControllerImpl =
-        ctx.getClassLoader()
-            .loadClass("org.chromium.content.browser.framehost.NavigationControllerImpl")
+    // navigationControllerImpl =
+    //     ctx.getClassLoader()
+    //         .loadClass("org.chromium.content.browser.framehost.NavigationControllerImpl")
     // webContentsObserverProxy =
     //     ctx.getClassLoader()
     //         .loadClass("org.chromium.content.browser.webcontents.WebContentsObserverProxy")
@@ -236,17 +237,60 @@ class ChromeXt(ctx: Context) {
   }
 
   fun scriptManager(action: String, payload: String): String? {
-    if (action == "installScript") {
-      val script = parseScript(payload)
-      if (script == null) {
-        return "alert('Invalid UserScript')"
-      } else {
-        Log.i("Install script ${script.id}")
-        scriptDao!!.insertAll(script)
-        return null
+    var callback: String? = null
+    when (action) {
+      "installScript" -> {
+        val script = parseScript(payload)
+        if (script == null) {
+          callback = "alert('Invalid UserScript')"
+        } else {
+          Log.i("Install script ${script.id}")
+          scriptDao!!.insertAll(script)
+        }
+      }
+      "getIds" -> {
+        val result = scriptDao!!.getAll().map { it.id.replace("'", "\\'") }
+        evaluateJavaScript("console.log(['${result.joinToString(separator = "','")}'])")
+      }
+      "getScriptById" -> {
+        runCatching {
+              val ids = payload.drop(1).dropLast(1).split(",").map { it.drop(1).dropLast(1) }
+              val result = scriptDao!!.getScriptById(ids).map { it.code.replace("'", "\\'") }
+              evaluateJavaScript("console.log(['${result.joinToString(separator = "','")}'])")
+            }
+            .onFailure { evaluateJavaScript("console.error(${it.toString()})") }
+      }
+      "getIdByRunAt" -> {
+        runCatching {
+              val runAts =
+                  payload.drop(1).dropLast(1).split(",").map {
+                    when (it.drop(1).dropLast(1)) {
+                      "document-start" -> RunAt.START
+                      "document-end" -> RunAt.END
+                      "document-idle" -> RunAt.IDLE
+                      else -> RunAt.IDLE
+                    }
+                  }
+              val result = scriptDao!!.getIdByRunAt(runAts).map { it.id.replace("'", "\\'") }
+              evaluateJavaScript("console.log(['${result.joinToString(separator = "','")}'])")
+            }
+            .onFailure { evaluateJavaScript("console.error(${it.toString()})") }
+      }
+      "deleteScriptById" -> {
+        runCatching {
+              val ids = payload.drop(1).dropLast(1).split(",").map { it.drop(1).dropLast(1) }
+              scriptDao!!.getAll().forEach {
+                if (ids.contains(it.id)) {
+                  if (scriptDao!!.delete(it) == 1) {
+                    evaluateJavaScript("console.log(`${it.id} deleted!`)")
+                  }
+                }
+              }
+            }
+            .onFailure { evaluateJavaScript("console.error(${it.toString()})") }
       }
     }
-    return null
+    return callback
   }
 
   fun changeUrl(packed: Any, url: String): Boolean {
@@ -271,18 +315,19 @@ class ChromeXt(ctx: Context) {
     return false
   }
 
-  private fun updateNavController(controller: Any): Boolean {
-    if (controller::class.qualifiedName == navigationControllerImpl!!.getName()) {
-      if (navController != controller) {
-        Log.i("navController updated")
-        // navController = controller
-      }
-      return true
-    }
-    Log.e(
-        "updateNavController: ${controller::class.qualifiedName} is not ${navigationControllerImpl!!.getName()}")
-    return false
-  }
+  // fun updateNavController(controller: Any): Boolean {
+  //   if (controller::class.qualifiedName == navigationControllerImpl!!.getName()) {
+  //     if (navController != controller) {
+  //       Log.i("navController updated")
+  //       // navController = controller
+  //     }
+  //     return true
+  //   }
+  //   Log.e(
+  //       "updateNavController: ${controller::class.qualifiedName} is not
+  // ${navigationControllerImpl!!.getName()}")
+  //   return false
+  // }
 
   fun didUpdateUrl(url: String) {
     if (url.startsWith("https://") || url.startsWith("http://") || url.startsWith("file://")) {

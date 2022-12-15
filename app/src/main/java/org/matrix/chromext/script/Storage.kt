@@ -39,14 +39,16 @@ class Converters {
 interface ScriptDao {
   @Query("SELECT * FROM script") fun getAll(): List<Script>
 
-  @Query("SELECT * FROM script WHERE id IN (:scriptIds)")
-  fun getAllByIds(scriptIds: Array<String>): List<Script>
-
-  @Query("SELECT * FROM script WHERE runAt is :runAt") fun getAllByRunAt(runAt: RunAt): List<Script>
-
   @Insert(onConflict = OnConflictStrategy.REPLACE) fun insertAll(vararg script: Script)
 
-  @Delete fun delete(script: Script)
+  // For front-end
+  @Query("SELECT * FROM script WHERE runAt is (:runAt)")
+  fun getIdByRunAt(runAt: List<RunAt>): List<Script>
+
+  @Query("SELECT * FROM script WHERE id IN (:scriptIds)")
+  fun getScriptById(scriptIds: List<String>): List<Script>
+
+  @Delete fun delete(script: Script): Int
 }
 
 @Database(entities = [Script::class], version = 1, exportSchema = false)

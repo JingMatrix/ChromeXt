@@ -1,0 +1,64 @@
+<html>
+  <head>
+    <script>
+      function getIds() {
+        ChromeXt(JSON.stringify({ action: "getIds", payload: "" }));
+      }
+      function getIdByRunAt(arg = ["document-idle"]) {
+        // Example arg: ["document-start"]
+        ChromeXt(JSON.stringify({ action: "getIdByRunAt", payload: arg }));
+      }
+      function getScriptById(arg) {
+        // Example arg: ["your-awesome-script-id"]
+        ChromeXt(JSON.stringify({ action: "getScriptById", payload: arg }));
+      }
+      function deleteScriptById(arg) {
+        // Example arg: ["script-you-don't-want-id"]
+        ChromeXt(JSON.stringify({ action: "deleteScriptById", payload: arg }));
+      }
+    </script>
+    <style type="text/css">
+      h1 {
+        text-align: center;
+        padding-top: 1em;
+      }
+
+      div {
+        margin: 0 auto;
+        width: 35em;
+      }
+
+      p {
+        text-align: center;
+      }
+
+      span {
+        font-weight: bold;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>ChromeXt is not installed</h1>
+    <div>
+      <p>
+        Open the Eruda button, look for possible JavaScript function from the
+        <span>Sources</span> panel, and use them in the
+        <span>Console</span> panel to configure UserScripts in ChromeXt.
+      </p>
+      <p></p>
+    </div>
+    <script>
+      if (typeof ChromeXt !== "undefined") {
+        document.querySelector("body > h1").innerHTML = "ChromeXt is working";
+      } else {
+        document.querySelector("body> div > p").style.display = "none";
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>
+      eruda.init();
+    </script>
+  </body>
+  <html></html>
+</html>
