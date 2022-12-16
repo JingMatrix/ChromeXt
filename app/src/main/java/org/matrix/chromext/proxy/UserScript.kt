@@ -184,11 +184,22 @@ class UserScriptProxy(ctx: Context) {
   private fun invokeScript(url: String) {
     scriptDao!!.getAll().forEach {
       val script = it
-      it.match.forEach {
+      var run = false
+      script.match.forEach {
         if (urlMatch(it, url)) {
-          Log.i("${script.id} injected")
-          evaluateJavaScript(script)
+          run = true
         }
+      }
+      if (run) {
+        script.exclude.forEach {
+          if (it != "" && urlMatch(it, url)) {
+            run = false
+          }
+        }
+      }
+      if (run) {
+        evaluateJavaScript(script)
+        Log.i("${script.id} injected")
       }
     }
   }

@@ -21,11 +21,13 @@ fun parseScript(input: String): Script? {
 
   val script =
       object {
-        var name = "smaple"
+        var name = "sample"
         var namespace = "ChromeXt"
         var runAt = RunAt.IDLE
         var match = mutableListOf<String>()
         var grant = mutableListOf<String>()
+        var exclude = mutableListOf<String>()
+        var require = mutableListOf<String>()
         val code = blockMatchGroup.get("code")?.value as String
         val encoded = false
       }
@@ -39,10 +41,13 @@ fun parseScript(input: String): Script? {
         "name" -> script.name = value
         "namespace" -> script.namespace = value
         "match" -> script.match.add(value)
+        "include" -> script.match.add(value)
         "grant" ->
-            if (value.startsWith("GM")) {
-              script.grant.add(value.replace("GM.", "GM_"))
+            if (value.startsWith("GM_")) {
+              script.grant.add(value)
             }
+        "exclude" -> script.exclude.add(value)
+        "require" -> script.require.add(value)
         "run-at" ->
             when (value) {
               "document-start" -> script.runAt = RunAt.START
@@ -60,6 +65,8 @@ fun parseScript(input: String): Script? {
         script.namespace + ":" + script.name,
         script.match.toTypedArray(),
         script.grant.toTypedArray(),
+        script.exclude.toTypedArray(),
+        script.require.toTypedArray(),
         script.code,
         script.runAt,
         script.encoded)

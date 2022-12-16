@@ -36,7 +36,14 @@ You can then install UserScripts from popular sources: any URL that ends with `.
 
 ### Supported API
 
-Currently, ChromeXt supports `@match`, `@run-at` and `@grant GM_addStyle` since they are everything the author needs to perform all sort of tasks.
+Currently, ChromeXt supports only the following APIs since they are everything the author needs to perform all sort of tasks.
+
+1. @name, @namespace
+2. @match (must present, otherwise the script is considered as invalid)
+3. @include = @match, @exclude
+4. @run-at: document-start, document-end, document-idle (the default and fallback value)
+5. @grant GM_addStyle, GM_addElement
+6. @require
 
 Honestly, users can implement most other APIs in their UserScripts.
 

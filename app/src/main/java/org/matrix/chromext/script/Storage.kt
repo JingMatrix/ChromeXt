@@ -18,6 +18,8 @@ data class Script(
     @PrimaryKey val id: String,
     val match: Array<String>,
     val grant: Array<String>,
+    val exclude: Array<String>,
+    val require: Array<String>,
     var code: String,
     val runAt: RunAt,
     var encoded: Boolean
@@ -51,7 +53,7 @@ interface ScriptDao {
   @Delete fun delete(script: Script): Int
 }
 
-@Database(entities = [Script::class], version = 1, exportSchema = false)
+@Database(entities = [Script::class], version = 2, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
   abstract fun init(): ScriptDao

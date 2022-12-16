@@ -45,6 +45,25 @@ function GM_addStyle(/* String */ styles) {
 };
 """
 
+const val GM_addElement =
+    """
+function GM_addElement(parent_node, tag_name, attributes) {
+	const element = document.createElement(tag_name);
+	for (const [key, value] of Object.entries(attributes)) {
+		element.setAttribute(key, value);
+	};
+	if (parent_node === undefined) {
+		document.documentElement.appendChild(element);
+	} else {
+		parent_node.appendChild(element);
+	};
+};
+
+function GM_addElement(tag_name, attributes) {
+	GM_addElement(document.head || document.body, tag_name, attributes);
+};
+"""
+
 fun encodeScript(script: Script): String? {
   var code = script.code
   if (script.encoded) {
@@ -60,12 +79,32 @@ fun encodeScript(script: Script): String? {
   when (script.runAt) {
     RunAt.START -> {}
     RunAt.END -> code = """document.addEventListener("DOMContenLoaded",(_e)=>{${code})};"""
-    RunAt.IDLE -> code = """window.onload=(_e)=>{setTimeout(()=>{${code}},20)};"""
+    RunAt.IDLE -> code = """window.onload=(_e)=>{setTimeout(()=>{${code}},10)};"""
+  }
+
+  val imports =
+      script.require
+          .map {
+            if (it != "") {
+              """await import("${it}")"""
+            } else {
+              it
+            }
+          }
+          .joinToString(separator = ";")
+  if (imports != "") {
+    code = """(async ()=>{${imports};${code}})();"""
   }
 
   script.grant.forEach {
-    when (it) {
+    val function = it
+    when (function) {
       "GM_addStyle" -> code = GM_addStyle + code
+      "GM_addElement" -> code = GM_addElement + code
+      else ->
+          code =
+              """function ${function}(...args) {console.error("${function} is not implemented in ChromeXt yet, called with", args)};""" +
+                  code
     }
   }
 
