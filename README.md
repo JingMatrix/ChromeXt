@@ -30,7 +30,8 @@ You can try the following implements of it, depending on your Android version or
 [EdXposed](https://github.com/ElderDrivers/EdXposed), [TaiChi](https://github.com/taichi-framework/TaiChi),
 [VirtualXposed](https://github.com/android-hacker/VirtualXposed), [Dreamland](https://github.com/canyie/Dreamland).
 
-Pick up the latest built APK from [Action](https://github.com/JingMatrix/ChromeXt/actions/workflows/android.yml) and install it.
+Pick up the latest built APK from my repo's [GitHub Action](https://github.com/JingMatrix/ChromeXt/actions/workflows/android.yml) and install it.
+The author upload releases to [Xposed-Modules-Repo](https://github.com/Xposed-Modules-Repo/org.matrix.chromext/releases) when needed, but not that frequently.
 You can then install UserScripts from popular sources: any URL that ends with `.user.js`.
 
 ### Supported API
