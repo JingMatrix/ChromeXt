@@ -186,7 +186,7 @@ class UserScriptProxy(ctx: Context) {
       val script = it
       it.match.forEach {
         if (urlMatch(it, url)) {
-          Log.d("${script.id} injected")
+          Log.i("${script.id} injected")
           evaluateJavaScript(script)
         }
       }
@@ -305,7 +305,7 @@ class UserScriptProxy(ctx: Context) {
   fun updateTabDelegator(delegator: Any): Boolean {
     if (delegator::class.qualifiedName == tabWebContentsDelegateAndroidImpl!!.getName()) {
       if (tabDelegator != delegator) {
-        Log.i("tabDelegator updated")
+        Log.d("tabDelegator updated")
         tabDelegator = delegator
       }
       return true

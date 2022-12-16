@@ -15,9 +15,14 @@ fun urlMatch(match: String, url: String): Boolean {
 
   if ("://" in pattern) {
     pattern = pattern.replace(".", "\\.")
-    pattern = pattern.replace("*", "[\\w\\-]*?")
+    pattern = pattern.replace("*", "\\S*")
+    pattern = pattern.replace("\\S*\\.", "\\S*")
+
+    // pattern = pattern.replace(".", "\\.")
+    // pattern = pattern.replace("*", "[\\w\\-]*?")
     // Recover those *. killed by replacements
-    pattern = pattern.replace("[\\w\\-]*?\\.", "[\\w\\-\\.]*?")
+    // pattern = pattern.replace("[\\w\\-]*?\\.", "[\\w\\-\\.]*?")
+
     Log.d("Java regex matching ${pattern} against ${url}: ${Regex(pattern).matches(url)}")
     return Regex(pattern).matches(url)
   } else {
