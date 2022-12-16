@@ -20,22 +20,22 @@ and modify it in the `SharedPreferences` of Chrome at `/data/data/com.android.ch
 
 ## Usage
 
-Pick up the lastest built APK from [Action](https://github.com/JingMatrix/ChromeXt/actions/workflows/android.yml) and install it.
-You can then install UserScripts from popular soucres: any URL that ends with `.user.js`.
+Pick up the latest built APK from [Action](https://github.com/JingMatrix/ChromeXt/actions/workflows/android.yml) and install it.
+You can then install UserScripts from popular sources: any URL that ends with `.user.js`.
 Currently, ChromeXt supports `@match`, `@run-at` and `@grant GM_addStyle` since they are everything the author needs to perform all sort of tasks.
 
-To manage scripts installed by `ChromeXt`, here is a simple [front-end](https://jingmatrix.github.io/ChromeXt/).
+To manage scripts installed by `ChromeXt`, here is a simple [front end](https://jingmatrix.github.io/ChromeXt/).
 
 ## Bonus
 
 ### Solution of system gesture conflicts
 
 To enable forward gesture in chrome, with the help of this module,
-one only need to disble the right back gesture by
+one only needs to disable the right back gesture by
 ```sh
 adb shell settings put secure back_gesture_inset_scale_right -1
 ```
 
 ## Development Plans
 
-- [ ] Improve front-end
+- [ ] Improve front end
