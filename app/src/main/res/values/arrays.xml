@@ -2,5 +2,8 @@
 <resources>
     <string-array name="xposedscope">
     <item>com.android.chrome</item>
+    <item>com.chrome.beta</item>
+    <item>com.chrome.dev</item>
+    <!-- <item>com.chrome.canary</item> -->
     </string-array>
 </resources>
