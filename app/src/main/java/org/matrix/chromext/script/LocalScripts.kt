@@ -3,11 +3,28 @@ package org.matrix.chromext.script
 const val promptInstallUserScript: String =
     """
 setTimeout(() => {
-	let install = confirm("Allow ChromeXt to intall / update this userscript?");
-	if (install) {
+	let old_script = "";
+	function installScript() {
 		let script = document.querySelector("body > pre").innerHTML.replaceAll("&amp;", "&").replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&quot;", "\"");
-		console.debug(JSON.stringify({"action": "installScript", "payload": script}));
-	}
+		if (script != old_script) {
+			old_script = script;
+			let install = confirm("Allow ChromeXt to install / update this userscript?");
+			if (install) { 
+				console.debug(JSON.stringify({"action": "installScript", "payload": script}));
+			}
+		}
+	};
+	document.body.setAttribute("contenteditable", true);
+	installScript();
+	let asked = false;
+	addEventListener("contextmenu", (e) => {
+	    addEventListener("click", (_event) => {
+			if (!asked) {
+				setTimeout(()=>{asked=false;installScript();}, 500);
+				asked = true;
+			}
+		}, {once: true});
+	});
 }, 100)
 """
 
