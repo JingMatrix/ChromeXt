@@ -51,6 +51,19 @@ Honestly, users can implement most other APIs in their UserScripts.
 
 To manage scripts installed by `ChromeXt`, here is a simple [front end](https://jingmatrix.github.io/ChromeXt/).
 
+### Limitations
+
+A valid UserScript would fail if the following two conditions hold _at the same time_:
+
+1. The matched website has disabled `script: 'unsafe-eval';` by [Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP),
+2. The script size is nearly 2M, or it escapes \` with backslash.
+
+Please note that one can, of course, use \` normally. 
+To deal with this extremely rare case, one should
+```
+use multiple scripts of normal sizes instead of a giant script, and avoid using \` in the code.
+```
+
 ## Bonus
 
 ### Solution of system gesture conflicts

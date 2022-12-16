@@ -67,6 +67,7 @@ class UserScriptProxy(ctx: Context) {
     // ! Note: GURL has limited length:
     // const size_t kMaxURLChars = 2 * 1024 * 1024; in chromium/src/ur/url_constants.cc
     // const uint32 kMaxURLChars = 2097152; in chromium/src/url/mojom/url.mojom
+    const val kMaxURLChars = 2097152
 
     // Get TabImpl field in
     // org/chromium/chrome/browser/tab/TabWebContentsDelegateAndroidImpl.smali
@@ -218,7 +219,7 @@ class UserScriptProxy(ctx: Context) {
 
   fun evaluateJavaScript(script: String) {
     // Encode as Url makes it easier to copy and paste for debugging
-    if (script.length > 200000) {
+    if (script.length > kMaxURLChars - 1000) {
       val alphabet: List<Char> = ('a'..'z') + ('A'..'Z')
       val randomString: String = List(14) { alphabet.random() }.joinToString("")
       loadUrl("javascript: void(globalThis.${randomString} = '');")

@@ -71,11 +71,16 @@ fun encodeScript(script: Script): String? {
     return null
   }
 
-  // Encode source code by simple replacement
-  val alphabet: List<Char> = ('a'..'z') + ('A'..'Z')
-  val backtrick: String = List(16) { alphabet.random() }.joinToString("")
-  code = code.replace("`", backtrick)
-  code = """Function(ChromeXt_decode(`${code}`))();"""
+  val shouldWrap: Boolean = code.contains("\\`")
+
+  var backtrick = ""
+  if (shouldWrap) {
+    // Encode source code by simple replacement
+    val alphabet: List<Char> = ('a'..'z') + ('A'..'Z')
+    backtrick = List(16) { alphabet.random() }.joinToString("")
+    code = code.replace("`", backtrick)
+    code = """Function(ChromeXt_decode(`${code}`))();"""
+  }
 
   when (script.runAt) {
     RunAt.START -> {}
@@ -109,7 +114,9 @@ fun encodeScript(script: Script): String? {
     }
   }
 
-  // Add decode function, and it finally contains only three backtricks in total
-  code = """function ChromeXt_decode(src) {return src.replaceAll("${backtrick}", "`");};""" + code
+  if (shouldWrap) {
+    // Add decode function, and it finally contains only three backtricks in total
+    code = """function ChromeXt_decode(src) {return src.replaceAll("${backtrick}", "`");};""" + code
+  }
   return code
 }
