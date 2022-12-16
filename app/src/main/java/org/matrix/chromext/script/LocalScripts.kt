@@ -5,7 +5,7 @@ const val promptInstallUserScript: String =
 setTimeout(() => {
 	let old_script = "";
 	function installScript() {
-		let script = document.querySelector("body > pre").innerHTML.replaceAll("&amp;", "&").replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&quot;", "\"");
+		let script = document.querySelector("body > pre").innerText;
 		if (script != old_script) {
 			old_script = script;
 			let install = confirm("Allow ChromeXt to install / update this userscript?");
@@ -14,13 +14,14 @@ setTimeout(() => {
 			}
 		}
 	};
-	document.body.setAttribute("contenteditable", true);
+	document.querySelector("body > pre").setAttribute("contenteditable", true);
 	installScript();
 	let asked = false;
 	addEventListener("contextmenu", (e) => {
 	    addEventListener("click", (_event) => {
 			if (!asked) {
-				setTimeout(()=>{asked=false;installScript();}, 500);
+				event.preventDefault();
+				setTimeout(()=>{asked=false;installScript();}, 100);
 				asked = true;
 			}
 		}, {once: true});
