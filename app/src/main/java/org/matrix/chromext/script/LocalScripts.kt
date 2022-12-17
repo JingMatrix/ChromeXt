@@ -31,14 +31,13 @@ setTimeout(() => {
 
 const val GM_addStyle =
     """
-function GM_addStyle(/* String */ styles) {
+function GM_addStyle(styles) {
 	const oStyle = document.createElement("style");
 	oStyle.setAttribute("type", "text/css");
 	oStyle.appendChild(document.createTextNode(styles));
 
-	const head = document.getElementsByTagName("head")[0];
+	const head = document.querySelector("head");
 	if (head === undefined) {
-		// no head yet, stick it wherever
 		document.documentElement.appendChild(oStyle);
 	} else {
 		head.appendChild(oStyle);
@@ -84,8 +83,8 @@ fun encodeScript(script: Script): String? {
 
   when (script.runAt) {
     RunAt.START -> {}
-    RunAt.END -> code = """document.addEventListener("DOMContenLoaded",(_e)=>{${code})};"""
-    RunAt.IDLE -> code = """window.onload=(_e)=>{setTimeout(()=>{${code}},10)};"""
+    RunAt.END -> code = """document.addEventListener("DOMContentLoaded",()=>{${code}});"""
+    RunAt.IDLE -> code = """window.onload=()=>{setTimeout(()=>{${code}},1)};"""
   }
 
   val imports =
