@@ -1,34 +1,5 @@
 package org.matrix.chromext.script
 
-const val promptInstallUserScript: String =
-    """
-setTimeout(() => {
-	let old_script = "";
-	function installScript() {
-		let script = document.querySelector("body > pre").innerText;
-		if (script != old_script) {
-			old_script = script;
-			let install = confirm("Allow ChromeXt to install / update this userscript?");
-			if (install) { 
-				console.debug(JSON.stringify({"action": "installScript", "payload": script}));
-			}
-		}
-	};
-	document.querySelector("body > pre").setAttribute("contenteditable", true);
-	installScript();
-	let asked = false;
-	addEventListener("contextmenu", (e) => {
-	    addEventListener("click", (_event) => {
-			if (!asked) {
-				event.preventDefault();
-				setTimeout(()=>{asked=false;installScript();}, 100);
-				asked = true;
-			}
-		}, {once: true});
-	});
-}, 100)
-"""
-
 const val GM_addStyle =
     """
 function GM_addStyle(styles) {
@@ -50,7 +21,11 @@ const val GM_addElement =
 function GM_addElement(parent_node, tag_name, attributes) {
 	const element = document.createElement(tag_name);
 	for (const [key, value] of Object.entries(attributes)) {
-		element.setAttribute(key, value);
+		if (key != "textContent") {
+			element.setAttribute(key, value);
+		} else {
+			element.textContent = value;
+		};
 	};
 	if (parent_node === undefined) {
 		document.documentElement.appendChild(element);
@@ -84,7 +59,7 @@ fun encodeScript(script: Script): String? {
   when (script.runAt) {
     RunAt.START -> {}
     RunAt.END -> code = """document.addEventListener("DOMContentLoaded",()=>{${code}});"""
-    RunAt.IDLE -> code = """window.onload=()=>{setTimeout(()=>{${code}},1)};"""
+    RunAt.IDLE -> code = """window.onload=()=>{${code}};"""
   }
 
   val imports =
@@ -119,3 +94,74 @@ fun encodeScript(script: Script): String? {
   }
   return code
 }
+
+const val promptInstallUserScript: String =
+    """
+window.onload=()=>{
+	const js = document.createElement("script");
+	const meta = document.createElement("meta");
+	const style = document.createElement("style");
+	js.setAttribute("type", "module");
+	js.textContent = "import {highlightElement} from 'https://unpkg.com/@speed-highlight/core/dist/index.js';highlightElement(document.querySelector('body > pre'), 'js');";
+	style.setAttribute("type", "text/css");
+	meta.setAttribute("name", "viewport");
+	meta.setAttribute("content", "width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no");
+	style.textContent = `
+	@import url('https://unpkg.com/@speed-highlight/core/dist/themes/default.css');
+	body {
+		margin: 0;
+	}
+	[class*="shj-lang-"] {
+		border-radius: 0;
+		color: #abb2bf;
+		background: #161b22;
+		font: 1em monospace;
+		padding: 0;
+		margin: 0;
+		width: 
+	}
+	[class*="shj-lang-"]:before {color: #6f9aff}
+	.shj-syn-deleted,
+	.shj-syn-err,
+	.shj-syn-var {color: #e06c75}
+	.shj-syn-section,
+	.shj-syn-oper,
+	.shj-syn-kwd {color: #c678dd}
+	.shj-syn-class {color: #e5c07b}
+	.shj-numbers,
+	.shj-syn-cmnt {color: #76839a}
+	.shj-syn-insert {color: #98c379}
+	.shj-syn-type {color: #56b6c2}
+	.shj-syn-num,
+	.shj-syn-bool {color: #d19a66}
+	.shj-syn-str,
+	.shj-syn-func {color: #61afef}
+	`;
+	document.head.appendChild(meta);
+	document.head.appendChild(style);
+	document.body.appendChild(js);
+	let old_script = "";
+	function installScript() {
+		let script = document.querySelector("body > pre").innerText;
+		if (script != old_script) {
+			old_script = script;
+			let install = confirm("Allow ChromeXt to install / update this userscript?");
+			if (install) {
+				console.debug(JSON.stringify({"action": "installScript", "payload": script}));
+			}
+		}
+	};
+	document.querySelector("body > pre").setAttribute("contenteditable", true);
+	installScript();
+	let asked = false;
+	addEventListener("contextmenu", () => {
+		addEventListener("click", (event) => {
+			if (!asked) {
+				event.preventDefault();
+				setTimeout(()=>{asked=false;installScript();}, 100);
+				asked = true;
+			}
+		}, {once: true});
+	});
+};
+"""

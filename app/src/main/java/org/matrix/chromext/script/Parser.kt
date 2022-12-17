@@ -43,7 +43,7 @@ fun parseScript(input: String): Script? {
         "match" -> script.match.add(value)
         "include" -> script.match.add(value)
         "grant" ->
-            if (value.startsWith("GM_")) {
+            if (value != "none") {
               script.grant.add(value)
             }
         "exclude" -> script.exclude.add(value)
