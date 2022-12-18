@@ -4,12 +4,12 @@ Add UserScript support to Chrome using Xposed framework
 
 ##  How it works?
 
-We hook a `onUpdateUrl` function in [ChromeHook.kt](app/src/main/java/org/matrix/chromext/hook/ChromeHook.kt),
+We hook a `onUpdateUrl` function in [UserScript.kt](app/src/main/java/org/matrix/chromext/hook/UserScript.kt),
 add URL comparison there and evaluate JavaScript using the `javascript:` scheme.
 
 ### Adapt to your Chrome version
 
-We pay our main efforts to support the latest stable of version of Android Chrome.
+We pay our main efforts to support the latest stable version of Android Chrome.
 And usually the `beta` or `dev` versions are supported as well, but not guaranteed.
 
 Recently, the author has tested `ChromeXt` with the latest `Android Chrome 108.0.5359.128`, and it works well.
@@ -51,11 +51,16 @@ Honestly, users can implement most other APIs in their UserScripts.
 
 To manage scripts installed by `ChromeXt`, here is a simple [front end](https://jingmatrix.github.io/ChromeXt/).
 
+### Edit scripts before installing them
+
+If you cancel the prompt to install a new UserScript, you can then edit it directly in Chrome.
+To commit your modifications, long press on some text and follow with a click somewhere, the installation prompt should appear again.
+
 ### Limitations
 
 A valid UserScript would fail if the following two conditions hold _at the same time_:
 
-1. The matched website has disabled `script: 'unsafe-eval';` by [Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP),
+1. The matched website has disabled `script: 'unsafe-eval';` by [Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP);
 2. The script size is nearly 2M, or it escapes \` with backslash.
 
 Please note that one can, of course, use \` normally. 
