@@ -49,7 +49,7 @@ Honestly, users can implement most other APIs in their UserScripts.
 
 ### UserScripts manager front end
 
-To manage scripts installed by `ChromeXt`, here is a simple [front end](https://jingmatrix.github.io/ChromeXt/).
+To manage scripts installed by `ChromeXt`, here are a simple front end hosted on [github.io](https://jingmatrix.github.io/ChromeXt/) and two mirrors of it (in case that you have connection issues): [onrender.com](https://jianyu-ma.onrender.com/ChromeXt/), [netlify.app](https://jianyu-ma.netlify.app/ChromeXt/).
 
 ### Edit scripts before installing them
 
@@ -85,7 +85,7 @@ Before you submit your pull-requests, please ensure that the command
 `./gradlew build` or `gradlew.bat build` produces no warnings and no errors.
 
 Here are corresponding files you might want / need to change:
-1. Front end: [index.html](index.html)
+1. Front end: [ChromeXt.vue](https://github.com/JingMatrix/viteblog/tree/master/components/ChromeXt.vue)
 2. Tampermonkey API: [LocalScripts.kt](app/src/main/java/org/matrix/chromext/script/LocalScripts.kt)
 
 ## Development plans
