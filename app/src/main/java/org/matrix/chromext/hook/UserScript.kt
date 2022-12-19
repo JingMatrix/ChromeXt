@@ -1,6 +1,7 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
+import android.net.Uri
 import com.github.kyuubiran.ezxhelper.utils.Log
 import com.github.kyuubiran.ezxhelper.utils.findMethod
 import com.github.kyuubiran.ezxhelper.utils.hookAfter
@@ -17,9 +18,13 @@ object UserScriptHook : BaseHook() {
         .hookAfter {
           userScriptProxy.updateTabDelegator(it.thisObject)
           val url = userScriptProxy.parseUrl(it.args[0])!!
+          var downloadedScript = false
+          if (url.startsWith("content://media/external/downloads/")) {
+            downloadedScript = ctx.getContentResolver().getType(Uri.parse(url)) == "text/javascript"
+          }
           if (url.endsWith("/ChromeXt/")) {
             userScriptProxy.evaluateJavaScript("ChromeXt=console.debug;")
-          } else if (url.endsWith(".user.js")) {
+          } else if (url.endsWith(".user.js") || downloadedScript) {
             userScriptProxy.evaluateJavaScript(promptInstallUserScript)
           } else {
             userScriptProxy.didUpdateUrl(url)

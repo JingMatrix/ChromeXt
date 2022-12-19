@@ -32,7 +32,12 @@ You can try the following implements of it, depending on your Android version or
 
 Pick up the latest built APK from my repo's [GitHub Action](https://github.com/JingMatrix/ChromeXt/actions/workflows/android.yml) and install it.
 The author upload releases to [Xposed-Modules-Repo](https://github.com/Xposed-Modules-Repo/org.matrix.chromext/releases) when needed, but not that frequently.
-You can then install UserScripts from popular sources: any URL that ends with `.user.js`.
+
+You can then install UserScripts from popular sources: URLs that ends with `.user.js`.
+However, this fails for scripts from some domains like `raw.githubusercontent.com`.
+For them, please download those scripts using the download button on the top of Chrome's three dot menu.
+And then if you open your downloaded scripts in Chrome, the installation prompt should show up again.
+
 
 ### Supported API
 
