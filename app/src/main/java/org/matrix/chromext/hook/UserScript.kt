@@ -20,7 +20,10 @@ object UserScriptHook : BaseHook() {
           val url = userScriptProxy.parseUrl(it.args[0])!!
           var downloadedScript = false
           if (url.startsWith("content://media/external/downloads/")) {
-            downloadedScript = ctx.getContentResolver().getType(Uri.parse(url)) == "text/javascript"
+            val fileType = ctx.getContentResolver().getType(Uri.parse(url))
+            if (fileType != null && fileType.endsWith("javascript")) {
+              downloadedScript = true
+            }
           }
           if (url.endsWith("/ChromeXt/")) {
             userScriptProxy.evaluateJavaScript("ChromeXt=console.debug;")
