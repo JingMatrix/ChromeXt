@@ -19,7 +19,7 @@ object UserScriptHook : BaseHook() {
           userScriptProxy.updateTabDelegator(it.thisObject)
           val url = userScriptProxy.parseUrl(it.args[0])!!
           var downloadedScript = false
-          if (url.startsWith("content://media/external/downloads/")) {
+          if (url.startsWith("content://media/external/")) {
             val fileType = ctx.getContentResolver().getType(Uri.parse(url))
             if (fileType != null && fileType.endsWith("javascript")) {
               downloadedScript = true

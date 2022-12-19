@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">ChromeXt</string>
+    <string name="view_in_chrome">Open in Chrome</string>
     <string name="xposed_desc">Add Userscript support for chrome through LSPosed</string>
 </resources>

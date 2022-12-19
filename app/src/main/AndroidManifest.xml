@@ -17,7 +17,32 @@
         <!-- xposed-scope here -->
         <meta-data
             android:name="xposedscope"
-            android:resource="@array/xposedscope" />
+			android:resource="@array/xposedscope" />
+		<activity android:name=".OpenInChrome"
+			android:label="@string/view_in_chrome"
+			android:theme="@android:style/Theme.NoDisplay"
+			android:exported="true">
+			 <intent-filter>
+				<action android:name="android.intent.action.VIEW" />
+				<category android:name="android.intent.category.DEFAULT" />
+				<data android:mimeType="application/javascript" android:scheme="content" />
+			</intent-filter>
+			 <intent-filter>
+				<action android:name="android.intent.action.VIEW" />
+				<category android:name="android.intent.category.DEFAULT" />
+				<data android:mimeType="text/javascript" android:scheme="content" />
+			</intent-filter>
+			 <intent-filter>
+				<action android:name="android.intent.action.VIEW" />
+				<category android:name="android.intent.category.DEFAULT" />
+				<data android:mimeType="text/html" android:scheme="content" />
+			</intent-filter>
+			<intent-filter>
+				<action android:name="android.intent.action.SEND" />
+				<category android:name="android.intent.category.DEFAULT" />
+				<data android:mimeType="text/*" />
+			</intent-filter>
+		</activity>
     </application>
 
 </manifest>
