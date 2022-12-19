@@ -47,7 +47,7 @@ Currently, ChromeXt supports only the following APIs since they are everything t
 2. @match (must present, otherwise the script is considered as invalid)
 3. @include = @match, @exclude
 4. @run-at: document-start, document-end, document-idle (the default and fallback value)
-5. @grant GM_addStyle, GM_addElement
+5. @grant GM_addStyle, GM_addElement, unsafeWindow (= window)
 6. @require
 
 Honestly, users can implement most other APIs in their UserScripts.

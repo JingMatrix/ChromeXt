@@ -78,9 +78,22 @@ fun encodeScript(script: Script): String? {
 
   script.grant.forEach {
     val function = it
+    if (function == "") {
+      return@forEach
+    }
     when (function) {
       "GM_addStyle" -> code = GM_addStyle + code
       "GM_addElement" -> code = GM_addElement + code
+      "unsafeWindow" -> code = "const unsafeWindow = window;" + code
+      "GM_log" -> code = "const GM_log = console.log.bind(console);" + code
+      "GM_deleteValue" ->
+          code = "const GM_deleteValue = localStorage.removeItem.bind(localStorage);" + code
+      "GM_setValue" -> code = "const GM_setValue = localStorage.setItem.bind(localStorage);" + code
+      "GM_getValue" -> code = "const GM_getValue = localStorage.getItem.bind(localStorage);" + code
+      "GM_listValues" ->
+          code =
+              "const GM_listValues = ()=> [...Array(localStorage.length).keys()].map(x=>localStorage.key(x));" +
+                  code
       else ->
           code =
               """function ${function}(...args) {console.error("${function} is not implemented in ChromeXt yet, called with", args)};""" +
