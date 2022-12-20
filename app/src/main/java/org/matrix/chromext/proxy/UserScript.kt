@@ -248,6 +248,10 @@ class UserScriptProxy(ctx: Context) {
     return null
   }
 
+  private fun parseArray(str: String): List<String> {
+    return str.removeSurrounding("[\"", "\"]").split("\",\"").map { it.replace("\\", "") }
+  }
+
   fun scriptManager(action: String, payload: String): String? {
     var callback: String? = null
     when (action) {
@@ -266,7 +270,7 @@ class UserScriptProxy(ctx: Context) {
       }
       "getScriptById" -> {
         runCatching {
-              val ids = payload.drop(1).dropLast(1).split(",").map { it.drop(1).dropLast(1) }
+              val ids = parseArray(payload)
               val result = scriptDao!!.getScriptById(ids).map { it.code.replace("'", "\\'") }
               evaluateJavaScript("console.log(['${result.joinToString(separator = "','")}'])")
             }
@@ -275,8 +279,8 @@ class UserScriptProxy(ctx: Context) {
       "getIdByRunAt" -> {
         runCatching {
               val runAts =
-                  payload.drop(1).dropLast(1).split(",").map {
-                    when (it.drop(1).dropLast(1)) {
+                  parseArray(payload).map {
+                    when (it) {
                       "document-start" -> RunAt.START
                       "document-end" -> RunAt.END
                       "document-idle" -> RunAt.IDLE
@@ -290,7 +294,7 @@ class UserScriptProxy(ctx: Context) {
       }
       "deleteScriptById" -> {
         runCatching {
-              val ids = payload.drop(1).dropLast(1).split(",").map { it.drop(1).dropLast(1) }
+              val ids = parseArray(payload)
               scriptDao!!.getAll().forEach {
                 if (ids.contains(it.id)) {
                   if (scriptDao!!.delete(it) == 1) {
