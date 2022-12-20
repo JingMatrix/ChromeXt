@@ -2,7 +2,7 @@ package org.matrix.chromext.hook
 
 import android.content.Context
 import android.content.Intent
-import com.github.kyuubiran.ezxhelper.utils.Log
+import android.net.Uri
 import com.github.kyuubiran.ezxhelper.utils.findMethod
 import com.github.kyuubiran.ezxhelper.utils.hookBefore
 
@@ -14,7 +14,9 @@ object IntentHook : BaseHook() {
         .hookBefore {
           val intent = it.args[0] as Intent
           if (intent.hasExtra("ChromeXt")) {
-            Log.i(intent.getStringExtra("ChromeXt") as String)
+            val url = intent.getStringExtra("ChromeXt") as String
+            intent.setAction(Intent.ACTION_VIEW)
+            intent.setData(Uri.parse(url))
           }
         }
   }

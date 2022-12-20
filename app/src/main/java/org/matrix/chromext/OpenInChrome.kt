@@ -11,7 +11,19 @@ private const val TAG = "ChromeXt"
 class OpenInChrome : Activity() {
 
   fun convertToFileUrl(url: String): String? {
-    return null
+    if (url.startsWith("content://")) {
+      var index = -1
+      val pattern = arrayOf("/storage/emulated/", "/data/data/", "/sdcard/")
+      pattern.forEach {
+        if (url.contains(it)) {
+          index = url.indexOf(it, 0)
+          return "file://" + url.substring(index)
+        }
+      }
+      return null
+    } else {
+      return null
+    }
   }
 
   fun invokeChromeTabbed(url: String) {
