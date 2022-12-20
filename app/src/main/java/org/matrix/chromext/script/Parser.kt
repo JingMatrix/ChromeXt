@@ -38,7 +38,7 @@ fun parseScript(input: String): Script? {
       val key = metaMatchGroup.get("key")?.value as String
       val value = metaMatchGroup.get("value")?.value as String
       when (key) {
-        "name" -> script.name = value
+        "name" -> script.name = value.replace(":", "")
         "namespace" -> script.namespace = value
         "match" -> script.match.add(value)
         "include" -> script.match.add(value)
@@ -62,7 +62,7 @@ fun parseScript(input: String): Script? {
     return null
   } else {
     return Script(
-        script.namespace + ":" + script.name,
+        (script.namespace + ":" + script.name).replace("\\", ""),
         script.match.toTypedArray(),
         script.grant.toTypedArray(),
         script.exclude.toTypedArray(),

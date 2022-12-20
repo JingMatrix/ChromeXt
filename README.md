@@ -43,8 +43,8 @@ And then if you open your downloaded scripts in Chrome, the installation prompt 
 
 Currently, ChromeXt supports only the following APIs since they are everything the author needs to perform all sort of tasks.
 
-1. @name, @namespace
-2. @match (must present, otherwise the script is considered as invalid)
+1. @name (colons and backslashes not allowed), @namespace (backslashes not allowed)
+2. @match (must present and conform to the [Chrome Standard](https://developer.chrome.com/docs/extensions/mv2/match_patterns/))
 3. @include = @match, @exclude
 4. @run-at: document-start, document-end, document-idle (the default and fallback value)
 5. @grant GM_addStyle, GM_addElement, unsafeWindow (= window)
