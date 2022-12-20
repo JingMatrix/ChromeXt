@@ -11,6 +11,7 @@ import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import org.matrix.chromext.hook.BaseHook
 import org.matrix.chromext.hook.GestureNavHook
+import org.matrix.chromext.hook.IntentHook
 import org.matrix.chromext.hook.UserScriptHook
 
 private const val PACKAGE_CHROME = "com.android.chrome"
@@ -35,7 +36,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit /* Optional */ {
           }
           .hookAfter {
             val ctx = (it.args[0] as Context).createContextForSplit("chrome")
-            initHooks(ctx, lpparam.packageName, UserScriptHook, GestureNavHook)
+            initHooks(ctx, lpparam.packageName, UserScriptHook, GestureNavHook, IntentHook)
           }
     }
   }
