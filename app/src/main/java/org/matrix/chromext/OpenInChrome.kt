@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.OpenableColumns
+import android.util.Log
 
 private const val TAG = "ChromeXt"
 
@@ -40,10 +41,20 @@ class OpenInChrome : Activity() {
     } else if (intent.action == Intent.ACTION_SEND) {
       var text = intent.getStringExtra(Intent.EXTRA_TEXT)
       if (text != null && intent.getType() == "text/plain") {
+        text = text.trim()
+        if (text.contains("\n ")) {
+          val shareLink = text.split("\n ")[1]
+          if (shareLink.contains("://")) {
+            text = shareLink
+          }
+        }
+        Log.d(TAG, "Get share text: ${text}")
         if (text.startsWith("file://") || text.startsWith("data:")) {
           invokeChromeTabbed(text)
-        } else if (!text.contains("://")) {
-          text = "https://google.com/search?q=${text}"
+        } else {
+          if (!text.contains("://")) {
+            text = "https://google.com/search?q=${text}"
+          }
           startActivity(
               Intent().apply {
                 action = Intent.ACTION_VIEW
