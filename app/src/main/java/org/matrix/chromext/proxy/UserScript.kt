@@ -141,6 +141,7 @@ class UserScriptProxy(ctx: Context) {
     //     ctx.getClassLoader()
     //         .loadClass("org.chromium.content.browser.webcontents.WebContentsObserverProxy")
     mUrl = loadUrlParams!!.getDeclaredField("a")
+    // mVerbatimHeaders = loadUrlParams!!.getDeclaredField("h")
     mTab = tabWebContentsDelegateAndroidImpl!!.getDeclaredField(TAB_FIELD)
     mSpec = gURL!!.getDeclaredField(SPEC_FIELD)
   }
@@ -309,14 +310,15 @@ class UserScriptProxy(ctx: Context) {
     return callback
   }
 
-  fun changeUrl(packed: Any, url: String): Boolean {
-    if (packed::class.qualifiedName == loadUrlParams!!.getName()) {
-      mUrl!!.set(packed, url)
-      return true
-    }
-    Log.e("changeUrl: ${packed::class.qualifiedName} is not ${loadUrlParams!!.getName()}")
-    return false
-  }
+  // fun fixCharset(packed: Any): Boolean {
+  //   if (packed::class.qualifiedName == loadUrlParams!!.getName()) {
+  //     mVerbatimHeaders!!.set(packed, "accept: charset=utf-8,text/javascript")
+  //     // Log.i("Fix Charset for ${mUrl!!.get(packed)}")
+  //     return true
+  //   }
+  //   Log.e("fixCharset: ${packed::class.qualifiedName} is not ${loadUrlParams!!.getName()}")
+  //   return false
+  // }
 
   fun updateTabDelegator(delegator: Any): Boolean {
     if (delegator::class.qualifiedName == tabWebContentsDelegateAndroidImpl!!.getName()) {

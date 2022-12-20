@@ -58,16 +58,16 @@ object UserScriptHook : BaseHook() {
           }
         }
 
-    // findMethod(userScriptProxy.navigationControllerImpl!!) { name == chromeXt.NAVI_LOAD_URL }
-    // public void loadUrl(LoadUrlParams params)
-    // .hookBefore {
-    // We might use it to reserve a page
-    // val url = userScriptProxy.parseUrl(it.args[0])!!
-    // userScriptProxy.updateNavController(it.thisObject)
-    // if (url.startsWith("chrome://xt/")) {
-    //   userScriptProxy.changeUrl(it.args[0], "javascript: ${homepageChromeXt}")
-    // }
-    // }
+    // findMethod(userScriptProxy.navigationControllerImpl!!) { name ==
+    // userScriptProxy.NAVI_LOAD_URL }
+    //     // public void loadUrl(LoadUrlParams params)
+    //     .hookBefore {
+    //       val url = userScriptProxy.parseUrl(it.args[0])!!
+    //       // userScriptProxy.updateNavController(it.thisObject)
+    //       if (url.startsWith("content://")) {
+    //         userScriptProxy.fixCharset(it.args[0])
+    //       }
+    //     }
 
     // findMethod(userScriptProxy.webContentsObserverProxy!!) { name == "didStartLoading" }
     //     // public void didStartLoading(GURL url)

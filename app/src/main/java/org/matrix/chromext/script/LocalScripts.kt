@@ -108,8 +108,18 @@ fun encodeScript(script: Script): String? {
   return code
 }
 
+// The Charset setting is hard-coded inside
+// src/third_party/blink/renderer/core/html/parser/text_document_parser.cc
 const val promptInstallUserScript: String =
     """
+// Object.defineProperties(document, {
+//   characterSet: { value: "UTF-8" },
+// });
+
+// const meta = document.createElement("meta");
+// meta.setAttribute("charset", "utf-8");
+// document.head.appendChild(meta);
+
 let old_script = "";
 let asked = false;
 
