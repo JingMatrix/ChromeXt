@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 
 private const val TAG = "ChromeXt"
 
@@ -12,11 +13,14 @@ class OpenInChrome : Activity() {
 
   fun convertToFileUrl(url: String): String? {
     if (url.startsWith("content://")) {
-      var index = -1
-      val pattern = arrayOf("/storage/emulated/", "/data/data/", "/sdcard/")
+      val pattern =
+          arrayOf(
+              "/storage/emulated/",
+              Environment.getDataDirectory().getPath(),
+              Environment.getExternalStorageDirectory().getPath())
       pattern.forEach {
         if (url.contains(it)) {
-          index = url.indexOf(it, 0)
+          val index = url.indexOf(it, 0)
           return "file://" + url.substring(index)
         }
       }
@@ -53,12 +57,11 @@ class OpenInChrome : Activity() {
     } else if (intent.action == Intent.ACTION_SEND) {
       var text = intent.getStringExtra(Intent.EXTRA_TEXT)
       if (text != null) {
-        if (text.startsWith("file://")) {
+        if (!text.contains("://")) {
+          text = "https://google.com/search?q=${text}"
+        } else if (text.startsWith("file://")) {
           invokeChromeTabbed(text)
         } else {
-          if (!text.contains("://")) {
-            text = "https://google.com/search?q=${text}"
-          }
           startActivity(
               Intent().apply {
                 action = Intent.ACTION_VIEW

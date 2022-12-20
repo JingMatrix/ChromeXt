@@ -96,6 +96,7 @@ Here are corresponding files you might want / need to change:
 ## Development plans
 
 - [x] Improve front end
-- [x] Make it possible to pass intent to Chrome with `file` scheme
+- [x] Make it possible to pass intents to Chrome with `file` scheme
+- [ ] Fix Charset problem in Chrome Custom tab invoked by IntentHandler
 - [ ] Use Chrome Custom Tab to remove the dependency on `Xposed framework`
 - [ ] Support more [Tampermonkey API](https://www.tampermonkey.net/documentation.php)s

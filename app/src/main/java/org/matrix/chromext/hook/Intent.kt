@@ -19,5 +19,17 @@ object IntentHook : BaseHook() {
             intent.setData(Uri.parse(url))
           }
         }
+
+    // // org.chromium.chrome.browser.IntentHandler
+    // findMethod(ctx.getClassLoader().loadClass("ji1")) { name == "z" }
+    // // private static void startActivityForTrustedIntentInternal(Context context, Intent intent,
+    // String componentClassName)
+    //     .hookBefore {
+    //       val intent = it.args[1] as Intent
+    //       if (intent.hasExtra("org.chromium.chrome.browser.customtabs.MEDIA_VIEWER_URL")) {
+    // Log.d(intent.toUri(0))
+    // }
+    //     }
+
   }
 }
