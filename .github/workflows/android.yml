@@ -24,6 +24,9 @@ jobs:
       run: chmod +x gradlew
     - name: Build with Gradle
       run: ./gradlew build
+        
+    - name: Rename signed apk
+      run: mv app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/ChromeXt.apk
 
     - uses: r0adkll/sign-android-release@v1
       name: Sign app APK
@@ -38,10 +41,10 @@ jobs:
     - name: Upload signed APK
       uses: actions/upload-artifact@v3
       with:
-        name: ChromeXt
+        name: ChromeXt.apk
         path: ${{steps.sign_app.outputs.signedReleaseFile}}
 
     - name: Collect signed APK
       uses: actions/download-artifact@v3
       with:
-        name: ChromeXt
+        name: ChromeXt.apk
