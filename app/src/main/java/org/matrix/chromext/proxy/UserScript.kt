@@ -47,14 +47,14 @@ class UserScriptProxy(ctx: Context) {
 
   // Grep Android.Intent.IntentUriNavigationResult to get class
   // org/chromium/components/external_intents/ExternalNavigationHandler.java
-  val EXTERNALNAVIGATIONHANDLER = "GC0"
+  val EXTERNAL_NAVIGATION_HANDLER = "GC0"
 
   // Grep .super Lorg/chromium/components/navigation_interception/InterceptNavigationDelegate
   // to get class org.chromium.components.external_intents.InterceptNavigationDelegateImpl
-  val INTERCEPTNAVIGATIONDELEGATEIMPL = "yi1"
+  val INTERCEPT_NAVIGATION_DELEGATE_IMPL = "yi1"
 
   // Grep (Lorg/chromium/content_public/browser/WebContents;)V
-  // in INTERCEPTNAVIGATIONDELEGATEIMPL to get associateWithWebContents
+  // in INTERCEPT_NAVIGATION_DELEGATE_IMPL to get associateWithWebContents
   val ASSOCIATE_CONTENTS = "a"
 
   companion object {
@@ -133,7 +133,7 @@ class UserScriptProxy(ctx: Context) {
         ctx.getClassLoader()
             .loadClass("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
     // interceptNavigationDelegateImpl =
-    //     ctx.getClassLoader().loadClass(INTERCEPTNAVIGATIONDELEGATEIMPL)
+    //     ctx.getClassLoader().loadClass(INTERCEPT_NAVIGATION_DELEGATE_IMPL)
     // navigationControllerImpl =
     //     ctx.getClassLoader()
     //         .loadClass("org.chromium.content.browser.framehost.NavigationControllerImpl")
