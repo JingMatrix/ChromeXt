@@ -1,11 +1,14 @@
 package org.matrix.chromext.hook
 
+// import com.github.kyuubiran.ezxhelper.utils.Log
 import android.content.Context
 import android.os.Build
 import android.view.Menu
 import com.github.kyuubiran.ezxhelper.utils.findMethod
 import com.github.kyuubiran.ezxhelper.utils.hookAfter
 import com.github.kyuubiran.ezxhelper.utils.hookBefore
+import java.lang.reflect.Method
+import org.matrix.chromext.R
 import org.matrix.chromext.proxy.MenuProxy
 
 object MenuHook : BaseHook() {
@@ -33,6 +36,28 @@ object MenuHook : BaseHook() {
         .hookBefore {
           val menu = it.args[0] as Menu
           proxy.injectLocalMenu(it.thisObject, ctx, menu)
+        }
+
+    findMethod(proxy.preferenceFragmentCompat!!) { name == proxy.ADD_PREFERENCES_FROM_RESOURCE }
+        // public void addPreferencesFromResource(Int preferencesResId)
+        .hookBefore {
+          if (it.thisObject::class.qualifiedName == proxy.developerSettings!!.getName()) {
+            it.args[0] = R.xml.developer_preferences
+          }
+        }
+
+    findMethod(proxy.preferenceFragmentCompat!!) { name == proxy.FIND_PREFERENCE }
+        // public @Nullable T <T extends Preference> findPreference(@NonNull CharSequence key)
+        .hookAfter {
+          if (it.thisObject::class.qualifiedName == proxy.developerSettings!!.getName() &&
+              (it.args[0] as String) == "beta_stable_hint") {
+
+            val refThis = it
+            arrayOf("eruda", "exit").forEach {
+              proxy.setClickListener(
+                  (refThis.method as Method).invoke(refThis.thisObject, it)!!, it)
+            }
+          }
         }
   }
 }
