@@ -48,11 +48,4 @@ dependencies {
 
     // To use Kotlin Symbol Processing (KSP)
     ksp("androidx.room:room-compiler:$room_version")
-
-	val preference_version = "1.2.0"
-
-    // Java language implementation
-    implementation("androidx.preference:preference:$preference_version")
-    // Kotlin
-    implementation("androidx.preference:preference-ktx:$preference_version")
 }
