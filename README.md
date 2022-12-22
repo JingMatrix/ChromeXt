@@ -108,6 +108,9 @@ Here are corresponding files you might want / need to change:
 - [x] Fix encoding problem for Chrome downloaded Javascript files
 - [x] Inject module resource into Chrome
 - [x] Implement developer tools
-- [ ] Use a local version of [eruda](https://github.com/liriliri/eruda)
+- [x] Use local versions of [eruda](https://github.com/liriliri/eruda)
+- [ ] Find elegant way to support Dev Tools for Android 11-
+- [ ] Improve eruda incorporation with Chrome
+- [ ] Add more information in the preference screen
 - [ ] Fix general text document encoding problem for Chrome Custom Tab
 - [ ] Support more [Tampermonkey API](https://www.tampermonkey.net/documentation.php)s
