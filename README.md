@@ -84,6 +84,14 @@ one only needs to disable the right back gesture by
 adb shell settings put secure back_gesture_inset_scale_right -1
 ```
 
+### Dev Tools for developers
+
+Currently, I implement this feature only for Android 11+.
+I might implement it for older Android versions if there are some requests for doing so.
+
+Tap five times on the Chrome version from the Chrome settings, you will see the `Developer options` menu.
+After restarting Chrome, ChromeXt offers you the `Developer tools` page menu.
+
 ## Contribute to this project
 
 Before you submit your pull-requests, please ensure that the command

@@ -17,7 +17,7 @@ found in the LICENSE file.
         android:title="Update Eruda" />
     <Preference
         android:key="exit"
-        android:title="Disable Developer Options" />
+        android:title="Disable developer options" />
     <org.chromium.components.browser_ui.settings.TextMessagePreference
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
