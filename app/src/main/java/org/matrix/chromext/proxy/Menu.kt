@@ -23,7 +23,7 @@ class MenuProxy(ctx: Context) {
   var PREPARE_MENU = "m"
 
   // Use frida to find getAppMenuLayoutId, whose return value is resource id
-  var GET_APPMENU_LAYOUT_ID = "h"
+  val GET_APPMENU_LAYOUT_ID = "h"
 
   // Grep ()Ljava/util/ArrayList to get method getCustomViewBinder
   val GET_CUSTOM_VIEW_BINDERS = "b"
@@ -38,7 +38,7 @@ class MenuProxy(ctx: Context) {
     val DECOR_VIEW_FIELD = "h"
   }
 
-  private var mContext: Field? = null
+  private val mContext: Field? = null
   private var mDecorView: Field? = null
 
   var chromeTabbedActivity: Class<*>? = null
@@ -55,7 +55,7 @@ class MenuProxy(ctx: Context) {
         ctx.getClassLoader().loadClass("org.chromium.chrome.browser.ChromeTabbedActivity")
     appMenuPropertiesDelegateImpl =
         ctx.getClassLoader().loadClass(APP_MENU_PROPERTIES_DELEGATE_IMPL)
-    mContext = appMenuPropertiesDelegateImpl!!.getDeclaredField(CONTEXT_FIELD)
+    // mContext = appMenuPropertiesDelegateImpl!!.getDeclaredField(CONTEXT_FIELD)
     mDecorView = appMenuPropertiesDelegateImpl!!.getDeclaredField(DECOR_VIEW_FIELD)
   }
 
