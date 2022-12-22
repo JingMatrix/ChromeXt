@@ -198,3 +198,26 @@ addEventListener("contextmenu", () => {
 	}, {once: true});
 });
 """
+
+const val eruda =
+    """
+if (typeof globalThis.eruda != "undefined") {
+	if (eruda._isInit) {
+		eruda.hide();
+		eruda.destroy();
+	} else {
+		eruda.init();
+		eruda.show();
+	}
+} else {
+    (async ()=>{
+		await import('//cdn.jsdelivr.net/npm/eruda');
+		if (typeof eruda != "undefined") {
+				eruda.init();
+				eruda.show();
+				globalThis.eruda = eruda;
+			}
+	   }
+	)();
+}
+"""

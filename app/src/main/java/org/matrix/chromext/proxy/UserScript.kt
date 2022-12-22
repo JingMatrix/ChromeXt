@@ -12,6 +12,7 @@ import org.matrix.chromext.script.RunAt
 import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDao
 import org.matrix.chromext.script.encodeScript
+import org.matrix.chromext.script.eruda
 import org.matrix.chromext.script.parseScript
 import org.matrix.chromext.script.urlMatch
 
@@ -360,4 +361,8 @@ class UserScriptProxy(ctx: Context) {
   // fun didStopLoading(url: String) {
   //   invokeScriptAt(RunAt.END, url)
   // }
+
+  fun openDevTools() {
+    evaluateJavaScript(eruda)
+  }
 }

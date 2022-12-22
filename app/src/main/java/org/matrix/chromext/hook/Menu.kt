@@ -2,7 +2,6 @@ package org.matrix.chromext.hook
 
 import android.content.Context
 import android.view.Menu
-import com.github.kyuubiran.ezxhelper.utils.Log
 import com.github.kyuubiran.ezxhelper.utils.findMethod
 import com.github.kyuubiran.ezxhelper.utils.hookAfter
 import com.github.kyuubiran.ezxhelper.utils.hookBefore
@@ -26,7 +25,7 @@ object MenuHook : BaseHook() {
         .hookAfter {
           val id = it.args[0] as Int
           if (id == R.id.developer_tools_id) {
-            Log.i("Dev Tools icon clicked!")
+            UserScriptHook.proxy!!.openDevTools()
           }
         }
 
