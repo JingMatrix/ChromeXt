@@ -199,7 +199,7 @@ addEventListener("contextmenu", () => {
 });
 """
 
-const val eruda =
+const val erudaToggle =
     """
 if (typeof globalThis.eruda != "undefined") {
 	if (eruda._isInit) {
@@ -209,15 +209,5 @@ if (typeof globalThis.eruda != "undefined") {
 		eruda.init();
 		eruda.show();
 	}
-} else {
-    (async ()=>{
-		await import('//cdn.jsdelivr.net/npm/eruda');
-		if (typeof eruda != "undefined") {
-				eruda.init();
-				eruda.show();
-				globalThis.eruda = eruda;
-			}
-	   }
-	)();
 }
 """

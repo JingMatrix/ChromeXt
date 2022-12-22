@@ -27,7 +27,7 @@ object MenuHook : BaseHook() {
           val id = it.args[0] as Int
           if (ctx.getResources().getResourceName(id) ==
               "org.matrix.chromext:id/developer_tools_id") {
-            UserScriptHook.proxy!!.openDevTools()
+            UserScriptHook.proxy!!.openDevTools(ctx)
           }
         }
 
@@ -35,7 +35,7 @@ object MenuHook : BaseHook() {
         // public void prepareMenu(Menu menu, AppMenuHandler handler)
         .hookBefore {
           val menu = it.args[0] as Menu
-          proxy.injectLocalMenu(it.thisObject, ctx, menu)
+          proxy.injectLocalMenu(it.thisObject, menu)
         }
 
     findMethod(proxy.preferenceFragmentCompat!!) { name == proxy.ADD_PREFERENCES_FROM_RESOURCE }
@@ -55,7 +55,7 @@ object MenuHook : BaseHook() {
             val refThis = it
             arrayOf("eruda", "exit").forEach {
               proxy.setClickListener(
-                  (refThis.method as Method).invoke(refThis.thisObject, it)!!, it)
+                  (refThis.method as Method).invoke(refThis.thisObject, it)!!, ctx, it)
             }
           }
         }

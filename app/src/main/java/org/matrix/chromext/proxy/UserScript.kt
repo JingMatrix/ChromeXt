@@ -2,6 +2,7 @@ package org.matrix.chromext.proxy
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.widget.Toast
 import androidx.room.Room
 import com.github.kyuubiran.ezxhelper.utils.Log
 import com.github.kyuubiran.ezxhelper.utils.invokeMethod
@@ -12,7 +13,7 @@ import org.matrix.chromext.script.RunAt
 import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDao
 import org.matrix.chromext.script.encodeScript
-import org.matrix.chromext.script.eruda
+import org.matrix.chromext.script.erudaToggle
 import org.matrix.chromext.script.parseScript
 import org.matrix.chromext.script.urlMatch
 
@@ -77,6 +78,9 @@ class UserScriptProxy(ctx: Context) {
     // Fields of org/chromium/content_public/browser/LoadUrlParams
     // are too many to list here
     // They are in the same order as the source code
+
+    // A variable to avoid redloading eruda
+    var eruda_loaded = false
   }
 
   var tabWebContentsDelegateAndroidImpl: Class<*>? = null
@@ -174,7 +178,11 @@ class UserScriptProxy(ctx: Context) {
         loadUrlParams!!.getDeclaredConstructor(String::class.java).newInstance(url)) {
           name == LOAD_URL
         }
-    Log.d("loadUrl: ${url}")
+    if (url.length < 300) {
+      Log.d("loadUrl: ${url}")
+    } else {
+      Log.d("loadUrl: ${url.substring(0, 99)} ...")
+    }
   }
 
   // private fun naviUrl(url: String) {
@@ -352,6 +360,7 @@ class UserScriptProxy(ctx: Context) {
     if (url.startsWith("https://") || url.startsWith("http://") || url.startsWith("file://")) {
       invokeScript(url)
     }
+    eruda_loaded = false
   }
 
   // fun didStartLoading(url: String) {
@@ -362,7 +371,22 @@ class UserScriptProxy(ctx: Context) {
   //   invokeScriptAt(RunAt.END, url)
   // }
 
-  fun openDevTools() {
-    evaluateJavaScript(eruda)
+  fun openDevTools(ctx: Context) {
+    if (!eruda_loaded) {
+      val sharedPref: SharedPreferences = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
+      val eruda = sharedPref.getString("eruda", "")
+      if (eruda != "") {
+        evaluateJavaScript(eruda!!)
+        evaluateJavaScript(erudaToggle)
+        eruda_loaded = true
+      } else {
+        val text = "Please update Eruda in the Developper options menu"
+        val duration = Toast.LENGTH_SHORT
+        val toast = Toast.makeText(ctx, text, duration)
+        toast.show()
+      }
+    } else {
+      evaluateJavaScript(erudaToggle)
+    }
   }
 }

@@ -1,16 +1,14 @@
 package org.matrix.chromext.proxy
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.View
-import android.view.View.OnClickListener
 import android.widget.PopupMenu
 import java.lang.reflect.Field
 import org.matrix.chromext.R
-
-// import org.matrix.chromext.R
+import org.matrix.chromext.settings.DownloadEruda
+import org.matrix.chromext.settings.ExitDevMode
 
 class MenuProxy(ctx: Context) {
 
@@ -58,12 +56,12 @@ class MenuProxy(ctx: Context) {
 
     // Find field with Landroid/view/View$OnClickListener
     val CLICK_LISTENER_FIELD = "X"
-
-    var sharedPref: SharedPreferences? = null
   }
 
   private val mContext: Field? = null
   private var mDecorView: Field? = null
+
+  var chromeContext: Context? = null
 
   var chromeTabbedActivity: Class<*>? = null
   var appMenuPropertiesDelegateImpl: Class<*>? = null
@@ -76,8 +74,11 @@ class MenuProxy(ctx: Context) {
   var isDeveloper: Boolean = false
 
   init {
-    sharedPref = ctx.getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)
+    val sharedPref =
+        ctx.getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)
     isDeveloper = sharedPref!!.getBoolean("developer", false)
+
+    chromeContext = ctx
 
     preference = ctx.getClassLoader().loadClass("androidx.preference.Preference")
     developerSettings =
@@ -94,25 +95,19 @@ class MenuProxy(ctx: Context) {
     mClickListener!!.setAccessible(true)
   }
 
-  fun injectLocalMenu(obj: Any, ctx: Context, menu: Menu) {
-    val localPopup = PopupMenu(ctx, mDecorView!!.get(obj) as View)
+  fun injectLocalMenu(obj: Any, menu: Menu) {
+    val localPopup = PopupMenu(chromeContext!!, mDecorView!!.get(obj) as View)
     val localInflater: MenuInflater = localPopup.getMenuInflater()
     localInflater.inflate(R.menu.main_menu, menu)
   }
 
-  private object disableDevMode : OnClickListener {
-    override fun onClick(v: View) {
-      with(sharedPref!!.edit()) {
-        putBoolean("developer", false)
-        apply()
-      }
-    }
-  }
-
-  fun setClickListener(obj: Any, pref: String) {
+  fun setClickListener(obj: Any, ctx: Context, pref: String) {
     when (pref) {
       "exit" -> {
-        mClickListener!!.set(obj, disableDevMode)
+        mClickListener!!.set(obj, ExitDevMode(ctx))
+      }
+      "eruda" -> {
+        mClickListener!!.set(obj, DownloadEruda(ctx))
       }
     }
   }
