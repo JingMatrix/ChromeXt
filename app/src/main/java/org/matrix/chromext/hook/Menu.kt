@@ -15,13 +15,13 @@ object MenuHook : BaseHook() {
 
   override fun init(ctx: Context) {
 
-    val menuProxy = MenuProxy(ctx)
+    val proxy = MenuProxy(ctx)
 
-    if (!menuProxy.isDeveloper) {
+    if (!proxy.isDeveloper) {
       return
     }
 
-    findMethod(menuProxy.chromeTabbedActivity!!) { name == menuProxy.MENU_KEYBOARD_ACTION }
+    findMethod(proxy.chromeTabbedActivity!!) { name == proxy.MENU_KEYBOARD_ACTION }
         // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
         .hookAfter {
           val id = it.args[0] as Int
@@ -30,7 +30,7 @@ object MenuHook : BaseHook() {
           }
         }
 
-    findMethod(menuProxy.appMenuPropertiesDelegateImpl!!) { name == menuProxy.PREPARE_MENU }
+    findMethod(proxy.appMenuPropertiesDelegateImpl!!) { name == proxy.PREPARE_MENU }
         // public void prepareMenu(Menu menu, AppMenuHandler handler)
         .hookBefore {
           val menu = it.args[0] as Menu

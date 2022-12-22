@@ -10,14 +10,18 @@ import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.promptInstallUserScript
 
 object UserScriptHook : BaseHook() {
-  override fun init(ctx: Context) {
-    val userScriptProxy = UserScriptProxy(ctx)
 
-    findMethod(userScriptProxy.tabWebContentsDelegateAndroidImpl!!) { name == "onUpdateUrl" }
+  var proxy: UserScriptProxy? = null
+
+  override fun init(ctx: Context) {
+
+    proxy = UserScriptProxy(ctx)
+
+    findMethod(proxy!!.tabWebContentsDelegateAndroidImpl!!) { name == "onUpdateUrl" }
         // public void onUpdateUrl(GURL url)
         .hookAfter {
-          userScriptProxy.updateTabDelegator(it.thisObject)
-          val url = userScriptProxy.parseUrl(it.args[0])!!
+          proxy!!.updateTabDelegator(it.thisObject)
+          val url = proxy!!.parseUrl(it.args[0])!!
           var downloadedScript = false
           if (url.startsWith("content://media/external/")) {
             val fileType = ctx.getContentResolver().getType(Uri.parse(url))
@@ -26,17 +30,15 @@ object UserScriptHook : BaseHook() {
             }
           }
           if (url.endsWith("/ChromeXt/")) {
-            userScriptProxy.evaluateJavaScript("ChromeXt=console.debug;")
+            proxy!!.evaluateJavaScript("ChromeXt=console.debug;")
           } else if (url.endsWith(".user.js") || downloadedScript) {
-            userScriptProxy.evaluateJavaScript(promptInstallUserScript)
+            proxy!!.evaluateJavaScript(promptInstallUserScript)
           } else {
-            userScriptProxy.didUpdateUrl(url)
+            proxy!!.didUpdateUrl(url)
           }
         }
 
-    findMethod(userScriptProxy.tabWebContentsDelegateAndroidImpl!!) {
-          name == "addMessageToConsole"
-        }
+    findMethod(proxy!!.tabWebContentsDelegateAndroidImpl!!) { name == "addMessageToConsole" }
         // public boolean addMessageToConsole(int level, String message, int lineNumber,
         // String sourceId)
         .hookAfter {
@@ -47,9 +49,9 @@ object UserScriptHook : BaseHook() {
                   val data = JSONObject(text)
                   val action = data.getString("action")
                   val payload = data.getString("payload")
-                  val callback = userScriptProxy.scriptManager(action, payload)
+                  val callback = proxy!!.scriptManager(action, payload)
                   if (callback != null) {
-                    userScriptProxy.evaluateJavaScript(callback)
+                    proxy!!.evaluateJavaScript(callback)
                   }
                 }
                 .onFailure { Log.w(it.toString()) }
@@ -58,32 +60,32 @@ object UserScriptHook : BaseHook() {
           }
         }
 
-    // findMethod(userScriptProxy.navigationControllerImpl!!) { name ==
-    // userScriptProxy.NAVI_LOAD_URL }
+    // findMethod(proxy!!.navigationControllerImpl!!) { name ==
+    // proxy!!.NAVI_LOAD_URL }
     //     // public void loadUrl(LoadUrlParams params)
     //     .hookBefore {
-    //       val url = userScriptProxy.parseUrl(it.args[0])!!
-    //       // userScriptProxy.updateNavController(it.thisObject)
+    //       val url = proxy!!.parseUrl(it.args[0])!!
+    //       // proxy!!.updateNavController(it.thisObject)
     //       if (url.startsWith("content://")) {
-    //         userScriptProxy.fixCharset(it.args[0])
+    //         proxy!!.fixCharset(it.args[0])
     //       }
     //     }
 
-    // findMethod(userScriptProxy.webContentsObserverProxy!!) { name == "didStartLoading" }
+    // findMethod(proxy!!.webContentsObserverProxy!!) { name == "didStartLoading" }
     //     // public void didStartLoading(GURL url)
     //     .hookBefore {
-    //       val url = userScriptProxy.parseUrl(it.args[0])!!
-    //       userScriptProxy.didStartLoading(url)
+    //       val url = proxy!!.parseUrl(it.args[0])!!
+    //       proxy!!.didStartLoading(url)
     //     }
 
-    // findMethod(userScriptProxy.webContentsObserverProxy!!) { name == "didStopLoading" }
+    // findMethod(proxy!!.webContentsObserverProxy!!) { name == "didStopLoading" }
     //     // public void didStopLoading(GURL url, boolean isKnownValid)
     //     .hookAfter {
-    //       val url = userScriptProxy.parseUrl(it.args[0])!!
-    //       userScriptProxy.didStopLoading(url)
+    //       val url = proxy!!.parseUrl(it.args[0])!!
+    //       proxy!!.didStopLoading(url)
     //     }
 
-    // findMethod(userScriptProxy.interceptNavigationDelegateImpl!!) {
+    // findMethod(proxy!!.interceptNavigationDelegateImpl!!) {
     //       name == "shouldIgnoreNavigation"
     //     }
     // public boolean shouldIgnoreNavigation(NavigationHandle navigationHandle, GURL

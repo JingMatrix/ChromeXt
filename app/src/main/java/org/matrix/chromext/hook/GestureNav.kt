@@ -11,23 +11,23 @@ import org.matrix.chromext.proxy.GestureNavProxy
 
 object GestureNavHook : BaseHook() {
   override fun init(ctx: Context) {
-    val gestureNavProxy = GestureNavProxy(ctx)
-    findMethod(gestureNavProxy.historyNavigationCoordinator!!) {
-          name == gestureNavProxy.IS_FEATURE_ENABLED
-        }
+
+    val proxy = GestureNavProxy(ctx)
+
+    findMethod(proxy.historyNavigationCoordinator!!) { name == proxy.IS_FEATURE_ENABLED }
         // private boolean isFeatureEnabled()
         .hookBefore {
           it.setResult(true)
           it.result = true
         }
 
-    // disableSystemGesture(gestureNavProxy)
+    // disableSystemGesture(proxy)
   }
 
   // @TargetApi(11)
-  // fun disableSystemGesture(gestureNavProxy: GestureNavProxy) {
+  // fun disableSystemGesture(proxy: GestureNavProxy) {
   //   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-  //     findMethod(gestureNavProxy.sideSlideLayout!!) { name == "onLayout" }
+  //     findMethod(proxy.sideSlideLayout!!) { name == "onLayout" }
   //         // protected void onLayout(boolean changed, int left, int top, int right, int bottom)
   //         .hookAfter {
   //           val view = it.thisObject as ViewGroup

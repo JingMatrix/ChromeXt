@@ -11,9 +11,10 @@ import org.matrix.chromext.proxy.IntentProxy
 
 object IntentHook : BaseHook() {
   override fun init(ctx: Context) {
-    val intentProxy = IntentProxy(ctx)
 
-    findMethod(intentProxy.chromeTabbedActivity!!) { name == "onNewIntent" }
+    val proxy = IntentProxy(ctx)
+
+    findMethod(proxy.chromeTabbedActivity!!) { name == "onNewIntent" }
         .hookBefore {
           val intent = it.args[0] as Intent
           if (intent.hasExtra("ChromeXt")) {
@@ -23,7 +24,7 @@ object IntentHook : BaseHook() {
           }
         }
 
-    findMethod(intentProxy.intentHandler!!) { name == intentProxy.START_ACTIVITY }
+    findMethod(proxy.intentHandler!!) { name == proxy.START_ACTIVITY }
         // private static void startActivityForTrustedIntentInternal(Context context, Intent
         // intent, String componentClassName)
         .hookBefore {
