@@ -2,7 +2,14 @@ package org.matrix.chromext.proxy
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.View
+import android.widget.PopupMenu
 import java.lang.reflect.Field
+import org.matrix.chromext.R
+
+// import org.matrix.chromext.R
 
 class MenuProxy(ctx: Context) {
 
@@ -14,6 +21,9 @@ class MenuProxy(ctx: Context) {
   // the first one is menu, the second one unknown
   // Also, using frida, this method invokes many other methods
   var PREPARE_MENU = "m"
+
+  // Use frida to find getAppMenuLayoutId, whose return value is resource id
+  var GET_APPMENU_LAYOUT_ID = "h"
 
   // Grep ()Ljava/util/ArrayList to get method getCustomViewBinder
   val GET_CUSTOM_VIEW_BINDERS = "b"
@@ -28,8 +38,8 @@ class MenuProxy(ctx: Context) {
     val DECOR_VIEW_FIELD = "h"
   }
 
-  private val mContext: Field? = null
-  private val mDecorView: Field? = null
+  private var mContext: Field? = null
+  private var mDecorView: Field? = null
 
   var chromeTabbedActivity: Class<*>? = null
   var appMenuPropertiesDelegateImpl: Class<*>? = null
@@ -45,12 +55,13 @@ class MenuProxy(ctx: Context) {
         ctx.getClassLoader().loadClass("org.chromium.chrome.browser.ChromeTabbedActivity")
     appMenuPropertiesDelegateImpl =
         ctx.getClassLoader().loadClass(APP_MENU_PROPERTIES_DELEGATE_IMPL)
-    // mContext = appMenuPropertiesDelegateImpl!!.getDeclaredField(CONTEXT_FIELD)
-    // mDecorView = appMenuPropertiesDelegateImpl!!.getDeclaredField(DECOR_VIEW_FIELD)
+    mContext = appMenuPropertiesDelegateImpl!!.getDeclaredField(CONTEXT_FIELD)
+    mDecorView = appMenuPropertiesDelegateImpl!!.getDeclaredField(DECOR_VIEW_FIELD)
   }
 
-  // private fun getMenuInflater(obj: Any): MenuInflater {
-  //   val popup = PopupMenu(mContext!!.get(obj) as Context, mDecorView!!.get(obj) as View)
-  //   return popup.getMenuInflater()
-  // }
+  fun injectLocalMenu(obj: Any, ctx: Context, menu: Menu) {
+    val localPopup = PopupMenu(ctx, mDecorView!!.get(obj) as View)
+    val localInflater: MenuInflater = localPopup.getMenuInflater()
+    localInflater.inflate(R.menu.main_menu, menu)
+  }
 }

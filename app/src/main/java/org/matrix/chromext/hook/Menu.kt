@@ -1,6 +1,7 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
+import android.os.Build
 import android.view.Menu
 import com.github.kyuubiran.ezxhelper.utils.findMethod
 import com.github.kyuubiran.ezxhelper.utils.hookAfter
@@ -9,15 +10,11 @@ import org.matrix.chromext.proxy.MenuProxy
 
 object MenuHook : BaseHook() {
 
-  var devTool_icon_res_id: Int? = null
-  var devTool_text_res_id: Int? = null
-  val devTool_id = 31415926
-
   override fun init(ctx: Context) {
 
     val proxy = MenuProxy(ctx)
 
-    if (!proxy.isDeveloper) {
+    if (!proxy.isDeveloper || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
       return
     }
 
@@ -25,7 +22,8 @@ object MenuHook : BaseHook() {
         // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
         .hookAfter {
           val id = it.args[0] as Int
-          if (id == devTool_id) {
+          if (ctx.getResources().getResourceName(id) ==
+              "org.matrix.chromext:id/developer_tools_id") {
             UserScriptHook.proxy!!.openDevTools()
           }
         }
@@ -34,10 +32,7 @@ object MenuHook : BaseHook() {
         // public void prepareMenu(Menu menu, AppMenuHandler handler)
         .hookBefore {
           val menu = it.args[0] as Menu
-          val devMenuItem = menu.add(Menu.NONE, devTool_id, Menu.NONE, "")
-          devMenuItem.setTitle(devTool_text_res_id!!)
-          devMenuItem.setIcon(devTool_icon_res_id!!)
-          devMenuItem.setVisible(true)
+          proxy.injectLocalMenu(it.thisObject, ctx, menu)
         }
   }
 }

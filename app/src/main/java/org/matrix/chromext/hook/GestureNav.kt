@@ -1,6 +1,5 @@
 package org.matrix.chromext.hook
 
-// import android.annotation.TargetApi
 // import android.graphics.Rect
 // import android.os.Build
 // import android.view.ViewGroup
@@ -24,7 +23,6 @@ object GestureNavHook : BaseHook() {
     // disableSystemGesture(proxy)
   }
 
-  // @TargetApi(11)
   // fun disableSystemGesture(proxy: GestureNavProxy) {
   //   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
   //     findMethod(proxy.sideSlideLayout!!) { name == "onLayout" }
