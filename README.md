@@ -98,5 +98,6 @@ Here are corresponding files you might want / need to change:
 - [x] Improve front end
 - [x] Make it possible to pass intents to Chrome with `file` scheme
 - [x] Fix encoding problem for Chrome downloaded Javascript files
+- [ ] Inject module resource into Chrome
 - [ ] Fix general text document encoding problem for Chrome Custom Tab
 - [ ] Support more [Tampermonkey API](https://www.tampermonkey.net/documentation.php)s
