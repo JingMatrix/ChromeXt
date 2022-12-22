@@ -54,7 +54,7 @@ object MenuHook : BaseHook() {
 
             val refThis = it
             arrayOf("eruda", "exit").forEach {
-              proxy.setClickListener(
+              proxy.setClickListenerAndSummary(
                   (refThis.method as Method).invoke(refThis.thisObject, it)!!, ctx, it)
             }
           }

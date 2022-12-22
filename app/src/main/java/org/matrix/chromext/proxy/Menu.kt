@@ -5,7 +5,9 @@ import android.view.Menu
 import android.view.MenuInflater
 import android.view.View
 import android.widget.PopupMenu
+import com.github.kyuubiran.ezxhelper.utils.invokeMethod
 import java.lang.reflect.Field
+import kotlin.text.Regex
 import org.matrix.chromext.R
 import org.matrix.chromext.settings.DownloadEruda
 import org.matrix.chromext.settings.ExitDevMode
@@ -49,6 +51,18 @@ class MenuProxy(ctx: Context) {
   // to get method findPreference of PreferenceFragmentCompat
   var FIND_PREFERENCE = "U0"
 
+  // Grep "Preference already has a SummaryProvider set"
+  // to get method setSummary of Preference
+  // and the corresponding field
+  var SET_SUMMARY = "Q"
+
+  // Compare method code length in Preference.smali,
+  // the shortest one with a unknown class should be
+  // setOnPreferenceClickListener(OnPreferenceClickListener onPreferenceClickListener)
+  // We should use its field instead of method
+  val ON_PREFERENCE_CLICK_LISTENER = "yk2"
+  val PREFERENCE_CLICK_LISTENER_FIELD = "l"
+
   companion object {
     // Find context and view fields from AppMenuPropertiesDelegateImpl class
     val CONTEXT_FIELD = "b"
@@ -67,9 +81,11 @@ class MenuProxy(ctx: Context) {
   var appMenuPropertiesDelegateImpl: Class<*>? = null
   var developerSettings: Class<*>? = null
   var preferenceFragmentCompat: Class<*>? = null
+  val onPreferenceClickListener: Class<*>? = null
 
   private var preference: Class<*>? = null
   private var mClickListener: Field? = null
+  private var mOnClickListener: Field? = null
 
   var isDeveloper: Boolean = false
 
@@ -81,6 +97,7 @@ class MenuProxy(ctx: Context) {
     chromeContext = ctx
 
     preference = ctx.getClassLoader().loadClass("androidx.preference.Preference")
+    // onPreferenceClickListener = ctx.getClassLoader().loadClass(ON_PREFERENCE_CLICK_LISTENER)
     developerSettings =
         ctx.getClassLoader()
             .loadClass("org.chromium.chrome.browser.tracing.settings.DeveloperSettings")
@@ -92,6 +109,7 @@ class MenuProxy(ctx: Context) {
     // mContext = appMenuPropertiesDelegateImpl!!.getDeclaredField(CONTEXT_FIELD)
     mDecorView = appMenuPropertiesDelegateImpl!!.getDeclaredField(DECOR_VIEW_FIELD)
     mClickListener = preference!!.getDeclaredField(CLICK_LISTENER_FIELD)
+    // mOnClickListener = preference!!.getDeclaredField(PREFERENCE_CLICK_LISTENER_FIELD)
     mClickListener!!.setAccessible(true)
   }
 
@@ -101,13 +119,37 @@ class MenuProxy(ctx: Context) {
     localInflater.inflate(R.menu.main_menu, menu)
   }
 
-  fun setClickListener(obj: Any, ctx: Context, pref: String) {
+  fun getErudaVersion(ctx: Context): String? {
+    val sharedPref = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
+    var eruda = sharedPref.getString("eruda", "")
+    if (eruda == "") {
+      return null
+    } else {
+      if (eruda!!.length > 200) {
+        eruda = eruda.take(150)
+      }
+      val verisonReg = Regex("""/npm/eruda@(?<version>[\d\.]+)/eruda""")
+      val vMatchGroup = verisonReg.find(eruda)?.groups as? MatchNamedGroupCollection
+      if (vMatchGroup != null) {
+        return vMatchGroup.get("version")?.value as String
+      }
+      return "unknown"
+    }
+  }
+
+  fun setClickListenerAndSummary(obj: Any, ctx: Context, pref: String) {
     when (pref) {
       "exit" -> {
         mClickListener!!.set(obj, ExitDevMode(ctx))
       }
       "eruda" -> {
         mClickListener!!.set(obj, DownloadEruda(ctx))
+        val version = getErudaVersion(ctx)
+        var summary = "Click to install Eruda, size around 0.5 MiB"
+        if (version != null) {
+          summary = "Current version: " + version
+        }
+        obj.invokeMethod(summary) { name == SET_SUMMARY }
       }
     }
   }
