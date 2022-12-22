@@ -1,6 +1,7 @@
 package org.matrix.chromext.proxy
 
 import android.content.Context
+import android.content.SharedPreferences
 import java.lang.reflect.Field
 
 class MenuProxy(ctx: Context) {
@@ -33,7 +34,13 @@ class MenuProxy(ctx: Context) {
   var chromeTabbedActivity: Class<*>? = null
   var appMenuPropertiesDelegateImpl: Class<*>? = null
 
+  var isDeveloper: Boolean = false
+
   init {
+    val sharedPref: SharedPreferences =
+        ctx.getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)
+    isDeveloper = sharedPref.getBoolean("developer", false)
+
     chromeTabbedActivity =
         ctx.getClassLoader().loadClass("org.chromium.chrome.browser.ChromeTabbedActivity")
     appMenuPropertiesDelegateImpl =

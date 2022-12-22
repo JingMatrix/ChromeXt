@@ -14,7 +14,12 @@ object MenuHook : BaseHook() {
   var devTool_res_id: Int? = null
 
   override fun init(ctx: Context) {
+
     val menuProxy = MenuProxy(ctx)
+
+    if (!menuProxy.isDeveloper) {
+      return
+    }
 
     findMethod(menuProxy.chromeTabbedActivity!!) { name == menuProxy.MENU_KEYBOARD_ACTION }
         // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
