@@ -35,7 +35,7 @@ fun filterPackage(packageName: String): Boolean {
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitPackageResources {
 
   var MODULE_PATH: String? = null
-  var MENU_RES_ID: Int? = null
+  var DEV_ICON_RES_ID: Int? = null
 
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
     if (filterPackage(lpparam.packageName)) {
@@ -49,7 +49,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
           }
           .hookAfter {
             val ctx = (it.args[0] as Context).createContextForSplit("chrome")
-            MenuHook.meu_res_id = MENU_RES_ID!!
+            MenuHook.devTool_res_id = DEV_ICON_RES_ID!!
             initHooks(
                 ctx, lpparam.packageName, UserScriptHook, GestureNavHook, IntentHook, MenuHook)
           }
@@ -67,7 +67,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
   ) {
     if (filterPackage(resparam.packageName)) {
       val res: Resources = XModuleResources.createInstance(MODULE_PATH, resparam.res)
-      MENU_RES_ID = resparam.res.addResource(res, R.menu.main_menu)
+      DEV_ICON_RES_ID = resparam.res.addResource(res, R.drawable.ic_devtools)
     }
   }
 

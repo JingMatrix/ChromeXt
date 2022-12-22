@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-	<item android:id="@+id/developer_tools_id" android:title="@string/main_menu_developer_tools" android:icon="@drawable/ic_devtools" />
+	<item android:id="@+id/developer_tools_id" />
 </menu>
