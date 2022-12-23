@@ -48,7 +48,13 @@ object UserScriptHook : BaseHook() {
                 }
                 .onFailure { Log.w(it.toString()) }
           } else {
-            Log.d("[${it.args[0]}] ${it.args[1]} @${it.args[3]}:${it.args[2]}")
+            Log.d(
+                when (it.args[0] as Int) {
+                  0 -> "D"
+                  2 -> "W"
+                  3 -> "E"
+                  else -> "V"
+                } + ": [${it.args[3]}@${it.args[2]}] ${it.args[1]}")
           }
         }
 
