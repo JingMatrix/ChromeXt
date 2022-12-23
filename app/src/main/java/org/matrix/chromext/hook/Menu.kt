@@ -40,7 +40,7 @@ object MenuHook : BaseHook() {
           val menu = it.args[0] as Menu
           proxy.injectLocalMenu(it.thisObject, menu)
           val devMenuItem = menu.getItem(menu.size() - 1)
-          devMenuItem.setVisible(!(it.args[3] as Boolean))
+          devMenuItem.setVisible(!(it.args[3] as Boolean) && (it.args[2] as Boolean))
         }
 
     findMethod(proxy.preferenceFragmentCompat!!) { name == proxy.ADD_PREFERENCES_FROM_RESOURCE }

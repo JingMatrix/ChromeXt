@@ -3,7 +3,7 @@ package org.matrix.chromext.settings
 import android.content.Context
 import android.view.View
 import android.view.View.OnClickListener
-import android.widget.Toast
+import org.matrix.chromext.utils.Log
 
 class ExitDevMode(ctx: Context) : OnClickListener {
 
@@ -19,10 +19,7 @@ class ExitDevMode(ctx: Context) : OnClickListener {
     with(sharedPref!!.edit()) {
       putBoolean("developer", false)
       apply()
-      val text = "Please restart Chrome to apply the changes"
-      val duration = Toast.LENGTH_SHORT
-      val toast = Toast.makeText(context, text, duration)
-      toast.show()
+      Log.toast(context!!, "Please restart Chrome to apply the changes")
     }
   }
 }

@@ -10,8 +10,8 @@ import android.net.Uri
 import android.os.Environment
 import android.view.View
 import android.view.View.OnClickListener
-import android.widget.Toast
 import java.io.FileReader
+import org.matrix.chromext.utils.Log
 
 class DownloadEruda(ctx: Context) : OnClickListener {
 
@@ -50,10 +50,7 @@ class DownloadEruda(ctx: Context) : OnClickListener {
           with(sharedPref!!.edit()) {
             putString("eruda", eruda)
             apply()
-            val text = "Updated to the lastest Eruda"
-            val duration = Toast.LENGTH_SHORT
-            val toast = Toast.makeText(ctx, text, duration)
-            toast.show()
+            Log.toast(ctx, "Updated to the lastest Eruda")
           }
         }
       }

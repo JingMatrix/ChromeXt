@@ -46,40 +46,40 @@ fun Method.hookAfter(
 
 fun Method.hookAfter(hooker: Hooker) = this.hookAfter(XCallback.PRIORITY_DEFAULT, hooker)
 
-class XposedHookFactory(priority: Int = XCallback.PRIORITY_DEFAULT) : XC_MethodHook(priority) {
-  private var beforeMethod: Hooker? = null
-  private var afterMethod: Hooker? = null
+// class XposedHookFactory(priority: Int = XCallback.PRIORITY_DEFAULT) : XC_MethodHook(priority) {
+//   private var beforeMethod: Hooker? = null
+//   private var afterMethod: Hooker? = null
 
-  override fun beforeHookedMethod(param: MethodHookParam) {
-    beforeMethod?.invoke(param)
-  }
+//   override fun beforeHookedMethod(param: MethodHookParam) {
+//     beforeMethod?.invoke(param)
+//   }
 
-  override fun afterHookedMethod(param: MethodHookParam) {
-    afterMethod?.invoke(param)
-  }
+//   override fun afterHookedMethod(param: MethodHookParam) {
+//     afterMethod?.invoke(param)
+//   }
 
-  fun before(before: Hooker) {
-    this.beforeMethod = before
-  }
+//   fun before(before: Hooker) {
+//     this.beforeMethod = before
+//   }
 
-  fun after(after: Hooker) {
-    this.afterMethod = after
-  }
-}
+//   fun after(after: Hooker) {
+//     this.afterMethod = after
+//   }
+// }
 
-fun Method.hookMethod(
-    priority: Int = XCallback.PRIORITY_DEFAULT,
-    hook: XposedHookFactory.() -> Unit
-): XC_MethodHook.Unhook {
-  val factory = XposedHookFactory(priority)
-  hook(factory)
-  return this.hookMethod(factory)
-}
+// fun Method.hookMethod(
+//     priority: Int = XCallback.PRIORITY_DEFAULT,
+//     hook: XposedHookFactory.() -> Unit
+// ): XC_MethodHook.Unhook {
+//   val factory = XposedHookFactory(priority)
+//   hook(factory)
+//   return this.hookMethod(factory)
+// }
 
-fun Array<XC_MethodHook.Unhook>.unhookAll() {
-  this.forEach { it.unhook() }
-}
+// fun Array<XC_MethodHook.Unhook>.unhookAll() {
+//   this.forEach { it.unhook() }
+// }
 
-fun Iterable<XC_MethodHook.Unhook>.unhookAll() {
-  this.forEach { it.unhook() }
-}
+// fun Iterable<XC_MethodHook.Unhook>.unhookAll() {
+//   this.forEach { it.unhook() }
+// }

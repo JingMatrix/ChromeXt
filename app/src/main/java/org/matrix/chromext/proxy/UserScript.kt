@@ -2,7 +2,6 @@ package org.matrix.chromext.proxy
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.widget.Toast
 import androidx.room.Room
 import java.lang.reflect.Field
 import java.net.URLEncoder
@@ -174,11 +173,7 @@ class UserScriptProxy(ctx: Context) {
 
   private fun loadUrl(url: String) {
     mTab!!.get(tabDelegator)?.invokeMethod(newUrl(url)) { name == LOAD_URL }
-    if (url.length < 300) {
-      Log.d("loadUrl: ${url}")
-    } else {
-      Log.d("loadUrl: ${url.substring(0, 99)} ...")
-    }
+    Log.d("loadUrl: ${url}")
   }
 
   fun newUrl(url: String): Any {
@@ -378,10 +373,7 @@ class UserScriptProxy(ctx: Context) {
         evaluateJavaScript(erudaToggle)
         eruda_loaded = true
       } else {
-        val text = "Please update Eruda in the Developper options menu"
-        val duration = Toast.LENGTH_SHORT
-        val toast = Toast.makeText(ctx, text, duration)
-        toast.show()
+        Log.toast(ctx, "Please update Eruda in the Developper options menu")
       }
     } else {
       evaluateJavaScript(erudaToggle)
