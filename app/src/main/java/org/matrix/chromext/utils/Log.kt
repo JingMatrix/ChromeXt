@@ -3,6 +3,7 @@ package org.matrix.chromext.utils
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
+import de.robv.android.xposed.XposedBridge
 
 const val TAG = "ChromeXt"
 
@@ -25,10 +26,12 @@ object Log {
 
   fun e(msg: String) {
     Log.e(TAG, msg)
+    XposedBridge.log(msg)
   }
 
   fun ex(thr: Throwable) {
-    Log.e(TAG, thr.toString())
+    Log.e(TAG, "", thr)
+    XposedBridge.log(thr.toString())
   }
 
   fun toast(context: Context, msg: String) {
