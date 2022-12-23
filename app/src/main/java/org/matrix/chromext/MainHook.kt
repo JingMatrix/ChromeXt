@@ -49,7 +49,13 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
             val ctx = (it.args[0] as Context).createContextForSplit("chrome")
             injectModuleResource(ctx)
             initHooks(
-                ctx, lpparam.packageName, UserScriptHook, GestureNavHook, IntentHook, MenuHook)
+                ctx,
+                lpparam.packageName,
+                UserScriptHook,
+                GestureNavHook,
+                IntentHook,
+                // DevSocketHook,
+                MenuHook)
           }
     }
   }
@@ -84,7 +90,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
             it.isInit = true
             Log.i("Inited hook for ${packageName}: ${it.javaClass.simpleName}")
           }
-          .onFailure { Log.e(it.toString()) }
+          .onFailure { Log.ex(it) }
     }
   }
 }
