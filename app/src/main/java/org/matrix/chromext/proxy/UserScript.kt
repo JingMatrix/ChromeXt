@@ -4,8 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.widget.Toast
 import androidx.room.Room
-import com.github.kyuubiran.ezxhelper.utils.Log
-import com.github.kyuubiran.ezxhelper.utils.invokeMethod
 import java.lang.reflect.Field
 import java.net.URLEncoder
 import org.matrix.chromext.script.AppDatabase
@@ -15,6 +13,8 @@ import org.matrix.chromext.script.encodeScript
 import org.matrix.chromext.script.erudaToggle
 import org.matrix.chromext.script.parseScript
 import org.matrix.chromext.script.urlMatch
+import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.invokeMethod
 
 class UserScriptProxy(ctx: Context) {
   // These smali code names are possible to change when Chrome updates

@@ -1,12 +1,12 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
-import com.github.kyuubiran.ezxhelper.utils.Log
-import com.github.kyuubiran.ezxhelper.utils.findMethod
-import com.github.kyuubiran.ezxhelper.utils.hookAfter
 import org.json.JSONObject
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.promptInstallUserScript
+import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.findMethod
+import org.matrix.chromext.utils.hookAfter
 
 object UserScriptHook : BaseHook() {
 

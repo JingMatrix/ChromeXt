@@ -1,13 +1,13 @@
 package org.matrix.chromext.hook
 
-// import com.github.kyuubiran.ezxhelper.utils.Log
+// import org.matrix.chromext.utils.Log
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import com.github.kyuubiran.ezxhelper.utils.findMethod
-import com.github.kyuubiran.ezxhelper.utils.hookBefore
 import org.matrix.chromext.convertDownloadUrl
 import org.matrix.chromext.proxy.IntentProxy
+import org.matrix.chromext.utils.findMethod
+import org.matrix.chromext.utils.hookBefore
 
 object IntentHook : BaseHook() {
   override fun init(ctx: Context) {

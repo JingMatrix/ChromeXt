@@ -4,9 +4,9 @@ package org.matrix.chromext.hook
 // import android.os.Build
 // import android.view.ViewGroup
 import android.content.Context
-import com.github.kyuubiran.ezxhelper.utils.findMethod
-import com.github.kyuubiran.ezxhelper.utils.hookBefore
 import org.matrix.chromext.proxy.GestureNavProxy
+import org.matrix.chromext.utils.findMethod
+import org.matrix.chromext.utils.hookBefore
 
 object GestureNavHook : BaseHook() {
   override fun init(ctx: Context) {

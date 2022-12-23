@@ -1,7 +1,7 @@
 package org.matrix.chromext.script
 
-import com.github.kyuubiran.ezxhelper.utils.Log
 import kotlin.text.Regex
+import org.matrix.chromext.utils.Log
 
 fun urlMatch(match: String, url: String): Boolean {
   var pattern = match

@@ -1,15 +1,15 @@
 package org.matrix.chromext.hook
 
-// import com.github.kyuubiran.ezxhelper.utils.Log
+// import org.matrix.chromext.utils.Log
 import android.content.Context
 import android.os.Build
 import android.view.Menu
-import com.github.kyuubiran.ezxhelper.utils.findMethod
-import com.github.kyuubiran.ezxhelper.utils.hookAfter
-import com.github.kyuubiran.ezxhelper.utils.hookBefore
 import java.lang.reflect.Method
 import org.matrix.chromext.R
 import org.matrix.chromext.proxy.MenuProxy
+import org.matrix.chromext.utils.findMethod
+import org.matrix.chromext.utils.hookAfter
+import org.matrix.chromext.utils.hookBefore
 
 object MenuHook : BaseHook() {
 

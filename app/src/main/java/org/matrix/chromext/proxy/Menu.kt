@@ -5,12 +5,12 @@ import android.view.Menu
 import android.view.MenuInflater
 import android.view.View
 import android.widget.PopupMenu
-import com.github.kyuubiran.ezxhelper.utils.invokeMethod
 import java.lang.reflect.Field
 import kotlin.text.Regex
 import org.matrix.chromext.R
 import org.matrix.chromext.settings.DownloadEruda
 import org.matrix.chromext.settings.ExitDevMode
+import org.matrix.chromext.utils.invokeMethod
 
 class MenuProxy(ctx: Context) {
 
