@@ -89,7 +89,7 @@ class MenuProxy(ctx: Context) {
 
   private var preference: Class<*>? = null
   private var mClickListener: Field? = null
-  private var mOnClickListener: Field? = null
+  private val mOnClickListener: Field? = null
 
   var isDeveloper: Boolean = false
 

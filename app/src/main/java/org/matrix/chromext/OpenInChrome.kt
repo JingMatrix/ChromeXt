@@ -33,7 +33,7 @@ class OpenInChrome : Activity() {
       intent.setComponent(destination)
       val fileUrl = convertDownloadUrl(this, intent.getData()!!)
       if (fileUrl == null) {
-        intent.setDataAndType(intent.getData(), "text/html")
+        // intent.setDataAndType(intent.getData(), "text/html")
         startActivity(intent)
       } else {
         invokeChromeTabbed(fileUrl)
@@ -49,7 +49,10 @@ class OpenInChrome : Activity() {
           }
         }
         Log.d(TAG, "Get share text: ${text}")
-        if (text.startsWith("file://") || text.startsWith("data:")) {
+        if (text.startsWith("file://") ||
+            // Not able to open chrome url
+            // text.startsWith("chrome://") ||
+            text.startsWith("data:")) {
           invokeChromeTabbed(text)
         } else {
           if (!text.contains("://")) {

@@ -2,16 +2,16 @@ package org.matrix.chromext.script
 
 const val GM_addStyle =
     """
-function GM_addStyle(styles) {
-	const oStyle = document.createElement("style");
-	oStyle.setAttribute("type", "text/css");
-	oStyle.appendChild(document.createTextNode(styles));
+function GM_addStyle(css) {
+	const style = document.createElement("style");
+	style.setAttribute("type", "text/css");
+	style.textContent = css;
 
 	const head = document.querySelector("head");
 	if (head === undefined) {
-		document.documentElement.appendChild(oStyle);
+		document.documentElement.appendChild(style);
 	} else {
-		head.appendChild(oStyle);
+		head.appendChild(style);
 	}
 };
 """
@@ -110,16 +110,9 @@ fun encodeScript(script: Script): String? {
 
 // The Charset setting is hard-coded inside
 // src/third_party/blink/renderer/core/html/parser/text_document_parser.cc
+// not able to solve it for now
 const val promptInstallUserScript: String =
     """
-// Object.defineProperties(document, {
-//   characterSet: { value: "UTF-8" },
-// });
-
-// const meta = document.createElement("meta");
-// meta.setAttribute("charset", "utf-8");
-// document.head.appendChild(meta);
-
 let old_script = "";
 let asked = false;
 

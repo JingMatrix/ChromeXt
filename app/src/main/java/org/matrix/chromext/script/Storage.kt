@@ -14,7 +14,6 @@ import androidx.room.TypeConverters
 
 @Entity
 data class Script(
-    // Must support
     @PrimaryKey val id: String,
     val match: Array<String>,
     val grant: Array<String>,
@@ -44,11 +43,11 @@ interface ScriptDao {
   @Insert(onConflict = OnConflictStrategy.REPLACE) fun insertAll(vararg script: Script)
 
   // For front-end
-  @Query("SELECT * FROM script WHERE runAt is (:runAt)")
-  fun getIdByRunAt(runAt: List<RunAt>): List<Script>
+  // @Query("SELECT * FROM script WHERE runAt is (:runAt)")
+  // fun getIdByRunAt(runAt: List<RunAt>): List<Script>
 
-  @Query("SELECT * FROM script WHERE id IN (:scriptIds)")
-  fun getScriptById(scriptIds: List<String>): List<Script>
+  // @Query("SELECT * FROM script WHERE id IN (:scriptIds)")
+  // fun getScriptById(scriptIds: List<String>): List<Script>
 
   @Delete fun delete(script: Script): Int
 }

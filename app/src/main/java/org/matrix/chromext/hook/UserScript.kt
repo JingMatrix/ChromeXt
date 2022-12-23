@@ -52,14 +52,14 @@ object UserScriptHook : BaseHook() {
           }
         }
 
-    // findMethod(proxy!!.navigationControllerImpl!!) { name ==
-    // proxy!!.NAVI_LOAD_URL }
+    // findMethod(proxy!!.navigationControllerImpl!!) { name == proxy!!.NAVI_LOAD_URL }
     //     // public void loadUrl(LoadUrlParams params)
     //     .hookBefore {
     //       val url = proxy!!.parseUrl(it.args[0])!!
     //       // proxy!!.updateNavController(it.thisObject)
-    //       if (url.startsWith("content://")) {
-    //         proxy!!.fixCharset(it.args[0])
+    //       if (url.endsWith("github.com/")) {
+    //         (it.method as Method).invoke(it.thisObject, proxy!!.newUrl("javascript:
+    // alert('Hello');"))
     //       }
     //     }
 
@@ -77,14 +77,13 @@ object UserScriptHook : BaseHook() {
     //       proxy!!.didStopLoading(url)
     //     }
 
-    // findMethod(proxy!!.interceptNavigationDelegateImpl!!) {
-    //       name == "shouldIgnoreNavigation"
+    // findMethod(proxy!!.interceptNavigationDelegateImpl!!) { name == "shouldIgnoreNavigation" }
+    //     // public boolean shouldIgnoreNavigation(NavigationHandle navigationHandle, GURL
+    //     // escapedUrl)
+    //     .hookAfter {
+    //       // Not using it yet, could help AdAway in the future
+    //       // Source code not stable yet, we should postpone relevant implements
     //     }
-    // public boolean shouldIgnoreNavigation(NavigationHandle navigationHandle, GURL
-    // escapedUrl)
-    // .hookAfter {
-    // Not using it yet, could help AdAway in the future
-    // Source code not stable yet, we should postpone relevant implements
-    // }
+
   }
 }

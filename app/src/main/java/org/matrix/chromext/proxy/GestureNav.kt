@@ -21,10 +21,10 @@ class GestureNavProxy(ctx: Context) {
   // private boolean mEnabled;
   // We start with its HistoryNavigationLayout
 
-  private var HISTORY_NAVIGATION_LAYOUT = "g31"
+  private val HISTORY_NAVIGATION_LAYOUT = "g31"
 
   // It has a Field SideSlideLayout
-  private var SIDE_SLIDE_LAYOUT = "wR2"
+  private val SIDE_SLIDE_LAYOUT = "wR2"
   // It can be identified with having many fields, such as
   // android/view/animation/Animation$AnimationListener,
   // android/view/animation/Animation,
@@ -34,7 +34,7 @@ class GestureNavProxy(ctx: Context) {
   // One the class HistoryNavigationCoordinator is found, we care about if filed mEnabled
   // and its method isFeatureEnabled() with a Boolean return value
   var historyNavigationCoordinator: Class<*>? = null
-  var ENABLE_FIELD = "s"
+  val ENABLE_FIELD = "s"
   var IS_FEATURE_ENABLED = "b"
 
   val sideSlideLayout: Class<*>? = null
