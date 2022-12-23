@@ -46,7 +46,7 @@ object MenuHook : BaseHook() {
     findMethod(proxy.preferenceFragmentCompat!!) { name == proxy.ADD_PREFERENCES_FROM_RESOURCE }
         // public void addPreferencesFromResource(Int preferencesResId)
         .hookBefore {
-          if (it.thisObject::class.qualifiedName == proxy.developerSettings!!.getName()) {
+          if (it.thisObject::class.qualifiedName == proxy.developerSettings!!.name) {
             it.args[0] = R.xml.developer_preferences
           }
         }
@@ -54,7 +54,7 @@ object MenuHook : BaseHook() {
     findMethod(proxy.preferenceFragmentCompat!!) { name == proxy.FIND_PREFERENCE }
         // public @Nullable T <T extends Preference> findPreference(@NonNull CharSequence key)
         .hookAfter {
-          if (it.thisObject::class.qualifiedName == proxy.developerSettings!!.getName() &&
+          if (it.thisObject::class.qualifiedName == proxy.developerSettings!!.name &&
               (it.args[0] as String) == "beta_stable_hint") {
 
             val refThis = it

@@ -241,13 +241,13 @@ class UserScriptProxy(ctx: Context) {
   }
 
   fun parseUrl(packed: Any): String? {
-    if (packed::class.qualifiedName == loadUrlParams!!.getName()) {
+    if (packed::class.qualifiedName == loadUrlParams!!.name) {
       return mUrl!!.get(packed) as String
-    } else if (packed::class.qualifiedName == gURL!!.getName()) {
+    } else if (packed::class.qualifiedName == gURL!!.name) {
       return mSpec!!.get(packed) as String
     }
     Log.e(
-        "parseUrl: ${packed::class.qualifiedName} is not ${loadUrlParams!!.getName()} nor ${gURL!!.getName()}")
+        "parseUrl: ${packed::class.qualifiedName} is not ${loadUrlParams!!.name} nor ${gURL!!.getName()}")
     return null
   }
 
@@ -313,17 +313,17 @@ class UserScriptProxy(ctx: Context) {
   }
 
   // fun fixCharset(packed: Any): Boolean {
-  //   if (packed::class.qualifiedName == loadUrlParams!!.getName()) {
+  //   if (packed::class.qualifiedName == loadUrlParams!!.name) {
   //     mVerbatimHeaders!!.set(packed, "accept: charset=utf-8,text/javascript")
   //     // Log.i("Fix Charset for ${mUrl!!.get(packed)}")
   //     return true
   //   }
-  //   Log.e("fixCharset: ${packed::class.qualifiedName} is not ${loadUrlParams!!.getName()}")
+  //   Log.e("fixCharset: ${packed::class.qualifiedName} is not ${loadUrlParams!!.name}")
   //   return false
   // }
 
   fun updateTabDelegator(delegator: Any): Boolean {
-    if (delegator::class.qualifiedName == tabWebContentsDelegateAndroidImpl!!.getName()) {
+    if (delegator::class.qualifiedName == tabWebContentsDelegateAndroidImpl!!.name) {
       if (tabDelegator != delegator) {
         Log.d("tabDelegator updated")
         tabDelegator = delegator
@@ -331,12 +331,12 @@ class UserScriptProxy(ctx: Context) {
       return true
     }
     Log.e(
-        "updateTabDelegator: ${delegator::class.qualifiedName} is not ${tabWebContentsDelegateAndroidImpl!!.getName()}")
+        "updateTabDelegator: ${delegator::class.qualifiedName} is not ${tabWebContentsDelegateAndroidImpl!!.name}")
     return false
   }
 
   // fun updateNavController(controller: Any): Boolean {
-  //   if (controller::class.qualifiedName == navigationControllerImpl!!.getName()) {
+  //   if (controller::class.qualifiedName == navigationControllerImpl!!.name) {
   //     if (navController != controller) {
   //       Log.i("navController updated")
   //       // navController = controller
@@ -345,7 +345,7 @@ class UserScriptProxy(ctx: Context) {
   //   }
   //   Log.e(
   //       "updateNavController: ${controller::class.qualifiedName} is not
-  // ${navigationControllerImpl!!.getName()}")
+  // ${navigationControllerImpl!!.name}")
   //   return false
   // }
 
