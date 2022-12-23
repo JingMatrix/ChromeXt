@@ -21,7 +21,11 @@ class MenuProxy(ctx: Context) {
   // Find following method prepareMenu, it has two params:
   // the first one is menu, the second one unknown
   // Also, using frida, this method invokes many other methods
-  var PREPARE_MENU = "m"
+  val PREPARE_MENU = "m"
+
+  // Grep (Landroid/view/Menu;Lorg/chromium/chrome/browser/tab/Tab;ZZ)V
+  // to get method updateRequestDesktopSiteMenuItem of AppMenuPropertiesDelegateImpl
+  var UPDATE_REQUEST_DESKTOP_SITE_MENU_ITEM = "q"
 
   // Use frida to find getAppMenuLayoutId, whose return value is resource id
   val GET_APPMENU_LAYOUT_ID = "h"
@@ -45,7 +49,7 @@ class MenuProxy(ctx: Context) {
 
   // Grep ()Landroidx/preference/PreferenceScreen to get method getPreferenceScreen
   // in the class PreferenceFragmentCompat
-  var GET_PREFERENCE_SCREEN = "V0"
+  val GET_PREFERENCE_SCREEN = "V0"
 
   // Grep (Ljava/lang/CharSequence;)Landroidx/preference/Preference;
   // to get method findPreference of PreferenceFragmentCompat

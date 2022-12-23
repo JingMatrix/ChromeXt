@@ -31,11 +31,16 @@ object MenuHook : BaseHook() {
           }
         }
 
-    findMethod(proxy.appMenuPropertiesDelegateImpl!!) { name == proxy.PREPARE_MENU }
-        // public void prepareMenu(Menu menu, AppMenuHandler handler)
+    findMethod(proxy.appMenuPropertiesDelegateImpl!!) {
+          name == proxy.UPDATE_REQUEST_DESKTOP_SITE_MENU_ITEM
+        }
+        // protected void updateRequestDesktopSiteMenuItem(Menu menu, @Nullable Tab currentTab,
+        //         boolean canShowRequestDesktopSite, boolean isChromeScheme)
         .hookBefore {
           val menu = it.args[0] as Menu
           proxy.injectLocalMenu(it.thisObject, menu)
+          val devMenuItem = menu.getItem(menu.size() - 1)
+          devMenuItem.setVisible(!(it.args[3] as Boolean))
         }
 
     findMethod(proxy.preferenceFragmentCompat!!) { name == proxy.ADD_PREFERENCES_FROM_RESOURCE }
