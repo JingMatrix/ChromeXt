@@ -17,6 +17,12 @@ android {
         versionName = "1.0.0"
     }
 
+	// packagingOptions {
+        // // Remove terminal-emulator and termux-shared JNI libs added via termux-shared dependency
+        // exclude("lib/*/libtermux.so")
+        // exclude("lib/*/liblocal-socket.so")
+    // }
+
     buildTypes {
         named("release") {
             isShrinkResources = true
@@ -39,7 +45,6 @@ android {
 }
 
 dependencies {
-    implementation("com.github.kyuubiran:EzXHelper:1.0.3")
     compileOnly("de.robv.android.xposed:api:82")
 
 	val room_version = "2.4.3"
@@ -48,4 +53,6 @@ dependencies {
 
     // To use Kotlin Symbol Processing (KSP)
     ksp("androidx.room:room-compiler:$room_version")
+
+	// implementation("com.github.termux.termux-app:termux-shared:v0.118.0")
 }
