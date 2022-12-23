@@ -54,7 +54,13 @@ object UserScriptHook : BaseHook() {
                   2 -> "W"
                   3 -> "E"
                   else -> "V"
-                } + ": [${it.args[3]}@${it.args[2]}] ${it.args[1]}")
+                } +
+                    ": [${it.args[3]}" +
+                    when (it.args[2] as Int) {
+                      0 -> ""
+                      else -> "@" + it.toString()
+                    } +
+                    "] ${it.args[1]}")
           }
         }
 

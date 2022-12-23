@@ -24,19 +24,20 @@ class GestureNavProxy(ctx: Context) {
   private val HISTORY_NAVIGATION_LAYOUT = "g31"
 
   // It has a Field SideSlideLayout
-  private val SIDE_SLIDE_LAYOUT = "wR2"
+  private val SIDE_SLIDE_LAYOUT = "vR2"
   // It can be identified with having many fields, such as
   // android/view/animation/Animation$AnimationListener,
   // android/view/animation/Animation,
   // android/view/animation/DecelerateInterpolator,
   // org/chromium/chrome/browser/gesturenav/NavigationBubble.
 
-  // One the class HistoryNavigationCoordinator is found, we care about if filed mEnabled
+  // Once the class HistoryNavigationCoordinator is found, we care about its filed mEnabled
   // and its method isFeatureEnabled() with a Boolean return value
   var historyNavigationCoordinator: Class<*>? = null
   val ENABLE_FIELD = "s"
   var IS_FEATURE_ENABLED = "b"
 
+  val decorView: Class<*>? = null
   val sideSlideLayout: Class<*>? = null
   // Even though it exposes the onLayout method, it is not the correct Layout to hook
 
@@ -45,6 +46,7 @@ class GestureNavProxy(ctx: Context) {
 
   init {
     historyNavigationCoordinator = ctx.getClassLoader().loadClass(HISTORY_NAVIGATION_COORDINATOR)
+    // decorView = ctx.getClassLoader().loadClass("com.android.internal.policy.DecorView")
     // sideSlideLayout = ctx.getClassLoader().loadClass(SIDE_SLIDE_LAYOUT)
   }
 }
