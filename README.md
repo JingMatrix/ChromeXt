@@ -47,10 +47,10 @@ Currently, ChromeXt supports only the following APIs since they are everything t
 2. @match (must present and conform to the [Chrome Standard](https://developer.chrome.com/docs/extensions/mv2/match_patterns/))
 3. @include = @match, @exclude
 4. @run-at: document-start, document-end, document-idle (the default and fallback value)
-5. @grant GM_addStyle, GM_addElement, unsafeWindow (= window)
+5. @grant GM_addStyle, GM_addElement, GM_xmlhttpRequest, GM_openInTab, unsafeWindow (= window)
 6. @require
 
-Honestly, users can implement most other APIs in their UserScripts.
+These APIs are implemented differently from the official ones, see the source file [LocalScripts.kt](app/src/main/java/org/matrix/chromext/script/LocalScripts.kt) if you have doubts or questions.
 
 ### UserScripts manager front end
 

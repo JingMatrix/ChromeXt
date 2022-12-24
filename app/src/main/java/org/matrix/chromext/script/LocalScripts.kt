@@ -13,7 +13,7 @@ function GM_addStyle(css) {
 	} else {
 		head.appendChild(style);
 	}
-};
+}
 """
 
 const val GM_addElement =
@@ -25,18 +25,75 @@ function GM_addElement(parent_node, tag_name, attributes) {
 			element.setAttribute(key, value);
 		} else {
 			element.textContent = value;
-		};
-	};
+		}
+	}
 	if (parent_node === undefined) {
 		document.documentElement.appendChild(element);
 	} else {
 		parent_node.appendChild(element);
-	};
-};
+	}
+}
 
 function GM_addElement(tag_name, attributes) {
 	GM_addElement(document.head || document.body, tag_name, attributes);
-};
+}
+"""
+
+const val GM_xmlhttpRequest =
+    """
+function GM_xmlhttpRequest(/* object */ details) {
+	details.method = details.method ? details.method.toUpperCase() : "GET";
+
+	if (!details.url) {
+		throw new Error("GM_xmlhttpRequest requires a URL.");
+	}
+
+	const xmlhr = new XMLHttpRequest();
+
+	for (const [key, value] of Object.entries(details)) {
+		if (key.startsWith("on")) {
+			xmlhr.addEventListener(key.substring(2), value);
+		}
+	}
+	if ("timeout" in details) {
+		xmlhr.timeout = details.timeout;
+	}
+
+	details.user = details.use || null;
+	details.password = details.password || null;
+	details.synchronous = details.synchronous || false;
+
+	xmlhr.open(details.method, details.url, !details.synchronous || true, details.user, details.password);
+
+	if ("headers" in details) {
+		for (const header in details.headers) {
+			xmlhr.setRequestHeader(header, details.headers[header]);
+		}
+	}
+	if ("data" in details) {
+	    if ("binary" in details) {
+			const blob = new Blob([details.data.toString()], "text/plain");
+			xmlhr.send(blob);
+		} else {
+			xmlhr.send(details.data);
+		}
+	} else {
+		xmlhr.send();
+	}
+
+	return xmlhr;
+}
+"""
+
+const val GM_openInTab =
+    """
+function GM_openInTab(url, options) {
+	const gm_window = window.open(url, "_blank");
+	if ("active" in options && options.active ) {
+		gm_window.focus();
+	}
+	return gm_window;
+}
 """
 
 fun encodeScript(script: Script): String? {
@@ -59,7 +116,7 @@ fun encodeScript(script: Script): String? {
   when (script.runAt) {
     RunAt.START -> {}
     RunAt.END -> code = """document.addEventListener("DOMContentLoaded",()=>{${code}});"""
-    RunAt.IDLE -> code = """window.onload=()=>{${code}};"""
+    RunAt.IDLE -> code = """window.onload=()=>{${code}}"""
   }
 
   val imports =
@@ -73,7 +130,7 @@ fun encodeScript(script: Script): String? {
           }
           .joinToString(separator = ";")
   if (imports != "") {
-    code = """(async ()=>{${imports};${code}})();"""
+    code = """(async ()=>{${imports}${code}})();"""
   }
 
   script.grant.forEach {
@@ -84,6 +141,8 @@ fun encodeScript(script: Script): String? {
     when (function) {
       "GM_addStyle" -> code = GM_addStyle + code
       "GM_addElement" -> code = GM_addElement + code
+      "GM_openInTab" -> code = GM_openInTab + code
+      "GM_xmlhttpRequest" -> code = GM_xmlhttpRequest + code
       "unsafeWindow" -> code = "const unsafeWindow = window;" + code
       "GM_log" -> code = "const GM_log = console.log.bind(console);" + code
       "GM_deleteValue" ->
@@ -96,14 +155,14 @@ fun encodeScript(script: Script): String? {
                   code
       else ->
           code =
-              """function ${function}(...args) {console.error("${function} is not implemented in ChromeXt yet, called with", args)};""" +
+              """function ${function}(...args) {console.error("${function} is not implemented in ChromeXt yet, called with", args)}""" +
                   code
     }
   }
 
   if (shouldWrap) {
     // Add decode function, and it finally contains only three backtricks in total
-    code = """function ChromeXt_decode(src) {return src.replaceAll("${backtrick}", "`");};""" + code
+    code = """function ChromeXt_decode(src) {return src.replaceAll("${backtrick}", "`");}""" + code
   }
   return code
 }
@@ -125,7 +184,7 @@ function installScript() {
 			console.debug(JSON.stringify({"action": "installScript", "payload": script}));
 		}
 	}
-};
+}
 
 function editor() {
 	const js = document.createElement("script");
@@ -173,13 +232,13 @@ function editor() {
 	document.body.appendChild(js);
 	document.querySelector("body > pre").setAttribute("contenteditable", true);
 	setTimeout(installScript, 500);
-};
+}
 
 if (document.readyState == "complete") {
 	editor();
 } else {
 	window.onload = editor;
-};
+}
 
 addEventListener("contextmenu", () => {
 	addEventListener("click", (event) => {
@@ -208,85 +267,86 @@ if (typeof globalThis.eruda != "undefined") {
 const val erudaFontFix =
     """
 (function(){
-if (!document.querySelector("#eruda")){return;};
-const erudaroot = document.querySelector("#eruda").shadowRoot;
-const style = document.createElement("style");
-style.setAttribute("type", "text/css");
-style.textContent = `
-[class^='eruda-icon-']:before {
-	font-size: 14px;
-}
-.eruda-icon-arrow-left:before {
-  content: '←';
-}
-.eruda-icon-arrow-right:before {
-  content: '→';
-}
-.eruda-icon-clear:before {
-  content: '✖';
-  font-size: 17px;
-}
-.eruda-icon-compress:before {
-  content: '🗎';
-}
-.eruda-icon-copy:before {
-  content: '📋';
-}
-.eruda-icon-delete:before {
-  content: '⌫';
-}
-.eruda-icon-expand:before {
-  content: '⌄';
-}
-.eruda-icon-eye:before {
-  content: '👁';
-}
-.eruda-icon-filter:before {
-  content: 'Ⴤ';
-  font-size: 15px;
-  font-weight: bold;
-}
-.eruda-icon-play:before {
-  content: '▷';
-}
-.eruda-icon-record:before {
-  content: '●';
-}
-.eruda-icon-refresh:before {
-  content: '↻';
-  font-size: 18px;
-  font-weight: bold;
-}
-.eruda-icon-reset:before {
-  content: '↺';
-}
-.eruda-icon-search:before {
-  content: '🔍';
-}
-.eruda-icon-select:before {
-  content: '⇖';
-  font-size: 26px;
-}
-.eruda-icon-tool:before {
-  content: '⚙';
-  font-size: 30px;
-}
-.luna-console-icon-error:before {
-  content: '✗';
-}
-.luna-console-icon-warn:before {
-  content: '⚠';
-}
-[class\$='icon-caret-right']:before,
-[class\$='icon-arrow-right']:before {
-  content: "► ";
-  font-size: 16px;
-}
-[class\$='icon-caret-down']:before,
-[class\$='icon-arrow-down']:before {
-  content: '▼';
-  font-size: 9px;
-}
-`;
-erudaroot.append(style);})();
+	if (!document.querySelector("#eruda")){return;}
+	const erudaroot = document.querySelector("#eruda").shadowRoot;
+	const style = document.createElement("style");
+	style.setAttribute("type", "text/css");
+	style.textContent = `
+	[class^='eruda-icon-']:before {
+		font-size: 14px;
+	}
+	.eruda-icon-arrow-left:before {
+	  content: '←';
+	}
+	.eruda-icon-arrow-right:before {
+	  content: '→';
+	}
+	.eruda-icon-clear:before {
+	  content: '✖';
+	  font-size: 17px;
+	}
+	.eruda-icon-compress:before {
+	  content: '🗎';
+	}
+	.eruda-icon-copy:before {
+	  content: '📋';
+	}
+	.eruda-icon-delete:before {
+	  content: '⌫';
+	}
+	.eruda-icon-expand:before {
+	  content: '⌄';
+	}
+	.eruda-icon-eye:before {
+	  content: '👁';
+	}
+	.eruda-icon-filter:before {
+	  content: 'Ⴤ';
+	  font-size: 15px;
+	  font-weight: bold;
+	}
+	.eruda-icon-play:before {
+	  content: '▷';
+	}
+	.eruda-icon-record:before {
+	  content: '●';
+	}
+	.eruda-icon-refresh:before {
+	  content: '↻';
+	  font-size: 18px;
+	  font-weight: bold;
+	}
+	.eruda-icon-reset:before {
+	  content: '↺';
+	}
+	.eruda-icon-search:before {
+	  content: '🔍';
+	}
+	.eruda-icon-select:before {
+	  content: '⇖';
+	  font-size: 26px;
+	}
+	.eruda-icon-tool:before {
+	  content: '⚙';
+	  font-size: 30px;
+	}
+	.luna-console-icon-error:before {
+	  content: '✗';
+	}
+	.luna-console-icon-warn:before {
+	  content: '⚠';
+	}
+	[class\$='icon-caret-right']:before,
+	[class\$='icon-arrow-right']:before {
+	  content: "► ";
+	  font-size: 16px;
+	}
+	[class\$='icon-caret-down']:before,
+	[class\$='icon-arrow-down']:before {
+	  content: '▼';
+	  font-size: 9px;
+	}
+	`;
+	erudaroot.append(style);
+})();
 """
