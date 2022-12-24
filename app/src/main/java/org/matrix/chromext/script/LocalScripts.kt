@@ -207,6 +207,8 @@ if (typeof globalThis.eruda != "undefined") {
 
 const val erudaFontFix =
     """
+(function(){
+if (!document.querySelector("#eruda")){return;};
 const erudaroot = document.querySelector("#eruda").shadowRoot;
 const style = document.createElement("style");
 style.setAttribute("type", "text/css");
@@ -232,9 +234,6 @@ style.textContent = `
 }
 .eruda-icon-delete:before {
   content: '⌫';
-}
-.eruda-icon-error:before {
-  content: '✗';
 }
 .eruda-icon-expand:before {
   content: '⌄';
@@ -272,17 +271,22 @@ style.textContent = `
   content: '⚙';
   font-size: 30px;
 }
-.eruda-icon-warn:before {
+.luna-console-icon-error:before {
+  content: '✗';
+}
+.luna-console-icon-warn:before {
   content: '⚠';
 }
-.luna-dom-viewer-icon-arrow-right:before {
+[class\$='icon-caret-right']:before,
+[class\$='icon-arrow-right']:before {
   content: "► ";
   font-size: 16px;
 }
-.luna-dom-viewer-icon-arrow-down:before {
+[class\$='icon-caret-down']:before,
+[class\$='icon-arrow-down']:before {
   content: '▼';
   font-size: 9px;
 }
 `;
-erudaroot.append(style);
+erudaroot.append(style);})();
 """

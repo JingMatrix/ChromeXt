@@ -111,6 +111,7 @@ Here are corresponding files you might want / need to change:
 - [x] Use local versions of [eruda](https://github.com/liriliri/eruda)
 - [ ] Find elegant way to support Dev Tools for Android 11-
 - [x] Improve eruda incorporation with Chrome
+- [ ] Download all eruda plugins?
 - [x] Add more information in the preference screen
 - [ ] Fix general text document encoding problem for Chrome Custom Tab
 - [ ] Support more [Tampermonkey API](https://www.tampermonkey.net/documentation.php)s

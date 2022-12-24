@@ -380,6 +380,9 @@ class UserScriptProxy(ctx: Context) {
       }
     } else {
       evaluateJavaScript(erudaToggle)
+      if (eruda_font_fixed) {
+        evaluateJavaScript(erudaFontFix)
+      }
     }
   }
 
