@@ -78,11 +78,13 @@ use multiple scripts of normal sizes instead of a giant script, and avoid using 
 
 ### Solution of system gesture conflicts
 
-To enable forward gesture in chrome, with the help of this module,
-one only needs to disable the right back gesture by
-```sh
-adb shell settings put secure back_gesture_inset_scale_right -1
-```
+The forward and backward gestures of Chrome are now available near the vertical center of screen.
+On other areas, only the system gesture is available.
+<!-- To enable forward gesture in chrome, with the help of this module, -->
+<!-- one only needs to disable the right back gesture by -->
+<!-- ```sh -->
+<!-- adb shell settings put secure back_gesture_inset_scale_right -1 -->
+<!-- ``` -->
 
 ### Dev Tools for developers
 

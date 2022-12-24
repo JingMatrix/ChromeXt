@@ -39,6 +39,7 @@ class GestureNavProxy(ctx: Context) {
 
   val decorView: Class<*>? = null
   val sideSlideLayout: Class<*>? = null
+  var chromeTabbedActivity: Class<*>? = null
   // Even though it exposes the onLayout method, it is not the correct Layout to hook
 
   val UPDATE_NAVIGATION_HANDLER = "g"
@@ -46,6 +47,8 @@ class GestureNavProxy(ctx: Context) {
 
   init {
     historyNavigationCoordinator = ctx.getClassLoader().loadClass(HISTORY_NAVIGATION_COORDINATOR)
+    chromeTabbedActivity =
+        ctx.getClassLoader().loadClass("org.chromium.chrome.browser.ChromeTabbedActivity")
     // decorView = ctx.getClassLoader().loadClass("com.android.internal.policy.DecorView")
     // sideSlideLayout = ctx.getClassLoader().loadClass(SIDE_SLIDE_LAYOUT)
   }
