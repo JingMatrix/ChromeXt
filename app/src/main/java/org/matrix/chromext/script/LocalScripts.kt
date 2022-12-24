@@ -289,21 +289,26 @@ const val erudaFontFix =
 	  content: '🗎';
 	}
 	.eruda-icon-copy:before {
-	  content: '📋';
+	  content: '⎘ ';
+	  font-size: 16px;
+	  font-weight: bold;
 	}
 	.eruda-icon-delete:before {
 	  content: '⌫';
+	  font-weight: bold;
 	}
 	.eruda-icon-expand:before {
 	  content: '⌄';
 	}
 	.eruda-icon-eye:before {
-	  content: '👁';
+	  content: '🧿';
 	}
 	.eruda-icon-filter:before {
-	  content: 'Ⴤ';
-	  font-size: 15px;
-	  font-weight: bold;
+	  content: '⭃';
+      font-size: 19px;
+      font-weight: bold;
+      display: block;
+      transform: rotate(90deg);
 	}
 	.eruda-icon-play:before {
 	  content: '▷';
@@ -323,8 +328,10 @@ const val erudaFontFix =
 	  content: '🔍';
 	}
 	.eruda-icon-select:before {
-	  content: '⇖';
-	  font-size: 26px;
+	  content: '➤';
+	  font-size: 14px;
+	  display: block;
+	  transform: rotate(232deg);
 	}
 	.eruda-icon-tool:before {
 	  content: '⚙';
@@ -338,8 +345,10 @@ const val erudaFontFix =
 	}
 	[class\$='icon-caret-right']:before,
 	[class\$='icon-arrow-right']:before {
-	  content: "► ";
-	  font-size: 16px;
+	  content: '▼';
+	  font-size: 9px;
+	  display: block;
+	  transform: rotate(-0.25turn);
 	}
 	[class\$='icon-caret-down']:before,
 	[class\$='icon-arrow-down']:before {
