@@ -2,7 +2,7 @@
 
 Add UserScript support to Chrome using Xposed framework
 
-##  How it works?
+##  How does it work?
 
 We hook a `onUpdateUrl` function in [UserScript.kt](app/src/main/java/org/matrix/chromext/hook/UserScript.kt),
 add URL comparison there and evaluate JavaScript using the `javascript:` scheme.
@@ -111,9 +111,10 @@ Here are corresponding files you might want / need to change:
 - [x] Inject module resource into Chrome
 - [x] Implement developer tools
 - [x] Use local versions of [eruda](https://github.com/liriliri/eruda)
-- [ ] Find elegant way to support Dev Tools for Android 11-
 - [x] Improve eruda incorporation with Chrome
-- [ ] Download all eruda plugins?
 - [x] Add more information in the preference screen
+- [x] Support more [Tampermonkey API](https://www.tampermonkey.net/documentation.php)s
+- [ ] Hook Chromium [mojom](https://source.chromium.org/chromium/chromium/src/+/main:docs/security/mojo.md) to more inside controls
+- [ ] Find elegant way to support Dev Tools for Android 11-
+- [ ] Download all eruda plugins?
 - [ ] Fix general text document encoding problem for Chrome Custom Tab
-- [ ] Support more [Tampermonkey API](https://www.tampermonkey.net/documentation.php)s
