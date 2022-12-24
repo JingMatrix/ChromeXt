@@ -74,6 +74,24 @@ class MenuProxy(ctx: Context) {
 
     // Find field with Landroid/view/View$OnClickListener
     val CLICK_LISTENER_FIELD = "X"
+
+    fun getErudaVersion(ctx: Context): String? {
+      val sharedPref = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
+      var eruda = sharedPref.getString("eruda", "")
+      if (eruda == "") {
+        return null
+      } else {
+        if (eruda!!.length > 200) {
+          eruda = eruda.take(150)
+        }
+        val verisonReg = Regex("""/npm/eruda@(?<version>[\d\.]+)/eruda""")
+        val vMatchGroup = verisonReg.find(eruda)?.groups as? MatchNamedGroupCollection
+        if (vMatchGroup != null) {
+          return vMatchGroup.get("version")?.value as String
+        }
+        return "unknown"
+      }
+    }
   }
 
   private val mContext: Field? = null
@@ -121,24 +139,6 @@ class MenuProxy(ctx: Context) {
     val localPopup = PopupMenu(chromeContext!!, mDecorView!!.get(obj) as View)
     val localInflater: MenuInflater = localPopup.getMenuInflater()
     localInflater.inflate(R.menu.main_menu, menu)
-  }
-
-  fun getErudaVersion(ctx: Context): String? {
-    val sharedPref = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
-    var eruda = sharedPref.getString("eruda", "")
-    if (eruda == "") {
-      return null
-    } else {
-      if (eruda!!.length > 200) {
-        eruda = eruda.take(150)
-      }
-      val verisonReg = Regex("""/npm/eruda@(?<version>[\d\.]+)/eruda""")
-      val vMatchGroup = verisonReg.find(eruda)?.groups as? MatchNamedGroupCollection
-      if (vMatchGroup != null) {
-        return vMatchGroup.get("version")?.value as String
-      }
-      return "unknown"
-    }
   }
 
   fun setClickListenerAndSummary(obj: Any, ctx: Context, pref: String) {

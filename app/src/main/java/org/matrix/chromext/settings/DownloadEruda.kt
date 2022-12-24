@@ -11,6 +11,7 @@ import android.os.Environment
 import android.view.View
 import android.view.View.OnClickListener
 import java.io.FileReader
+import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.utils.Log
 
 class DownloadEruda(ctx: Context) : OnClickListener {
@@ -30,7 +31,7 @@ class DownloadEruda(ctx: Context) : OnClickListener {
     context!!.registerReceiver(
         writeSharedPreference, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
 
-    val request = Request(Uri.parse("https://cdn.jsdelivr.net/npm/eruda"))
+    val request = Request(Uri.parse("https://cdn.jsdelivr.net/npm/eruda@latest/eruda.min.js"))
     request.setDescription("Console for mobile browsers")
     request.setTitle("Eruda.js")
     request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "Eruda.js")
@@ -46,12 +47,19 @@ class DownloadEruda(ctx: Context) : OnClickListener {
           val downloadManager = ctx.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
           val fd = downloadManager.openDownloadedFile(downloadId).getFileDescriptor()
           val eruda = FileReader(fd).use { it.readText() }
+          val old_version = MenuProxy.getErudaVersion(ctx)!!
           val sharedPref = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
           with(sharedPref!!.edit()) {
             putString("eruda", eruda)
             apply()
-            Log.toast(ctx, "Updated to the lastest Eruda")
           }
+          val new_version = MenuProxy.getErudaVersion(ctx)!!
+          if (old_version != new_version) {
+            Log.toast(ctx, "Updated to eruda v" + MenuProxy.getErudaVersion(ctx)!!)
+          } else {
+            Log.toast(ctx, "Eruda is already the lastest")
+          }
+          downloadManager.remove(downloadId)
         }
       }
     }
