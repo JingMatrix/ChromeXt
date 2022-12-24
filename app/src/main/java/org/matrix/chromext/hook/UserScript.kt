@@ -47,6 +47,11 @@ object UserScriptHook : BaseHook() {
                   }
                 }
                 .onFailure { Log.w(it.toString()) }
+          } else if ((it.args[0] as Int) == 3 &&
+              (it.args[1] as String).startsWith(
+                  "Refused to load the font 'data:application/x-font-woff;charset=utf-8;base64")) {
+            Log.i("Fixing font problem for Eruda")
+            proxy!!.fixErudaFont()
           } else {
             Log.d(
                 when (it.args[0] as Int) {

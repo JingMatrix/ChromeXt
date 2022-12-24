@@ -9,6 +9,7 @@ import org.matrix.chromext.script.AppDatabase
 import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDao
 import org.matrix.chromext.script.encodeScript
+import org.matrix.chromext.script.erudaFontFix
 import org.matrix.chromext.script.erudaToggle
 import org.matrix.chromext.script.parseScript
 import org.matrix.chromext.script.urlMatch
@@ -79,6 +80,7 @@ class UserScriptProxy(ctx: Context) {
 
     // A variable to avoid redloading eruda
     var eruda_loaded = false
+    var eruda_font_fixed = false
   }
 
   var tabWebContentsDelegateAndroidImpl: Class<*>? = null
@@ -354,6 +356,7 @@ class UserScriptProxy(ctx: Context) {
       invokeScript(url)
     }
     eruda_loaded = false
+    eruda_font_fixed = false
   }
 
   // fun didStartLoading(url: String) {
@@ -377,6 +380,13 @@ class UserScriptProxy(ctx: Context) {
       }
     } else {
       evaluateJavaScript(erudaToggle)
+    }
+  }
+
+  fun fixErudaFont() {
+    if (eruda_loaded && !eruda_font_fixed) {
+      evaluateJavaScript(erudaFontFix)
+      eruda_font_fixed = true
     }
   }
 }
