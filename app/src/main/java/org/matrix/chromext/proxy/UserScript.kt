@@ -123,6 +123,7 @@ class UserScriptProxy(ctx: Context) {
   private val mNavigationUIDataSupplier: Field? = null
 
   private var scriptDao: ScriptDao? = null
+
   init {
     val sharedPref: SharedPreferences = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
     updateSmali(sharedPref)
@@ -181,11 +182,6 @@ class UserScriptProxy(ctx: Context) {
   fun newUrl(url: String): Any {
     return loadUrlParams!!.getDeclaredConstructor(String::class.java).newInstance(url)
   }
-  // private fun naviUrl(url: String) {
-  //   navController!!.invokeMethod( newUrl(url) ) {
-  //         name == NAVI_LOAD_URL
-  //       }
-  // }
 
   private fun invokeScript(url: String) {
     scriptDao!!.getAll().forEach {
@@ -313,16 +309,6 @@ class UserScriptProxy(ctx: Context) {
     }
     return callback
   }
-
-  // fun fixCharset(packed: Any): Boolean {
-  //   if (packed::class.qualifiedName == loadUrlParams!!.name) {
-  //     mVerbatimHeaders!!.set(packed, "accept: charset=utf-8,text/javascript")
-  //     // Log.i("Fix Charset for ${mUrl!!.get(packed)}")
-  //     return true
-  //   }
-  //   Log.e("fixCharset: ${packed::class.qualifiedName} is not ${loadUrlParams!!.name}")
-  //   return false
-  // }
 
   fun updateTabDelegator(delegator: Any): Boolean {
     if (delegator::class.qualifiedName == tabWebContentsDelegateAndroidImpl!!.name) {
