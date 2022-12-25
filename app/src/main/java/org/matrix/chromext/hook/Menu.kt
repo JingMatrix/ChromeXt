@@ -1,10 +1,12 @@
 package org.matrix.chromext.hook
 
-// import org.matrix.chromext.utils.Log
 import android.content.Context
 import android.os.Build
 import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import java.lang.reflect.Method
+import java.util.ArrayList
 import org.matrix.chromext.R
 import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.utils.findMethod
@@ -25,8 +27,8 @@ object MenuHook : BaseHook() {
         // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
         .hookAfter {
           val id = it.args[0] as Int
-          if (ctx.getResources().getResourceName(id) ==
-              "org.matrix.chromext:id/developer_tools_id") {
+          val name = ctx.getResources().getResourceName(id)
+          if (name == "org.matrix.chromext:id/developer_tools_id") {
             UserScriptHook.proxy!!.openDevTools(ctx)
           }
         }
@@ -38,9 +40,19 @@ object MenuHook : BaseHook() {
         //         boolean canShowRequestDesktopSite, boolean isChromeScheme)
         .hookBefore {
           val menu = it.args[0] as Menu
-          proxy.injectLocalMenu(it.thisObject, menu)
-          val devMenuItem = menu.getItem(menu.size() - 1)
+          MenuInflater(ctx).inflate(R.menu.main_menu, menu)
+
+          val mItems = menu::class.java.getDeclaredField("mItems")
+          mItems.setAccessible(true)
+
+          @Suppress("UNCHECKED_CAST") val items = mItems.get(menu) as ArrayList<MenuItem>
+
+          val devMenuItem: MenuItem = items.removeLast()
           devMenuItem.setVisible(!(it.args[3] as Boolean) && (it.args[2] as Boolean))
+          // The index 13 is just chosen by tests, to make sure that it appears before the share
+          // menu
+          items.add(13, devMenuItem)
+          mItems.setAccessible(false)
         }
 
     findMethod(proxy.preferenceFragmentCompat!!) { name == proxy.ADD_PREFERENCES_FROM_RESOURCE }

@@ -1,13 +1,8 @@
 package org.matrix.chromext.proxy
 
 import android.content.Context
-import android.view.Menu
-import android.view.MenuInflater
-import android.view.View
-import android.widget.PopupMenu
 import java.lang.reflect.Field
 import kotlin.text.Regex
-import org.matrix.chromext.R
 import org.matrix.chromext.settings.DownloadEruda
 import org.matrix.chromext.settings.ExitDevMode
 import org.matrix.chromext.utils.invokeMethod
@@ -53,7 +48,7 @@ class MenuProxy(ctx: Context) {
 
   // Grep (Ljava/lang/CharSequence;)Landroidx/preference/Preference;
   // to get method findPreference of PreferenceFragmentCompat
-  var FIND_PREFERENCE = "U0"
+  val FIND_PREFERENCE = "U0"
 
   // Grep "Preference already has a SummaryProvider set"
   // to get method setSummary of Preference
@@ -68,10 +63,6 @@ class MenuProxy(ctx: Context) {
   val PREFERENCE_CLICK_LISTENER_FIELD = "l"
 
   companion object {
-    // Find context and view fields from AppMenuPropertiesDelegateImpl class
-    val CONTEXT_FIELD = "b"
-    val DECOR_VIEW_FIELD = "h"
-
     // Find field with Landroid/view/View$OnClickListener
     val CLICK_LISTENER_FIELD = "X"
 
@@ -94,11 +85,6 @@ class MenuProxy(ctx: Context) {
     }
   }
 
-  private val mContext: Field? = null
-  private var mDecorView: Field? = null
-
-  var chromeContext: Context? = null
-
   var chromeTabbedActivity: Class<*>? = null
   var appMenuPropertiesDelegateImpl: Class<*>? = null
   var developerSettings: Class<*>? = null
@@ -116,8 +102,6 @@ class MenuProxy(ctx: Context) {
         ctx.getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)
     isDeveloper = sharedPref!!.getBoolean("developer", false)
 
-    chromeContext = ctx
-
     preference = ctx.getClassLoader().loadClass("androidx.preference.Preference")
     // onPreferenceClickListener = ctx.getClassLoader().loadClass(ON_PREFERENCE_CLICK_LISTENER)
     developerSettings =
@@ -128,17 +112,9 @@ class MenuProxy(ctx: Context) {
         ctx.getClassLoader().loadClass("org.chromium.chrome.browser.ChromeTabbedActivity")
     appMenuPropertiesDelegateImpl =
         ctx.getClassLoader().loadClass(APP_MENU_PROPERTIES_DELEGATE_IMPL)
-    // mContext = appMenuPropertiesDelegateImpl!!.getDeclaredField(CONTEXT_FIELD)
-    mDecorView = appMenuPropertiesDelegateImpl!!.getDeclaredField(DECOR_VIEW_FIELD)
     mClickListener = preference!!.getDeclaredField(CLICK_LISTENER_FIELD)
     // mOnClickListener = preference!!.getDeclaredField(PREFERENCE_CLICK_LISTENER_FIELD)
     mClickListener!!.setAccessible(true)
-  }
-
-  fun injectLocalMenu(obj: Any, menu: Menu) {
-    val localPopup = PopupMenu(chromeContext!!, mDecorView!!.get(obj) as View)
-    val localInflater: MenuInflater = localPopup.getMenuInflater()
-    localInflater.inflate(R.menu.main_menu, menu)
   }
 
   fun setClickListenerAndSummary(obj: Any, ctx: Context, pref: String) {
