@@ -41,16 +41,18 @@ object UserScriptHook : BaseHook() {
                   val data = JSONObject(text)
                   val action = data.getString("action")
                   val payload = data.getString("payload")
-                  val callback = proxy!!.scriptManager(action, payload)
-                  if (callback != null) {
-                    proxy!!.evaluateJavaScript(callback)
-                  }
+                  runCatching {
+                        val callback = proxy!!.scriptManager(action, payload)
+                        if (callback != null) {
+                          proxy!!.evaluateJavaScript(callback)
+                        }
+                      }
+                      .onFailure { Log.w("Failed with ${action}: ${payload}") }
                 }
-                .onFailure { Log.w(it.toString()) }
+                .onFailure { Log.d("Ignore console.debug: " + text) }
           } else if ((it.args[0] as Int) == 3 &&
               (it.args[1] as String).startsWith(
                   "Refused to load the font 'data:application/x-font-woff;charset=utf-8;base64")) {
-            // Log.i("Fixing font problem for Eruda")
             proxy!!.fixErudaFont()
           } else {
             Log.d(

@@ -28,6 +28,7 @@ fun parseScript(input: String): Script? {
         var grant = mutableListOf<String>()
         var exclude = mutableListOf<String>()
         var require = mutableListOf<String>()
+        val meta = blockMatchGroup.get("metablock")?.value as String
         val code = blockMatchGroup.get("code")?.value as String
         val encoded = false
       }
@@ -67,6 +68,7 @@ fun parseScript(input: String): Script? {
         script.grant.toTypedArray(),
         script.exclude.toTypedArray(),
         script.require.toTypedArray(),
+        script.meta,
         script.code,
         script.runAt,
         script.encoded)

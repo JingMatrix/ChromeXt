@@ -11,6 +11,8 @@ import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Entity
 data class Script(
@@ -19,6 +21,7 @@ data class Script(
     val grant: Array<String>,
     val exclude: Array<String>,
     val require: Array<String>,
+    var meta: String,
     var code: String,
     val runAt: RunAt,
     var encoded: Boolean
@@ -46,13 +49,20 @@ interface ScriptDao {
   // @Query("SELECT * FROM script WHERE runAt is (:runAt)")
   // fun getIdByRunAt(runAt: List<RunAt>): List<Script>
 
-  // @Query("SELECT * FROM script WHERE id IN (:scriptIds)")
-  // fun getScriptById(scriptIds: List<String>): List<Script>
+  @Query("SELECT * FROM script WHERE id IN (:scriptIds)")
+  fun getScriptById(scriptIds: List<String>): List<Script>
 
   @Delete fun delete(script: Script): Int
 }
 
-@Database(entities = [Script::class], version = 2, exportSchema = false)
+val MIGRATION_2_3 =
+    object : Migration(2, 3) {
+      override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("ALTER TABLE script ADD COLUMN meta TEXT NOT NULL DEFAULT ''")
+      }
+    }
+
+@Database(entities = [Script::class], version = 3, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
   abstract fun init(): ScriptDao

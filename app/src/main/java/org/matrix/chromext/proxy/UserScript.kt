@@ -6,6 +6,7 @@ import androidx.room.Room
 import java.lang.reflect.Field
 import java.net.URLEncoder
 import org.matrix.chromext.script.AppDatabase
+import org.matrix.chromext.script.MIGRATION_2_3
 import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDao
 import org.matrix.chromext.script.encodeScript
@@ -130,6 +131,7 @@ class UserScriptProxy(ctx: Context) {
     scriptDao =
         Room.databaseBuilder(ctx, AppDatabase::class.java, "userscript")
             .allowMainThreadQueries()
+            .addMigrations(MIGRATION_2_3)
             .build()
             .init()
     gURL = ctx.getClassLoader().loadClass("org.chromium.url.GURL")
@@ -254,6 +256,7 @@ class UserScriptProxy(ctx: Context) {
   }
 
   fun scriptManager(action: String, payload: String): String? {
+    val SCRIPT_QUOTE_ESCAPE = "ChromeXt_Signle_Quote_Escape_String"
     var callback: String? = null
     when (action) {
       "installScript" -> {
@@ -266,45 +269,24 @@ class UserScriptProxy(ctx: Context) {
         }
       }
       "getIds" -> {
-        val result = scriptDao!!.getAll().map { it.id.replace("'", "\\'") }
-        evaluateJavaScript("console.log(['${result.joinToString(separator = "','")}'])")
+        val result = scriptDao!!.getAll().map { it.id.replace("'", SCRIPT_QUOTE_ESCAPE) }
+        callback =
+            "window.dispatchEvent(new CustomEvent('script_id',{detail:['${result.joinToString(separator = "','")}']}));"
       }
-      // "getScriptById" -> {
-      //   runCatching {
-      //         val ids = parseArray(payload)
-      //         val result = scriptDao!!.getScriptById(ids).map { it.code.replace("'", "\\'") }
-      //         evaluateJavaScript("console.log(['${result.joinToString(separator = "','")}'])")
-      //       }
-      //       .onFailure { evaluateJavaScript("console.error(${it.toString()})") }
-      // }
-      // "getIdByRunAt" -> {
-      //   runCatching {
-      //         val runAts =
-      //             parseArray(payload).map {
-      //               when (it) {
-      //                 "document-start" -> RunAt.START
-      //                 "document-end" -> RunAt.END
-      //                 "document-idle" -> RunAt.IDLE
-      //                 else -> RunAt.IDLE
-      //               }
-      // }
-      // val result = scriptDao!!.getIdByRunAt(runAts).map { it.id.replace("'", "\\'") }
-      // evaluateJavaScript("console.log(['${result.joinToString(separator = "','")}'])")
-      // }
-      // .onFailure { evaluateJavaScript("console.error(${it.toString()})") }
-      // }
+      "getMetaById" -> {
+        val ids = parseArray(payload)
+        val result =
+            scriptDao!!.getScriptById(ids).map { it.meta.replace("`", SCRIPT_QUOTE_ESCAPE) }
+        callback =
+            "window.dispatchEvent(new CustomEvent('script_meta',{detail:[`${result.joinToString(separator = "`,`")}`]}));"
+      }
       "deleteScriptById" -> {
-        runCatching {
-              val ids = parseArray(payload)
-              scriptDao!!.getAll().forEach {
-                if (ids.contains(it.id)) {
-                  if (scriptDao!!.delete(it) == 1) {
-                    evaluateJavaScript("console.log(`${it.id} deleted!`)")
-                  }
-                }
-              }
-            }
-            .onFailure { evaluateJavaScript("console.error(${it.toString()})") }
+        val ids = parseArray(payload)
+        scriptDao!!.getAll().forEach {
+          if (ids.contains(it.id)) {
+            scriptDao!!.delete(it)
+          }
+        }
       }
     }
     return callback
