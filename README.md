@@ -114,7 +114,7 @@ Here are corresponding files you might want / need to change:
 - [x] Add more information in the preference screen
 - [x] Support more [Tampermonkey API](https://www.tampermonkey.net/documentation.php)s
 - [x] Find elegant way to support Dev Tools for Android 11-
-- [ ] Improve front end
-- [ ] Hook Chromium [mojom](https://source.chromium.org/chromium/chromium/src/+/main:docs/security/mojo.md) to more inside controls
-- [ ] Download all eruda plugins?
+- [x] Improve front end
+- [ ] Update TabDelegator when changing a Tab
+- [ ] Support @resource API
 - [ ] Fix general text document encoding problem for Chrome Custom Tab
