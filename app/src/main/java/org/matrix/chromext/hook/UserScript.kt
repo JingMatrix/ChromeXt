@@ -3,7 +3,6 @@ package org.matrix.chromext.hook
 import android.content.Context
 import org.json.JSONObject
 import org.matrix.chromext.proxy.UserScriptProxy
-import org.matrix.chromext.script.promptInstallUserScript
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
@@ -24,6 +23,8 @@ object UserScriptHook : BaseHook() {
           if (url.endsWith("/ChromeXt/")) {
             proxy!!.evaluateJavaScript("ChromeXt=console.debug;")
           } else if (url.endsWith(".user.js")) {
+            val promptInstallUserScript =
+                ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
             proxy!!.evaluateJavaScript(promptInstallUserScript)
           } else {
             proxy!!.didUpdateUrl(url)
@@ -53,7 +54,7 @@ object UserScriptHook : BaseHook() {
           } else if ((it.args[0] as Int) == 3 &&
               (it.args[1] as String).startsWith(
                   "Refused to load the font 'data:application/x-font-woff;charset=utf-8;base64")) {
-            proxy!!.fixErudaFont()
+            proxy!!.fixErudaFont(ctx)
           } else {
             Log.d(
                 when (it.args[0] as Int) {
