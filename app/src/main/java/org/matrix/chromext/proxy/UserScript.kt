@@ -268,6 +268,16 @@ class UserScriptProxy(ctx: Context) {
         callback =
             "window.dispatchEvent(new CustomEvent('script_meta',{detail:[`${result.joinToString(separator = "`,`")}`]}));"
       }
+      "updateMetaForId" -> {
+        val CHROMEXT_SPLIT = "ChromeXt_Split_For_Metadata_Update"
+        val result = payload.split(CHROMEXT_SPLIT)
+        val match = scriptDao!!.getScriptById(listOf(result[0]))
+        if (match.size > 0) {
+          val script = match.first()
+          val newScript = parseScript(result[1] + "\n" + script.code)
+          scriptDao!!.insertAll(newScript!!)
+        }
+      }
       "deleteScriptById" -> {
         val ids = parseArray(payload)
         scriptDao!!.getAll().forEach {
