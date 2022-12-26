@@ -43,7 +43,7 @@ And then if you open your downloaded scripts in Chrome, the installation prompt 
 
 Currently, ChromeXt supports only the following APIs since they are everything the author needs to perform all sort of tasks.
 
-1. @name (colons and backslashes not allowed), @namespace (backslashes not allowed)
+1. @name (colons and backslashes not allowed), @namespace (backslashes not allowed), other similar properties' implements depends on the manage front end
 2. @match (must present and conform to the [Chrome Standard](https://developer.chrome.com/docs/extensions/mv2/match_patterns/))
 3. @include = @match, @exclude
 4. @run-at: document-start, document-end, document-idle (the default and fallback value)
@@ -88,8 +88,8 @@ On other areas, only the system gesture is available.
 
 ### Dev Tools for developers
 
-Currently, I implement this feature only for Android 11+.
-I might implement it for older Android versions if there are some requests for doing so.
+<!-- Currently, I implement this feature only for Android 11+. -->
+<!-- I might implement it for older Android versions if there are some requests for doing so. -->
 
 Tap five times on the Chrome version from the Chrome settings, you will see the `Developer options` menu.
 After restarting Chrome, ChromeXt offers you the `Developer tools` page menu.
@@ -105,7 +105,6 @@ Here are corresponding files you might want / need to change:
 
 ## Development plans
 
-- [x] Improve front end
 - [x] Make it possible to pass intents to Chrome with `file` scheme
 - [x] Fix encoding problem for Chrome downloaded Javascript files
 - [x] Inject module resource into Chrome
@@ -114,7 +113,8 @@ Here are corresponding files you might want / need to change:
 - [x] Improve eruda incorporation with Chrome
 - [x] Add more information in the preference screen
 - [x] Support more [Tampermonkey API](https://www.tampermonkey.net/documentation.php)s
+- [x] Find elegant way to support Dev Tools for Android 11-
+- [ ] Improve front end
 - [ ] Hook Chromium [mojom](https://source.chromium.org/chromium/chromium/src/+/main:docs/security/mojo.md) to more inside controls
-- [ ] Find elegant way to support Dev Tools for Android 11-
 - [ ] Download all eruda plugins?
 - [ ] Fix general text document encoding problem for Chrome Custom Tab

@@ -20,6 +20,7 @@ import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
+import org.matrix.chromext.utils.invokeMethod
 
 private const val PACKAGE_CHROME = "com.android.chrome"
 private const val PACKAGE_BETA = "com.chrome.beta"
@@ -69,6 +70,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
                   File(URI.create("file://" + MODULE_PATH)), ParcelFileDescriptor.MODE_READ_ONLY)))
 
       ctx.getResources().addLoaders(resLoader)
+    } else {
+      ctx.assets.invokeMethod(MODULE_PATH) { name == "addAssetPath" }
     }
   }
 
