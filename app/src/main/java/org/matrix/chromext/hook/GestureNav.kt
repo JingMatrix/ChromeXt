@@ -38,7 +38,7 @@ object GestureNavHook : BaseHook() {
       Log.d("Called setSystemGestureExclusionRects with size ${width} x ${excludeHeight * 2}")
       decoView.setSystemGestureExclusionRects(
           // public Rect (int left, int top, int right, int bottom)
-          listOf(Rect(0, height / 2 - excludeHeight, width, height / 2 + excludeHeight)))
+          listOf(Rect(width / 2, height / 2 - excludeHeight, width, height / 2 + excludeHeight)))
     }
   }
 }
