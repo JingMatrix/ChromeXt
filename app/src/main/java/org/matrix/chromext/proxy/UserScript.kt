@@ -154,23 +154,11 @@ class UserScriptProxy(ctx: Context) {
     mSpec = gURL!!.getDeclaredField(SPEC_FIELD)
   }
   private fun updateSmali(sharedPref: SharedPreferences) {
-    // if (sharedPref.contains("NAVI_LOAD_URL")) {
-    //   NAVI_LOAD_URL = sharedPref.getString("NAVI_LOAD_URL", NAVI_LOAD_URL)!!
-    // } else {
-    //   writeSmali(sharedPref)
-    //   return
-    // }
     if (sharedPref.contains("LOAD_URL")) {
       LOAD_URL = sharedPref.getString("LOAD_URL", LOAD_URL)!!
-    } else {
-      writeSmali(sharedPref)
-      return
     }
-  }
-
-  private fun writeSmali(sharedPref: SharedPreferences) {
     with(sharedPref.edit()) {
-      // putString("NAVI_LOAD_URL", NAVI_LOAD_URL)
+      clear()
       putString("LOAD_URL", LOAD_URL)
       apply()
     }
@@ -337,9 +325,9 @@ class UserScriptProxy(ctx: Context) {
 
   fun openDevTools(ctx: Context) {
     if (!eruda_loaded) {
-      val sharedPref: SharedPreferences = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
-      val eruda = sharedPref.getString("eruda", "")
-      if (eruda != "") {
+      val sharedPref: SharedPreferences = ctx.getSharedPreferences("Eruda", Context.MODE_PRIVATE)
+      if (sharedPref.contains("eruda")) {
+        val eruda = sharedPref.getString("eruda", "")
         evaluateJavaScript(eruda!!)
         evaluateJavaScript(erudaToggle)
         eruda_loaded = true

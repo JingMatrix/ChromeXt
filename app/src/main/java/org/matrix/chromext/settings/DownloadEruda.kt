@@ -47,13 +47,13 @@ class DownloadEruda(ctx: Context) : OnClickListener {
           val downloadManager = ctx.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
           val fd = downloadManager.openDownloadedFile(downloadId).getFileDescriptor()
           val eruda = FileReader(fd).use { it.readText() }
-          val old_version = MenuProxy.getErudaVersion(ctx)!!
-          val sharedPref = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
+          val old_version = MenuProxy.getErudaVersion(ctx)
+          val sharedPref = ctx.getSharedPreferences("Eruda", Context.MODE_PRIVATE)
           with(sharedPref!!.edit()) {
             putString("eruda", eruda)
             apply()
           }
-          val new_version = MenuProxy.getErudaVersion(ctx)!!
+          val new_version = MenuProxy.getErudaVersion(ctx)
           if (old_version != new_version) {
             Log.toast(ctx, "Updated to eruda v" + MenuProxy.getErudaVersion(ctx)!!)
           } else {

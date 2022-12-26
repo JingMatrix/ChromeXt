@@ -67,7 +67,10 @@ class MenuProxy(ctx: Context) {
     val CLICK_LISTENER_FIELD = "X"
 
     fun getErudaVersion(ctx: Context): String? {
-      val sharedPref = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
+      val sharedPref = ctx.getSharedPreferences("Eruda", Context.MODE_PRIVATE)
+      if (!sharedPref.contains("eruda")) {
+        return null
+      }
       var eruda = sharedPref.getString("eruda", "")
       if (eruda == "") {
         return null
