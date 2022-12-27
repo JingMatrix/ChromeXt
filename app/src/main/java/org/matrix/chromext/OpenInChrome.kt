@@ -56,7 +56,7 @@ class OpenInChrome : Activity() {
           invokeChromeTabbed(text)
         } else {
           if (!text.contains("://")) {
-            text = "https://google.com/search?q=${text}"
+            text = "https://google.com/search?q=${text.replace("#", "%23")}"
           }
           startActivity(
               Intent().apply {
