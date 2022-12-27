@@ -116,6 +116,7 @@ Here are corresponding files you might want / need to change:
 - [x] Find elegant way to support Dev Tools for Android 11-
 - [x] Improve front end
 - [ ] Add recommended scripts to the front end manager
+- [ ] Add uBlock Origin cosmetic AdBlocker using Eruda
 - [ ] Read Mode menu
 - [ ] Support @resource API
 - [ ] Fix general text document encoding problem for Chrome Custom Tab
