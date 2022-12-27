@@ -1,7 +1,6 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
-import android.os.Build
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
@@ -18,10 +17,6 @@ object MenuHook : BaseHook() {
   override fun init(ctx: Context) {
 
     val proxy = MenuProxy(ctx)
-
-    if (!proxy.isDeveloper || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-      return
-    }
 
     findMethod(proxy.chromeTabbedActivity!!) { name == proxy.MENU_KEYBOARD_ACTION }
         // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
@@ -48,7 +43,8 @@ object MenuHook : BaseHook() {
           @Suppress("UNCHECKED_CAST") val items = mItems.get(menu) as ArrayList<MenuItem>
 
           val devMenuItem: MenuItem = items.removeLast()
-          devMenuItem.setVisible(!(it.args[3] as Boolean) && (it.args[2] as Boolean))
+          devMenuItem.setVisible(
+              !(it.args[3] as Boolean) && (it.args[2] as Boolean) && proxy.isDeveloper)
           // The index 13 is just chosen by tests, to make sure that it appears before the share
           // menu
           items.add(13, devMenuItem)
