@@ -100,7 +100,7 @@ Before you submit your pull-requests, please ensure that the command
 `./gradlew build` or `gradlew.bat build` produces no warnings and no errors.
 
 Here are corresponding files you might want / need to change:
-1. Front end: [ChromeXt.vue](https://github.com/JingMatrix/viteblog/tree/master/components/ChromeXt.vue)
+1. Front end: [manager.vue](https://github.com/JingMatrix/viteblog/tree/master/components/ChromeXt/manager.vue)
 2. Tampermonkey API: [LocalScripts.kt](app/src/main/java/org/matrix/chromext/script/LocalScripts.kt)
 
 ## Development plans
@@ -115,5 +115,7 @@ Here are corresponding files you might want / need to change:
 - [x] Support more [Tampermonkey API](https://www.tampermonkey.net/documentation.php)s
 - [x] Find elegant way to support Dev Tools for Android 11-
 - [x] Improve front end
+- [ ] Add recommended scripts to the front end manager
+- [ ] Read Mode menu
 - [ ] Support @resource API
 - [ ] Fix general text document encoding problem for Chrome Custom Tab
