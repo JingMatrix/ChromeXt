@@ -45,6 +45,7 @@ object UserScriptHook : BaseHook() {
                   runCatching {
                         val callback = proxy!!.scriptManager(action, payload)
                         if (callback != null) {
+                          proxy!!.updateTabDelegator(it.thisObject)
                           proxy!!.evaluateJavaScript(callback)
                         }
                       }

@@ -115,6 +115,5 @@ Here are corresponding files you might want / need to change:
 - [x] Support more [Tampermonkey API](https://www.tampermonkey.net/documentation.php)s
 - [x] Find elegant way to support Dev Tools for Android 11-
 - [x] Improve front end
-- [ ] Update TabDelegator when changing a Tab
 - [ ] Support @resource API
 - [ ] Fix general text document encoding problem for Chrome Custom Tab
