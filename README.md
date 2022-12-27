@@ -102,6 +102,7 @@ Before you submit your pull-requests, please ensure that the command
 Here are corresponding files you might want / need to change:
 1. Front end: [manager.vue](https://github.com/JingMatrix/viteblog/tree/master/components/ChromeXt/manager.vue)
 2. Tampermonkey API: [LocalScripts.kt](app/src/main/java/org/matrix/chromext/script/LocalScripts.kt)
+3. Eruda configuration: [local_eruda.js](app/src/main/assets/local_eruda.js)
 
 ## Development plans
 

@@ -338,6 +338,8 @@ class UserScriptProxy(ctx: Context) {
       if (sharedPref.contains("eruda")) {
         val eruda = sharedPref.getString("eruda", "")
         evaluateJavaScript(eruda!!)
+        val local_eruda = ctx.assets.open("local_eruda.js").bufferedReader().use { it.readText() }
+        evaluateJavaScript(local_eruda)
         evaluateJavaScript(erudaToggle)
         eruda_loaded = true
       } else {
