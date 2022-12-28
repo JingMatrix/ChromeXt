@@ -9,11 +9,11 @@
 let filter = localStorage.getItem("ChromeXt_filter");
 if (filter != null) {
   filter = JSON.parse(filter);
-  window.onload = () => {
+  window.addEventListener("load", () => {
     document.querySelectorAll(filter.join(", ")).forEach((node) => {
       node.hidden = true;
       node.style.display = "none";
       node.style.visibility = "hidden";
     });
-  };
+  });
 }

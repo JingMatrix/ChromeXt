@@ -115,8 +115,8 @@ fun encodeScript(script: Script): String? {
 
   when (script.runAt) {
     RunAt.START -> {}
-    RunAt.END -> code = """document.addEventListener("DOMContentLoaded",()=>{${code}});"""
-    RunAt.IDLE -> code = """window.onload=()=>{${code}}"""
+    RunAt.END -> code = """window.addEventListener("DOMContentLoaded",()=>{${code}});"""
+    RunAt.IDLE -> code = """window.addEventListener("load",()=>{${code}});"""
   }
 
   val imports =
