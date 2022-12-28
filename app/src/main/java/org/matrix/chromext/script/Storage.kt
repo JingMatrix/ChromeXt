@@ -24,7 +24,7 @@ data class Script(
     var meta: String,
     var code: String,
     val runAt: RunAt,
-    var encoded: Boolean
+    val shouldWrap: Boolean = false
 )
 
 class Converters {
@@ -62,7 +62,15 @@ val MIGRATION_2_3 =
       }
     }
 
-@Database(entities = [Script::class], version = 3, exportSchema = false)
+val MIGRATION_3_4 =
+    object : Migration(3, 4) {
+      override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("ALTER TABLE script RENAME COLUMN encoded to shouldWrap")
+        database.execSQL("UPDATE script SET shouldWrap = false")
+      }
+    }
+
+@Database(entities = [Script::class], version = 4, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
   abstract fun init(): ScriptDao

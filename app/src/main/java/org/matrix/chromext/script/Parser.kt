@@ -30,7 +30,6 @@ fun parseScript(input: String): Script? {
         var require = mutableListOf<String>()
         val meta = blockMatchGroup.get("metablock")?.value as String
         val code = blockMatchGroup.get("code")?.value as String
-        val encoded = false
       }
   val metablock = blockMatchGroup.get("metablock")?.value as String
   metablock.split("\n").forEach {
@@ -71,6 +70,6 @@ fun parseScript(input: String): Script? {
         script.meta,
         script.code,
         script.runAt,
-        script.encoded)
+        script.code.contains("\\`"))
   }
 }

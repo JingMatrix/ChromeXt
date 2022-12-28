@@ -98,14 +98,9 @@ function GM_openInTab(url, options) {
 
 fun encodeScript(script: Script): String? {
   var code = script.code
-  if (script.encoded) {
-    return null
-  }
-
-  val shouldWrap: Boolean = code.contains("\\`")
 
   var backtrick = ""
-  if (shouldWrap) {
+  if (script.shouldWrap) {
     // Encode source code by simple replacement
     val alphabet: List<Char> = ('a'..'z') + ('A'..'Z')
     backtrick = List(16) { alphabet.random() }.joinToString("")
@@ -160,7 +155,7 @@ fun encodeScript(script: Script): String? {
     }
   }
 
-  if (shouldWrap) {
+  if (script.shouldWrap) {
     // Add decode function, and it finally contains only three backtricks in total
     code = """function ChromeXt_decode(src) {return src.replaceAll("${backtrick}", "`");}""" + code
   }

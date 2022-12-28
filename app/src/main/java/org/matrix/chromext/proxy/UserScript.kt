@@ -7,6 +7,7 @@ import java.lang.reflect.Field
 import java.net.URLEncoder
 import org.matrix.chromext.script.AppDatabase
 import org.matrix.chromext.script.MIGRATION_2_3
+import org.matrix.chromext.script.MIGRATION_3_4
 import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDao
 import org.matrix.chromext.script.encodeScript
@@ -130,7 +131,7 @@ class UserScriptProxy(ctx: Context) {
     scriptDao =
         Room.databaseBuilder(ctx, AppDatabase::class.java, "userscript")
             .allowMainThreadQueries()
-            .addMigrations(MIGRATION_2_3)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
             .build()
             .init()
     gURL = ctx.getClassLoader().loadClass("org.chromium.url.GURL")
@@ -196,15 +197,10 @@ class UserScriptProxy(ctx: Context) {
   }
 
   private fun evaluateJavaScript(script: Script) {
-    if (!script.encoded) {
-      val code = encodeScript(script)
-      if (code != null) {
-        script.code = code
-        script.encoded = true
-        scriptDao!!.insertAll(script)
-      }
+    val code = encodeScript(script)
+    if (code != null) {
+      evaluateJavaScript(code)
     }
-    evaluateJavaScript(script.code)
   }
 
   fun evaluateJavaScript(script: String) {
