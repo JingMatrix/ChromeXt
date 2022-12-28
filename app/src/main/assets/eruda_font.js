@@ -22,7 +22,8 @@
 	.eruda-icon-compress:before {
 	  content: '🗎';
 	}
-	.eruda-icon-copy:before {
+	.eruda-icon-copy:before,
+	.luna-text-viewer-icon-copy:before {
 	  content: '⎘ ';
 	  font-size: 16px;
 	  font-weight: bold;
@@ -37,10 +38,14 @@
 	.eruda-icon-eye:before {
 	  content: '🧿';
 	}
+	div.eruda-btn.eruda-search {
+	  margin-top: 4px;
+	}
 	.eruda-icon-filter:before {
 	  content: '⭃';
       font-size: 19px;
       font-weight: bold;
+      margin-right: -5px;
       display: block;
       transform: rotate(90deg);
 	}
