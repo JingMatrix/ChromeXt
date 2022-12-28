@@ -26,6 +26,9 @@ class UserScriptProxy(ctx: Context) {
   // org/chromium/chrome/browser/tab/TabImpl.smali
   var LOAD_URL = "h"
 
+  // Grep TabModelImpl to get the class TabModelImpl
+  var TAB_MODEL_IMPL = "be3"
+
   // Grep Android.Omnibox.InputToNavigationControllerStart to get loadUrl in
   // org/chromium/content/browser/framehost/NavigationControllerImpl.smali
   val NAVI_LOAD_URL = "h"
@@ -85,8 +88,11 @@ class UserScriptProxy(ctx: Context) {
   }
 
   var tabWebContentsDelegateAndroidImpl: Class<*>? = null
-  private var mTab: Field? = null
-  private var tabDelegator: Any? = null
+  private val mTab: Field? = null
+  private val tabDelegator: Any? = null
+
+  var tabModelImpl: Class<*>? = null
+  private var tabModel: Any? = null
 
   val interceptNavigationDelegateImpl: Class<*>? = null
 
@@ -135,6 +141,7 @@ class UserScriptProxy(ctx: Context) {
             .build()
             .init()
     gURL = ctx.getClassLoader().loadClass("org.chromium.url.GURL")
+    tabModelImpl = ctx.getClassLoader().loadClass(TAB_MODEL_IMPL)
     loadUrlParams =
         ctx.getClassLoader().loadClass("org.chromium.content_public.browser.LoadUrlParams")
     tabWebContentsDelegateAndroidImpl =
@@ -150,29 +157,27 @@ class UserScriptProxy(ctx: Context) {
     //         .loadClass("org.chromium.content.browser.webcontents.WebContentsObserverProxy")
     mUrl = loadUrlParams!!.getDeclaredField("a")
     // mVerbatimHeaders = loadUrlParams!!.getDeclaredField("h")
-    mTab = tabWebContentsDelegateAndroidImpl!!.getDeclaredField(TAB_FIELD)
+    // mTab = tabWebContentsDelegateAndroidImpl!!.getDeclaredField(TAB_FIELD)
     mSpec = gURL!!.getDeclaredField(SPEC_FIELD)
   }
   private fun updateSmali(sharedPref: SharedPreferences) {
     if (sharedPref.contains("LOAD_URL")) {
       LOAD_URL = sharedPref.getString("LOAD_URL", LOAD_URL)!!
+      TAB_MODEL_IMPL = sharedPref.getString("TAB_MODEL_IMPL", TAB_MODEL_IMPL)!!
     }
     with(sharedPref.edit()) {
       clear()
       putString("LOAD_URL", LOAD_URL)
+      putString("TAB_MODEL_IMPL", TAB_MODEL_IMPL)
       apply()
     }
   }
 
   private fun loadUrl(url: String) {
-    val tab = mTab!!.get(tabDelegator)!!
-    val destroyed = tab.invokeMethod() { name == "isDestroyed" } as Boolean
-    if (!destroyed) {
-      tab.invokeMethod(newUrl(url)) { name == LOAD_URL }
-      Log.d("loadUrl: ${url}")
-    } else {
-      Log.e("tabDelegator not updated, current one is destroyed")
-    }
+    val index = tabModel!!.invokeMethod() { name == "index" } as Int
+    val tab = tabModel!!.invokeMethod(index) { name == "getTabAt" }
+    tab!!.invokeMethod(newUrl(url)) { name == LOAD_URL }
+    Log.d("loadUrl: ${url}")
   }
 
   fun newUrl(url: String): Any {
@@ -291,16 +296,12 @@ class UserScriptProxy(ctx: Context) {
     return callback
   }
 
-  fun updateTabDelegator(delegator: Any): Boolean {
-    if (delegator::class.qualifiedName == tabWebContentsDelegateAndroidImpl!!.name) {
-      if (tabDelegator != delegator) {
-        Log.d("tabDelegator updated")
-        tabDelegator = delegator
-      }
+  fun updateTabModel(model: Any): Boolean {
+    if (model::class.qualifiedName == tabModelImpl!!.name) {
+      tabModel = model
       return true
     }
-    Log.e(
-        "updateTabDelegator: ${delegator::class.qualifiedName} is not ${tabWebContentsDelegateAndroidImpl!!.name}")
+    Log.e("updateTabModel: ${model::class.qualifiedName} is not ${tabModelImpl!!.name}")
     return false
   }
 

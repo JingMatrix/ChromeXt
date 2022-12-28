@@ -15,10 +15,13 @@ object UserScriptHook : BaseHook() {
 
     proxy = UserScriptProxy(ctx)
 
+    proxy!!.tabModelImpl!!.getDeclaredConstructors()[0].hookAfter {
+      proxy!!.updateTabModel(it.thisObject)
+    }
+
     findMethod(proxy!!.tabWebContentsDelegateAndroidImpl!!) { name == "onUpdateUrl" }
         // public void onUpdateUrl(GURL url)
         .hookAfter {
-          proxy!!.updateTabDelegator(it.thisObject)
           val url = proxy!!.parseUrl(it.args[0])!!
           if (url.endsWith("/ChromeXt/")) {
             proxy!!.evaluateJavaScript("ChromeXt=console.debug;")
@@ -45,7 +48,6 @@ object UserScriptHook : BaseHook() {
                   runCatching {
                         val callback = proxy!!.scriptManager(action, payload)
                         if (callback != null) {
-                          proxy!!.updateTabDelegator(it.thisObject)
                           proxy!!.evaluateJavaScript(callback)
                         }
                       }

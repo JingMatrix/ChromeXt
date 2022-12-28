@@ -4,6 +4,7 @@ import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XC_MethodHook.Unhook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.callbacks.XCallback
+import java.lang.reflect.Constructor
 import java.lang.reflect.Method
 
 typealias Hooker = (param: XC_MethodHook.MethodHookParam) -> Unit
@@ -45,6 +46,27 @@ fun Method.hookAfter(
 }
 
 fun Method.hookAfter(hooker: Hooker) = this.hookAfter(XCallback.PRIORITY_DEFAULT, hooker)
+
+fun Constructor<*>.hookMethod(hookCallback: XC_MethodHook): XC_MethodHook.Unhook {
+  return XposedBridge.hookMethod(this, hookCallback)
+}
+
+fun Constructor<*>.hookAfter(
+    priority: Int = XCallback.PRIORITY_DEFAULT,
+    hooker: Hooker
+): XC_MethodHook.Unhook {
+  return this.hookMethod(
+      object : XC_MethodHook(priority) {
+        override fun afterHookedMethod(param: MethodHookParam) =
+            try {
+              hooker(param)
+            } catch (thr: Throwable) {
+              Log.ex(thr)
+            }
+      })
+}
+
+fun Constructor<*>.hookAfter(hooker: Hooker) = this.hookAfter(XCallback.PRIORITY_DEFAULT, hooker)
 
 // class XposedHookFactory(priority: Int = XCallback.PRIORITY_DEFAULT) : XC_MethodHook(priority) {
 //   private var beforeMethod: Hooker? = null

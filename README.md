@@ -16,11 +16,11 @@ Recently, the author has tested `ChromeXt` with the latest `Android Chrome 108.0
 Please consider update your Android Chrome first before proceeding.
 
 For other versions, it might not work.
-To adapt to those versions, one only need to find out one method name in its [smali](https://github.com/JesusFreke/smali/wiki) code.
+To adapt to those versions, one only need to find out one method name and one class name in its [smali](https://github.com/JesusFreke/smali/wiki) code.
 Here is how to do that.
 First use `apktool` to decompile the `split_chrome.apk` file pulled from the installation of Chrome on your phone,
-then follow the hints in [UserScript.kt](app/src/main/java/org/matrix/chromext/proxy/UserScript.kt) to get the correct name
-and modify it in the [SharedPreferences](https://developer.android.com/reference/android/content/SharedPreferences) of Chrome at `/data/data/com.android.chrome/shared_prefs/ChromeXt.xml`.
+then follow the hints in [UserScript.kt](app/src/main/java/org/matrix/chromext/proxy/UserScript.kt) to get the correct names
+and modify them in the [SharedPreferences](https://developer.android.com/reference/android/content/SharedPreferences) of Chrome at `/data/data/com.android.chrome/shared_prefs/ChromeXt.xml`.
 
 ## Usage
 
@@ -127,7 +127,7 @@ Here are corresponding files you might want / need to change:
 - [x] Find elegant way to support Dev Tools for Android 11-
 - [x] Improve front end
 - [x] Add uBlock Origin cosmetic AdBlocker using Eruda
-- [ ] Find way to get current interactive tab
+- [x] Find way to get current interactive tab
 - [ ] Add recommended scripts to the front end manager
 - [ ] Read Mode menu
 - [ ] Support @resource API
