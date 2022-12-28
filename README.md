@@ -127,6 +127,7 @@ Here are corresponding files you might want / need to change:
 - [x] Find elegant way to support Dev Tools for Android 11-
 - [x] Improve front end
 - [x] Add uBlock Origin cosmetic AdBlocker using Eruda
+- [ ] Find way to get current interactive tab
 - [ ] Add recommended scripts to the front end manager
 - [ ] Read Mode menu
 - [ ] Support @resource API

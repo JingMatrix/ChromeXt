@@ -165,8 +165,14 @@ class UserScriptProxy(ctx: Context) {
   }
 
   private fun loadUrl(url: String) {
-    mTab!!.get(tabDelegator)?.invokeMethod(newUrl(url)) { name == LOAD_URL }
-    Log.d("loadUrl: ${url}")
+    val tab = mTab!!.get(tabDelegator)!!
+    val destroyed = tab.invokeMethod() { name == "isDestroyed" } as Boolean
+    if (!destroyed) {
+      tab.invokeMethod(newUrl(url)) { name == LOAD_URL }
+      Log.d("loadUrl: ${url}")
+    } else {
+      Log.e("tabDelegator not updated, current one is destroyed")
+    }
   }
 
   fun newUrl(url: String): Any {
