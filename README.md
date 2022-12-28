@@ -94,6 +94,16 @@ On other areas, only the system gesture is available.
 Tap five times on the Chrome version from the Chrome settings, you will see the `Developer options` menu.
 After restarting Chrome, ChromeXt offers you the `Developer tools` page menu.
 
+### AD Blocker solution
+
+For blocking internet requests, I recommend to use `AdAway` or any proxy AD Blocker such as `clash`.
+
+The content cosmetic blocker is embedded into ChromeXt with the help of eruda.
+To use it, first install this simple UserScript: [cosmetic-filter.user.js](cosmetic-filter.user.js).
+Then open the `Developer tools` from the page menu, in the `Elemnets` panel, one can use the `pointer` icon to select elements on the page.
+Once you click the `delete` icon for a selected element, a corresponding filter will be saved to the `Resources` panel.
+And the UserScript given above will then hide this element.
+
 ## Contribute to this project
 
 Before you submit your pull-requests, please ensure that the command
@@ -116,8 +126,8 @@ Here are corresponding files you might want / need to change:
 - [x] Support more [Tampermonkey API](https://www.tampermonkey.net/documentation.php)s
 - [x] Find elegant way to support Dev Tools for Android 11-
 - [x] Improve front end
+- [x] Add uBlock Origin cosmetic AdBlocker using Eruda
 - [ ] Add recommended scripts to the front end manager
-- [ ] Add uBlock Origin cosmetic AdBlocker using Eruda
 - [ ] Read Mode menu
 - [ ] Support @resource API
 - [ ] Fix general text document encoding problem for Chrome Custom Tab
