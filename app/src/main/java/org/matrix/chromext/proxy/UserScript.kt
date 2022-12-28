@@ -11,7 +11,6 @@ import org.matrix.chromext.script.MIGRATION_3_4
 import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDao
 import org.matrix.chromext.script.encodeScript
-import org.matrix.chromext.script.erudaToggle
 import org.matrix.chromext.script.parseScript
 import org.matrix.chromext.script.urlMatch
 import org.matrix.chromext.utils.Log
@@ -82,17 +81,12 @@ class UserScriptProxy(ctx: Context) {
     // are too many to list here
     // They are in the same order as the source code
 
-    // A variable to avoid redloading eruda
-    var eruda_loaded = false
-    var eruda_font_fix = ""
   }
 
   var tabWebContentsDelegateAndroidImpl: Class<*>? = null
-  private val mTab: Field? = null
-  private val tabDelegator: Any? = null
 
   var tabModelImpl: Class<*>? = null
-  private var tabModel: Any? = null
+  private val tabModel = TabModel(TAB_MODEL_IMPL)
 
   val interceptNavigationDelegateImpl: Class<*>? = null
 
@@ -141,12 +135,12 @@ class UserScriptProxy(ctx: Context) {
             .build()
             .init()
     gURL = ctx.getClassLoader().loadClass("org.chromium.url.GURL")
-    tabModelImpl = ctx.getClassLoader().loadClass(TAB_MODEL_IMPL)
     loadUrlParams =
         ctx.getClassLoader().loadClass("org.chromium.content_public.browser.LoadUrlParams")
     tabWebContentsDelegateAndroidImpl =
         ctx.getClassLoader()
             .loadClass("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
+    tabModelImpl = ctx.getClassLoader().loadClass(TAB_MODEL_IMPL)
     // interceptNavigationDelegateImpl =
     //     ctx.getClassLoader().loadClass(INTERCEPT_NAVIGATION_DELEGATE_IMPL)
     // navigationControllerImpl =
@@ -160,6 +154,7 @@ class UserScriptProxy(ctx: Context) {
     // mTab = tabWebContentsDelegateAndroidImpl!!.getDeclaredField(TAB_FIELD)
     mSpec = gURL!!.getDeclaredField(SPEC_FIELD)
   }
+
   private fun updateSmali(sharedPref: SharedPreferences) {
     if (sharedPref.contains("LOAD_URL")) {
       LOAD_URL = sharedPref.getString("LOAD_URL", LOAD_URL)!!
@@ -174,9 +169,7 @@ class UserScriptProxy(ctx: Context) {
   }
 
   private fun loadUrl(url: String) {
-    val index = tabModel!!.invokeMethod() { name == "index" } as Int
-    val tab = tabModel!!.invokeMethod(index) { name == "getTabAt" }
-    tab!!.invokeMethod(newUrl(url)) { name == LOAD_URL }
+    tabModel.getTab().invokeMethod(newUrl(url)) { name == LOAD_URL }
     Log.d("loadUrl: ${url}")
   }
 
@@ -216,6 +209,7 @@ class UserScriptProxy(ctx: Context) {
 
   fun evaluateJavaScript(script: String) {
     // Encode as Url makes it easier to copy and paste for debugging
+    if (script == "") return
     if (script.length > kMaxURLChars - 1000) {
       val alphabet: List<Char> = ('a'..'z') + ('A'..'Z')
       val randomString: String = List(14) { alphabet.random() }.joinToString("")
@@ -296,13 +290,8 @@ class UserScriptProxy(ctx: Context) {
     return callback
   }
 
-  fun updateTabModel(model: Any): Boolean {
-    if (model::class.qualifiedName == tabModelImpl!!.name) {
-      tabModel = model
-      return true
-    }
-    Log.e("updateTabModel: ${model::class.qualifiedName} is not ${tabModelImpl!!.name}")
-    return false
+  fun updateTabModel(model: Any) {
+    tabModel.update(model)
   }
 
   // fun updateNavController(controller: Any): Boolean {
@@ -323,8 +312,7 @@ class UserScriptProxy(ctx: Context) {
     if (url.startsWith("https://") || url.startsWith("http://") || url.startsWith("file://")) {
       invokeScript(url)
     }
-    eruda_loaded = false
-    eruda_font_fix = ""
+    tabModel.refresh()
   }
 
   // fun didStartLoading(url: String) {
@@ -336,30 +324,10 @@ class UserScriptProxy(ctx: Context) {
   // }
 
   fun openDevTools(ctx: Context) {
-    if (!eruda_loaded) {
-      val sharedPref: SharedPreferences = ctx.getSharedPreferences("Eruda", Context.MODE_PRIVATE)
-      if (sharedPref.contains("eruda")) {
-        val eruda = sharedPref.getString("eruda", "")
-        evaluateJavaScript(eruda!!)
-        val local_eruda = ctx.assets.open("local_eruda.js").bufferedReader().use { it.readText() }
-        evaluateJavaScript(local_eruda)
-        evaluateJavaScript(erudaToggle)
-        eruda_loaded = true
-      } else {
-        Log.toast(ctx, "Please update Eruda in the Developper options menu")
-      }
-    } else {
-      evaluateJavaScript(erudaToggle)
-      if (eruda_font_fix != "") {
-        evaluateJavaScript(eruda_font_fix)
-      }
-    }
+    evaluateJavaScript(tabModel.openEruda(ctx))
   }
 
   fun fixErudaFont(ctx: Context) {
-    if (eruda_loaded && eruda_font_fix == "") {
-      eruda_font_fix = ctx.assets.open("eruda_font.js").bufferedReader().use { it.readText() }
-      evaluateJavaScript(eruda_font_fix)
-    }
+    evaluateJavaScript(tabModel.getEurdaFontFix(ctx))
   }
 }
