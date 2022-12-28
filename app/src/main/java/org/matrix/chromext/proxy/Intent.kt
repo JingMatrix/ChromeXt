@@ -14,11 +14,11 @@ class IntentProxy(ctx: Context) {
 
   // Use frida-ps to get the method getExtraHeadersFromIntent
   // that returns a header
-  private val GET_EXTRA_HEADERS = "f"
+  // private val GET_EXTRA_HEADERS = "f"
 
-  var chromeTabbedActivity: Class<*>? = null
+  var chromeTabbedActivity: Class<*>
 
-  var intentHandler: Class<*>? = null
+  var intentHandler: Class<*>
 
   init {
     chromeTabbedActivity =

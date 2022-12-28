@@ -30,36 +30,36 @@ class UserScriptProxy(ctx: Context) {
 
   // Grep Android.Omnibox.InputToNavigationControllerStart to get loadUrl in
   // org/chromium/content/browser/framehost/NavigationControllerImpl.smali
-  val NAVI_LOAD_URL = "h"
+  // val NAVI_LOAD_URL = "h"
   // ! Note: loadUrl is only called for browser-Initiated navigations
 
   // It is possible to a HTTP POST with LoadUrlParams Class
   // grep org/chromium/content_public/common/ResourceRequestBody to get setPostData in
   // org/chromium/content_public/browser/LoadUrlParams
-  val POST_DATA = "b"
+  // val POST_DATA = "b"
   // ! Note: this is very POWERFUL
 
   // Grep ()I to get or goToNavigationIndex in
   // org/chromium/content/browser/framehost/NavigationControllerImpl.smali
   // Current tab has the biggest index, a new tab has index 0, index is stored with tab
-  val NAVI_GOTO = "z"
+  // val NAVI_GOTO = "z"
 
   // Grep (I)V to get or getLastCommittedEntryIndex in
   // org/chromium/content/browser/framehost/NavigationControllerImpl.smali
   // Current tab has the biggest index, a new tab has index 0, index is stored with tab
-  val NAVI_LAST_INDEX = "e"
+  // val NAVI_LAST_INDEX = "e"
 
   // Grep Android.Intent.IntentUriNavigationResult to get class
   // org/chromium/components/external_intents/ExternalNavigationHandler.java
-  val EXTERNAL_NAVIGATION_HANDLER = "GC0"
+  // val EXTERNAL_NAVIGATION_HANDLER = "GC0"
 
   // Grep .super Lorg/chromium/components/navigation_interception/InterceptNavigationDelegate
   // to get class org.chromium.components.external_intents.InterceptNavigationDelegateImpl
-  val INTERCEPT_NAVIGATION_DELEGATE_IMPL = "yi1"
+  // val INTERCEPT_NAVIGATION_DELEGATE_IMPL = "yi1"
 
   // Grep (Lorg/chromium/content_public/browser/WebContents;)V
   // in INTERCEPT_NAVIGATION_DELEGATE_IMPL to get associateWithWebContents
-  val ASSOCIATE_CONTENTS = "a"
+  // val ASSOCIATE_CONTENTS = "a"
 
   companion object {
     // These samli code are considered stable for further releases of Chrome
@@ -75,7 +75,7 @@ class UserScriptProxy(ctx: Context) {
 
     // Get TabImpl field in
     // org/chromium/chrome/browser/tab/TabWebContentsDelegateAndroidImpl.smali
-    private const val TAB_FIELD = "a"
+    // private const val TAB_FIELD = "a"
 
     // Fields of org/chromium/content_public/browser/LoadUrlParams
     // are too many to list here
@@ -83,45 +83,45 @@ class UserScriptProxy(ctx: Context) {
 
   }
 
-  var tabWebContentsDelegateAndroidImpl: Class<*>? = null
+  var tabWebContentsDelegateAndroidImpl: Class<*>
 
-  var tabModelImpl: Class<*>? = null
+  var tabModelImpl: Class<*>
   private val tabModel = TabModel(TAB_MODEL_IMPL)
 
-  val interceptNavigationDelegateImpl: Class<*>? = null
+  // val interceptNavigationDelegateImpl: Class<*>? = null
 
-  val navigationControllerImpl: Class<*>? = null
-  private val navController: Any? = null
+  // val navigationControllerImpl: Class<*>? = null
+  // private val navController: Any? = null
 
-  val webContentsObserverProxy: Class<*>? = null
+  // val webContentsObserverProxy: Class<*>? = null
 
-  private val navigationHandle: Class<*>? = null
+  // private val navigationHandle: Class<*>? = null
 
-  private var gURL: Class<*>? = null
-  private var mSpec: Field? = null
+  private var gURL: Class<*>
+  private var mSpec: Field
 
-  private var loadUrlParams: Class<*>? = null
-  private var mUrl: Field? = null
-  private val mInitiatorOrigin: Field? = null
-  private val mLoadUrlType: Field? = null
-  private val mTransitionType: Field? = null
-  private val mReferrer: Field? = null
-  private val mExtraHeaders: Field? = null
-  private val mNavigationHandleUserDataHost: Field? = null
-  private val mVerbatimHeaders: Field? = null
-  private val mUaOverrideOption: Field? = null
-  private val mPostData: Field? = null
-  private val mBaseUrlForDataUrl: Field? = null
-  private val mVirtualUrlForDataUrl: Field? = null
-  private val mDataUrlAsString: Field? = null
-  private val mCanLoadLocalResources: Field? = null
-  private val mIsRendererInitiated: Field? = null
-  private val mShouldReplaceCurrentEntry: Field? = null
-  private val mIntentReceivedTimestamp: Field? = null
-  private val mInputStartTimestamp: Field? = null
-  private val mHasUserGesture: Field? = null
-  private val mShouldClearHistoryList: Field? = null
-  private val mNavigationUIDataSupplier: Field? = null
+  private var loadUrlParams: Class<*>
+  private var mUrl: Field
+  // private val mInitiatorOrigin: Field? = null
+  // private val mLoadUrlType: Field? = null
+  // private val mTransitionType: Field? = null
+  // private val mReferrer: Field? = null
+  // private val mExtraHeaders: Field? = null
+  // private val mNavigationHandleUserDataHost: Field? = null
+  // private val mVerbatimHeaders: Field? = null
+  // private val mUaOverrideOption: Field? = null
+  // private val mPostData: Field? = null
+  // private val mBaseUrlForDataUrl: Field? = null
+  // private val mVirtualUrlForDataUrl: Field? = null
+  // private val mDataUrlAsString: Field? = null
+  // private val mCanLoadLocalResources: Field? = null
+  // private val mIsRendererInitiated: Field? = null
+  // private val mShouldReplaceCurrentEntry: Field? = null
+  // private val mIntentReceivedTimestamp: Field? = null
+  // private val mInputStartTimestamp: Field? = null
+  // private val mHasUserGesture: Field? = null
+  // private val mShouldClearHistoryList: Field? = null
+  // private val mNavigationUIDataSupplier: Field? = null
 
   private var scriptDao: ScriptDao? = null
 
@@ -149,10 +149,10 @@ class UserScriptProxy(ctx: Context) {
     // webContentsObserverProxy =
     //     ctx.getClassLoader()
     //         .loadClass("org.chromium.content.browser.webcontents.WebContentsObserverProxy")
-    mUrl = loadUrlParams!!.getDeclaredField("a")
+    mUrl = loadUrlParams.getDeclaredField("a")
     // mVerbatimHeaders = loadUrlParams!!.getDeclaredField("h")
     // mTab = tabWebContentsDelegateAndroidImpl!!.getDeclaredField(TAB_FIELD)
-    mSpec = gURL!!.getDeclaredField(SPEC_FIELD)
+    mSpec = gURL.getDeclaredField(SPEC_FIELD)
   }
 
   private fun updateSmali(sharedPref: SharedPreferences) {
@@ -174,7 +174,7 @@ class UserScriptProxy(ctx: Context) {
   }
 
   fun newUrl(url: String): Any {
-    return loadUrlParams!!.getDeclaredConstructor(String::class.java).newInstance(url)
+    return loadUrlParams.getDeclaredConstructor(String::class.java).newInstance(url)
   }
 
   private fun invokeScript(url: String) {
@@ -229,13 +229,13 @@ class UserScriptProxy(ctx: Context) {
   }
 
   fun parseUrl(packed: Any): String? {
-    if (packed::class.qualifiedName == loadUrlParams!!.name) {
-      return mUrl!!.get(packed) as String
-    } else if (packed::class.qualifiedName == gURL!!.name) {
-      return mSpec!!.get(packed) as String
+    if (packed::class.qualifiedName == loadUrlParams.name) {
+      return mUrl.get(packed) as String
+    } else if (packed::class.qualifiedName == gURL.name) {
+      return mSpec.get(packed) as String
     }
     Log.e(
-        "parseUrl: ${packed::class.qualifiedName} is not ${loadUrlParams!!.name} nor ${gURL!!.getName()}")
+        "parseUrl: ${packed::class.qualifiedName} is not ${loadUrlParams.name} nor ${gURL.getName()}")
     return null
   }
 

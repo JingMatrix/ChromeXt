@@ -18,7 +18,7 @@ object MenuHook : BaseHook() {
 
     val proxy = MenuProxy(ctx)
 
-    findMethod(proxy.chromeTabbedActivity!!) { name == proxy.MENU_KEYBOARD_ACTION }
+    findMethod(proxy.chromeTabbedActivity) { name == proxy.MENU_KEYBOARD_ACTION }
         // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
         .hookAfter {
           val id = it.args[0] as Int
@@ -28,7 +28,7 @@ object MenuHook : BaseHook() {
           }
         }
 
-    findMethod(proxy.appMenuPropertiesDelegateImpl!!) {
+    findMethod(proxy.appMenuPropertiesDelegateImpl) {
           name == proxy.UPDATE_REQUEST_DESKTOP_SITE_MENU_ITEM
         }
         // protected void updateRequestDesktopSiteMenuItem(Menu menu, @Nullable Tab currentTab,
@@ -51,18 +51,18 @@ object MenuHook : BaseHook() {
           mItems.setAccessible(false)
         }
 
-    findMethod(proxy.preferenceFragmentCompat!!) { name == proxy.ADD_PREFERENCES_FROM_RESOURCE }
+    findMethod(proxy.preferenceFragmentCompat) { name == proxy.ADD_PREFERENCES_FROM_RESOURCE }
         // public void addPreferencesFromResource(Int preferencesResId)
         .hookBefore {
-          if (it.thisObject::class.qualifiedName == proxy.developerSettings!!.name) {
+          if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
             it.args[0] = R.xml.developer_preferences
           }
         }
 
-    findMethod(proxy.preferenceFragmentCompat!!) { name == proxy.FIND_PREFERENCE }
+    findMethod(proxy.preferenceFragmentCompat) { name == proxy.FIND_PREFERENCE }
         // public @Nullable T <T extends Preference> findPreference(@NonNull CharSequence key)
         .hookAfter {
-          if (it.thisObject::class.qualifiedName == proxy.developerSettings!!.name &&
+          if (it.thisObject::class.qualifiedName == proxy.developerSettings.name &&
               (it.args[0] as String) == "beta_stable_hint") {
 
             val refThis = it

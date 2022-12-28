@@ -16,24 +16,24 @@ class MenuProxy(ctx: Context) {
   // Find following method prepareMenu, it has two params:
   // the first one is menu, the second one unknown
   // Also, using frida, this method invokes many other methods
-  val PREPARE_MENU = "m"
+  // val PREPARE_MENU = "m"
 
   // Grep (Landroid/view/Menu;Lorg/chromium/chrome/browser/tab/Tab;ZZ)V
   // to get method updateRequestDesktopSiteMenuItem of AppMenuPropertiesDelegateImpl
   var UPDATE_REQUEST_DESKTOP_SITE_MENU_ITEM = "q"
 
   // Use frida to find getAppMenuLayoutId, whose return value is resource id
-  val GET_APPMENU_LAYOUT_ID = "h"
+  // val GET_APPMENU_LAYOUT_ID = "h"
 
   // Grep ()Ljava/util/ArrayList to get method getCustomViewBinder
-  val GET_CUSTOM_VIEW_BINDERS = "b"
+  // val GET_CUSTOM_VIEW_BINDERS = "b"
 
   // Grep MobileMenuSettings to get method onMenuOrKeyboardAction
   // in the class ChromeTabbedActivity.smali
   var MENU_KEYBOARD_ACTION = "h0"
 
   // Find the only public method onCreatePreferences in DeveloperSettings.smali
-  val DEVELOPER_SETTINGS = "W0"
+  // val DEVELOPER_SETTINGS = "W0"
 
   // Find the super class PreferenceFragmentCompat of DeveloperSettings
   var PREFERENCE_FRAGMENT_COMPAT = "pk2"
@@ -44,11 +44,11 @@ class MenuProxy(ctx: Context) {
 
   // Grep ()Landroidx/preference/PreferenceScreen to get method getPreferenceScreen
   // in the class PreferenceFragmentCompat
-  val GET_PREFERENCE_SCREEN = "V0"
+  // val GET_PREFERENCE_SCREEN = "V0"
 
   // Grep (Ljava/lang/CharSequence;)Landroidx/preference/Preference;
   // to get method findPreference of PreferenceFragmentCompat
-  val FIND_PREFERENCE = "U0"
+  var FIND_PREFERENCE = "U0"
 
   // Grep "Preference already has a SummaryProvider set"
   // to get method setSummary of Preference
@@ -59,8 +59,8 @@ class MenuProxy(ctx: Context) {
   // the shortest one with a unknown class should be
   // setOnPreferenceClickListener(OnPreferenceClickListener onPreferenceClickListener)
   // We should use its field instead of method
-  val ON_PREFERENCE_CLICK_LISTENER = "yk2"
-  val PREFERENCE_CLICK_LISTENER_FIELD = "l"
+  // val ON_PREFERENCE_CLICK_LISTENER = "yk2"
+  // val PREFERENCE_CLICK_LISTENER_FIELD = "l"
 
   companion object {
     // Find field with Landroid/view/View$OnClickListener
@@ -88,15 +88,15 @@ class MenuProxy(ctx: Context) {
     }
   }
 
-  var chromeTabbedActivity: Class<*>? = null
-  var appMenuPropertiesDelegateImpl: Class<*>? = null
-  var developerSettings: Class<*>? = null
-  var preferenceFragmentCompat: Class<*>? = null
-  val onPreferenceClickListener: Class<*>? = null
+  var chromeTabbedActivity: Class<*>
+  var appMenuPropertiesDelegateImpl: Class<*>
+  var developerSettings: Class<*>
+  var preferenceFragmentCompat: Class<*>
+  // val onPreferenceClickListener: Class<*>? = null
 
   private var preference: Class<*>? = null
   private var mClickListener: Field? = null
-  private val mOnClickListener: Field? = null
+  // private val mOnClickListener: Field? = null
 
   var isDeveloper: Boolean = false
 

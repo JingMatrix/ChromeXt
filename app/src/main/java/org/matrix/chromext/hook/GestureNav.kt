@@ -17,14 +17,14 @@ object GestureNavHook : BaseHook() {
     val proxy = GestureNavProxy(ctx)
     var activity: Activity? = null
 
-    findMethod(proxy.historyNavigationCoordinator!!) { name == proxy.IS_FEATURE_ENABLED }
+    findMethod(proxy.historyNavigationCoordinator) { name == proxy.IS_FEATURE_ENABLED }
         // private boolean isFeatureEnabled()
         .hookBefore {
           excludeSystemGesture(activity!!)
           it.result = true
         }
 
-    findMethod(proxy.chromeTabbedActivity!!) { name == "onStart" }
+    findMethod(proxy.chromeTabbedActivity) { name == "onStart" }
         .hookAfter { activity = it.thisObject as Activity }
   }
 

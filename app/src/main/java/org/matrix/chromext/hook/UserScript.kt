@@ -15,11 +15,11 @@ object UserScriptHook : BaseHook() {
 
     proxy = UserScriptProxy(ctx)
 
-    proxy!!.tabModelImpl!!.getDeclaredConstructors()[0].hookAfter {
+    proxy!!.tabModelImpl.getDeclaredConstructors()[0].hookAfter {
       proxy!!.updateTabModel(it.thisObject)
     }
 
-    findMethod(proxy!!.tabWebContentsDelegateAndroidImpl!!) { name == "onUpdateUrl" }
+    findMethod(proxy!!.tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
         // public void onUpdateUrl(GURL url)
         .hookAfter {
           val url = proxy!!.parseUrl(it.args[0])!!
@@ -34,7 +34,7 @@ object UserScriptHook : BaseHook() {
           }
         }
 
-    findMethod(proxy!!.tabWebContentsDelegateAndroidImpl!!) { name == "addMessageToConsole" }
+    findMethod(proxy!!.tabWebContentsDelegateAndroidImpl) { name == "addMessageToConsole" }
         // public boolean addMessageToConsole(int level, String message, int lineNumber,
         // String sourceId)
         .hookAfter {

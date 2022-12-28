@@ -7,7 +7,7 @@ import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
 
 class TabModel(modelClass: String) {
-  private var className: String? = null
+  private var className: String
   private var tabModel: Any? = null
   private var eruda_loaded = mutableMapOf<Int, Boolean>()
   private var eruda_font_fixed = mutableMapOf<Int, Boolean>()
@@ -18,10 +18,10 @@ class TabModel(modelClass: String) {
   }
 
   fun update(model: Any) {
-    if (model::class.qualifiedName == className!!) {
+    if (model::class.qualifiedName == className) {
       tabModel = model
     } else {
-      Log.e("updateTabModel: ${model::class.qualifiedName} is not ${className!!}")
+      Log.e("updateTabModel: ${model::class.qualifiedName} is not ${className}")
     }
   }
 
