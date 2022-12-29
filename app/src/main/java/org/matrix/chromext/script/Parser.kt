@@ -4,7 +4,7 @@ import kotlin.text.Regex
 
 private val blocksReg =
     Regex(
-        """\A(?<metablock>// ==UserScript==\r?\n([\S\s]*?)\r?\n// ==/UserScript==)(?<code>[\S\s]*)""")
+        """[\S\s]*?(?<metablock>// ==UserScript==\r?\n([\S\s]*?)\r?\n// ==/UserScript==)(?<code>[\S\s]*)""")
 private val metaReg = Regex("""^//\s+@(?<key>[\w-]+)\s+(?<value>.+)""")
 
 fun parseScript(input: String): Script? {
