@@ -1,7 +1,6 @@
 package org.matrix.chromext.proxy
 
 import android.content.Context
-import android.content.SharedPreferences
 import java.lang.reflect.Field
 import java.net.URLEncoder
 import org.matrix.chromext.BuildConfig
@@ -21,9 +20,6 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
   // Grep smali code with Tab.loadUrl to get the loadUrl function in
   // org/chromium/chrome/browser/tab/TabImpl.smali
   var LOAD_URL = "h"
-
-  // Grep TabModelImpl to get the class TabModelImpl
-  var TAB_MODEL_IMPL = "be3"
 
   // Grep Android.Omnibox.InputToNavigationControllerStart to get loadUrl in
   // org/chromium/content/browser/framehost/NavigationControllerImpl.smali
@@ -82,8 +78,6 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
 
   var tabWebContentsDelegateAndroidImpl: Class<*>
 
-  var tabModelImpl: Class<*>
-
   // val interceptNavigationDelegateImpl: Class<*>? = null
 
   // val navigationControllerImpl: Class<*>? = null
@@ -124,14 +118,10 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
   init {
     if (!split) {
       LOAD_URL = "f"
-
-      // Attention, TAB_MODEL_IMPL for non-split version should be loaded at MainHook
-      // TAB_MODEL_IMPL = "pw3"
     }
 
     if (!BuildConfig.DEBUG) {
-      val sharedPref: SharedPreferences = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
-      updateSmali(sharedPref)
+      updateSmali(ctx)
     }
 
     scriptManager = ScriptDbManger(ctx)
@@ -141,7 +131,6 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
     tabWebContentsDelegateAndroidImpl =
         ctx.getClassLoader()
             .loadClass("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
-    tabModelImpl = ctx.getClassLoader().loadClass(TAB_MODEL_IMPL)
     // interceptNavigationDelegateImpl =
     //     ctx.getClassLoader().loadClass(INTERCEPT_NAVIGATION_DELEGATE_IMPL)
     // navigationControllerImpl =
@@ -156,15 +145,13 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
     mSpec = gURL.getDeclaredField(SPEC_FIELD)
   }
 
-  private fun updateSmali(sharedPref: SharedPreferences) {
+  private fun updateSmali(ctx: Context) {
+    val sharedPref = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
     if (sharedPref.contains("LOAD_URL")) {
       LOAD_URL = sharedPref.getString("LOAD_URL", LOAD_URL)!!
-      TAB_MODEL_IMPL = sharedPref.getString("TAB_MODEL_IMPL", TAB_MODEL_IMPL)!!
     }
     with(sharedPref.edit()) {
-      clear()
       putString("LOAD_URL", LOAD_URL)
-      putString("TAB_MODEL_IMPL", TAB_MODEL_IMPL)
       apply()
     }
   }
@@ -241,10 +228,6 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
     Log.e(
         "parseUrl: ${packed::class.qualifiedName} is not ${loadUrlParams.name} nor ${gURL.getName()}")
     return null
-  }
-
-  fun updateTabModel(model: Any) {
-    TabModel.update(model, TAB_MODEL_IMPL)
   }
 
   // fun updateNavController(controller: Any): Boolean {

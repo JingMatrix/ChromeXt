@@ -1,5 +1,6 @@
 package org.matrix.chromext
 
+import android.app.Activity
 import android.content.Context
 import android.content.res.loader.ResourcesLoader
 import android.content.res.loader.ResourcesProvider
@@ -12,7 +13,6 @@ import de.robv.android.xposed.callbacks.XC_InitPackageResources
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import java.io.File
 import java.net.URI
-import org.matrix.chromext.hook.BaseHook
 import org.matrix.chromext.hook.GestureNavHook
 import org.matrix.chromext.hook.IntentHook
 import org.matrix.chromext.hook.MenuHook
@@ -37,6 +37,7 @@ fun filterPackage(packageName: String): Boolean {
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitPackageResources {
 
   var MODULE_PATH: String? = null
+  var RESOURCE_INJECTED = false
 
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
     if (filterPackage(lpparam.packageName)) {
@@ -48,48 +49,37 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
                       name == "attachBaseContext"
                     }
                 .hookAfter {
-                  var ctx = it.args[0] as Context
-                  ctx = ctx.createContextForSplit("chrome")
-                  injectModuleResource(ctx)
-                  // Init hooks
-                  initHooks(
-                      ctx,
-                      split,
-                      lpparam.packageName,
-                      UserScriptHook,
-                      GestureNavHook,
-                      IntentHook,
-                      MenuHook)
-                  initHooks(ctx, split, lpparam.packageName, UserScriptHook)
+                  val ctx = (it.args[0] as Context).createContextForSplit("chrome")
+                  initHooks(ctx, split, lpparam.packageName)
+                  ctx.getClassLoader()
+                      .loadClass(TAB_MODEL_IMPL_SPLIT)
+                      .getDeclaredConstructors()[0]
+                      .hookAfter { TabModel.update(it.thisObject, split) }
                 }
           }
           .onFailure {
             split = false
-            val TAB_MODEL_IMPL = "pw3"
-            Log.i("Current version is the not split one")
-            val launcherClass = "org.chromium.chrome.browser.ChromeTabbedActivity"
             lpparam.classLoader.loadClass(TAB_MODEL_IMPL).getDeclaredConstructors()[0].hookAfter {
-              TabModel.update(it.thisObject, TAB_MODEL_IMPL)
+              TabModel.update(it.thisObject, split)
             }
-            findMethod(lpparam.classLoader.loadClass(launcherClass)) { name == "onStart" }
+            findMethod(
+                    lpparam.classLoader.loadClass(
+                        "org.chromium.chrome.browser.ChromeTabbedActivity")) {
+                      name == "onStart"
+                    }
                 .hookAfter {
-                  val ctx = it.thisObject as Context
-                  injectModuleResource(ctx)
-                  initHooks(
-                      ctx,
-                      split,
-                      lpparam.packageName,
-                      UserScriptHook,
-                      // GestureNavHook,
-                      // MenuHook,
-                      IntentHook)
-                  initHooks(ctx, split, lpparam.packageName, UserScriptHook)
+                  val ctx = it.thisObject as Activity
+                  GestureConflict.hookActivity(ctx)
+                  initHooks(ctx, split, lpparam.packageName)
                 }
           }
     }
   }
 
   fun injectModuleResource(ctx: Context) {
+    if (RESOURCE_INJECTED) {
+      return
+    }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
       val resLoader = ResourcesLoader()
       resLoader.addProvider(
@@ -101,6 +91,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
     } else {
       ctx.assets.invokeMethod(MODULE_PATH) { name == "addAssetPath" }
     }
+    RESOURCE_INJECTED = true
   }
 
   override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
@@ -113,8 +104,9 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
     // Black magic to inject local resources
   }
 
-  private fun initHooks(ctx: Context, split: Boolean, packageName: String, vararg hook: BaseHook) {
-    hook.forEach {
+  private fun initHooks(ctx: Context, split: Boolean, packageName: String) {
+    injectModuleResource(ctx)
+    arrayOf(UserScriptHook, GestureNavHook, MenuHook, IntentHook).forEach {
       runCatching {
             if (it.isInit) return@forEach
             it.init(ctx, split)

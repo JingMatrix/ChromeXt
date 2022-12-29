@@ -1,11 +1,13 @@
 package org.matrix.chromext.hook
 
+import android.app.Activity
 import android.content.Context
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import java.lang.reflect.Method
 import java.util.ArrayList
+import org.matrix.chromext.GestureConflict
 import org.matrix.chromext.R
 import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.utils.findMethod
@@ -17,6 +19,14 @@ object MenuHook : BaseHook() {
   override fun init(ctx: Context, split: Boolean) {
 
     val proxy = MenuProxy(ctx, split)
+
+    if (split) {
+      findMethod(proxy.chromeTabbedActivity) { name == "onStart" }
+          .hookAfter {
+            val activity = it.thisObject as Activity
+            GestureConflict.hookActivity(activity)
+          }
+    }
 
     findMethod(proxy.chromeTabbedActivity) { name == proxy.MENU_KEYBOARD_ACTION }
         // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
@@ -50,6 +60,11 @@ object MenuHook : BaseHook() {
           items.add(13, devMenuItem)
           mItems.setAccessible(false)
         }
+
+    if (!split) {
+      // Couldn't hook Preference Menu for unknown reason. might be the resource problem
+      return
+    }
 
     findMethod(proxy.preferenceFragmentCompat) { name == proxy.ADD_PREFERENCES_FROM_RESOURCE }
         // public void addPreferencesFromResource(Int preferencesResId)

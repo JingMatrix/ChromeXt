@@ -19,8 +19,11 @@ For other versions, it might not work.
 To adapt to those versions, one only need to find out one method name and one class name in its [smali](https://github.com/JesusFreke/smali/wiki) code.
 Here is how to do that.
 First use `apktool` to decompile the `split_chrome.apk` file pulled from the installation of Chrome on your phone,
-then follow the hints in [UserScript.kt](app/src/main/java/org/matrix/chromext/proxy/UserScript.kt) to get the correct names
-and modify them in the [SharedPreferences](https://developer.android.com/reference/android/content/SharedPreferences) of Chrome at `/data/data/com.android.chrome/shared_prefs/ChromeXt.xml`.
+then follow the hints in [UserScript.kt](app/src/main/java/org/matrix/chromext/proxy/UserScript.kt) to get the correct method name `LOAD_URL`
+and modify it in the [SharedPreferences](https://developer.android.com/reference/android/content/SharedPreferences) of Chrome at `/data/data/com.android.chrome/shared_prefs/ChromeXt.xml`.
+If this still doesn't work you, you need to change smali class name in [TabModel](app/src/main/java/org/matrix/chromext/TabModel.kt) and recomplie the source code.
+
+
 
 ## Usage
 
@@ -130,6 +133,7 @@ Here are corresponding files you might want / need to change:
 - [x] Find way to get current interactive tab
 - [x] Remove AndroidX Room dependency to reduce app size
 - [x] Support non-split version of Android Chrome
+- [ ] Solve the menu hook problem for non-split versions
 - [ ] Add recommended scripts to the front end manager
 - [ ] Read Mode menu
 - [ ] Support @resource API

@@ -3,16 +3,29 @@ package org.matrix.chromext
 import android.content.Context
 import android.content.SharedPreferences
 import org.matrix.chromext.script.erudaToggle
+import org.matrix.chromext.settings.DownloadEruda
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
 
+// Grep TabModelImpl to get the class TabModelImpl
+const val TAB_MODEL_IMPL = "pw3"
+
+// For the split version
+const val TAB_MODEL_IMPL_SPLIT = "be3"
+
 object TabModel {
+  private var className = TAB_MODEL_IMPL
+  private var split = false
   private var tabModel: Any? = null
   private var eruda_loaded = mutableMapOf<Int, Boolean>()
   private var eruda_font_fixed = mutableMapOf<Int, Boolean>()
   private var eruda_font_fix: String? = null
 
-  fun update(model: Any, className: String) {
+  fun update(model: Any, isSplit: Boolean) {
+    if (isSplit) {
+      split = isSplit
+      className = TAB_MODEL_IMPL_SPLIT
+    }
     if (model::class.qualifiedName == className) {
       tabModel = model
     } else {
@@ -51,7 +64,11 @@ object TabModel {
         script += erudaToggle
         eruda_loaded.put(index(), true)
       } else {
-        Log.toast(ctx, "Please update Eruda in the Developper options menu")
+        Log.toast(ctx, "Eruda not found, start downloading it")
+        if (!split) {
+          // Since one cannot donwload it from the preference menu
+          DownloadEruda(ctx).download()
+        }
       }
     } else {
       script += erudaToggle

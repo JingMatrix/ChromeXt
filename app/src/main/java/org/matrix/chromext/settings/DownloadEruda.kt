@@ -27,7 +27,10 @@ class DownloadEruda(ctx: Context) : OnClickListener {
   }
 
   override fun onClick(v: View) {
+    download()
+  }
 
+  fun download() {
     context!!.registerReceiver(
         writeSharedPreference, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
 
