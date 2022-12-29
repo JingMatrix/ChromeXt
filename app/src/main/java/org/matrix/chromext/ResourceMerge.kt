@@ -10,13 +10,21 @@ import java.net.URI
 import org.matrix.chromext.utils.invokeMethod
 
 object ResourceMerge {
-  var module_path: String? = null
+  private var module_path: String? = null
+  private var isChromeEnriched = false
 
   fun init(packagePath: String) {
     module_path = packagePath
   }
 
   fun enrich(ctx: Context) {
+    if (ctx == Chrome.getContext()) {
+      if (isChromeEnriched) {
+        return
+      } else {
+        isChromeEnriched = true
+      }
+    }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
       val resLoader = ResourcesLoader()
       resLoader.addProvider(

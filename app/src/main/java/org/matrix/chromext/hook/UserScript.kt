@@ -2,6 +2,7 @@ package org.matrix.chromext.hook
 
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.ResourceMerge
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
@@ -22,8 +23,10 @@ object UserScriptHook : BaseHook() {
           if (url.endsWith("/ChromeXt/")) {
             proxy!!.evaluateJavaScript("ChromeXt=console.debug;")
           } else if (url.endsWith(".user.js")) {
+            val ctx = Chrome.getContext()
+            ResourceMerge.enrich(ctx)
             val promptInstallUserScript =
-                Chrome.getContext().assets.open("editor.js").bufferedReader().use { it.readText() }
+                ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
             proxy!!.evaluateJavaScript(promptInstallUserScript)
           } else {
             proxy!!.didUpdateUrl(url)
