@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import android.widget.Toast
 import de.robv.android.xposed.XposedBridge
+import org.matrix.chromext.BuildConfig
 
 const val TAG = "ChromeXt"
 
@@ -13,10 +14,12 @@ object Log {
   }
 
   fun d(msg: String) {
-    if (msg.length > 300) {
-      Log.d(TAG, msg.take(300) + " ...")
-    } else {
-      Log.d(TAG, msg)
+    if (BuildConfig.DEBUG) {
+      if (msg.length > 300) {
+        Log.d(TAG, msg.take(300) + " ...")
+      } else {
+        Log.d(TAG, msg)
+      }
     }
   }
 

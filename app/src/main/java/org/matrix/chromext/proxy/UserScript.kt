@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import java.lang.reflect.Field
 import java.net.URLEncoder
+import org.matrix.chromext.BuildConfig
 import org.matrix.chromext.TabModel
 import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDbManger
@@ -128,8 +129,11 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
       // TAB_MODEL_IMPL = "pw3"
     }
 
-    val sharedPref: SharedPreferences = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
-    // updateSmali(sharedPref)
+    if (!BuildConfig.DEBUG) {
+      val sharedPref: SharedPreferences = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
+      updateSmali(sharedPref)
+    }
+
     scriptManager = ScriptDbManger(ctx)
     gURL = ctx.getClassLoader().loadClass("org.chromium.url.GURL")
     loadUrlParams =

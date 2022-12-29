@@ -16,6 +16,9 @@ android {
         versionName = "2.0.0"
     }
 
+	buildFeatures {
+        buildConfig = true
+    }
 	// packagingOptions {
         // // Remove terminal-emulator and termux-shared JNI libs added via termux-shared dependency
         // exclude("lib/*/libtermux.so")
@@ -23,7 +26,7 @@ android {
     // }
 
     buildTypes {
-        named("release") {
+        release {
             isShrinkResources = true
             isMinifyEnabled = true
             proguardFiles("proguard-rules.pro")
