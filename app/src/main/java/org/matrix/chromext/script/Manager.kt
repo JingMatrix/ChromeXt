@@ -2,7 +2,10 @@ package org.matrix.chromext.script
 
 import android.content.ContentValues
 import android.content.Context
+import android.database.AbstractWindowedCursor
+import android.database.CursorWindow
 import android.database.sqlite.SQLiteOpenHelper
+import android.os.Build
 import org.matrix.chromext.utils.Log
 
 private const val SEP = ""
@@ -46,6 +49,9 @@ class ScriptDbManger(ctx: Context) {
   ): Array<Script> {
     val db = dbHelper.readableDatabase
     val cursor = db.query("script", null, selection, selectionArgs, null, null, null)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      (cursor as AbstractWindowedCursor).setWindow(CursorWindow("max", 1024 * 1024 * 10))
+    }
     val scripts = mutableListOf<Script>()
     with(cursor) {
       while (moveToNext()) {
