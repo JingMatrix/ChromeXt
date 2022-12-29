@@ -131,7 +131,7 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
 
     scriptManager = ScriptDbManger(ctx)
     ctx.getClassLoader().loadClass(TAB_MODEL_IMPL).getDeclaredConstructors()[0].hookAfter {
-      TabModel.update(it.thisObject, TAB_MODEL_IMPL, split)
+      TabModel.update(it.thisObject, TAB_MODEL_IMPL)
     }
     gURL = ctx.getClassLoader().loadClass("org.chromium.url.GURL")
     loadUrlParams =

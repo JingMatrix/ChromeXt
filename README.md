@@ -133,7 +133,7 @@ Here are corresponding files you might want / need to change:
 - [x] Find way to get current interactive tab
 - [x] Remove AndroidX Room dependency to reduce app size
 - [x] Support non-split version of Android Chrome
-- [ ] Solve the menu hook problem for non-split versions
+- [x] Solve the menu hook problem for non-split versions
 - [ ] Add recommended scripts to the front end manager
 - [ ] Read Mode menu
 - [ ] Support @resource API
