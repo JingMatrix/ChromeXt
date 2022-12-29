@@ -4,5 +4,5 @@ import android.content.Context
 
 abstract class BaseHook {
   var isInit: Boolean = false
-  abstract fun init(ctx: Context)
+  abstract fun init(ctx: Context, split: Boolean)
 }

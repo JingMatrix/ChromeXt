@@ -14,9 +14,9 @@ import org.matrix.chromext.utils.hookBefore
 
 object MenuHook : BaseHook() {
 
-  override fun init(ctx: Context) {
+  override fun init(ctx: Context, split: Boolean) {
 
-    val proxy = MenuProxy(ctx)
+    val proxy = MenuProxy(ctx, split)
 
     findMethod(proxy.chromeTabbedActivity) { name == proxy.MENU_KEYBOARD_ACTION }
         // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)

@@ -7,7 +7,7 @@ import org.matrix.chromext.settings.DownloadEruda
 import org.matrix.chromext.settings.ExitDevMode
 import org.matrix.chromext.utils.invokeMethod
 
-class MenuProxy(ctx: Context) {
+class MenuProxy(ctx: Context, split: Boolean) {
 
   // Grep Android.PrepareMenu.OpenWebApkVisibilityCheck to get the class
   // org/chromium/chrome/browser/app/appmenu/AppMenuPropertiesDelegateImpl.java

@@ -47,10 +47,17 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
                 name == "attachBaseContext"
               }
           .hookAfter {
-            val ctx = (it.args[0] as Context).createContextForSplit("chrome")
+            var split = false
+            var ctx = it.args[0] as Context
+            runCatching {
+                  ctx = ctx.createContextForSplit("chrome")
+                  split = true
+                }
+                .onFailure { Log.i("Chrome apk is not split") }
             injectModuleResource(ctx)
             initHooks(
                 ctx,
+                split,
                 lpparam.packageName,
                 UserScriptHook,
                 GestureNavHook,
@@ -85,11 +92,11 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
     // Black magic to inject local resources
   }
 
-  private fun initHooks(ctx: Context, packageName: String, vararg hook: BaseHook) {
+  private fun initHooks(ctx: Context, split: Boolean, packageName: String, vararg hook: BaseHook) {
     hook.forEach {
       runCatching {
             if (it.isInit) return@forEach
-            it.init(ctx)
+            it.init(ctx, split)
             it.isInit = true
             Log.i("Inited hook for ${packageName}: ${it.javaClass.simpleName}")
           }

@@ -2,7 +2,7 @@ package org.matrix.chromext.proxy
 
 import android.content.Context
 
-class GestureNavProxy(ctx: Context) {
+class GestureNavProxy(ctx: Context, split: Boolean) {
 
   // The main class to hook is
   // org/chromium/chrome/browser/gesturenav/HistoryNavigationCoordinator.java

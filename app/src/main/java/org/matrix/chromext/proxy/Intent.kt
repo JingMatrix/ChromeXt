@@ -2,7 +2,7 @@ package org.matrix.chromext.proxy
 
 import android.content.Context
 
-class IntentProxy(ctx: Context) {
+class IntentProxy(ctx: Context, split: Boolean) {
 
   // Grep 'Ignoring internal Chrome URL from untrustworthy source.' to get the class
   // org/chromium/chrome/browser/IntentHandler.java

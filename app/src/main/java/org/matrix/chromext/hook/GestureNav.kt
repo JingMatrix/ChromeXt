@@ -13,8 +13,9 @@ import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
 
 object GestureNavHook : BaseHook() {
-  override fun init(ctx: Context) {
-    val proxy = GestureNavProxy(ctx)
+  override fun init(ctx: Context, split: Boolean) {
+
+    val proxy = GestureNavProxy(ctx, split)
     var activity: Activity? = null
 
     findMethod(proxy.historyNavigationCoordinator) { name == proxy.IS_FEATURE_ENABLED }

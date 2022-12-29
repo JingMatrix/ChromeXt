@@ -11,9 +11,9 @@ object UserScriptHook : BaseHook() {
 
   var proxy: UserScriptProxy? = null
 
-  override fun init(ctx: Context) {
+  override fun init(ctx: Context, split: Boolean) {
 
-    proxy = UserScriptProxy(ctx)
+    proxy = UserScriptProxy(ctx, split)
 
     proxy!!.tabModelImpl.getDeclaredConstructors()[0].hookAfter {
       proxy!!.updateTabModel(it.thisObject)

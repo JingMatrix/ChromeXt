@@ -11,7 +11,7 @@ import org.matrix.chromext.script.urlMatch
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
 
-class UserScriptProxy(ctx: Context) {
+class UserScriptProxy(ctx: Context, split: Boolean) {
   // These smali code names are possible to change when Chrome updates
   // User should be able to change them by their own if needed
   // If a field is read-only, i.e., initilized with `val`, meaning that we are not using it yet
