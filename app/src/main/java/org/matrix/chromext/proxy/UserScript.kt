@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import java.lang.reflect.Field
 import java.net.URLEncoder
+import org.matrix.chromext.TabModel
 import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDbManger
 import org.matrix.chromext.script.encodeScript
@@ -81,7 +82,6 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
   var tabWebContentsDelegateAndroidImpl: Class<*>
 
   var tabModelImpl: Class<*>
-  private val tabModel: TabModel
 
   // val interceptNavigationDelegateImpl: Class<*>? = null
 
@@ -123,12 +123,13 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
   init {
     if (!split) {
       LOAD_URL = "f"
-      TAB_MODEL_IMPL = "pw3"
+
+      // Attention, TAB_MODEL_IMPL for non-split version should be loaded at MainHook
+      // TAB_MODEL_IMPL = "pw3"
     }
 
-    tabModel = TabModel(TAB_MODEL_IMPL)
     val sharedPref: SharedPreferences = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
-    updateSmali(sharedPref)
+    // updateSmali(sharedPref)
     scriptManager = ScriptDbManger(ctx)
     gURL = ctx.getClassLoader().loadClass("org.chromium.url.GURL")
     loadUrlParams =
@@ -165,12 +166,14 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
   }
 
   private fun loadUrl(url: String) {
-    tabModel.getTab().invokeMethod(newUrl(url)) { name == LOAD_URL }
+    TabModel.getTab().invokeMethod(newUrl(url)) { name == LOAD_URL }
     Log.d("loadUrl: ${url}")
   }
 
   fun newUrl(url: String): Any {
-    return loadUrlParams.getDeclaredConstructor(String::class.java).newInstance(url)
+    return loadUrlParams
+        .getDeclaredConstructor(String::class.java, Int::class.java)
+        .newInstance(url, 0)
   }
 
   private fun invokeScript(url: String) {
@@ -237,7 +240,7 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
   }
 
   fun updateTabModel(model: Any) {
-    tabModel.update(model)
+    TabModel.update(model, TAB_MODEL_IMPL)
   }
 
   // fun updateNavController(controller: Any): Boolean {
@@ -258,7 +261,7 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
     if (url.startsWith("https://") || url.startsWith("http://") || url.startsWith("file://")) {
       invokeScript(url)
     }
-    tabModel.refresh()
+    TabModel.refresh()
   }
 
   // fun didStartLoading(url: String) {
@@ -270,10 +273,10 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
   // }
 
   fun openDevTools(ctx: Context) {
-    evaluateJavaScript(tabModel.openEruda(ctx))
+    evaluateJavaScript(TabModel.openEruda(ctx))
   }
 
   fun fixErudaFont(ctx: Context) {
-    evaluateJavaScript(tabModel.getEurdaFontFix(ctx))
+    evaluateJavaScript(TabModel.getEurdaFontFix(ctx))
   }
 }

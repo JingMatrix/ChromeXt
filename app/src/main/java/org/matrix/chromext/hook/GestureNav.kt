@@ -21,7 +21,11 @@ object GestureNavHook : BaseHook() {
     findMethod(proxy.historyNavigationCoordinator) { name == proxy.IS_FEATURE_ENABLED }
         // private boolean isFeatureEnabled()
         .hookBefore {
-          excludeSystemGesture(activity!!)
+          if (activity == null) {
+            Log.w("Wasn't able to hook chromeTabbedActivity instance")
+          } else {
+            excludeSystemGesture(activity!!)
+          }
           it.result = true
         }
 

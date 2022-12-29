@@ -40,30 +40,51 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
 
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
     if (filterPackage(lpparam.packageName)) {
-      // Init hooks
-      findMethod(
-              lpparam.classLoader.loadClass(
-                  "org.chromium.chrome.browser.base.SplitChromeApplication")) {
-                name == "attachBaseContext"
-              }
-          .hookAfter {
-            var split = false
-            var ctx = it.args[0] as Context
-            runCatching {
+      var split = true
+      runCatching {
+            findMethod(
+                    lpparam.classLoader.loadClass(
+                        "org.chromium.chrome.browser.base.SplitChromeApplication")) {
+                      name == "attachBaseContext"
+                    }
+                .hookAfter {
+                  var ctx = it.args[0] as Context
                   ctx = ctx.createContextForSplit("chrome")
-                  split = true
+                  injectModuleResource(ctx)
+                  // Init hooks
+                  initHooks(
+                      ctx,
+                      split,
+                      lpparam.packageName,
+                      UserScriptHook,
+                      GestureNavHook,
+                      IntentHook,
+                      MenuHook)
+                  initHooks(ctx, split, lpparam.packageName, UserScriptHook)
                 }
-                .onFailure { Log.i("Chrome apk is not split") }
-            injectModuleResource(ctx)
-            initHooks(
-                ctx,
-                split,
-                lpparam.packageName,
-                UserScriptHook,
-                GestureNavHook,
-                IntentHook,
-                // DevSocketHook,
-                MenuHook)
+          }
+          .onFailure {
+            split = false
+            val TAB_MODEL_IMPL = "pw3"
+            Log.i("Current version is the not split one")
+            val launcherClass = "org.chromium.chrome.browser.ChromeTabbedActivity"
+            lpparam.classLoader.loadClass(TAB_MODEL_IMPL).getDeclaredConstructors()[0].hookAfter {
+              TabModel.update(it.thisObject, TAB_MODEL_IMPL)
+            }
+            findMethod(lpparam.classLoader.loadClass(launcherClass)) { name == "onStart" }
+                .hookAfter {
+                  val ctx = it.thisObject as Context
+                  injectModuleResource(ctx)
+                  initHooks(
+                      ctx,
+                      split,
+                      lpparam.packageName,
+                      UserScriptHook,
+                      // GestureNavHook,
+                      // MenuHook,
+                      IntentHook)
+                  initHooks(ctx, split, lpparam.packageName, UserScriptHook)
+                }
           }
     }
   }

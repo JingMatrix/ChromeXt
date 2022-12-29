@@ -1,4 +1,4 @@
-package org.matrix.chromext.proxy
+package org.matrix.chromext
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -6,18 +6,13 @@ import org.matrix.chromext.script.erudaToggle
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
 
-class TabModel(modelClass: String) {
-  private var className: String
+object TabModel {
   private var tabModel: Any? = null
   private var eruda_loaded = mutableMapOf<Int, Boolean>()
   private var eruda_font_fixed = mutableMapOf<Int, Boolean>()
   private var eruda_font_fix: String? = null
 
-  init {
-    className = modelClass
-  }
-
-  fun update(model: Any) {
+  fun update(model: Any, className: String) {
     if (model::class.qualifiedName == className) {
       tabModel = model
     } else {

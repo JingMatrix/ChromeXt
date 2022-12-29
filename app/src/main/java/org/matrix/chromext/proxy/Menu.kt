@@ -62,10 +62,10 @@ class MenuProxy(ctx: Context, split: Boolean) {
   // val ON_PREFERENCE_CLICK_LISTENER = "yk2"
   // val PREFERENCE_CLICK_LISTENER_FIELD = "l"
 
-  companion object {
-    // Find field with Landroid/view/View$OnClickListener
-    val CLICK_LISTENER_FIELD = "X"
+  // Find field with Landroid/view/View$OnClickListener
+  var CLICK_LISTENER_FIELD = "X"
 
+  companion object {
     fun getErudaVersion(ctx: Context): String? {
       val sharedPref = ctx.getSharedPreferences("Eruda", Context.MODE_PRIVATE)
       if (!sharedPref.contains("eruda")) {
@@ -103,10 +103,10 @@ class MenuProxy(ctx: Context, split: Boolean) {
   init {
     if (!split) {
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "lg"
-      UPDATE_REQUEST_DESKTOP_SITE_MENU_ITEM = "l"
       MENU_KEYBOARD_ACTION = "v0"
       PREFERENCE_FRAGMENT_COMPAT = "Ey2"
       SET_SUMMARY = "P"
+      CLICK_LISTENER_FIELD = "R"
     }
 
     val sharedPref =

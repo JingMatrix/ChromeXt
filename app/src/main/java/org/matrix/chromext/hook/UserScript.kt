@@ -15,8 +15,10 @@ object UserScriptHook : BaseHook() {
 
     proxy = UserScriptProxy(ctx, split)
 
-    proxy!!.tabModelImpl.getDeclaredConstructors()[0].hookAfter {
-      proxy!!.updateTabModel(it.thisObject)
+    if (split) {
+      proxy!!.tabModelImpl.getDeclaredConstructors()[0].hookAfter {
+        proxy!!.updateTabModel(it.thisObject)
+      }
     }
 
     findMethod(proxy!!.tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
