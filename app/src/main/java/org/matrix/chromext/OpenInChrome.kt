@@ -33,7 +33,7 @@ class OpenInChrome : Activity() {
       intent.setComponent(destination)
       val fileUrl = convertDownloadUrl(this, intent.getData()!!)
       if (fileUrl == null) {
-        // intent.setDataAndType(intent.getData(), "text/html")
+        intent.setDataAndType(intent.getData(), "text/html")
         startActivity(intent)
       } else {
         invokeChromeTabbed(fileUrl)
