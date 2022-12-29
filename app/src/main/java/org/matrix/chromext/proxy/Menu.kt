@@ -41,6 +41,10 @@ class MenuProxy(ctx: Context, split: Boolean) {
   // Grep (I)V to get method addPreferencesFromResource
   // in the class PreferenceFragmentCompat
   var ADD_PREFERENCES_FROM_RESOURCE = "T0"
+  // Inside the smali code of this method,
+  // we see its super class androidx/fragment/app/c
+  // has a method getContext()
+  var GET_CONTEXT = "I0"
 
   // Grep ()Landroidx/preference/PreferenceScreen to get method getPreferenceScreen
   // in the class PreferenceFragmentCompat

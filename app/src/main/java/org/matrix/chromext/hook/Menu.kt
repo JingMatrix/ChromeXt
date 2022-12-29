@@ -1,14 +1,13 @@
 package org.matrix.chromext.hook
 
-import android.app.Activity
 import android.content.Context
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import java.lang.reflect.Method
 import java.util.ArrayList
-import org.matrix.chromext.GestureConflict
 import org.matrix.chromext.R
+import org.matrix.chromext.ResourceMerge
 import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
@@ -20,8 +19,11 @@ object MenuHook : BaseHook() {
 
     val proxy = MenuProxy(ctx, split)
 
-    // Page menu only appear after restarting chrome
+    // Page menu only appears after restarting chrome
     if (proxy.isDeveloper) {
+
+      ResourceMerge.enrich(ctx)
+
       findMethod(proxy.chromeTabbedActivity) { name == proxy.MENU_KEYBOARD_ACTION }
           // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
           .hookAfter {
@@ -55,35 +57,35 @@ object MenuHook : BaseHook() {
           }
     }
 
-    // Preference menu doesn't work with non-split version
-    if (split) {
-      findMethod(proxy.chromeTabbedActivity) { name == "onStart" }
+    if (!split) {
+      findMethod(proxy.preferenceFragmentCompat, true) { name == proxy.GET_CONTEXT }
           .hookAfter {
-            val activity = it.thisObject as Activity
-            GestureConflict.hookActivity(activity)
-          }
-
-      findMethod(proxy.preferenceFragmentCompat) { name == proxy.ADD_PREFERENCES_FROM_RESOURCE }
-          // public void addPreferencesFromResource(Int preferencesResId)
-          .hookBefore {
             if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
-              it.args[0] = R.xml.developer_preferences
-            }
-          }
-
-      findMethod(proxy.preferenceFragmentCompat) { name == proxy.FIND_PREFERENCE }
-          // public @Nullable T <T extends Preference> findPreference(@NonNull CharSequence key)
-          .hookAfter {
-            if (it.thisObject::class.qualifiedName == proxy.developerSettings.name &&
-                (it.args[0] as String) == "beta_stable_hint") {
-
-              val refThis = it
-              arrayOf("eruda", "exit").forEach {
-                proxy.setClickListenerAndSummary(
-                    (refThis.method as Method).invoke(refThis.thisObject, it)!!, ctx, it)
-              }
+              ResourceMerge.enrich(it.getResult() as Context)
             }
           }
     }
+
+    findMethod(proxy.preferenceFragmentCompat) { name == proxy.ADD_PREFERENCES_FROM_RESOURCE }
+        // public void addPreferencesFromResource(Int preferencesResId)
+        .hookBefore {
+          if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
+            it.args[0] = R.xml.developer_preferences
+          }
+        }
+
+    findMethod(proxy.preferenceFragmentCompat) { name == proxy.FIND_PREFERENCE }
+        // public @Nullable T <T extends Preference> findPreference(@NonNull CharSequence key)
+        .hookAfter {
+          if (it.thisObject::class.qualifiedName == proxy.developerSettings.name &&
+              (it.args[0] as String) == "beta_stable_hint") {
+
+            val refThis = it
+            arrayOf("eruda", "exit").forEach {
+              proxy.setClickListenerAndSummary(
+                  (refThis.method as Method).invoke(refThis.thisObject, it)!!, ctx, it)
+            }
+          }
+        }
   }
 }

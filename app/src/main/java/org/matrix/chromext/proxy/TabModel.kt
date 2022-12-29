@@ -7,25 +7,15 @@ import org.matrix.chromext.settings.DownloadEruda
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
 
-// Grep TabModelImpl to get the class TabModelImpl
-const val TAB_MODEL_IMPL = "pw3"
-
-// For the split version
-const val TAB_MODEL_IMPL_SPLIT = "be3"
-
 object TabModel {
-  private var className = TAB_MODEL_IMPL
   private var split = false
   private var tabModel: Any? = null
   private var eruda_loaded = mutableMapOf<Int, Boolean>()
   private var eruda_font_fixed = mutableMapOf<Int, Boolean>()
   private var eruda_font_fix: String? = null
 
-  fun update(model: Any, isSplit: Boolean) {
-    if (isSplit) {
-      split = isSplit
-      className = TAB_MODEL_IMPL_SPLIT
-    }
+  fun update(model: Any, className: String, isSplit: Boolean) {
+    split = isSplit
     if (model::class.qualifiedName == className) {
       tabModel = model
     } else {

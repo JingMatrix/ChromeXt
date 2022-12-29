@@ -10,6 +10,7 @@ import org.matrix.chromext.script.ScriptDbManger
 import org.matrix.chromext.script.encodeScript
 import org.matrix.chromext.script.urlMatch
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.invokeMethod
 
 class UserScriptProxy(ctx: Context, split: Boolean) {
@@ -25,6 +26,9 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
   // org/chromium/content/browser/framehost/NavigationControllerImpl.smali
   // val NAVI_LOAD_URL = "h"
   // ! Note: loadUrl is only called for browser-Initiated navigations
+
+  // Grep TabModelImpl to get the class TabModelImpl
+  var TAB_MODEL_IMPL = "be3"
 
   // It is possible to a HTTP POST with LoadUrlParams Class
   // grep org/chromium/content_public/common/ResourceRequestBody to get setPostData in
@@ -118,6 +122,7 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
   init {
     if (!split) {
       LOAD_URL = "f"
+      TAB_MODEL_IMPL = "pw3"
     }
 
     if (!BuildConfig.DEBUG) {
@@ -125,6 +130,9 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
     }
 
     scriptManager = ScriptDbManger(ctx)
+    ctx.getClassLoader().loadClass(TAB_MODEL_IMPL).getDeclaredConstructors()[0].hookAfter {
+      TabModel.update(it.thisObject, TAB_MODEL_IMPL, split)
+    }
     gURL = ctx.getClassLoader().loadClass("org.chromium.url.GURL")
     loadUrlParams =
         ctx.getClassLoader().loadClass("org.chromium.content_public.browser.LoadUrlParams")
@@ -150,8 +158,13 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
     if (sharedPref.contains("LOAD_URL")) {
       LOAD_URL = sharedPref.getString("LOAD_URL", LOAD_URL)!!
     }
+    if (sharedPref.contains("TAB_MODEL_IMPL")) {
+      TAB_MODEL_IMPL = sharedPref.getString("TAB_MODEL_IMPL", TAB_MODEL_IMPL)!!
+    }
     with(sharedPref.edit()) {
+      clear()
       putString("LOAD_URL", LOAD_URL)
+      putString("TAB_MODEL_IMPL", TAB_MODEL_IMPL)
       apply()
     }
   }
