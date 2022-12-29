@@ -18,21 +18,24 @@ class ScriptDbManger(ctx: Context) {
   fun insert(vararg script: Script) {
     val db = dbHelper.writableDatabase
     script.forEach {
-      db.delete("script", "id = ?", arrayOf(it.id))
+      val lines = db.delete("script", "id = ?", arrayOf(it.id))
+      if (lines > 0) {
+        Log.i("Update ${lines.toString()} rows with id ${it.id}")
+      }
       val values =
           ContentValues().apply {
             put("id", it.id)
             put("code", it.code)
             put("meta", it.meta)
             put("runAt", it.runAt.name)
-            put("shouldWrap", it.shouldWrap)
+            put("shouldWrap", if (it.shouldWrap) 1 else 0)
             put("match", it.match.joinToString(separator = SEP))
             put("grant", it.grant.joinToString(separator = SEP))
             put("exclude", it.exclude.joinToString(separator = SEP))
             put("require", it.require.joinToString(separator = SEP))
           }
       if (db.insert("script", null, values).toString() == "-1") {
-        Log.e("Insertion failed with: " + it.toString())
+        Log.e("Insertion failed with: " + it.id)
       }
     }
   }
