@@ -4,6 +4,7 @@ import android.content.Context
 import java.lang.reflect.Field
 import java.net.URLEncoder
 import org.matrix.chromext.BuildConfig
+import org.matrix.chromext.Chrome
 import org.matrix.chromext.TabModel
 import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDbManger
@@ -13,7 +14,7 @@ import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.invokeMethod
 
-class UserScriptProxy(ctx: Context, split: Boolean) {
+class UserScriptProxy() {
   // These smali code names are possible to change when Chrome updates
   // User should be able to change them by their own if needed
   // If a field is read-only, i.e., initilized with `val`, meaning that we are not using it yet
@@ -117,44 +118,40 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
   // private val mShouldClearHistoryList: Field? = null
   // private val mNavigationUIDataSupplier: Field? = null
 
-  var scriptManager: ScriptDbManger
+  val scriptManager: ScriptDbManger
 
   init {
-    if (!split) {
+    if (!Chrome.split) {
       LOAD_URL = "f"
       TAB_MODEL_IMPL = "pw3"
     }
 
     if (!BuildConfig.DEBUG) {
-      updateSmali(ctx)
+      updateSmali()
     }
 
-    scriptManager = ScriptDbManger(ctx)
-    ctx.getClassLoader().loadClass(TAB_MODEL_IMPL).getDeclaredConstructors()[0].hookAfter {
+    scriptManager = ScriptDbManger(Chrome.getContext())
+    Chrome.load(TAB_MODEL_IMPL).getDeclaredConstructors()[0].hookAfter {
       TabModel.update(it.thisObject, TAB_MODEL_IMPL)
     }
-    gURL = ctx.getClassLoader().loadClass("org.chromium.url.GURL")
-    loadUrlParams =
-        ctx.getClassLoader().loadClass("org.chromium.content_public.browser.LoadUrlParams")
+    gURL = Chrome.load("org.chromium.url.GURL")
+    loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
     tabWebContentsDelegateAndroidImpl =
-        ctx.getClassLoader()
-            .loadClass("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
+        Chrome.load("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
     // interceptNavigationDelegateImpl =
-    //     ctx.getClassLoader().loadClass(INTERCEPT_NAVIGATION_DELEGATE_IMPL)
+    //     Chrome.load(INTERCEPT_NAVIGATION_DELEGATE_IMPL)
     // navigationControllerImpl =
-    //     ctx.getClassLoader()
-    //         .loadClass("org.chromium.content.browser.framehost.NavigationControllerImpl")
+    //     Chrome.load("org.chromium.content.browser.framehost.NavigationControllerImpl")
     // webContentsObserverProxy =
-    //     ctx.getClassLoader()
-    //         .loadClass("org.chromium.content.browser.webcontents.WebContentsObserverProxy")
+    //     Chrome.load("org.chromium.content.browser.webcontents.WebContentsObserverProxy")
     mUrl = loadUrlParams.getDeclaredField("a")
     // mVerbatimHeaders = loadUrlParams!!.getDeclaredField("h")
     // mTab = tabWebContentsDelegateAndroidImpl!!.getDeclaredField(TAB_FIELD)
     mSpec = gURL.getDeclaredField(SPEC_FIELD)
   }
 
-  private fun updateSmali(ctx: Context) {
-    val sharedPref = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
+  private fun updateSmali() {
+    val sharedPref = Chrome.getContext().getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
     if (sharedPref.contains("LOAD_URL")) {
       LOAD_URL = sharedPref.getString("LOAD_URL", LOAD_URL)!!
     }
@@ -272,11 +269,11 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
   //   invokeScriptAt(RunAt.END, url)
   // }
 
-  fun openDevTools(ctx: Context) {
-    evaluateJavaScript(TabModel.openEruda(ctx))
+  fun openDevTools() {
+    evaluateJavaScript(TabModel.openEruda())
   }
 
-  fun fixErudaFont(ctx: Context) {
-    evaluateJavaScript(TabModel.getEurdaFontFix(ctx))
+  fun fixErudaFont() {
+    evaluateJavaScript(TabModel.getEurdaFontFix())
   }
 }

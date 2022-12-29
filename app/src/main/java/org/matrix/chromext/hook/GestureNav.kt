@@ -1,7 +1,6 @@
 package org.matrix.chromext.hook
 
 import android.app.Activity
-import android.content.Context
 import android.graphics.Rect
 import android.os.Build
 import kotlin.math.roundToInt
@@ -13,10 +12,10 @@ import org.matrix.chromext.utils.hookBefore
 
 object GestureNavHook : BaseHook() {
 
-  override fun init(ctx: Context, split: Boolean) {
+  override fun init() {
 
     var activity: Activity? = null
-    val proxy = GestureNavProxy(ctx, split)
+    val proxy = GestureNavProxy()
 
     findMethod(proxy.historyNavigationCoordinator) { name == proxy.IS_FEATURE_ENABLED }
         // private boolean isFeatureEnabled()

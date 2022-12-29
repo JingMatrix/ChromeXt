@@ -6,6 +6,7 @@ import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.callbacks.XC_InitPackageResources
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import org.matrix.chromext.hook.BaseHook
 import org.matrix.chromext.hook.GestureNavHook
 import org.matrix.chromext.hook.IntentHook
 import org.matrix.chromext.hook.MenuHook
@@ -27,9 +28,6 @@ fun filterPackage(packageName: String): Boolean {
 }
 
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitPackageResources {
-
-  var split = true
-
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
     if (filterPackage(lpparam.packageName)) {
       runCatching {
@@ -40,18 +38,22 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
                     }
                 .hookAfter {
                   val ctx = (it.args[0] as Context).createContextForSplit("chrome")
-                  initHooks(ctx, lpparam.packageName)
+                  Chrome.init(ctx, lpparam.packageName)
+                  initHooks(UserScriptHook, GestureNavHook, MenuHook, IntentHook)
                 }
           }
           .onFailure {
-            split = false
+            Chrome.split = false
             findMethod(
                     lpparam.classLoader.loadClass(
                         "org.chromium.chrome.browser.ChromeTabbedActivity"),
                     true) {
                       name == "onCreate"
                     }
-                .hookAfter { initHooks(it.thisObject as Context, lpparam.packageName) }
+                .hookAfter {
+                  Chrome.init(it.thisObject as Context, lpparam.packageName)
+                  initHooks(UserScriptHook, GestureNavHook, MenuHook, IntentHook)
+                }
           }
     }
   }
@@ -64,13 +66,13 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
       resparam: XC_InitPackageResources.InitPackageResourcesParam
   ) {}
 
-  private fun initHooks(ctx: Context, packageName: String) {
-    arrayOf(UserScriptHook, GestureNavHook, MenuHook, IntentHook).forEach {
+  private fun initHooks(vararg hook: BaseHook) {
+    hook.forEach {
       runCatching {
             if (it.isInit) return@forEach
-            it.init(ctx, split)
+            it.init()
             it.isInit = true
-            Log.i("Inited hook for ${packageName}: ${it.javaClass.simpleName}")
+            Log.i("Inited hook for ${Chrome.getPackageName()}: ${it.javaClass.simpleName}")
           }
           .onFailure { Log.ex(it) }
     }

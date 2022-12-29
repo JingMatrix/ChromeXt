@@ -1,8 +1,8 @@
 package org.matrix.chromext.proxy
 
-import android.content.Context
+import org.matrix.chromext.Chrome
 
-class IntentProxy(ctx: Context, split: Boolean) {
+class IntentProxy() {
 
   // Grep 'Ignoring internal Chrome URL from untrustworthy source.' to get the class
   // org/chromium/chrome/browser/IntentHandler.java
@@ -21,12 +21,11 @@ class IntentProxy(ctx: Context, split: Boolean) {
   var intentHandler: Class<*>
 
   init {
-    if (!split) {
+    if (!Chrome.split) {
       INTENT_HANDLER = "Ot1"
     }
 
-    chromeTabbedActivity =
-        ctx.getClassLoader().loadClass("org.chromium.chrome.browser.ChromeTabbedActivity")
-    intentHandler = ctx.getClassLoader().loadClass(INTENT_HANDLER)
+    chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
+    intentHandler = Chrome.load(INTENT_HANDLER)
   }
 }

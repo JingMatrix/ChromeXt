@@ -1,7 +1,7 @@
 package org.matrix.chromext.hook
 
-import android.content.Context
 import org.json.JSONObject
+import org.matrix.chromext.Chrome
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
@@ -11,9 +11,9 @@ object UserScriptHook : BaseHook() {
 
   var proxy: UserScriptProxy? = null
 
-  override fun init(ctx: Context, split: Boolean) {
+  override fun init() {
 
-    proxy = UserScriptProxy(ctx, split)
+    proxy = UserScriptProxy()
 
     findMethod(proxy!!.tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
         // public void onUpdateUrl(GURL url)
@@ -23,7 +23,7 @@ object UserScriptHook : BaseHook() {
             proxy!!.evaluateJavaScript("ChromeXt=console.debug;")
           } else if (url.endsWith(".user.js")) {
             val promptInstallUserScript =
-                ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
+                Chrome.getContext().assets.open("editor.js").bufferedReader().use { it.readText() }
             proxy!!.evaluateJavaScript(promptInstallUserScript)
           } else {
             proxy!!.didUpdateUrl(url)
@@ -53,7 +53,7 @@ object UserScriptHook : BaseHook() {
           } else if ((it.args[0] as Int) == 3 &&
               (it.args[1] as String).startsWith(
                   "Refused to load the font 'data:application/x-font-woff;charset=utf-8;base64")) {
-            proxy!!.fixErudaFont(ctx)
+            proxy!!.fixErudaFont()
           } else {
             Log.d(
                 when (it.args[0] as Int) {

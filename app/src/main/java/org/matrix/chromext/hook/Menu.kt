@@ -6,6 +6,7 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import java.lang.reflect.Method
 import java.util.ArrayList
+import org.matrix.chromext.Chrome
 import org.matrix.chromext.R
 import org.matrix.chromext.ResourceMerge
 import org.matrix.chromext.proxy.MenuProxy
@@ -15,13 +16,14 @@ import org.matrix.chromext.utils.hookBefore
 
 object MenuHook : BaseHook() {
 
-  override fun init(ctx: Context, split: Boolean) {
+  override fun init() {
 
-    val proxy = MenuProxy(ctx, split)
+    val proxy = MenuProxy()
 
     // Page menu only appears after restarting chrome
     if (proxy.isDeveloper) {
 
+      val ctx = Chrome.getContext()
       ResourceMerge.enrich(ctx)
 
       findMethod(proxy.chromeTabbedActivity) { name == proxy.MENU_KEYBOARD_ACTION }
@@ -30,7 +32,7 @@ object MenuHook : BaseHook() {
             val id = it.args[0] as Int
             val name = ctx.getResources().getResourceName(id)
             if (name == "org.matrix.chromext:id/developer_tools_id") {
-              UserScriptHook.proxy!!.openDevTools(ctx)
+              UserScriptHook.proxy!!.openDevTools()
             }
           }
 
@@ -57,7 +59,7 @@ object MenuHook : BaseHook() {
           }
     }
 
-    if (!split) {
+    if (!Chrome.split) {
       findMethod(proxy.preferenceFragmentCompat, true) { name == proxy.GET_CONTEXT }
           .hookAfter {
             if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
@@ -83,7 +85,7 @@ object MenuHook : BaseHook() {
             val refThis = it
             arrayOf("eruda", "exit").forEach {
               proxy.setClickListenerAndSummary(
-                  (refThis.method as Method).invoke(refThis.thisObject, it)!!, ctx, it)
+                  (refThis.method as Method).invoke(refThis.thisObject, it)!!, it)
             }
           }
         }

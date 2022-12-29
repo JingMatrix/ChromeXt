@@ -41,7 +41,8 @@ object TabModel {
     return eruda_font_fixed.get(index()) ?: false
   }
 
-  fun openEruda(ctx: Context): String {
+  fun openEruda(): String {
+    val ctx = Chrome.getContext()
     var script = ""
     if (!erudaLoaded()) {
       val sharedPref: SharedPreferences = ctx.getSharedPreferences("Eruda", Context.MODE_PRIVATE)
@@ -56,14 +57,15 @@ object TabModel {
     } else {
       script += erudaToggle
       if (erudaFontFixed()) {
-        script += getEurdaFontFix(ctx)
+        script += getEurdaFontFix()
       }
     }
 
     return script
   }
 
-  fun getEurdaFontFix(ctx: Context): String {
+  fun getEurdaFontFix(): String {
+    val ctx = Chrome.getContext()
     if (!erudaLoaded()) {
       return ""
     }

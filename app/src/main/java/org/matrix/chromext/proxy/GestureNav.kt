@@ -1,8 +1,8 @@
 package org.matrix.chromext.proxy
 
-import android.content.Context
+import org.matrix.chromext.Chrome
 
-class GestureNavProxy(ctx: Context, split: Boolean) {
+class GestureNavProxy() {
 
   // The main class to hook is
   // org/chromium/chrome/browser/gesturenav/HistoryNavigationCoordinator.java
@@ -48,16 +48,15 @@ class GestureNavProxy(ctx: Context, split: Boolean) {
   // identified since it contains WebContents class
 
   init {
-    if (!split) {
+    if (!Chrome.split) {
       // private val SIDE_SLIDE_LAYOUT = "E83"
       // private val HISTORY_NAVIGATION_LAYOUT = "Xb1"
       HISTORY_NAVIGATION_COORDINATOR = "Ub1"
       IS_FEATURE_ENABLED = "b"
     }
 
-    historyNavigationCoordinator = ctx.getClassLoader().loadClass(HISTORY_NAVIGATION_COORDINATOR)
-    chromeTabbedActivity =
-        ctx.getClassLoader().loadClass("org.chromium.chrome.browser.ChromeTabbedActivity")
+    historyNavigationCoordinator = Chrome.load(HISTORY_NAVIGATION_COORDINATOR)
+    chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
     // decorView = ctx.getClassLoader().loadClass("com.android.internal.policy.DecorView")
     // sideSlideLayout = ctx.getClassLoader().loadClass(SIDE_SLIDE_LAYOUT)
   }

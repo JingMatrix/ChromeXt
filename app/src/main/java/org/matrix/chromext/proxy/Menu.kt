@@ -3,11 +3,12 @@ package org.matrix.chromext.proxy
 import android.content.Context
 import java.lang.reflect.Field
 import kotlin.text.Regex
+import org.matrix.chromext.Chrome
 import org.matrix.chromext.settings.DownloadEruda
 import org.matrix.chromext.settings.ExitDevMode
 import org.matrix.chromext.utils.invokeMethod
 
-class MenuProxy(ctx: Context, split: Boolean) {
+class MenuProxy() {
 
   // Grep Android.PrepareMenu.OpenWebApkVisibilityCheck to get the class
   // org/chromium/chrome/browser/app/appmenu/AppMenuPropertiesDelegateImpl.java
@@ -70,8 +71,8 @@ class MenuProxy(ctx: Context, split: Boolean) {
   var CLICK_LISTENER_FIELD = "X"
 
   companion object {
-    fun getErudaVersion(ctx: Context): String? {
-      val sharedPref = ctx.getSharedPreferences("Eruda", Context.MODE_PRIVATE)
+    fun getErudaVersion(): String? {
+      val sharedPref = Chrome.getContext().getSharedPreferences("Eruda", Context.MODE_PRIVATE)
       if (!sharedPref.contains("eruda")) {
         return null
       }
@@ -105,7 +106,7 @@ class MenuProxy(ctx: Context, split: Boolean) {
   var isDeveloper: Boolean = false
 
   init {
-    if (!split) {
+    if (!Chrome.split) {
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "lg"
       MENU_KEYBOARD_ACTION = "v0"
       PREFERENCE_FRAGMENT_COMPAT = "Ey2"
@@ -114,32 +115,30 @@ class MenuProxy(ctx: Context, split: Boolean) {
     }
 
     val sharedPref =
-        ctx.getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)
+        Chrome.getContext()
+            .getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)
     isDeveloper = sharedPref!!.getBoolean("developer", false)
 
-    preference = ctx.getClassLoader().loadClass("androidx.preference.Preference")
-    // onPreferenceClickListener = ctx.getClassLoader().loadClass(ON_PREFERENCE_CLICK_LISTENER)
+    preference = Chrome.load("androidx.preference.Preference")
+    // onPreferenceClickListener = Chrome.load(ON_PREFERENCE_CLICK_LISTENER)
     developerSettings =
-        ctx.getClassLoader()
-            .loadClass("org.chromium.chrome.browser.tracing.settings.DeveloperSettings")
-    preferenceFragmentCompat = ctx.getClassLoader().loadClass(PREFERENCE_FRAGMENT_COMPAT)
-    chromeTabbedActivity =
-        ctx.getClassLoader().loadClass("org.chromium.chrome.browser.ChromeTabbedActivity")
-    appMenuPropertiesDelegateImpl =
-        ctx.getClassLoader().loadClass(APP_MENU_PROPERTIES_DELEGATE_IMPL)
+        Chrome.load("org.chromium.chrome.browser.tracing.settings.DeveloperSettings")
+    preferenceFragmentCompat = Chrome.load(PREFERENCE_FRAGMENT_COMPAT)
+    chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
+    appMenuPropertiesDelegateImpl = Chrome.load(APP_MENU_PROPERTIES_DELEGATE_IMPL)
     mClickListener = preference.getDeclaredField(CLICK_LISTENER_FIELD)
     // mOnClickListener = preference!!.getDeclaredField(PREFERENCE_CLICK_LISTENER_FIELD)
     mClickListener.setAccessible(true)
   }
 
-  fun setClickListenerAndSummary(obj: Any, ctx: Context, pref: String) {
+  fun setClickListenerAndSummary(obj: Any, pref: String) {
     when (pref) {
       "exit" -> {
-        mClickListener.set(obj, ExitDevMode(ctx))
+        mClickListener.set(obj, ExitDevMode)
       }
       "eruda" -> {
-        mClickListener.set(obj, DownloadEruda(ctx))
-        val version = getErudaVersion(ctx)
+        mClickListener.set(obj, DownloadEruda)
+        val version = getErudaVersion()
         var summary = "Click to install Eruda, size around 0.5 MiB"
         if (version != null) {
           summary = "Current version: " + version
