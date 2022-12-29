@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
+import de.robv.android.xposed.XC_MethodHook.Unhook
 import java.lang.reflect.Method
 import java.util.ArrayList
 import org.matrix.chromext.Chrome
@@ -19,6 +20,7 @@ object MenuHook : BaseHook() {
   override fun init() {
 
     val proxy = MenuProxy()
+    var enrichHook: Unhook? = null
 
     // Page menu only appears after restarting chrome
     if (proxy.isDeveloper) {
@@ -60,12 +62,16 @@ object MenuHook : BaseHook() {
     }
 
     if (!Chrome.split) {
-      findMethod(proxy.preferenceFragmentCompat, true) { name == proxy.GET_CONTEXT }
-          .hookAfter {
-            if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
-              ResourceMerge.enrich(it.getResult() as Context)
-            }
-          }
+      enrichHook =
+          findMethod(proxy.preferenceFragmentCompat, true) { name == proxy.GET_CONTEXT }
+              .hookAfter {
+                if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
+                  ResourceMerge.enrich(it.getResult() as Context)
+                  if (enrichHook != null) {
+                    enrichHook!!.unhook()
+                  }
+                }
+              }
     }
 
     findMethod(proxy.preferenceFragmentCompat) { name == proxy.ADD_PREFERENCES_FROM_RESOURCE }
