@@ -81,7 +81,7 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
   var tabWebContentsDelegateAndroidImpl: Class<*>
 
   var tabModelImpl: Class<*>
-  private val tabModel = TabModel(TAB_MODEL_IMPL)
+  private val tabModel: TabModel
 
   // val interceptNavigationDelegateImpl: Class<*>? = null
 
@@ -121,6 +121,12 @@ class UserScriptProxy(ctx: Context, split: Boolean) {
   var scriptManager: ScriptDbManger
 
   init {
+    if (!split) {
+      LOAD_URL = "f"
+      TAB_MODEL_IMPL = "pw3"
+    }
+
+    tabModel = TabModel(TAB_MODEL_IMPL)
     val sharedPref: SharedPreferences = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
     updateSmali(sharedPref)
     scriptManager = ScriptDbManger(ctx)

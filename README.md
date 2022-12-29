@@ -129,7 +129,7 @@ Here are corresponding files you might want / need to change:
 - [x] Add uBlock Origin cosmetic AdBlocker using Eruda
 - [x] Find way to get current interactive tab
 - [x] Remove AndroidX Room dependency to reduce app size
-- [ ] Support non-split version of Android Chrome
+- [x] Support non-split version of Android Chrome
 - [ ] Add recommended scripts to the front end manager
 - [ ] Read Mode menu
 - [ ] Support @resource API

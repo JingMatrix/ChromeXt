@@ -94,13 +94,21 @@ class MenuProxy(ctx: Context, split: Boolean) {
   var preferenceFragmentCompat: Class<*>
   // val onPreferenceClickListener: Class<*>? = null
 
-  private var preference: Class<*>? = null
-  private var mClickListener: Field? = null
+  private var preference: Class<*>
+  private var mClickListener: Field
   // private val mOnClickListener: Field? = null
 
   var isDeveloper: Boolean = false
 
   init {
+    if (!split) {
+      APP_MENU_PROPERTIES_DELEGATE_IMPL = "lg"
+      UPDATE_REQUEST_DESKTOP_SITE_MENU_ITEM = "l"
+      MENU_KEYBOARD_ACTION = "v0"
+      PREFERENCE_FRAGMENT_COMPAT = "Ey2"
+      SET_SUMMARY = "P"
+    }
+
     val sharedPref =
         ctx.getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)
     isDeveloper = sharedPref!!.getBoolean("developer", false)
@@ -115,18 +123,18 @@ class MenuProxy(ctx: Context, split: Boolean) {
         ctx.getClassLoader().loadClass("org.chromium.chrome.browser.ChromeTabbedActivity")
     appMenuPropertiesDelegateImpl =
         ctx.getClassLoader().loadClass(APP_MENU_PROPERTIES_DELEGATE_IMPL)
-    mClickListener = preference!!.getDeclaredField(CLICK_LISTENER_FIELD)
+    mClickListener = preference.getDeclaredField(CLICK_LISTENER_FIELD)
     // mOnClickListener = preference!!.getDeclaredField(PREFERENCE_CLICK_LISTENER_FIELD)
-    mClickListener!!.setAccessible(true)
+    mClickListener.setAccessible(true)
   }
 
   fun setClickListenerAndSummary(obj: Any, ctx: Context, pref: String) {
     when (pref) {
       "exit" -> {
-        mClickListener!!.set(obj, ExitDevMode(ctx))
+        mClickListener.set(obj, ExitDevMode(ctx))
       }
       "eruda" -> {
-        mClickListener!!.set(obj, DownloadEruda(ctx))
+        mClickListener.set(obj, DownloadEruda(ctx))
         val version = getErudaVersion(ctx)
         var summary = "Click to install Eruda, size around 0.5 MiB"
         if (version != null) {

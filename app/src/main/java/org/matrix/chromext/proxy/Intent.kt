@@ -21,6 +21,10 @@ class IntentProxy(ctx: Context, split: Boolean) {
   var intentHandler: Class<*>
 
   init {
+    if (!split) {
+      INTENT_HANDLER = "Ot1"
+    }
+
     chromeTabbedActivity =
         ctx.getClassLoader().loadClass("org.chromium.chrome.browser.ChromeTabbedActivity")
     intentHandler = ctx.getClassLoader().loadClass(INTENT_HANDLER)

@@ -22,10 +22,12 @@ class GestureNavProxy(ctx: Context, split: Boolean) {
   // We start with its HistoryNavigationLayout
 
   // private val HISTORY_NAVIGATION_LAYOUT = "g31"
+  // which has two fields of Ljava/lang/Runnable,
+  // one field of Lorg/chromium/base/Callback
+  // And it has a Field SideSlideLayout
 
-  // It has a Field SideSlideLayout
   // private val SIDE_SLIDE_LAYOUT = "vR2"
-  // It can be identified with having many fields, such as
+  // which can be identified with having many fields, such as
   // android/view/animation/Animation$AnimationListener,
   // android/view/animation/Animation,
   // android/view/animation/DecelerateInterpolator,
@@ -46,6 +48,13 @@ class GestureNavProxy(ctx: Context, split: Boolean) {
   // identified since it contains WebContents class
 
   init {
+    if (!split) {
+      // private val SIDE_SLIDE_LAYOUT = "E83"
+      // private val HISTORY_NAVIGATION_LAYOUT = "Xb1"
+      HISTORY_NAVIGATION_COORDINATOR = "Ub1"
+      IS_FEATURE_ENABLED = "b"
+    }
+
     historyNavigationCoordinator = ctx.getClassLoader().loadClass(HISTORY_NAVIGATION_COORDINATOR)
     chromeTabbedActivity =
         ctx.getClassLoader().loadClass("org.chromium.chrome.browser.ChromeTabbedActivity")
