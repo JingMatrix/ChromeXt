@@ -46,7 +46,7 @@ object UserScriptHook : BaseHook() {
                   val action = data.getString("action")
                   val payload = data.getString("payload")
                   runCatching {
-                        val callback = proxy!!.scriptManager(action, payload)
+                        val callback = proxy!!.scriptManager.on(action, payload)
                         if (callback != null) {
                           proxy!!.evaluateJavaScript(callback)
                         }

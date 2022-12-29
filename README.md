@@ -128,7 +128,7 @@ Here are corresponding files you might want / need to change:
 - [x] Improve front end
 - [x] Add uBlock Origin cosmetic AdBlocker using Eruda
 - [x] Find way to get current interactive tab
-- [ ] Remove AndroidX Room dependency to reduce app size
+- [x] Remove AndroidX Room dependency to reduce app size
 - [ ] Add recommended scripts to the front end manager
 - [ ] Read Mode menu
 - [ ] Support @resource API

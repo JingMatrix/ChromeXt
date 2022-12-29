@@ -2,16 +2,11 @@ package org.matrix.chromext.proxy
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.room.Room
 import java.lang.reflect.Field
 import java.net.URLEncoder
-import org.matrix.chromext.script.AppDatabase
-import org.matrix.chromext.script.MIGRATION_2_3
-import org.matrix.chromext.script.MIGRATION_3_4
 import org.matrix.chromext.script.Script
-import org.matrix.chromext.script.ScriptDao
+import org.matrix.chromext.script.ScriptDbManger
 import org.matrix.chromext.script.encodeScript
-import org.matrix.chromext.script.parseScript
 import org.matrix.chromext.script.urlMatch
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
@@ -123,17 +118,12 @@ class UserScriptProxy(ctx: Context) {
   // private val mShouldClearHistoryList: Field? = null
   // private val mNavigationUIDataSupplier: Field? = null
 
-  private var scriptDao: ScriptDao? = null
+  var scriptManager: ScriptDbManger
 
   init {
     val sharedPref: SharedPreferences = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
     updateSmali(sharedPref)
-    scriptDao =
-        Room.databaseBuilder(ctx, AppDatabase::class.java, "userscript")
-            .allowMainThreadQueries()
-            .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
-            .build()
-            .init()
+    scriptManager = ScriptDbManger(ctx)
     gURL = ctx.getClassLoader().loadClass("org.chromium.url.GURL")
     loadUrlParams =
         ctx.getClassLoader().loadClass("org.chromium.content_public.browser.LoadUrlParams")
@@ -178,21 +168,22 @@ class UserScriptProxy(ctx: Context) {
   }
 
   private fun invokeScript(url: String) {
-    scriptDao!!.getAll().forEach {
+    scriptManager.getAll().forEach {
       val script = it
       var run = false
+
+      script.exclude.forEach {
+        if (it != "" && urlMatch(it, url)) {
+          return
+        }
+      }
+
       script.match.forEach {
-        if (urlMatch(it, url)) {
+        if (!run && urlMatch(it, url)) {
           run = true
         }
       }
-      if (run) {
-        script.exclude.forEach {
-          if (it != "" && urlMatch(it, url)) {
-            run = false
-          }
-        }
-      }
+
       if (run) {
         evaluateJavaScript(script)
         Log.i("${script.id} injected")
@@ -237,57 +228,6 @@ class UserScriptProxy(ctx: Context) {
     Log.e(
         "parseUrl: ${packed::class.qualifiedName} is not ${loadUrlParams.name} nor ${gURL.getName()}")
     return null
-  }
-
-  private fun parseArray(str: String): List<String> {
-    return str.removeSurrounding("[\"", "\"]").split("\",\"").map { it.replace("\\", "") }
-  }
-
-  fun scriptManager(action: String, payload: String): String? {
-    val SCRIPT_QUOTE_ESCAPE = "ChromeXt_Signle_Quote_Escape_String"
-    var callback: String? = null
-    when (action) {
-      "installScript" -> {
-        val script = parseScript(payload)
-        if (script == null) {
-          callback = "alert('Invalid UserScript')"
-        } else {
-          Log.i("Install script ${script.id}")
-          scriptDao!!.insertAll(script)
-        }
-      }
-      "getIds" -> {
-        val result = scriptDao!!.getAll().map { it.id.replace("'", SCRIPT_QUOTE_ESCAPE) }
-        callback =
-            "window.dispatchEvent(new CustomEvent('script_id',{detail:['${result.joinToString(separator = "','")}']}));"
-      }
-      "getMetaById" -> {
-        val ids = parseArray(payload)
-        val result =
-            scriptDao!!.getScriptById(ids).map { it.meta.replace("`", SCRIPT_QUOTE_ESCAPE) }
-        callback =
-            "window.dispatchEvent(new CustomEvent('script_meta',{detail:[`${result.joinToString(separator = "`,`")}`]}));"
-      }
-      "updateMetaForId" -> {
-        val CHROMEXT_SPLIT = "ChromeXt_Split_For_Metadata_Update"
-        val result = payload.split(CHROMEXT_SPLIT)
-        val match = scriptDao!!.getScriptById(listOf(result[0]))
-        if (match.size > 0) {
-          val script = match.first()
-          val newScript = parseScript(result[1] + "\n" + script.code)
-          scriptDao!!.insertAll(newScript!!)
-        }
-      }
-      "deleteScriptById" -> {
-        val ids = parseArray(payload)
-        scriptDao!!.getAll().forEach {
-          if (ids.contains(it.id)) {
-            scriptDao!!.delete(it)
-          }
-        }
-      }
-    }
-    return callback
   }
 
   fun updateTabModel(model: Any) {

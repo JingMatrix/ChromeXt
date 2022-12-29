@@ -2,12 +2,6 @@ package org.matrix.chromext.script
 
 import kotlin.text.Regex
 
-enum class RunAt(val state: String) {
-  START("document-start"),
-  END("document-end"),
-  IDLE("document-idle")
-}
-
 private val blocksReg =
     Regex(
         """\A(?<metablock>// ==UserScript==\r?\n([\S\s]*?)\r?\n// ==/UserScript==)(?<code>[\S\s]*)""")

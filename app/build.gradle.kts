@@ -46,13 +46,4 @@ android {
 
 dependencies {
     compileOnly("de.robv.android.xposed:api:82")
-
-	val room_version = "2.4.3"
-    implementation("androidx.room:room-runtime:$room_version")
-    annotationProcessor("androidx.room:room-compiler:$room_version")
-
-    // To use Kotlin Symbol Processing (KSP)
-    ksp("androidx.room:room-compiler:$room_version")
-
-	// implementation("com.github.termux.termux-app:termux-shared:v0.118.0")
 }
