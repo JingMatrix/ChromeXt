@@ -35,13 +35,13 @@ class GestureNavProxy() {
 
   // Once the class HistoryNavigationCoordinator is found, we care about its filed mEnabled
   // and its method isFeatureEnabled() with a Boolean return value
-  var historyNavigationCoordinator: Class<*>
+  val historyNavigationCoordinator: Class<*>
   // val ENABLE_FIELD = "s"
   var IS_FEATURE_ENABLED = "b"
 
   // val decorView: Class<*>? = null
   // val sideSlideLayout: Class<*>? = null
-  var chromeTabbedActivity: Class<*>
+  val chromeTabbedActivity: Class<*>
   // Even though it exposes the onLayout method, it is not the correct Layout to hook
 
   // val UPDATE_NAVIGATION_HANDLER = "g"

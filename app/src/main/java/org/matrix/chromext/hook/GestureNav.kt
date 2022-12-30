@@ -3,6 +3,7 @@ package org.matrix.chromext.hook
 import android.app.Activity
 import android.graphics.Rect
 import android.os.Build
+import java.lang.ref.WeakReference
 import kotlin.math.roundToInt
 import org.matrix.chromext.proxy.GestureNavProxy
 import org.matrix.chromext.utils.Log
@@ -14,18 +15,18 @@ object GestureNavHook : BaseHook() {
 
   override fun init() {
 
-    var activity: Activity? = null
+    var activity: WeakReference<Activity>? = null
     val proxy = GestureNavProxy()
 
     findMethod(proxy.historyNavigationCoordinator) { name == proxy.IS_FEATURE_ENABLED }
         // private boolean isFeatureEnabled()
         .hookBefore {
-          fixConflict(activity!!)
+          fixConflict(activity!!.get()!!)
           it.result = true
         }
 
     findMethod(proxy.chromeTabbedActivity) { name == "onStart" }
-        .hookAfter { activity = it.thisObject as Activity }
+        .hookAfter { activity = WeakReference(it.thisObject as Activity) }
   }
 
   fun fixConflict(activity: Activity) {

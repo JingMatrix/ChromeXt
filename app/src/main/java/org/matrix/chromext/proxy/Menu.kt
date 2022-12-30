@@ -93,14 +93,14 @@ class MenuProxy() {
     }
   }
 
-  var chromeTabbedActivity: Class<*>
-  var appMenuPropertiesDelegateImpl: Class<*>
-  var developerSettings: Class<*>
-  var preferenceFragmentCompat: Class<*>
+  val chromeTabbedActivity: Class<*>
+  val appMenuPropertiesDelegateImpl: Class<*>
+  val developerSettings: Class<*>
+  val preferenceFragmentCompat: Class<*>
   // val onPreferenceClickListener: Class<*>? = null
 
-  private var preference: Class<*>
-  private var mClickListener: Field
+  private val preference: Class<*>
+  private val mClickListener: Field
   // private val mOnClickListener: Field? = null
 
   var isDeveloper: Boolean = false

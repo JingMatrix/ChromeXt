@@ -16,9 +16,9 @@ class IntentProxy() {
   // that returns a header
   // private val GET_EXTRA_HEADERS = "f"
 
-  var chromeTabbedActivity: Class<*>
+  val chromeTabbedActivity: Class<*>
 
-  var intentHandler: Class<*>
+  val intentHandler: Class<*>
 
   init {
     if (!Chrome.split) {
