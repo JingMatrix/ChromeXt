@@ -22,7 +22,7 @@ class MenuProxy() {
   // in the class ChromeTabbedActivity.smali
   var MENU_KEYBOARD_ACTION = "h0"
 
-  // Find the super class PreferenceFragmentCompat of DeveloperSettings.samli
+  // Find the super class PreferenceFragmentCompat of DeveloperSettings.smali
   var PREFERENCE_FRAGMENT_COMPAT = "pk2"
 
   // Grep (I)V to get method addPreferencesFromResource
@@ -103,8 +103,29 @@ class MenuProxy() {
       CLICK_LISTENER_FIELD = "R"
     }
 
-    if (Chrome.split && Chrome.version == 110) {
+    if (Chrome.split && Chrome.version >= 109) {
+      APP_MENU_PROPERTIES_DELEGATE_IMPL = "tf"
+      MENU_KEYBOARD_ACTION = "i0"
+      PREFERENCE_FRAGMENT_COMPAT = "al2"
+      ADD_PREFERENCES_FROM_RESOURCE = "U0"
+      GET_CONTEXT = "I0"
+      FIND_PREFERENCE = "V0"
+      SET_SUMMARY = "R"
+    }
+
+    if (Chrome.split && Chrome.version >= 110) {
+      APP_MENU_PROPERTIES_DELEGATE_IMPL = "pf"
+      MENU_KEYBOARD_ACTION = "h0"
+      PREFERENCE_FRAGMENT_COMPAT = "je2"
+      ADD_PREFERENCES_FROM_RESOURCE = "T0"
+      GET_CONTEXT = "I0"
+      FIND_PREFERENCE = "U0"
+      SET_SUMMARY = "R"
+    }
+
+    if (Chrome.split && Chrome.version >= 111) {
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "Mf"
+      MENU_KEYBOARD_ACTION = "h0"
       PREFERENCE_FRAGMENT_COMPAT = "zf2"
       ADD_PREFERENCES_FROM_RESOURCE = "U0"
       GET_CONTEXT = "J0"
@@ -114,7 +135,8 @@ class MenuProxy() {
 
     val sharedPref =
         Chrome.getContext()
-            .getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)
+            .getSharedPreferences(
+                Chrome.getContext().getPackageName() + "_preferences", Context.MODE_PRIVATE)
     isDeveloper = sharedPref!!.getBoolean("developer", false)
 
     preference = Chrome.load("androidx.preference.Preference")

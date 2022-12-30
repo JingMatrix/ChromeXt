@@ -25,7 +25,15 @@ class IntentProxy() {
       INTENT_HANDLER = "Ot1"
     }
 
-    if (Chrome.split && Chrome.version == 110) {
+    if (Chrome.split && Chrome.version >= 109) {
+      INTENT_HANDLER = "xi1"
+    }
+
+    if (Chrome.split && Chrome.version >= 110) {
+      INTENT_HANDLER = "Rb1"
+    }
+
+    if (Chrome.split && Chrome.version >= 111) {
       INTENT_HANDLER = "Pc1"
       START_ACTIVITY = "A"
     }

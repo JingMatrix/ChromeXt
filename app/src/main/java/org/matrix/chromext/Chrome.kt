@@ -13,7 +13,7 @@ object Chrome {
   private var longVersion: Long = 0
   var split = true
   var isDev = false
-  var version  = 108
+  var version = 108
   // Might be extended to support different versions
 
   fun init(ctx: Context) {
@@ -39,7 +39,7 @@ object Chrome {
   }
 
   private fun setVersion() {
-	  version = packageInfo!!.versionName.split(".").first().toInt()
+    version = packageInfo!!.versionName.split(".").first().toInt()
     if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
       longVersion = packageInfo!!.getLongVersionCode()
     } else {

@@ -10,6 +10,10 @@ object ExitDevMode : OnClickListener {
 
   override fun onClick(v: View) {
     val context = Chrome.getContext()
+    if (Chrome.isDev) {
+      Log.toast(context, "This function is not available for your Chrome build")
+      return
+    }
     val sharedPref =
         context.getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)
     with(sharedPref!!.edit()) {

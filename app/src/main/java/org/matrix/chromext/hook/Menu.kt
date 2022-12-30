@@ -23,7 +23,7 @@ object MenuHook : BaseHook() {
     var enrichHook: Unhook? = null
 
     // Page menu only appears after restarting chrome
-    if (proxy.isDeveloper) {
+    if (proxy.isDeveloper || Chrome.isDev) {
 
       val ctx = Chrome.getContext()
       ResourceMerge.enrich(ctx)
@@ -61,7 +61,7 @@ object MenuHook : BaseHook() {
           }
     }
 
-    if (!Chrome.split || Chrome.version == 110) {
+    if (!Chrome.split || Chrome.version >= 109) {
       enrichHook =
           findMethod(proxy.preferenceFragmentCompat, true) { name == proxy.GET_CONTEXT }
               .hookAfter {

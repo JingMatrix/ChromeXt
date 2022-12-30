@@ -23,8 +23,10 @@ class GestureNavProxy() {
 
   // private val HISTORY_NAVIGATION_LAYOUT = "g31"
   // which has two fields of Ljava/lang/Runnable,
-  // one field of Lorg/chromium/base/Callback
-  // And it has a Field SideSlideLayout
+  // one field of Lorg/chromium/base/Callback.
+  // Note that it has the same two last letters as HistoryNavigationCoordinator
+  // And it has a Field SideSlideLayout,
+  // and if you grep with this field, there is only matching line
 
   // private val SIDE_SLIDE_LAYOUT = "vR2"
   // which can be identified with having many fields, such as
@@ -54,7 +56,19 @@ class GestureNavProxy() {
       HISTORY_NAVIGATION_COORDINATOR = "Ub1"
     }
 
-    if (Chrome.split && Chrome.version == 110) {
+    if (Chrome.split && Chrome.version >= 109) {
+      // private val SIDE_SLIDE_LAYOUT = "mS2"
+      // private val HISTORY_NAVIGATION_LAYOUT = "K31"
+      HISTORY_NAVIGATION_COORDINATOR = "H31"
+    }
+
+    if (Chrome.split && Chrome.version >= 110) {
+      // private val SIDE_SLIDE_LAYOUT = "yL2"
+      // private val HISTORY_NAVIGATION_LAYOUT = "XW0"
+      HISTORY_NAVIGATION_COORDINATOR = "UW0"
+    }
+
+    if (Chrome.split && Chrome.version >= 111) {
       // private val SIDE_SLIDE_LAYOUT = "YM2"
       // private val HISTORY_NAVIGATION_LAYOUT = "RX0"
       HISTORY_NAVIGATION_COORDINATOR = "OX0"
