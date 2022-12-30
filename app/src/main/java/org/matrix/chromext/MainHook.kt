@@ -38,7 +38,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
                     }
                 .hookAfter {
                   val ctx = (it.args[0] as Context).createContextForSplit("chrome")
-                  Chrome.init(ctx, lpparam.packageName)
+                  Chrome.init(ctx)
                   initHooks(UserScriptHook, GestureNavHook, MenuHook, IntentHook)
                 }
           }
@@ -51,7 +51,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
                       name == "onCreate"
                     }
                 .hookAfter {
-                  Chrome.init(it.thisObject as Context, lpparam.packageName)
+                  Chrome.init(it.thisObject as Context)
                   initHooks(UserScriptHook, GestureNavHook, MenuHook, IntentHook)
                 }
           }
@@ -72,7 +72,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
             if (it.isInit) return@forEach
             it.init()
             it.isInit = true
-            Log.i("Inited hook for ${Chrome.getPackageName()}: ${it.javaClass.simpleName}")
+            Log.i("Inited hook: ${it.javaClass.simpleName}")
           }
           .onFailure { Log.ex(it) }
     }
