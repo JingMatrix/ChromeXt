@@ -2,6 +2,8 @@ package org.matrix.chromext
 
 import android.content.Context
 import android.content.pm.PackageInfo
+import android.content.pm.PackageManager.PackageInfoFlags
+import android.os.Build
 import java.lang.ref.WeakReference
 import org.matrix.chromext.utils.Log
 
@@ -14,7 +16,12 @@ object Chrome {
   fun init(ctx: Context) {
     mContext = WeakReference(ctx)
     val packageName = ctx.getPackageName()
-    packageInfo = ctx.getPackageManager().getPackageInfo(packageName, 0)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      packageInfo = ctx.getPackageManager().getPackageInfo(packageName, PackageInfoFlags.of(0))
+    } else {
+      @Suppress("DEPRECATION")
+      packageInfo = ctx.getPackageManager().getPackageInfo(packageName, 0)
+    }
     var state = "split"
     if (!split) {
       state = "non-split"
