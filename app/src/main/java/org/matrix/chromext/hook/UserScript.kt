@@ -3,10 +3,12 @@ package org.matrix.chromext.hook
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.ResourceMerge
+import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
+import org.matrix.chromext.utils.hookBefore
 
 object UserScriptHook : BaseHook() {
 
@@ -15,6 +17,13 @@ object UserScriptHook : BaseHook() {
   override fun init() {
 
     proxy = UserScriptProxy()
+
+    proxy!!.tabModel.getDeclaredConstructors()[0].hookAfter {
+      TabModel.update(it.thisObject, proxy!!.TAB_MODEL_IMPL)
+    }
+
+    findMethod(proxy!!.tabModel) { name == "destroy" }
+        .hookBefore { TabModel.dropModel(it.thisObject) }
 
     findMethod(proxy!!.tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
         // public void onUpdateUrl(GURL url)

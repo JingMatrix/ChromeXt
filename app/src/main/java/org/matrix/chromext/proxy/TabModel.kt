@@ -1,31 +1,37 @@
-package org.matrix.chromext
+package org.matrix.chromext.proxy
 
 import android.content.Context
 import android.content.SharedPreferences
+import java.lang.ref.WeakReference
+import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.erudaToggle
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
 
 object TabModel {
-  private var tabModel: Any? = null
+  private var tabModels = mutableListOf<WeakReference<Any>>()
   private var eruda_loaded = mutableMapOf<Int, Boolean>()
   private var eruda_font_fixed = mutableMapOf<Int, Boolean>()
   private var eruda_font_fix: String? = null
 
   fun update(model: Any, className: String) {
     if (model::class.qualifiedName == className) {
-      tabModel = model
+      tabModels += WeakReference(model)
     } else {
       Log.e("updateTabModel: ${model::class.qualifiedName} is not ${className}")
     }
   }
 
+  fun dropModel(model: Any) {
+    tabModels.removeAll { it.get()!! == model }
+  }
+
   fun index(): Int {
-    return tabModel!!.invokeMethod() { name == "index" } as Int
+    return tabModels.last().get()!!.invokeMethod() { name == "index" } as Int
   }
 
   fun getTab(): Any {
-    return tabModel!!.invokeMethod(index()) { name == "getTabAt" }!!
+    return tabModels.last().get()!!.invokeMethod(index()) { name == "getTabAt" }!!
   }
 
   fun refresh() {

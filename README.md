@@ -134,6 +134,7 @@ Here are corresponding files you might want / need to change:
 - [x] Remove AndroidX Room dependency to reduce app size
 - [x] Support non-split version of Android Chrome
 - [x] Solve the menu hook problem for non-split versions
+- [x] Handle multiple Tab Model
 - [ ] Add recommended scripts to the front end manager
 - [ ] Read Mode menu
 - [ ] Support @resource API

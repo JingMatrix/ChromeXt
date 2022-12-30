@@ -5,13 +5,11 @@ import java.lang.reflect.Field
 import java.net.URLEncoder
 import org.matrix.chromext.BuildConfig
 import org.matrix.chromext.Chrome
-import org.matrix.chromext.TabModel
 import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDbManger
 import org.matrix.chromext.script.encodeScript
 import org.matrix.chromext.script.urlMatch
 import org.matrix.chromext.utils.Log
-import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.invokeMethod
 
 class UserScriptProxy() {
@@ -78,11 +76,11 @@ class UserScriptProxy() {
     // Fields of org/chromium/content_public/browser/LoadUrlParams
     // are too many to list here
     // They are in the same order as the source code
-
   }
 
-  var tabWebContentsDelegateAndroidImpl: Class<*>
+  val tabWebContentsDelegateAndroidImpl: Class<*>
 
+  val tabModel: Class<*>
   // val interceptNavigationDelegateImpl: Class<*>? = null
 
   // val navigationControllerImpl: Class<*>? = null
@@ -92,11 +90,11 @@ class UserScriptProxy() {
 
   // private val navigationHandle: Class<*>? = null
 
-  private var gURL: Class<*>
-  private var mSpec: Field
+  private val gURL: Class<*>
+  private val mSpec: Field
 
-  private var loadUrlParams: Class<*>
-  private var mUrl: Field
+  private val loadUrlParams: Class<*>
+  private val mUrl: Field
   // private val mInitiatorOrigin: Field? = null
   // private val mLoadUrlType: Field? = null
   // private val mTransitionType: Field? = null
@@ -131,9 +129,8 @@ class UserScriptProxy() {
     }
 
     scriptManager = ScriptDbManger(Chrome.getContext())
-    Chrome.load(TAB_MODEL_IMPL).getDeclaredConstructors()[0].hookAfter {
-      TabModel.update(it.thisObject, TAB_MODEL_IMPL)
-    }
+    tabModel = Chrome.load(TAB_MODEL_IMPL)
+
     gURL = Chrome.load("org.chromium.url.GURL")
     loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
     tabWebContentsDelegateAndroidImpl =
