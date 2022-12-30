@@ -9,7 +9,8 @@ add URL comparison there and evaluate JavaScript using the `javascript:` scheme.
 
 ### Adapt to your Chrome version
 
-We pay our main efforts to support the latest stable version of Android Chrome.
+We pay our main efforts to support the latest stable version of Android Chrome
+installed from Google Play Store or downloaded APK from the internet.
 And usually the `beta` or `dev` versions are supported as well, but not guaranteed.
 
 Recently, the author has tested `ChromeXt` with the latest `Android Chrome 108.0.5359.128`, and it works well.
@@ -19,11 +20,10 @@ For other versions, it might not work.
 To adapt to those versions, one only need to find out one method name and one class name in its [smali](https://github.com/JesusFreke/smali/wiki) code.
 Here is how to do that.
 First use `apktool` to decompile the `split_chrome.apk` file pulled from the installation of Chrome on your phone,
-then follow the hints in [UserScript.kt](app/src/main/java/org/matrix/chromext/proxy/UserScript.kt) to get the correct method name `LOAD_URL`
+then follow the hints in [UserScript.kt](app/src/main/java/org/matrix/chromext/proxy/UserScript.kt) to get the correct method name `LOAD_URL` and the correct class name `TAB_MODEL_IMPL`
 and modify it in the [SharedPreferences](https://developer.android.com/reference/android/content/SharedPreferences) of Chrome at `/data/data/com.android.chrome/shared_prefs/ChromeXt.xml`.
-If this still doesn't work you, you need to change smali class name in [TabModel](app/src/main/java/org/matrix/chromext/TabModel.kt) and recomplie the source code.
-
-
+Note that, the Chrome installed from the play store is the split version
+while a usual installation from downloaded APK gives the non-split version.
 
 ## Usage
 
