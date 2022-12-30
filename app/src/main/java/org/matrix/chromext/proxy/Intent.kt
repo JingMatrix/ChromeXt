@@ -25,6 +25,11 @@ class IntentProxy() {
       INTENT_HANDLER = "Ot1"
     }
 
+    if (Chrome.split && Chrome.version == 110) {
+      INTENT_HANDLER = "Pc1"
+      START_ACTIVITY = "A"
+    }
+
     chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
     intentHandler = Chrome.load(INTENT_HANDLER)
   }

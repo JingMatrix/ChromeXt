@@ -5,7 +5,6 @@ import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import de.robv.android.xposed.XC_MethodHook.Unhook
-import java.lang.reflect.Method
 import java.util.ArrayList
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.R
@@ -14,6 +13,7 @@ import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
+import org.matrix.chromext.utils.hookMethod
 
 object MenuHook : BaseHook() {
 
@@ -61,7 +61,7 @@ object MenuHook : BaseHook() {
           }
     }
 
-    if (!Chrome.split) {
+    if (!Chrome.split || Chrome.version == 110) {
       enrichHook =
           findMethod(proxy.preferenceFragmentCompat, true) { name == proxy.GET_CONTEXT }
               .hookAfter {
@@ -76,22 +76,22 @@ object MenuHook : BaseHook() {
 
     findMethod(proxy.preferenceFragmentCompat) { name == proxy.ADD_PREFERENCES_FROM_RESOURCE }
         // public void addPreferencesFromResource(Int preferencesResId)
-        .hookBefore {
-          if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
-            it.args[0] = R.xml.developer_preferences
+        .hookMethod {
+          before {
+            if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
+              it.args[0] = R.xml.developer_preferences
+            }
           }
-        }
 
-    findMethod(proxy.preferenceFragmentCompat) { name == proxy.FIND_PREFERENCE }
-        // public @Nullable T <T extends Preference> findPreference(@NonNull CharSequence key)
-        .hookAfter {
-          if (it.thisObject::class.qualifiedName == proxy.developerSettings.name &&
-              (it.args[0] as String) == "beta_stable_hint") {
-
-            val refThis = it
-            arrayOf("eruda", "exit").forEach {
-              proxy.setClickListenerAndSummary(
-                  (refThis.method as Method).invoke(refThis.thisObject, it)!!, it)
+          after {
+            if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
+              val refThis = it
+              arrayOf("eruda", "exit").forEach {
+                proxy.setClickListenerAndSummary(
+                    findMethod(proxy.preferenceFragmentCompat) { name == proxy.FIND_PREFERENCE }
+                        .invoke(refThis.thisObject, it)!!,
+                    it)
+              }
             }
           }
         }

@@ -10,3 +10,4 @@
 local.properties
 *.apk
 com.android.chrome
+com.chrome.*

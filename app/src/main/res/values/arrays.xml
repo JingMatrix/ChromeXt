@@ -4,6 +4,6 @@
     <item>com.android.chrome</item>
     <item>com.chrome.beta</item>
     <item>com.chrome.dev</item>
-    <!-- <item>com.chrome.canary</item> -->
+    <item>com.chrome.canary</item>
     </string-array>
 </resources>

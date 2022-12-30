@@ -124,6 +124,11 @@ class UserScriptProxy() {
       TAB_MODEL_IMPL = "pw3"
     }
 
+    if (Chrome.split && Chrome.version == 110) {
+      LOAD_URL = "g"
+      TAB_MODEL_IMPL = "z93"
+    }
+
     if (!BuildConfig.DEBUG) {
       updateSmali()
     }

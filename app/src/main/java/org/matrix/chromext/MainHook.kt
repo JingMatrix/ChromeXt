@@ -18,12 +18,12 @@ import org.matrix.chromext.utils.hookAfter
 private const val PACKAGE_CHROME = "com.android.chrome"
 private const val PACKAGE_BETA = "com.chrome.beta"
 private const val PACKAGE_DEV = "com.chrome.dev"
-// private const val PACKAGE_CANARY = "com.chrome.canary"
+private const val PACKAGE_CANARY = "com.chrome.canary"
 
 fun filterPackage(packageName: String): Boolean {
   return packageName == PACKAGE_BETA ||
       packageName == PACKAGE_DEV ||
-      // packageName == PACKAGE_CANARY ||
+      packageName == PACKAGE_CANARY ||
       packageName == PACKAGE_CHROME
 }
 

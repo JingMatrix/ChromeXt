@@ -52,7 +52,12 @@ class GestureNavProxy() {
       // private val SIDE_SLIDE_LAYOUT = "E83"
       // private val HISTORY_NAVIGATION_LAYOUT = "Xb1"
       HISTORY_NAVIGATION_COORDINATOR = "Ub1"
-      IS_FEATURE_ENABLED = "b"
+    }
+
+    if (Chrome.split && Chrome.version == 110) {
+      // private val SIDE_SLIDE_LAYOUT = "YM2"
+      // private val HISTORY_NAVIGATION_LAYOUT = "RX0"
+      HISTORY_NAVIGATION_COORDINATOR = "OX0"
     }
 
     historyNavigationCoordinator = Chrome.load(HISTORY_NAVIGATION_COORDINATOR)

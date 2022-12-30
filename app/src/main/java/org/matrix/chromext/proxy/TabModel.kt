@@ -58,7 +58,7 @@ object TabModel {
         script += erudaToggle
         eruda_loaded.put(index(), true)
       } else {
-        Log.toast(ctx, "Eruda not found, start downloading it")
+        Log.toast(ctx, "Please update Eruda in the Developer options menu")
       }
     } else {
       script += erudaToggle
