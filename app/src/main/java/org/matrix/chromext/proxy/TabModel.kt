@@ -12,6 +12,7 @@ object TabModel {
   private var tabModels = mutableListOf<WeakReference<Any>>()
   private var eruda_loaded = mutableMapOf<Int, Boolean>()
   private var eruda_font_fixed = mutableMapOf<Int, Boolean>()
+  private var url = mutableMapOf<Int, String>()
   private var eruda_font_fix: String? = null
 
   fun update(model: Any, className: String) {
@@ -34,7 +35,12 @@ object TabModel {
     return tabModels.last().get()!!.invokeMethod(index()) { name == "getTabAt" }!!
   }
 
-  fun refresh() {
+  fun getUrl(): String {
+    return url.get(index()) ?: ""
+  }
+
+  fun refresh(newUrl: String) {
+    url.put(index(), newUrl)
     eruda_loaded.put(index(), false)
     eruda_font_fixed.put(index(), false)
   }

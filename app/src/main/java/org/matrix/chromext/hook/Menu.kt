@@ -11,6 +11,7 @@ import org.matrix.chromext.DevTools
 import org.matrix.chromext.R
 import org.matrix.chromext.ResourceMerge
 import org.matrix.chromext.proxy.MenuProxy
+import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
@@ -35,9 +36,9 @@ object MenuHook : BaseHook() {
             val id = it.args[0] as Int
             val name = ctx.getResources().getResourceName(id)
             if (name == "org.matrix.chromext:id/developer_tools_id") {
-              // Eruda support might be removed soon
-              UserScriptHook.proxy!!.openDevTools()
               DevTools.toggle()
+            } else if (name == "org.matrix.chromext:id/eruda_console_id") {
+              UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
             }
           }
 
@@ -55,6 +56,10 @@ object MenuHook : BaseHook() {
 
             @Suppress("UNCHECKED_CAST") val items = mItems.get(menu) as ArrayList<MenuItem>
 
+            if (TabModel.getUrl().endsWith("/ChromeXt/")) {
+              // Drop the Eruda console menu
+              items.removeLast()
+            }
             val devMenuItem: MenuItem = items.removeLast()
             devMenuItem.setVisible(!(it.args[3] as Boolean) && (it.args[2] as Boolean))
             // The index 13 is just chosen by tests, to make sure that it appears before the share

@@ -7,6 +7,7 @@ import java.io.OutputStream
 import java.net.ServerSocket
 import java.net.Socket
 import kotlin.concurrent.thread
+import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.utils.Log
 
 object DevTools {
@@ -14,7 +15,12 @@ object DevTools {
   private var server = Socket()
   private var client = LocalSocket()
   private var running = false
-  var port = 0
+  private var port = 0
+
+  private fun notifyFrontEnd() {
+    UserScriptHook.proxy!!.evaluateJavaScript(
+        "window.dispatchEvent(new CustomEvent('cdp_port',{detail:${port}}))")
+  }
 
   fun toggle() {
     if (running) {
@@ -26,8 +32,9 @@ object DevTools {
     if (!running) {
       return
     }
+    val forwardServer = bind()
     thread {
-      server = bind().accept()
+      server = forwardServer.accept()
       thread { forward(client.getInputStream(), server.getOutputStream()) }
       thread { forward(server.getInputStream(), client.getOutputStream()) }
     }
@@ -37,6 +44,7 @@ object DevTools {
     val forwardServer = ServerSocket(0)
     port = forwardServer.getLocalPort()
     Log.d("Forward server bind to port ${port}")
+    notifyFrontEnd()
     return forwardServer
   }
 
@@ -58,6 +66,8 @@ object DevTools {
   private fun stop() {
     client.close()
     server.close()
+    port = 0
+    notifyFrontEnd()
     Log.d("Close all sockets")
   }
 }

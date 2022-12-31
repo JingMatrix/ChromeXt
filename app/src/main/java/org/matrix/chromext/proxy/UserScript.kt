@@ -268,19 +268,6 @@ class UserScriptProxy() {
     if (url.startsWith("https://") || url.startsWith("http://") || url.startsWith("file://")) {
       invokeScript(url)
     }
-    TabModel.refresh()
-  }
-
-  // fun didStartLoading(url: String) {
-  //   invokeScriptAt(RunAt.START, url)
-  // }
-
-  // fun didStopLoading(url: String) {
-  //   invokeScriptAt(RunAt.END, url)
-  // }
-
-  fun openDevTools() {
-    evaluateJavaScript(TabModel.openEruda())
   }
 
   fun fixErudaFont() {

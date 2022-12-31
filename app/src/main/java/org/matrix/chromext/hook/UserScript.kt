@@ -29,6 +29,7 @@ object UserScriptHook : BaseHook() {
         // public void onUpdateUrl(GURL url)
         .hookAfter {
           val url = proxy!!.parseUrl(it.args[0])!!
+          TabModel.refresh(url)
           if (url.endsWith("/ChromeXt/")) {
             proxy!!.evaluateJavaScript("ChromeXt=console.debug;")
           } else if (url.endsWith(".user.js")) {
