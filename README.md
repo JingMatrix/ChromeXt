@@ -131,12 +131,16 @@ Here are corresponding files you might want / need to change:
 - [x] Support more [Tampermonkey API](https://www.tampermonkey.net/documentation.php)s
 - [x] Find elegant way to support Dev Tools for Android 11-
 - [x] Improve front end
-- [x] Add uBlock Origin cosmetic AdBlocker using Eruda
+- [x] Add cosmetic AdBlocker using Eruda
 - [x] Find way to get current interactive tab
 - [x] Remove AndroidX Room dependency to reduce app size
 - [x] Support non-split version of Android Chrome
 - [x] Solve the menu hook problem for non-split versions
 - [x] Handle multiple Tab Model
-- [ ] Facebook blocks Dev Tools
+- [ ] Forward Dev Tools server socket
+- [ ] A mobile friendly Dev Tools front-end
+- [ ] Use CDP as UserScript engine
+- [ ] Facebook blocks Eruda
 - [ ] Add recommended scripts to the front end manager
 - [ ] Support @resource API
+- [ ] Remove Xposed dependency

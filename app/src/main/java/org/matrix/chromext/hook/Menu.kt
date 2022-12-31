@@ -7,6 +7,7 @@ import android.view.MenuItem
 import de.robv.android.xposed.XC_MethodHook.Unhook
 import java.util.ArrayList
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.DevTools
 import org.matrix.chromext.R
 import org.matrix.chromext.ResourceMerge
 import org.matrix.chromext.proxy.MenuProxy
@@ -34,7 +35,9 @@ object MenuHook : BaseHook() {
             val id = it.args[0] as Int
             val name = ctx.getResources().getResourceName(id)
             if (name == "org.matrix.chromext:id/developer_tools_id") {
+              // Eruda support might be removed soon
               UserScriptHook.proxy!!.openDevTools()
+              DevTools.toggle()
             }
           }
 
