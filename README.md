@@ -9,12 +9,13 @@ add URL comparison there and evaluate JavaScript using the `javascript:` scheme.
 
 ### Adapt to your Chrome version
 
-We pay our main efforts to support the latest stable version of Android Chrome
+We pay our main efforts to support the latest _stable_ version of Android Chrome
 installed from Google Play Store or downloaded APK from the internet.
-And usually the `beta` or `dev` versions are supported as well, but not guaranteed.
-
-Recently, the author has tested `ChromeXt` with the latest `Android Chrome 108.0.5359.128`, and it works well.
 Please consider update your Android Chrome first before proceeding.
+
+Current supporting state:
+1. installation from Google Play Store: `108`, `109`, `110`, `111`
+2. installation from APK: `108`
 
 For other versions, it might not work.
 To adapt to those versions, one only need to find out one method name and one class name in its [smali](https://github.com/JesusFreke/smali/wiki) code.
@@ -22,7 +23,7 @@ Here is how to do that.
 First use `apktool` to decompile the `split_chrome.apk` file pulled from the installation of Chrome on your phone,
 then follow the hints in [UserScript.kt](app/src/main/java/org/matrix/chromext/proxy/UserScript.kt) to get the correct method name `LOAD_URL` and the correct class name `TAB_MODEL_IMPL`
 and modify it in the [SharedPreferences](https://developer.android.com/reference/android/content/SharedPreferences) of Chrome at `/data/data/com.android.chrome/shared_prefs/ChromeXt.xml`.
-Note that, the Chrome installed from the play store is the split version
+Note that, the Chrome installed from Google Play Store is the split version
 while a usual installation from downloaded APK gives the non-split version.
 
 ## Usage
@@ -116,6 +117,7 @@ Here are corresponding files you might want / need to change:
 1. Front end: [manager.vue](https://github.com/JingMatrix/viteblog/tree/master/components/ChromeXt/manager.vue)
 2. Tampermonkey API: [LocalScripts.kt](app/src/main/java/org/matrix/chromext/script/LocalScripts.kt)
 3. Eruda configuration: [local_eruda.js](app/src/main/assets/local_eruda.js)
+4. Support more versions: [proxy](app/src/main/java/org/matrix/chromext/proxy)
 
 ## Development plans
 
