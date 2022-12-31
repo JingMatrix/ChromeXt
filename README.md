@@ -137,7 +137,7 @@ Here are corresponding files you might want / need to change:
 - [x] Support non-split version of Android Chrome
 - [x] Solve the menu hook problem for non-split versions
 - [x] Handle multiple Tab Model
-- [ ] Forward Dev Tools server socket
+- [x] Forward Dev Tools server socket
 - [ ] A mobile friendly Dev Tools front-end
 - [ ] Use CDP as UserScript engine
 - [ ] Facebook blocks Eruda
