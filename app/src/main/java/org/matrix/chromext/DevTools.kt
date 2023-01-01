@@ -27,20 +27,23 @@ object DevTools {
 
   fun start() {
     thread { pages = getPages() }
-    val old_port = port
-    port = 0
     if (forwarding != null) {
-      if (forwarding!!.dispatched) {
-        forwarding!!.discard()
-        forwarding = null
-      } else {
-        // Awake front end
-        port = old_port
-        return
-      }
+      // Awake front end
+      val old_port = port
+      port = 0
+      port = old_port
+      return
     }
     forwarding = Forward(bind())
     forwarding!!.start()
+  }
+
+  fun stop() {
+    if (forwarding != null) {
+      forwarding!!.discard()
+      forwarding = null
+      port = 0
+    }
   }
 
   private fun bind(): ServerSocket {
