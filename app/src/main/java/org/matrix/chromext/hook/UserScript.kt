@@ -38,6 +38,10 @@ object UserScriptHook : BaseHook() {
             val promptInstallUserScript =
                 ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
             proxy!!.evaluateJavaScript(promptInstallUserScript)
+          } else if (url.startsWith("https://chrome-devtools-frontend.appspot.com/serve_rev/@")) {
+            val mobilewidth =
+                """window.onload=()=>{const meta = document.createElement("meta");meta.setAttribute("name", "viewport");meta.setAttribute("content", "width=device-width, initial-scale=1");document.head.prepend(meta);}"""
+            proxy!!.evaluateJavaScript("javascript: ${mobilewidth}")
           } else {
             proxy!!.didUpdateUrl(url)
           }

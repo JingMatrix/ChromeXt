@@ -140,7 +140,7 @@ Here are corresponding files you might want / need to change:
 - [x] Solve the menu hook problem for non-split versions
 - [x] Handle multiple Tab Model
 - [x] Forward Dev Tools server socket
-- [ ] A mobile friendly Dev Tools front-end
+- [x] A mobile friendly Dev Tools front-end
 - [ ] Use CDP as UserScript engine
 - [ ] Facebook blocks Eruda
 - [ ] Add recommended scripts to the front end manager
