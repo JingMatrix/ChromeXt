@@ -9,6 +9,7 @@ import java.io.InputStreamReader
 import java.io.OutputStream
 import java.io.PrintWriter
 import java.net.ServerSocket
+import java.net.Socket
 import kotlin.concurrent.thread
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.utils.Log
@@ -26,7 +27,7 @@ object DevTools {
   var pages = ""
 
   fun start() {
-    thread { pages = getPages() }
+    thread { pages = refreshDevTool() }
     if (forwarding != null) {
       // Awake front end
       val old_port = port
@@ -57,7 +58,8 @@ object DevTools {
 private class Forward(forwarder: ServerSocket) : Thread() {
 
   private val forwardSocket: ServerSocket
-  private val threads = mutableListOf<forwardStreamThread>()
+  private var client = LocalSocket()
+  private var server = Socket()
   var dispatched = false
 
   init {
@@ -65,7 +67,6 @@ private class Forward(forwarder: ServerSocket) : Thread() {
   }
 
   override fun run() {
-    val client = LocalSocket()
     client.connect(LocalSocketAddress("chrome_devtools_remote"))
 
     if (client.isConnected()) {
@@ -74,25 +75,21 @@ private class Forward(forwarder: ServerSocket) : Thread() {
       return
     }
 
-    val server = forwardSocket.accept()
-    threads.add(forwardStreamThread(client.inputStream, server.outputStream))
-    threads.add(forwardStreamThread(server.inputStream, client.outputStream))
-    threads.forEach {
-      Log.d("Starting forwardStreamThread")
-      it.start()
-    }
+    server = forwardSocket.accept()
+    forwardStreamThread(client.inputStream, server.outputStream).start()
+    forwardStreamThread(server.inputStream, client.outputStream).start()
     dispatched = true
   }
 
   fun discard() {
     if (dispatched) {
-      Log.d("Interrupting forwardStreamThread")
-      threads.forEach { it.interrupt() }
+      Log.d("Closing client socket")
+      client.close()
+      Log.d("Closing server socket")
+      server.close()
+      Log.d("Closing forward server")
       forwardSocket.close()
-      Log.d("Forward server closed")
-      Log.d("Interrupting forwarding thread")
     }
-    interrupt()
   }
 }
 
@@ -104,20 +101,33 @@ private class forwardStreamThread(inputStream: InputStream, outputStream: Output
     output = outputStream
   }
   override fun run() {
-    while (!interrupted()) {
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        input.transferTo(output)
-      } else {
-        val bit = input.read()
-        if (bit != -1) {
-          output.write(bit)
+    runCatching {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            while (true) {
+              input.transferTo(output)
+            }
+          } else {
+            while (true) {
+              val bit = input.read()
+              if (bit != -1) {
+                output.write(bit)
+              }
+            }
+          }
         }
-      }
-    }
+        .onFailure {
+          val msg = it.message
+          if (msg != "Socket closed") {
+            // The msg should be just `Socket closed`
+            Log.ex(it)
+          } else {
+            Log.d(msg)
+          }
+        }
   }
 }
 
-private fun getPages(): String {
+private fun refreshDevTool(): String {
   val client = LocalSocket()
   client.connect(LocalSocketAddress("chrome_devtools_remote"))
   val writer = PrintWriter(client.getOutputStream())
@@ -126,11 +136,11 @@ private fun getPages(): String {
   writer.flush()
   val reader = BufferedReader(InputStreamReader(client.getInputStream()))
   var header = true
-  var res = ""
+  var pages = ""
   while (true) {
     val text = reader.readLine()
     if (!header) {
-      res += text + "\n"
+      pages += text + "\n"
     }
     if (text.trim() == "") {
       header = false
@@ -142,5 +152,5 @@ private fun getPages(): String {
       break
     }
   }
-  return res
+  return pages
 }
