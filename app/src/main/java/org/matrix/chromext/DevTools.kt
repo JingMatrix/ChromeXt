@@ -25,17 +25,20 @@ object DevTools {
 
   var pages = ""
 
-  fun toggle() {
+  fun start() {
+    thread { pages = getPages() }
+    val old_port = port
+    port = 0
     if (forwarding != null) {
       if (forwarding!!.dispatched) {
         forwarding!!.discard()
         forwarding = null
-        port = 0
       } else {
+        // Awake front end
+        port = old_port
         return
       }
     }
-    thread { pages = getPages() }
     forwarding = Forward(bind())
     forwarding!!.start()
   }

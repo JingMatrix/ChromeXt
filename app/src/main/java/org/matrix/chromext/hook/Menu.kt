@@ -36,7 +36,7 @@ object MenuHook : BaseHook() {
             val id = it.args[0] as Int
             val name = ctx.getResources().getResourceName(id)
             if (name == "org.matrix.chromext:id/developer_tools_id") {
-              DevTools.toggle()
+              DevTools.start()
             } else if (name == "org.matrix.chromext:id/eruda_console_id") {
               UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
             }
