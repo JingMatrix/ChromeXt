@@ -6,6 +6,7 @@ import android.database.AbstractWindowedCursor
 import android.database.CursorWindow
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.Build
+import org.matrix.chromext.DevTools
 import org.matrix.chromext.utils.Log
 
 private const val SEP = ""
@@ -129,6 +130,12 @@ class ScriptDbManger(ctx: Context) {
       "deleteScriptById" -> {
         val ids = parseArray(payload)
         delete(ids)
+      }
+      "getPages" -> {
+        val pages = DevTools.pages
+        if (DevTools.pages != "") {
+          callback = "window.dispatchEvent(new CustomEvent('pages',{detail:${DevTools.pages}}));"
+        }
       }
     }
     return callback
