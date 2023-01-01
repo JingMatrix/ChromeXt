@@ -133,8 +133,8 @@ class ScriptDbManger(ctx: Context) {
       }
       "getPages" -> {
         val pages = DevTools.pages
-        if (DevTools.pages != "") {
-          callback = "window.dispatchEvent(new CustomEvent('pages',{detail:${DevTools.pages}}));"
+        if (pages != "") {
+          callback = "window.dispatchEvent(new CustomEvent('pages',{detail:${pages}}));"
         }
       }
     }

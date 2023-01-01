@@ -2,22 +2,20 @@ package org.matrix.chromext
 
 import android.net.LocalSocket
 import android.net.LocalSocketAddress
+import android.os.Build
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStream
 import java.io.PrintWriter
 import java.net.ServerSocket
-import java.net.Socket
 import kotlin.concurrent.thread
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.utils.Log
 
 object DevTools {
 
-  private var server = Socket()
-  private var running = false
-  private var client = LocalSocket()
+  private var forwarding: Forward? = null
   private var port = 0
     set(value) {
       UserScriptHook.proxy!!.evaluateJavaScript(
@@ -28,20 +26,18 @@ object DevTools {
   var pages = ""
 
   fun toggle() {
-    if (running) {
-      running = false
-      stop()
-    }
-    thread { pages = getPages() }
-    connect()
-    if (running) {
-      val forwardServer = bind()
-      thread {
-        server = forwardServer.accept()
-        thread { forward(client.getInputStream(), server.getOutputStream()) }
-        thread { forward(server.getInputStream(), client.getOutputStream()) }
+    if (forwarding != null) {
+      if (forwarding!!.dispatched) {
+        forwarding!!.discard()
+        forwarding = null
+        port = 0
+      } else {
+        return
       }
     }
+    thread { pages = getPages() }
+    forwarding = Forward(bind())
+    forwarding!!.start()
   }
 
   private fun bind(): ServerSocket {
@@ -50,30 +46,68 @@ object DevTools {
     Log.d("Forward server bind to port ${port}")
     return forwardServer
   }
+}
 
-  private fun connect() {
-    client = LocalSocket()
+private class Forward(forwarder: ServerSocket) : Thread() {
+
+  private val forwardSocket: ServerSocket
+  private val threads = mutableListOf<forwardStreamThread>()
+  var dispatched = false
+
+  init {
+    forwardSocket = forwarder
+  }
+
+  override fun run() {
+    val client = LocalSocket()
     client.connect(LocalSocketAddress("chrome_devtools_remote"))
+
     if (client.isConnected()) {
-      running = true
       Log.d("Connected to Chrome DevTools")
     } else {
-      running = false
-      Log.e("Fail to connect to Chrome DevTools")
+      return
     }
+
+    val server = forwardSocket.accept()
+    threads.add(forwardStreamThread(client.inputStream, server.outputStream))
+    threads.add(forwardStreamThread(server.inputStream, client.outputStream))
+    threads.forEach {
+      Log.d("Starting forwardStreamThread")
+      it.start()
+    }
+    dispatched = true
   }
 
-  private fun forward(inStream: InputStream, outStream: OutputStream) {
-    while (running) {
-      outStream.write(inStream.read())
+  fun discard() {
+    if (dispatched) {
+      Log.d("Interrupting forwardStreamThread")
+      threads.forEach { it.interrupt() }
+      forwardSocket.close()
+      Log.d("Forward server closed")
+      Log.d("Interrupting forwarding thread")
     }
+    interrupt()
   }
+}
 
-  private fun stop() {
-    client.close()
-    server.close()
-    port = 0
-    Log.d("Close all sockets")
+private class forwardStreamThread(inputStream: InputStream, outputStream: OutputStream) : Thread() {
+  val input: InputStream
+  val output: OutputStream
+  init {
+    input = inputStream
+    output = outputStream
+  }
+  override fun run() {
+    while (!interrupted()) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        input.transferTo(output)
+      } else {
+        val bit = input.read()
+        if (bit != -1) {
+          output.write(bit)
+        }
+      }
+    }
   }
 }
 
