@@ -96,7 +96,9 @@ On other areas, only the system gesture is available.
 <!-- I might implement it for older Android versions if there are some requests for doing so. -->
 
 Tap five times on the Chrome version from the Chrome settings, you will see the `Developer options` menu.
-After restarting Chrome, ChromeXt offers you the `Developer tools` page menu.
+After restarting Chrome, ChromeXt offers you
+1. the `Developer tools` page menu for the UserScript manager front-end,
+2. the `Eruda console` page menu for other pages
 
 ### AD Blocker solution
 
