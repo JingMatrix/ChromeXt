@@ -4,12 +4,12 @@ import android.net.LocalSocket
 import android.net.LocalSocketAddress
 import android.os.Build
 import java.io.BufferedReader
+import java.io.Closeable
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStream
 import java.io.PrintWriter
 import java.net.ServerSocket
-import java.net.Socket
 import kotlin.concurrent.thread
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.utils.Log
@@ -52,42 +52,44 @@ object DevTools {
 private class Forward(forwarder: ServerSocket) : Thread() {
 
   private val forwardSocket: ServerSocket
-  private var client = LocalSocket()
-  private var server = Socket()
 
   init {
     forwardSocket = forwarder
   }
 
   override fun run() {
-    client.connect(LocalSocketAddress("chrome_devtools_remote"))
-
-    if (client.isConnected()) {
-      Log.d("Connected to Chrome DevTools")
-    } else {
-      return
-    }
-
+    val sockets = mutableListOf<Closeable>()
     runCatching {
-          server = forwardSocket.accept()
-          forwardStreamThread(client.inputStream, server.outputStream, "client").start()
-          forwardStreamThread(server.inputStream, client.outputStream, "server").start()
+          while (true) {
+            val client = LocalSocket()
+            client.connect(LocalSocketAddress("chrome_devtools_remote"))
+
+            if (client.isConnected()) {
+              Log.d("New connection to Chrome DevTools")
+              sockets.add(client)
+            } else {
+              Log.e("Fail to connect to Chrome DevTools localsocket")
+              return
+            }
+
+            val server = forwardSocket.accept()
+            sockets.add(server)
+            forwardStreamThread(client.inputStream, server.outputStream, "client").start()
+            forwardStreamThread(server.inputStream, client.outputStream, "server").start()
+          }
         }
         .onFailure {
           val msg = it.message
           if (msg != "Socket closed") {
             Log.ex(it)
           } else {
-            Log.d("Forward server closed before accepting any connection")
+            Log.d("Forward server closed")
+            sockets.forEach { it.close() }
           }
         }
   }
 
   fun discard() {
-    Log.d("Closing client socket")
-    client.close()
-    Log.d("Closing server socket")
-    server.close()
     Log.d("Closing forward server")
     forwardSocket.close()
   }
@@ -120,7 +122,7 @@ private class forwardStreamThread(
               }
             }
           }
-          Log.d("An inspecting seesion of ${tag} ends")
+          Log.d("An inspecting seesion from ${tag} ends")
           input.close()
           output.close()
         }
@@ -129,7 +131,7 @@ private class forwardStreamThread(
           if (msg != "Socket closed") {
             Log.ex(it)
           } else {
-            Log.d(msg + " for ${tag} before a session ends")
+            Log.d(msg + " for a ${tag} connection")
           }
         }
   }
