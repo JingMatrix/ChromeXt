@@ -28,7 +28,10 @@ while a usual installation from downloaded APK gives the non-split version.
 
 ## Usage
 
-This project requires **Xposed framework** installed.
+Currently, this project requires **Xposed framework** installed.
+However, it is possible to make Xposed framework as optional dependency.
+See related progress in the `Development plans` section.
+
 You can try the following implements of it, depending on your Android version or whether having root enabled:
 [LSPosed](https://github.com/LSPosed/LSPosed), [LSPatch](https://github.com/LSPosed/LSPatch),
 [EdXposed](https://github.com/ElderDrivers/EdXposed), [TaiChi](https://github.com/taichi-framework/TaiChi),
@@ -98,7 +101,7 @@ On other areas, only the system gesture is available.
 Tap five times on the Chrome version from the Chrome settings, you will see the `Developer options` menu.
 After restarting Chrome, ChromeXt offers you
 1. the `Developer tools` page menu for the UserScript manager front-end,
-2. the `Eruda console` page menu for other pages
+2. the `Eruda console` page menu for other pages.
 
 ### AD Blocker solution
 
@@ -141,8 +144,9 @@ Here are corresponding files you might want / need to change:
 - [x] Handle multiple Tab Model
 - [x] Forward Dev Tools server socket
 - [x] A mobile friendly Dev Tools front-end
-- [ ] Use CDP as UserScript engine
+- [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
+- [ ] Use [Shizuku](https://github.com/RikkaApps/Shizuku) to support non-root users
+- [ ] Turn Xposed into optional dependency
 - [ ] Facebook blocks Eruda
 - [ ] Add recommended scripts to the front end manager
 - [ ] Support @resource API
-- [ ] Remove Xposed dependency
