@@ -28,18 +28,12 @@ object DevTools {
 
   fun start() {
     thread { pages = refreshDevTool() }
-    if (forwarding != null) {
-      // Awake front end
-      val old_port = port
-      port = 0
-      port = old_port
-      return
-    }
+    cleanup()
     forwarding = Forward(bind())
     forwarding!!.start()
   }
 
-  fun stop() {
+  private fun cleanup() {
     if (forwarding != null) {
       forwarding!!.discard()
       forwarding = null
@@ -50,7 +44,7 @@ object DevTools {
   private fun bind(): ServerSocket {
     val forwardServer = ServerSocket(0)
     port = forwardServer.getLocalPort()
-    Log.d("Forward server bind to port ${port}")
+    Log.d("Forward server starts at port ${port}")
     return forwardServer
   }
 }
@@ -60,7 +54,6 @@ private class Forward(forwarder: ServerSocket) : Thread() {
   private val forwardSocket: ServerSocket
   private var client = LocalSocket()
   private var server = Socket()
-  var dispatched = false
 
   init {
     forwardSocket = forwarder
@@ -75,53 +68,68 @@ private class Forward(forwarder: ServerSocket) : Thread() {
       return
     }
 
-    server = forwardSocket.accept()
-    forwardStreamThread(client.inputStream, server.outputStream).start()
-    forwardStreamThread(server.inputStream, client.outputStream).start()
-    dispatched = true
+    runCatching {
+          server = forwardSocket.accept()
+          forwardStreamThread(client.inputStream, server.outputStream, "client").start()
+          forwardStreamThread(server.inputStream, client.outputStream, "server").start()
+        }
+        .onFailure {
+          val msg = it.message
+          if (msg != "Socket closed") {
+            Log.ex(it)
+          } else {
+            Log.d("Forward server closed before accepting any connection")
+          }
+        }
   }
 
   fun discard() {
-    if (dispatched) {
-      Log.d("Closing client socket")
-      client.close()
-      Log.d("Closing server socket")
-      server.close()
-      Log.d("Closing forward server")
-      forwardSocket.close()
-    }
+    Log.d("Closing client socket")
+    client.close()
+    Log.d("Closing server socket")
+    server.close()
+    Log.d("Closing forward server")
+    forwardSocket.close()
   }
 }
 
-private class forwardStreamThread(inputStream: InputStream, outputStream: OutputStream) : Thread() {
+private class forwardStreamThread(
+    inputStream: InputStream,
+    outputStream: OutputStream,
+    TAG: String
+) : Thread() {
   val input: InputStream
   val output: OutputStream
+  val tag: String
   init {
     input = inputStream
     output = outputStream
+    tag = TAG
   }
   override fun run() {
     runCatching {
           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            while (true) {
-              input.transferTo(output)
-            }
+            input.transferTo(output)
           } else {
             while (true) {
               val bit = input.read()
               if (bit != -1) {
                 output.write(bit)
+              } else {
+                break
               }
             }
           }
+          Log.d("An inspecting seesion of ${tag} ends")
+          input.close()
+          output.close()
         }
         .onFailure {
           val msg = it.message
           if (msg != "Socket closed") {
-            // The msg should be just `Socket closed`
             Log.ex(it)
           } else {
-            Log.d(msg)
+            Log.d(msg + " for ${tag} before a session ends")
           }
         }
   }
@@ -146,8 +154,6 @@ private fun refreshDevTool(): String {
       header = false
     }
     if (text.startsWith("} ]")) {
-      reader.close()
-      writer.close()
       client.close()
       break
     }

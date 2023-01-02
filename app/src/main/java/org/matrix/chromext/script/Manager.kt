@@ -131,9 +131,6 @@ class ScriptDbManger(ctx: Context) {
         val ids = parseArray(payload)
         delete(ids)
       }
-      "stopDevTools" -> {
-        DevTools.stop()
-      }
       "getPages" -> {
         val pages = DevTools.pages
         if (pages != "") {
