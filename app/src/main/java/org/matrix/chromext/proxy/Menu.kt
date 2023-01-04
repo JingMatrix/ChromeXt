@@ -106,6 +106,8 @@ class MenuProxy() {
 
   init {
     if (!Chrome.split) {
+      READER_MODE_MANAGER = "bH2"
+      ACTIVATE_READER_MODE = "Z0"
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "lg"
       MENU_KEYBOARD_ACTION = "v0"
       GET_CONTEXT = "I0"
@@ -115,6 +117,7 @@ class MenuProxy() {
     }
 
     if (Chrome.split && Chrome.version >= 109) {
+      READER_MODE_MANAGER = "Ts2"
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "tf"
       MENU_KEYBOARD_ACTION = "i0"
       PREFERENCE_FRAGMENT_COMPAT = "al2"
@@ -125,6 +128,7 @@ class MenuProxy() {
     }
 
     if (Chrome.split && Chrome.version >= 110) {
+      READER_MODE_MANAGER = "nm2"
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "pf"
       MENU_KEYBOARD_ACTION = "h0"
       PREFERENCE_FRAGMENT_COMPAT = "je2"
@@ -135,6 +139,7 @@ class MenuProxy() {
     }
 
     if (Chrome.split && Chrome.version >= 111) {
+      READER_MODE_MANAGER = "Cn2"
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "Mf"
       MENU_KEYBOARD_ACTION = "h0"
       PREFERENCE_FRAGMENT_COMPAT = "zf2"
