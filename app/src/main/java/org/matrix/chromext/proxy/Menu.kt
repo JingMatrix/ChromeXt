@@ -92,6 +92,7 @@ class MenuProxy() {
   }
 
   val chromeTabbedActivity: Class<*>
+  val customTabActivity: Class<*>
   val appMenuPropertiesDelegateImpl: Class<*>
   val developerSettings: Class<*>
   val preferenceFragmentCompat: Class<*>
@@ -166,6 +167,7 @@ class MenuProxy() {
         Chrome.load("org.chromium.chrome.browser.tracing.settings.DeveloperSettings")
     preferenceFragmentCompat = Chrome.load(PREFERENCE_FRAGMENT_COMPAT)
     chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
+    customTabActivity = Chrome.load("org.chromium.chrome.browser.customtabs.CustomTabActivity")
     appMenuPropertiesDelegateImpl = Chrome.load(APP_MENU_PROPERTIES_DELEGATE_IMPL)
     gURL = Chrome.load("org.chromium.url.GURL")
     readerModeManager = Chrome.load(READER_MODE_MANAGER)

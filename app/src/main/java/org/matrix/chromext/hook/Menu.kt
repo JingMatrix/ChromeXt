@@ -35,20 +35,34 @@ object MenuHook : BaseHook() {
       readerModeManager = it.thisObject
     }
 
+    fun menuHandler(id: Int): Boolean {
+      val name = ctx.getResources().getResourceName(id)
+      when (name) {
+        "org.matrix.chromext:id/developer_tools_id" -> DevTools.start()
+        "org.matrix.chromext:id/eruda_console_id" ->
+            UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
+        "com.android.chrome:id/info_menu_id" -> {
+          // No idea why I must use getName() instead of name
+          readerModeManager!!.invokeMethod() { getName() == proxy.ACTIVATE_READER_MODE }
+          return true
+        }
+      }
+      return false
+    }
+
     findMethod(proxy.chromeTabbedActivity) { name == proxy.MENU_KEYBOARD_ACTION }
         // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
         .hookBefore {
-          val id = it.args[0] as Int
-          val name = ctx.getResources().getResourceName(id)
-          when (name) {
-            "org.matrix.chromext:id/developer_tools_id" -> DevTools.start()
-            "org.matrix.chromext:id/eruda_console_id" ->
-                UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
-            "com.android.chrome:id/info_menu_id" -> {
-              // No idea why I must use getName() instead of name
-              readerModeManager!!.invokeMethod() { getName() == proxy.ACTIVATE_READER_MODE }
-              it.result = true
-            }
+          if (menuHandler(it.args[0] as Int)) {
+            it.result = true
+          }
+        }
+
+    findMethod(proxy.customTabActivity) { name == proxy.MENU_KEYBOARD_ACTION }
+        // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
+        .hookBefore {
+          if (menuHandler(it.args[0] as Int)) {
+            it.result = true
           }
         }
 
