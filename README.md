@@ -144,6 +144,8 @@ Here are corresponding files you might want / need to change:
 - [x] Handle multiple Tab Model
 - [x] Forward Dev Tools server socket
 - [x] A mobile friendly Dev Tools front-end
+- [ ] Add menu options to save chrome-distiller pages
+- [ ] Allow user to trigger reader mode
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
 - [ ] Use [Shizuku](https://github.com/RikkaApps/Shizuku) to support non-root users
 - [ ] Turn Xposed into optional dependency
