@@ -15,6 +15,8 @@ class MenuProxy() {
   // much shorter implements
   var READER_MODE_MANAGER = "js2"
   var ACTIVATE_READER_MODE = "Y0"
+  // Get its current tab field
+  var TAB_FIELD = "v"
   // Also we need its gURL field
   var DISTILLER_URL_FIELD = "p"
 
@@ -100,6 +102,7 @@ class MenuProxy() {
   private val preference: Class<*>
   private val mClickListener: Field
   val mDistillerUrl: Field
+  val mTab: Field
   // private val mOnClickListener: Field? = null
 
   var isDeveloper: Boolean = false
@@ -107,6 +110,8 @@ class MenuProxy() {
   init {
     if (!Chrome.split) {
       READER_MODE_MANAGER = "bH2"
+      TAB_FIELD = "p"
+      DISTILLER_URL_FIELD = "j"
       ACTIVATE_READER_MODE = "Z0"
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "lg"
       MENU_KEYBOARD_ACTION = "v0"
@@ -167,6 +172,8 @@ class MenuProxy() {
     mClickListener = preference.getDeclaredField(CLICK_LISTENER_FIELD)
     // mOnClickListener = preference!!.getDeclaredField(PREFERENCE_CLICK_LISTENER_FIELD)
     mClickListener.setAccessible(true)
+    mTab = readerModeManager.getDeclaredField(TAB_FIELD)
+    mTab.setAccessible(true)
     mDistillerUrl = readerModeManager.getDeclaredField(DISTILLER_URL_FIELD)
     mDistillerUrl.setAccessible(true)
   }

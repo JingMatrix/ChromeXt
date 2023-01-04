@@ -65,6 +65,7 @@ object MenuHook : BaseHook() {
             val infoMenu = menu.getItem(0).getSubMenu()!!.getItem(3)
             infoMenu.setIcon(R.drawable.ic_book)
             infoMenu.setEnabled(!(it.args[3] as Boolean) && readerModeManager != null)
+            proxy.mTab.set(readerModeManager!!, it.args[1])
             proxy.mDistillerUrl.set(
                 readerModeManager!!,
                 // We need a mock url to finish the cleanup logic readerModeManager
