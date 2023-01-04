@@ -2,7 +2,6 @@ package org.matrix.chromext.hook
 
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
-import org.matrix.chromext.ResourceMerge
 import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.utils.Log
@@ -33,15 +32,14 @@ object UserScriptHook : BaseHook() {
           if (url.endsWith("/ChromeXt/")) {
             proxy!!.evaluateJavaScript("ChromeXt=console.debug;")
           } else if (url.endsWith(".user.js")) {
-            val ctx = Chrome.getContext()
-            ResourceMerge.enrich(ctx)
             val promptInstallUserScript =
-                ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
+                Chrome.getContext().assets.open("editor.js").bufferedReader().use { it.readText() }
             proxy!!.evaluateJavaScript(promptInstallUserScript)
           } else if (url.startsWith("https://chrome-devtools-frontend.appspot.com/serve_rev/@")) {
-            val ctx = Chrome.getContext()
-            ResourceMerge.enrich(ctx)
-            val mobilewidth = ctx.assets.open("devtools.js").bufferedReader().use { it.readText() }
+            val mobilewidth =
+                Chrome.getContext().assets.open("devtools.js").bufferedReader().use {
+                  it.readText()
+                }
             proxy!!.evaluateJavaScript("javascript: ${mobilewidth}")
           } else {
             proxy!!.didUpdateUrl(url)
