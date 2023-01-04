@@ -16,6 +16,7 @@ import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
 import org.matrix.chromext.utils.hookMethod
+import org.matrix.chromext.utils.invokeMethod
 
 object MenuHook : BaseHook() {
 
@@ -25,53 +26,79 @@ object MenuHook : BaseHook() {
     var enrichHook: Unhook? = null
 
     // Page menu only appears after restarting chrome
-    if (proxy.isDeveloper || Chrome.isDev) {
 
-      val ctx = Chrome.getContext()
-      ResourceMerge.enrich(ctx)
+    val ctx = Chrome.getContext()
+    ResourceMerge.enrich(ctx)
+    var readerModeManager: Any? = null
 
-      findMethod(proxy.chromeTabbedActivity) { name == proxy.MENU_KEYBOARD_ACTION }
-          // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
-          .hookAfter {
-            val id = it.args[0] as Int
-            val name = ctx.getResources().getResourceName(id)
-            if (name == "org.matrix.chromext:id/developer_tools_id") {
-              DevTools.start()
-            } else if (name == "org.matrix.chromext:id/eruda_console_id") {
-              UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
-            }
-          }
-
-      findMethod(proxy.appMenuPropertiesDelegateImpl) {
-            name == proxy.UPDATE_REQUEST_DESKTOP_SITE_MENU_ITEM
-          }
-          // protected void updateRequestDesktopSiteMenuItem(Menu menu, @Nullable Tab currentTab,
-          //         boolean canShowRequestDesktopSite, boolean isChromeScheme)
-          .hookBefore {
-            val menu = it.args[0] as Menu
-            if (menu.size() <= 13) {
-              // Infalte only for the main_menu, which has more than 13 items at least
-              return@hookBefore
-            }
-            MenuInflater(ctx).inflate(R.menu.main_menu, menu)
-
-            val mItems = menu::class.java.getDeclaredField("mItems")
-            mItems.setAccessible(true)
-
-            @Suppress("UNCHECKED_CAST") val items = mItems.get(menu) as ArrayList<MenuItem>
-
-            if (TabModel.getUrl().endsWith("/ChromeXt/")) {
-              // Drop the Eruda console menu
-              items.removeLast()
-            }
-            val devMenuItem: MenuItem = items.removeLast()
-            devMenuItem.setVisible(!(it.args[3] as Boolean) && (it.args[2] as Boolean))
-            // The index 13 is just chosen by tests, to make sure that it appears before the share
-            // menu
-            items.add(13, devMenuItem)
-            mItems.setAccessible(false)
-          }
+    proxy.readerModeManager.getDeclaredConstructors()[0].hookAfter {
+      readerModeManager = it.thisObject
     }
+
+    findMethod(proxy.chromeTabbedActivity) { name == proxy.MENU_KEYBOARD_ACTION }
+        // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
+        .hookBefore {
+          val id = it.args[0] as Int
+          val name = ctx.getResources().getResourceName(id)
+          when (name) {
+            "org.matrix.chromext:id/developer_tools_id" -> DevTools.start()
+            "org.matrix.chromext:id/eruda_console_id" ->
+                UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
+            "com.android.chrome:id/info_menu_id" -> {
+              if (readerModeManager != null) {
+                // No idea why I must use getName() instead of name
+                readerModeManager!!.invokeMethod() { getName() == proxy.ACTIVATE_READER_MODE }
+                it.result = true
+              }
+            }
+          }
+        }
+
+    findMethod(proxy.appMenuPropertiesDelegateImpl) {
+          name == proxy.UPDATE_REQUEST_DESKTOP_SITE_MENU_ITEM
+        }
+        // protected void updateRequestDesktopSiteMenuItem(Menu menu, @Nullable Tab currentTab,
+        //         boolean canShowRequestDesktopSite, boolean isChromeScheme)
+        .hookBefore {
+          val menu = it.args[0] as Menu
+
+          if (menu.getItem(0).hasSubMenu()) {
+            // The first menu item shou be the row_menu
+            val infoMenu = menu.getItem(0).getSubMenu()!!.getItem(3)
+            if (readerModeManager != null) {
+              infoMenu.setIcon(R.drawable.ic_book)
+              proxy.mDistillerUrl.set(
+                  readerModeManager!!,
+                  // We need a mock url to finish the cleanup logic readerModeManager
+                  proxy.gURL
+                      .getDeclaredConstructors()[1]
+                      .newInstance("https://github.com/JingMatrix/ChromeXt"))
+            }
+          }
+
+          if (menu.size() <= 20 || !(proxy.isDeveloper || Chrome.isDev)) {
+            // Infalte only for the main_menu, which has more than 20 items at least
+            return@hookBefore
+          }
+
+          MenuInflater(ctx).inflate(R.menu.main_menu, menu)
+
+          val mItems = menu::class.java.getDeclaredField("mItems")
+          mItems.setAccessible(true)
+
+          @Suppress("UNCHECKED_CAST") val items = mItems.get(menu) as ArrayList<MenuItem>
+
+          if (TabModel.getUrl().endsWith("/ChromeXt/")) {
+            // Drop the Eruda console menu
+            items.removeLast()
+          }
+          val devMenuItem: MenuItem = items.removeLast()
+          devMenuItem.setVisible(!(it.args[3] as Boolean) && (it.args[2] as Boolean))
+          // The index 13 is just chosen by tests, to make sure that it appears before the share
+          // menu
+          items.add(13, devMenuItem)
+          mItems.setAccessible(false)
+        }
 
     if (!Chrome.split || Chrome.version >= 109) {
       enrichHook =

@@ -9,6 +9,14 @@ import org.matrix.chromext.settings.ExitDevMode
 import org.matrix.chromext.utils.invokeMethod
 
 class MenuProxy() {
+  // Grep DomDistiller.InfoBarUsage to get the class
+  // ReaderModeManager with it method activateReaderMode
+  // One get two methods, the other one is onClosed, which has
+  // much shorter implements
+  var READER_MODE_MANAGER = "js2"
+  var ACTIVATE_READER_MODE = "Y0"
+  // Also we need its gURL field
+  var DISTILLER_URL_FIELD = "p"
 
   // Grep Android.PrepareMenu.OpenWebApkVisibilityCheck to get the class
   // org/chromium/chrome/browser/app/appmenu/AppMenuPropertiesDelegateImpl.java
@@ -85,10 +93,13 @@ class MenuProxy() {
   val appMenuPropertiesDelegateImpl: Class<*>
   val developerSettings: Class<*>
   val preferenceFragmentCompat: Class<*>
+  val readerModeManager: Class<*>
+  val gURL: Class<*>
   // val onPreferenceClickListener: Class<*>? = null
 
   private val preference: Class<*>
   private val mClickListener: Field
+  val mDistillerUrl: Field
   // private val mOnClickListener: Field? = null
 
   var isDeveloper: Boolean = false
@@ -146,9 +157,13 @@ class MenuProxy() {
     preferenceFragmentCompat = Chrome.load(PREFERENCE_FRAGMENT_COMPAT)
     chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
     appMenuPropertiesDelegateImpl = Chrome.load(APP_MENU_PROPERTIES_DELEGATE_IMPL)
+    gURL = Chrome.load("org.chromium.url.GURL")
+    readerModeManager = Chrome.load(READER_MODE_MANAGER)
     mClickListener = preference.getDeclaredField(CLICK_LISTENER_FIELD)
     // mOnClickListener = preference!!.getDeclaredField(PREFERENCE_CLICK_LISTENER_FIELD)
     mClickListener.setAccessible(true)
+    mDistillerUrl = readerModeManager.getDeclaredField(DISTILLER_URL_FIELD)
+    mDistillerUrl.setAccessible(true)
   }
 
   fun setClickListenerAndSummary(obj: Any, pref: String) {
