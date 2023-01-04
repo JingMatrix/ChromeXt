@@ -49,6 +49,10 @@ object MenuHook : BaseHook() {
           //         boolean canShowRequestDesktopSite, boolean isChromeScheme)
           .hookBefore {
             val menu = it.args[0] as Menu
+            if (menu.size() <= 13) {
+              // Infalte only for the main_menu, which has more than 13 items at least
+              return@hookBefore
+            }
             MenuInflater(ctx).inflate(R.menu.main_menu, menu)
 
             val mItems = menu::class.java.getDeclaredField("mItems")
