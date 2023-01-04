@@ -45,11 +45,9 @@ object MenuHook : BaseHook() {
             "org.matrix.chromext:id/eruda_console_id" ->
                 UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
             "com.android.chrome:id/info_menu_id" -> {
-              if (readerModeManager != null) {
-                // No idea why I must use getName() instead of name
-                readerModeManager!!.invokeMethod() { getName() == proxy.ACTIVATE_READER_MODE }
-                it.result = true
-              }
+              // No idea why I must use getName() instead of name
+              readerModeManager!!.invokeMethod() { getName() == proxy.ACTIVATE_READER_MODE }
+              it.result = true
             }
           }
         }
@@ -65,15 +63,14 @@ object MenuHook : BaseHook() {
           if (menu.getItem(0).hasSubMenu()) {
             // The first menu item shou be the row_menu
             val infoMenu = menu.getItem(0).getSubMenu()!!.getItem(3)
-            if (readerModeManager != null) {
-              infoMenu.setIcon(R.drawable.ic_book)
-              proxy.mDistillerUrl.set(
-                  readerModeManager!!,
-                  // We need a mock url to finish the cleanup logic readerModeManager
-                  proxy.gURL
-                      .getDeclaredConstructors()[1]
-                      .newInstance("https://github.com/JingMatrix/ChromeXt"))
-            }
+            infoMenu.setIcon(R.drawable.ic_book)
+            infoMenu.setEnabled(!(it.args[3] as Boolean) && readerModeManager != null)
+            proxy.mDistillerUrl.set(
+                readerModeManager!!,
+                // We need a mock url to finish the cleanup logic readerModeManager
+                proxy.gURL
+                    .getDeclaredConstructors()[1]
+                    .newInstance("https://github.com/JingMatrix/ChromeXt"))
           }
 
           if (menu.size() <= 20 || !(proxy.isDeveloper || Chrome.isDev)) {
