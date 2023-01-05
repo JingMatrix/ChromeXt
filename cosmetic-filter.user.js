@@ -18,6 +18,8 @@ if (filter != null) {
   });
 }
 
+document.querySelectorAll("amp-ad,amp-embed,amp-sticky-ad").forEach((node) => node.remove());
+
 const removeIframe = () => {
   iframes = document.querySelectorAll("iframe");
   iframes.forEach((node) => {
