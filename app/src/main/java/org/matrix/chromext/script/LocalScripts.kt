@@ -133,10 +133,10 @@ fun encodeScript(script: Script): String? {
     RunAt.IDLE -> code = """window.addEventListener("load",()=>{${code}});"""
   }
 
-  script.grant.forEach {
+  script.grant.forEach granting@{
     val function = it
     if (function == "") {
-      return@forEach
+      return@granting
     }
     when (function) {
       "GM_addStyle" -> code = GM_addStyle + code
@@ -154,7 +154,7 @@ fun encodeScript(script: Script): String? {
         script.resource.forEach {
           val content = it.split(" ")
           val name = content.first()
-          if (name == "") return@forEach
+          if (name == "") return@granting
           val url = content.last()
           GM_ResourceURL += name + ":'" + url + "',"
         }
@@ -166,7 +166,7 @@ fun encodeScript(script: Script): String? {
         runCatching {
               script.resource.forEach {
                 val name = it.split(" ").first()
-                if (name == "") return@forEach
+                if (name == "") return@granting
                 val file =
                     File(
                         Chrome.getContext().getExternalFilesDir(null),
