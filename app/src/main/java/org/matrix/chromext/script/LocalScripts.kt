@@ -113,12 +113,6 @@ fun encodeScript(script: Script): String? {
     code = """Function(ChromeXt_decode(`${code}`))();"""
   }
 
-  when (script.runAt) {
-    RunAt.START -> {}
-    RunAt.END -> code = """window.addEventListener("DOMContentLoaded",()=>{${code}});"""
-    RunAt.IDLE -> code = """window.addEventListener("load",()=>{${code}});"""
-  }
-
   val imports =
       script.require
           .map {
@@ -130,7 +124,13 @@ fun encodeScript(script: Script): String? {
           }
           .joinToString(separator = ";")
   if (imports != "") {
-    code = """(async ()=>{${imports}${code}})();"""
+    code = """(async ()=>{${imports};${code}})();"""
+  }
+
+  when (script.runAt) {
+    RunAt.START -> {}
+    RunAt.END -> code = """window.addEventListener("DOMContentLoaded",()=>{${code}});"""
+    RunAt.IDLE -> code = """window.addEventListener("load",()=>{${code}});"""
   }
 
   script.grant.forEach {
