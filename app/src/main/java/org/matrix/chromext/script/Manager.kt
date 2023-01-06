@@ -37,6 +37,7 @@ class ScriptDbManger(ctx: Context) {
             put("grant", it.grant.joinToString(separator = SEP))
             put("exclude", it.exclude.joinToString(separator = SEP))
             put("require", it.require.joinToString(separator = SEP))
+            put("resource", it.resource.joinToString(separator = SEP))
           }
       if (db.insert("script", null, values).toString() == "-1") {
         Log.e("Insertion failed with: " + it.id)
@@ -65,7 +66,9 @@ class ScriptDbManger(ctx: Context) {
         val grant = getString(getColumnIndexOrThrow("grant")).split(SEP).toTypedArray()
         val exclude = getString(getColumnIndexOrThrow("exclude")).split(SEP).toTypedArray()
         val require = getString(getColumnIndexOrThrow("require")).split(SEP).toTypedArray()
-        val script = Script(id, match, grant, exclude, require, meta, code, runAt, shouldWrap)
+        val resource = getString(getColumnIndexOrThrow("resource")).split(SEP).toTypedArray()
+        val script =
+            Script(id, match, grant, exclude, require, resource, meta, code, runAt, shouldWrap)
         scripts.add(script)
       }
     }

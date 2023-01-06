@@ -1,6 +1,8 @@
 package org.matrix.chromext.script
 
 import kotlin.text.Regex
+import org.matrix.chromext.utils.Download
+import org.matrix.chromext.utils.Log
 
 private val blocksReg =
     Regex(
@@ -24,6 +26,7 @@ fun parseScript(input: String): Script? {
         var require = mutableListOf<String>()
         val meta = blockMatchGroup.get("metablock")?.value as String
         val code = blockMatchGroup.get("code")?.value as String
+        var resource = mutableListOf<String>()
       }
   val metablock = blockMatchGroup.get("metablock")?.value as String
   metablock.split("\n").forEach {
@@ -42,6 +45,7 @@ fun parseScript(input: String): Script? {
             }
         "exclude" -> script.exclude.add(value)
         "require" -> script.require.add(value)
+        "resource" -> script.resource.add(value.trim().replace("\\s+".toRegex(), " "))
         "run-at" ->
             when (value) {
               "document-start" -> script.runAt = RunAt.START
@@ -55,15 +59,38 @@ fun parseScript(input: String): Script? {
   if (script.match.size == 0) {
     return null
   } else {
-    return Script(
-        (script.namespace + ":" + script.name).replace("\\", ""),
-        script.match.toTypedArray(),
-        script.grant.toTypedArray(),
-        script.exclude.toTypedArray(),
-        script.require.toTypedArray(),
-        script.meta,
-        script.code,
-        script.runAt,
-        script.code.contains("\\`"))
+    val parsed =
+        Script(
+            (script.namespace + ":" + script.name).replace("\\", ""),
+            script.match.toTypedArray(),
+            script.grant.toTypedArray(),
+            script.exclude.toTypedArray(),
+            script.require.toTypedArray(),
+            script.resource.toTypedArray(),
+            script.meta,
+            script.code,
+            script.runAt,
+            script.code.contains("\\`"))
+    val id = parsed.id
+    if (parsed.grant.contains("GM_getResourceText")) {
+      parsed.resource.forEach {
+        val content = it.split(" ")
+        val name = content.first()
+        val url = content.last()
+        Log.d("Downloading resource for ${name}: ${url}")
+        if (url.startsWith("http")) {
+          Download.start(url, resourcePath(id, name), true)
+        }
+      }
+    }
+    return parsed
   }
 }
+
+const val RESERVED_CHARS = "|\\?*<\":>+[]/' "
+
+fun resourcePath(id: String, name: String): String =
+    "Resource/" +
+        id.filterNot { RESERVED_CHARS.contains(it) } +
+        "/" +
+        name.filterNot { RESERVED_CHARS.contains(it) }

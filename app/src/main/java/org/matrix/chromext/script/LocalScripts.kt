@@ -1,5 +1,10 @@
 package org.matrix.chromext.script
 
+import java.io.File
+import java.io.FileReader
+import org.matrix.chromext.Chrome
+import org.matrix.chromext.utils.Log
+
 const val GM_addStyle =
     """
 function GM_addStyle(css) {
@@ -144,6 +149,47 @@ fun encodeScript(script: Script): String? {
           code = "const GM_deleteValue = localStorage.removeItem.bind(localStorage);" + code
       "GM_setValue" -> code = "const GM_setValue = localStorage.setItem.bind(localStorage);" + code
       "GM_getValue" -> code = "const GM_getValue = localStorage.getItem.bind(localStorage);" + code
+      "GM_getResourceURL" -> {
+        var GM_ResourceURL = "GM_ResourceURL={"
+        script.resource.forEach {
+          val content = it.split(" ")
+          val name = content.first()
+          if (name == "") return@forEach
+          val url = content.last()
+          GM_ResourceURL += name + ":'" + url + "',"
+        }
+        GM_ResourceURL += "};"
+        code = GM_ResourceURL + "const GM_getResourceURL = (name) => GM_ResourceURL[name];" + code
+      }
+      "GM_getResourceText" -> {
+        var GM_ResourceText = "GM_ResourceText={"
+        runCatching {
+              script.resource.forEach {
+                val name = it.split(" ").first()
+                if (name == "") return@forEach
+                val file =
+                    File(
+                        Chrome.getContext().getExternalFilesDir(null),
+                        resourcePath(script.id, name))
+                if (file.exists()) {
+                  val text = FileReader(file).use { it.readText() }
+                  GM_ResourceText +=
+                      name +
+                          ":'" +
+                          text
+                              .replace("\n", "ChromeXt_ResourceText_NEWLINE")
+                              .replace("'", "ChromeXt_ResourceText_QUOTE") +
+                          "',"
+                }
+              }
+            }
+            .onFailure { Log.ex(it) }
+        GM_ResourceText += "};"
+        code =
+            GM_ResourceText +
+                """const GM_getResourceText = (name) => (name in GM_ResourceText) ? GM_ResourceText[name].replaceAll("ChromeXt_ResourceText_NEWLINE", "\n").replaceAll("ChromeXt_ResourceText_QUOTE", "'") : "ChromeXt failed to get resource";""" +
+                code
+      }
       "GM_listValues" ->
           code =
               "const GM_listValues = ()=> [...Array(localStorage.length).keys()].map(x=>localStorage.key(x));" +

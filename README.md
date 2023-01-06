@@ -145,9 +145,9 @@ Here are corresponding files you might want / need to change:
 - [x] Forward Dev Tools server socket
 - [x] A mobile friendly Dev Tools front-end
 - [x] Allow user to trigger reader mode
+- [x] Support @resource API
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
 - [ ] Use [Shizuku](https://github.com/RikkaApps/Shizuku) to support non-root users
 - [ ] Turn Xposed into optional dependency
 - [ ] Facebook blocks Eruda
 - [ ] Add recommended scripts to the front end manager
-- [ ] Support @resource API
