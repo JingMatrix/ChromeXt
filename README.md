@@ -55,7 +55,7 @@ Currently, ChromeXt supports only the following APIs since they are everything t
 3. @include = @match, @exclude
 4. @run-at: document-start, document-end, document-idle (the default and fallback value)
 5. @grant GM_addStyle, GM_addElement, GM_xmlhttpRequest, GM_openInTab, unsafeWindow (= window)
-6. @require
+6. @require, @resource (Without [Subresource Integrity](https://www.tampermonkey.net/documentation.php#api:Subresource_Integrity))
 
 These APIs are implemented differently from the official ones, see the source file [LocalScripts.kt](app/src/main/java/org/matrix/chromext/script/LocalScripts.kt) if you have doubts or questions.
 
@@ -147,7 +147,7 @@ Here are corresponding files you might want / need to change:
 - [x] Allow user to trigger reader mode
 - [x] Support @resource API
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
-- [ ] Use [Shizuku](https://github.com/RikkaApps/Shizuku) to support non-root users
+- [ ] Use `adb forward` to support non-root users
 - [ ] Turn Xposed into optional dependency
 - [ ] Facebook blocks Eruda
 - [ ] Add recommended scripts to the front end manager
