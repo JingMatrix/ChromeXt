@@ -13,8 +13,14 @@ function GM_addStyle(css) {
 	style.textContent = css;
 
 	const head = document.querySelector("head");
-	if (head === undefined) {
-		document.documentElement.appendChild(style);
+	if (!head) {
+		if (document.readyState == "loading") {
+			window.addEventListener("DOMContentLoaded", () => {
+				(document.head || document.documentElement).appendChild(style);
+			});
+		} else {
+			document.documentElement.appendChild(style);
+		};
 	} else {
 		head.appendChild(style);
 	}
@@ -32,8 +38,14 @@ function GM_addElement(parent_node, tag_name, attributes) {
 			element.textContent = value;
 		}
 	}
-	if (parent_node === undefined) {
-		document.documentElement.appendChild(element);
+	if (!parent_node) {
+		if (document.readyState == "loading") {
+			window.addEventListener("DOMContentLoaded", () => {
+				(document.body || document.documentElement).appendChild(element);
+			});
+		} else {
+			document.documentElement.appendChild(element);
+		}
 	} else {
 		parent_node.appendChild(element);
 	}
