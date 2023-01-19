@@ -123,7 +123,7 @@ class MenuProxy() {
     }
 
     if (Chrome.split && Chrome.version >= 109) {
-      READER_MODE_MANAGER = "Ts2"
+      READER_MODE_MANAGER = "Ss2"
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "tf"
       MENU_KEYBOARD_ACTION = "i0"
       PREFERENCE_FRAGMENT_COMPAT = "al2"

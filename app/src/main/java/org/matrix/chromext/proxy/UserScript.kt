@@ -125,7 +125,7 @@ class UserScriptProxy() {
     }
 
     if (Chrome.split && Chrome.version >= 109) {
-      TAB_MODEL_IMPL = "Ze3"
+      TAB_MODEL_IMPL = "We3"
     }
 
     if (Chrome.split && Chrome.version >= 110) {
