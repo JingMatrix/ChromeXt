@@ -116,10 +116,22 @@ class MenuProxy() {
       ACTIVATE_READER_MODE = "Z0"
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "lg"
       MENU_KEYBOARD_ACTION = "v0"
-      GET_CONTEXT = "I0"
       PREFERENCE_FRAGMENT_COMPAT = "Ey2"
+      // ADD_PREFERENCES_FROM_RESOURCE = "T0"
+      GET_CONTEXT = "I0"
+      // FIND_PREFERENCE = "U0"
       SET_SUMMARY = "P"
       CLICK_LISTENER_FIELD = "R"
+    }
+
+    if (!Chrome.split && Chrome.version >= 109) {
+      READER_MODE_MANAGER = "KH2"
+      APP_MENU_PROPERTIES_DELEGATE_IMPL = "rg"
+      MENU_KEYBOARD_ACTION = "w0"
+      PREFERENCE_FRAGMENT_COMPAT = "qz2"
+      GET_CONTEXT = "J0"
+      SET_SUMMARY = "R"
+      // CLICK_LISTENER_FIELD = "R"
     }
 
     if (Chrome.split && Chrome.version >= 109) {

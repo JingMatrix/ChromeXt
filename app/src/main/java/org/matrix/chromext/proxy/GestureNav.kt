@@ -56,6 +56,12 @@ class GestureNavProxy() {
       HISTORY_NAVIGATION_COORDINATOR = "Ub1"
     }
 
+    if (!Chrome.split && Chrome.version >= 109) {
+      // private val SIDE_SLIDE_LAYOUT = "w93"
+      // private val HISTORY_NAVIGATION_LAYOUT = "Ic1"
+      HISTORY_NAVIGATION_COORDINATOR = "Fc1"
+    }
+
     if (Chrome.split && Chrome.version >= 109) {
       // private val SIDE_SLIDE_LAYOUT = "mS2"
       // private val HISTORY_NAVIGATION_LAYOUT = "K31"

@@ -25,6 +25,10 @@ class IntentProxy() {
       INTENT_HANDLER = "Ot1"
     }
 
+    if (!Chrome.split && Chrome.version >= 109) {
+      INTENT_HANDLER = "gu1"
+    }
+
     if (Chrome.split && Chrome.version >= 109) {
       INTENT_HANDLER = "xi1"
     }

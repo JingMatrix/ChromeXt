@@ -124,6 +124,11 @@ class UserScriptProxy() {
       TAB_MODEL_IMPL = "pw3"
     }
 
+    if (!Chrome.split && Chrome.version >= 109) {
+      LOAD_URL = "g"
+      TAB_MODEL_IMPL = "nx3"
+    }
+
     if (Chrome.split && Chrome.version >= 109) {
       TAB_MODEL_IMPL = "We3"
     }
