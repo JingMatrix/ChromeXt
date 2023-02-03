@@ -29,11 +29,11 @@ android {
   androidResources { additionalParameters("--allow-reserved-package-id", "--package-id", "0x45") }
 
   compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_18
+    targetCompatibility = JavaVersion.VERSION_18
   }
 
-  kotlinOptions { jvmTarget = JavaVersion.VERSION_11.toString() }
+  kotlinOptions { jvmTarget = JavaVersion.VERSION_18.toString() }
 }
 
 dependencies { compileOnly("de.robv.android.xposed:api:82") }
