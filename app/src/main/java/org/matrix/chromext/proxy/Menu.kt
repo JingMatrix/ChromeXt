@@ -146,10 +146,10 @@ class MenuProxy() {
     }
 
     if (Chrome.split && Chrome.version >= 110) {
-      READER_MODE_MANAGER = "nm2"
-      APP_MENU_PROPERTIES_DELEGATE_IMPL = "pf"
+      READER_MODE_MANAGER = "pm2"
+      APP_MENU_PROPERTIES_DELEGATE_IMPL = "Jf"
       MENU_KEYBOARD_ACTION = "h0"
-      PREFERENCE_FRAGMENT_COMPAT = "je2"
+      PREFERENCE_FRAGMENT_COMPAT = "ke2"
       ADD_PREFERENCES_FROM_RESOURCE = "T0"
       GET_CONTEXT = "I0"
       FIND_PREFERENCE = "U0"

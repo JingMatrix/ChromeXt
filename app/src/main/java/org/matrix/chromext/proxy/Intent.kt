@@ -34,7 +34,7 @@ class IntentProxy() {
     }
 
     if (Chrome.split && Chrome.version >= 110) {
-      INTENT_HANDLER = "Rb1"
+      INTENT_HANDLER = "cc1"
     }
 
     if (Chrome.split && Chrome.version >= 111) {

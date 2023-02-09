@@ -135,7 +135,7 @@ class UserScriptProxy() {
 
     if (Chrome.split && Chrome.version >= 110) {
       LOAD_URL = "g"
-      TAB_MODEL_IMPL = "o83"
+      TAB_MODEL_IMPL = "c83"
     }
 
     if (Chrome.split && Chrome.version >= 111) {
