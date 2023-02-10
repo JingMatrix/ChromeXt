@@ -77,45 +77,59 @@ if (
         .on("click", ".eruda-delete-filter", function (e) {
           const rule = e.curTarget.dataset.key;
           eruda._filter.remove(rule);
-          self.refreshLocalStorage()._render();
+          self.refreshChromeXtFilter();
         })
         .on("click", ".eruda-add-filter", () => {
           eruda._filter.new();
-          self.refreshLocalStorage()._render();
+          self.refreshChromeXtFilter();
         })
         .on("click", ".eruda-save-filter", () => {
           eruda._filter.save();
-          self.refreshLocalStorage()._render();
+          self.refreshChromeXtFilter();
           container.notify("Filter Saved");
         });
     }
-    _renderHtml(html) {
+    _initTpl() {
+      super._initTpl();
+      this._$el.prepend(
+        "<div class='eruda-section eruda-ChromeXt-filter'></div>"
+      );
+      this._$ChromeXtFilter = this._$el.find(".eruda-ChromeXt-filter");
+    }
+    init($el, container) {
+      super.init($el, container);
+    }
+    refresh() {
+      return super.refresh().refreshChromeXtFilter();
+    }
+    refreshChromeXtFilter() {
       const c = (str) => {
         return str
           .split(" ")
           .map((it) => "eruda-" + it)
           .join(" ");
       };
-      let filterHtml = "<tr><td>Empty</td></tr>";
+      let filterHtml = "<li></li>";
 
       let filter = eruda._filter.get();
       if (filter.length > 0) {
         filterHtml = filter
           .map(
-            (key) => `<tr>
-          <td contentEditable="true" class="${c("filter-item")}">${key}</td>
-          <td class="${c("control")}">
-            <span class="${c(
-              "icon-delete delete-filter"
-            )}" data-key="${key}" data-type="local"></span>
-          </td>
-        </tr>`
+            (key) => `<li style="display: flex;">
+          <span style="width:90%;padding:0.3em;" contentEditable="true" class="${c(
+            "filter-item"
+          )}">${key}</span>
+		  <span style="width:10%;margin:auto;text-align:center;" class="${c(
+        "icon-delete delete-filter"
+      )}" data-key="${key}"></span>
+        </li>`
           )
           .join("");
       }
 
-      const ChromeXtFilterHtml = `<div class="${c("section ChromeXt-filter")}">
-		<h2 class="${c("title")}">ChromeXt Cosmetic Filters
+      this._$ChromeXtFilter.html(`<h2 class="${c(
+        "title"
+      )}">ChromeXt Cosmetic Filters
 			<div class="${c(
         "btn save-filter"
       )}" style="font-size:12px;"><span>💾</span></div>
@@ -123,16 +137,11 @@ if (
         "btn add-filter"
       )}" style="font-size:12px;"><span>➕</span></div>
 		</h2>
-		<div class="${c("content")}">
-        <table>
-          <tbody>
-            ${filterHtml}
-          </tbody>
-        </table>
-      </div>
-    </div>`;
+		<ul>${filterHtml}</ul>
+      `);
 
-      super._renderHtml(ChromeXtFilterHtml + html);
+      this.refreshLocalStorage();
+      return this;
     }
   }
 
