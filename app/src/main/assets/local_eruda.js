@@ -96,9 +96,6 @@ if (
       );
       this._$ChromeXtFilter = this._$el.find(".eruda-ChromeXt-filter");
     }
-    init($el, container) {
-      super.init($el, container);
-    }
     refresh() {
       return super.refresh().refreshChromeXtFilter();
     }
