@@ -19,6 +19,7 @@ class GestureNavProxy() {
   // private BackActionDelegate mBackActionDelegate;
   // private Tab mTab;
   // private boolean mEnabled;
+  // Its last two fields are both Callback
   // We start with its HistoryNavigationLayout
 
   // private val HISTORY_NAVIGATION_LAYOUT = "g31"
@@ -66,6 +67,12 @@ class GestureNavProxy() {
       // private val SIDE_SLIDE_LAYOUT = "mS2"
       // private val HISTORY_NAVIGATION_LAYOUT = "K31"
       HISTORY_NAVIGATION_COORDINATOR = "H31"
+    }
+
+    if (!Chrome.split && Chrome.version >= 110) {
+      // private val SIDE_SLIDE_LAYOUT = "J23"
+      // private val HISTORY_NAVIGATION_LAYOUT = "b61"
+      HISTORY_NAVIGATION_COORDINATOR = "Y51"
     }
 
     if (Chrome.split && Chrome.version >= 110) {

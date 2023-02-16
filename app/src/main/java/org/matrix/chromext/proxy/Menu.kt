@@ -29,7 +29,7 @@ class MenuProxy() {
   var UPDATE_REQUEST_DESKTOP_SITE_MENU_ITEM = "q"
 
   // Grep MobileMenuSettings to get method onMenuOrKeyboardAction
-  // in the class ChromeTabbedActivity.smali
+  // in the class ChromeActivity.smali
   var MENU_KEYBOARD_ACTION = "h0"
 
   // Find the super class PreferenceFragmentCompat of DeveloperSettings.smali
@@ -143,6 +143,16 @@ class MenuProxy() {
       GET_CONTEXT = "I0"
       FIND_PREFERENCE = "V0"
       SET_SUMMARY = "R"
+    }
+
+    if (!Chrome.split && Chrome.version >= 110) {
+      READER_MODE_MANAGER = "lB2"
+      APP_MENU_PROPERTIES_DELEGATE_IMPL = "Fg"
+      MENU_KEYBOARD_ACTION = "u0"
+      PREFERENCE_FRAGMENT_COMPAT = "Ds2"
+      GET_CONTEXT = "J0"
+      SET_SUMMARY = "R"
+      // CLICK_LISTENER_FIELD = "R"
     }
 
     if (Chrome.split && Chrome.version >= 110) {
