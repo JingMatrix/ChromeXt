@@ -81,6 +81,8 @@ To deal with this extremely rare case, one should
 use multiple scripts of normal sizes instead of a giant script, and avoid using \` in the code.
 ```
 
+When using Google Pay, it is better to disable this module first.
+
 ## Bonus
 
 ### Solution of system gesture conflicts
