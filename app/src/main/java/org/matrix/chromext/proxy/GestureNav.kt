@@ -76,9 +76,9 @@ class GestureNavProxy() {
     }
 
     if (Chrome.split && Chrome.version >= 110) {
-      // private val SIDE_SLIDE_LAYOUT = "yL2"
-      // private val HISTORY_NAVIGATION_LAYOUT = "XW0"
-      HISTORY_NAVIGATION_COORDINATOR = "UW0"
+      // private val SIDE_SLIDE_LAYOUT = "zL2"
+      // private val HISTORY_NAVIGATION_LAYOUT = "gX0"
+      HISTORY_NAVIGATION_COORDINATOR = "dX0"
     }
 
     if (Chrome.split && Chrome.version >= 111) {
