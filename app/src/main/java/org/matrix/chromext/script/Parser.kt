@@ -4,6 +4,10 @@ import kotlin.text.Regex
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
 
+// const size_t kMaxURLChars = 2 * 1024 * 1024; in chromium/src/ur/url_constants.cc
+// const uint32 kMaxURLChars = 2097152; in chromium/src/url/mojom/url.mojom
+const val kMaxURLChars = 2097152
+
 private val blocksReg =
     Regex(
         """[\S\s]*?(?<metablock>// ==UserScript==\r?\n([\S\s]*?)\r?\n// ==/UserScript==)(?<code>[\S\s]*)""")
@@ -70,7 +74,7 @@ fun parseScript(input: String): Script? {
             script.meta,
             script.code,
             script.runAt,
-            script.code.contains("\\`"))
+            shouldWrap = script.code.contains("\\`") && script.code.length > kMaxURLChars - 2000)
     val id = parsed.id
     if (parsed.grant.contains("GM_getResourceText")) {
       parsed.resource.forEach {

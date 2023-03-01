@@ -8,6 +8,7 @@ import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDbManger
 import org.matrix.chromext.script.encodeScript
+import org.matrix.chromext.script.kMaxURLChars
 import org.matrix.chromext.script.urlMatch
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
@@ -65,9 +66,6 @@ class UserScriptProxy() {
     // org/chromium/url/GURL.smali is for URL
     private const val SPEC_FIELD = "a"
     // ! Note: GURL has limited length:
-    // const size_t kMaxURLChars = 2 * 1024 * 1024; in chromium/src/ur/url_constants.cc
-    // const uint32 kMaxURLChars = 2097152; in chromium/src/url/mojom/url.mojom
-    const val kMaxURLChars = 2097152
 
     // Get TabImpl field in
     // org/chromium/chrome/browser/tab/TabWebContentsDelegateAndroidImpl.smali
