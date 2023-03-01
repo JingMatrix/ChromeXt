@@ -29,30 +29,28 @@ function GM_addStyle(css) {
 
 const val GM_addElement =
     """
-function GM_addElement(parent_node, tag_name, attributes) {
-	const element = document.createElement(tag_name);
-	for (const [key, value] of Object.entries(attributes)) {
+function GM_addElement() {
+	// parent_node, tag_name, attributes
+	const l = arguments.length;
+	const element = document.createElement(arguments[l-2]);
+	for (const [key, value] of Object.entries(arguments[l-1])) {
 		if (key != "textContent") {
 			element.setAttribute(key, value);
 		} else {
 			element.textContent = value;
 		}
 	}
-	if (!parent_node) {
+	if (l == 2) {
 		if (document.readyState == "loading") {
 			window.addEventListener("DOMContentLoaded", () => {
-				(document.body || document.documentElement).appendChild(element);
+				(document.head || document.body || document.documentElement).appendChild(element);
 			});
 		} else {
-			document.documentElement.appendChild(element);
+			(document.head || document.body).appendChild(element);
 		}
-	} else {
-		parent_node.appendChild(element);
+	} else if (l == 3) {
+		arguments[0].appendChild(element);
 	}
-}
-
-function GM_addElement(tag_name, attributes) {
-	GM_addElement(document.head || document.body, tag_name, attributes);
 }
 """
 
@@ -136,14 +134,14 @@ fun encodeScript(script: Script): String? {
       script.require
           .map {
             if (it != "") {
-              """await import("${it}")"""
+              """try{await import("${it}")}catch(e){console.log(e);GM_addElement('script', {src:'${it}'})}"""
             } else {
               it
             }
           }
           .joinToString(separator = ";")
   if (imports != "") {
-    code = """(async ()=>{${imports};${code}})();"""
+    code = """(async ()=>{${GM_addElement};${imports};${code}})();"""
   }
 
   when (script.runAt) {
