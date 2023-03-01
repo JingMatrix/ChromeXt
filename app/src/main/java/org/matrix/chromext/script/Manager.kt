@@ -97,26 +97,26 @@ class ScriptDbManger(ctx: Context) {
   }
 
   fun on(action: String, payload: String): String? {
-    val SCRIPT_QUOTE_ESCAPE = "ChromeXt_Signle_Quote_Escape_String"
+    val QUOTE_ESCAPE = "ChromeXt_Quote_Escape_String"
     var callback: String? = null
     when (action) {
       "installScript" -> {
         val script = parseScript(payload)
         if (script == null) {
-          callback = "alert('Invalid UserScript')"
+          callback = "alert('Invalid UserScript');"
         } else {
           Log.i("Install script ${script.id}")
           insert(script)
         }
       }
       "getIds" -> {
-        val result = getAll().map { it.id.replace("'", SCRIPT_QUOTE_ESCAPE) }
+        val result = getAll().map { it.id.replace("'", QUOTE_ESCAPE) }
         callback =
             "window.dispatchEvent(new CustomEvent('script_id',{detail:['${result.joinToString(separator = "','")}']}));"
       }
       "getMetaById" -> {
         val ids = parseArray(payload)
-        val result = query("id = ?", ids).map { it.meta.replace("`", SCRIPT_QUOTE_ESCAPE) }
+        val result = query("id = ?", ids).map { it.meta.replace("`", QUOTE_ESCAPE) }
         callback =
             "window.dispatchEvent(new CustomEvent('script_meta',{detail:[`${result.joinToString(separator = "`,`")}`]}));"
       }
