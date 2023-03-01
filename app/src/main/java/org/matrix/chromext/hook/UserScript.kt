@@ -66,10 +66,6 @@ object UserScriptHook : BaseHook() {
                       .onFailure { Log.w("Failed with ${action}: ${payload}") }
                 }
                 .onFailure { Log.d("Ignore console.debug: " + text) }
-          } else if ((it.args[0] as Int) == 3 &&
-              (it.args[1] as String).startsWith(
-                  "Refused to load the font 'data:application/x-font-woff;charset=utf-8;base64")) {
-            proxy!!.fixErudaFont()
           } else {
             Log.d(
                 when (it.args[0] as Int) {

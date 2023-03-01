@@ -1,6 +1,6 @@
 if (
   typeof globalThis.eruda != "undefined" &&
-  typeof eruda.configured == "undefined"
+  typeof eruda._configured == "undefined"
 ) {
   class Filter {
     #filter = [];
@@ -144,7 +144,111 @@ if (
 
   eruda.Elements = elements;
   eruda.Resources = resources;
-  eruda.configured = true;
+  eruda._configured = true;
+  eruda._font_fix = `
+	[class^='eruda-icon-']:before {
+		font-size: 14px;
+	}
+	.eruda-icon-arrow-left:before {
+	  content: '←';
+	}
+	.eruda-icon-arrow-right:before {
+	  content: '→';
+	}
+	.eruda-icon-clear:before {
+	  content: '✖';
+	  font-size: 17px;
+	}
+	.eruda-icon-compress:before {
+	  content: '🗎';
+	}
+	.eruda-icon-copy:before,
+	.luna-text-viewer-icon-copy:before {
+	  content: '⎘ ';
+	  font-size: 16px;
+	  font-weight: bold;
+	}
+	.eruda-icon-delete:before {
+	  content: '⌫';
+	  font-weight: bold;
+	}
+	.eruda-icon-expand:before {
+	  content: '⌄';
+	}
+	.eruda-icon-eye:before {
+	  content: '🧿';
+	}
+	div.eruda-btn.eruda-search {
+	  margin-top: 4px;
+	}
+	.eruda-icon-filter:before {
+	  content: '⭃';
+      font-size: 19px;
+      font-weight: bold;
+      margin-right: -5px;
+      display: block;
+      transform: rotate(90deg);
+	}
+	.eruda-icon-play:before {
+	  content: '▷';
+	}
+	.eruda-icon-record:before {
+	  content: '●';
+	}
+	.eruda-icon-refresh:before {
+	  content: '↻';
+	  font-size: 18px;
+	  font-weight: bold;
+	}
+	.eruda-icon-reset:before {
+	  content: '↺';
+	}
+	.eruda-icon-search:before {
+	  content: '🔍';
+	}
+	.eruda-icon-select:before {
+	  content: '➤';
+	  font-size: 14px;
+	  display: block;
+	  transform: rotate(232deg);
+	}
+	.eruda-icon-tool:before {
+	  content: '⚙';
+	  font-size: 30px;
+	}
+	.luna-console-icon-error:before {
+	  content: '✗';
+	}
+	.luna-console-icon-warn:before {
+	  content: '⚠';
+	}
+	[class\$='icon-caret-right']:before,
+	[class\$='icon-arrow-right']:before {
+	  content: '▼';
+	  font-size: 9px;
+	  display: block;
+	  transform: rotate(-0.25turn);
+	}
+	[class\$='icon-caret-down']:before,
+	[class\$='icon-arrow-down']:before {
+	  content: '▼';
+	  font-size: 9px;
+	}
+	`;
+  eruda._localConfig = () => {
+    if (!document.querySelector("#eruda")) {
+      return;
+    }
+    addErudaStyle(
+      "chromext_eruda_dom_fix",
+      "#eruda-elements div.eruda-dom-viewer-container { overflow-x: hidden;} #eruda-elements div.eruda-dom-viewer-container > div.eruda-dom-viewer { overflow-x: scroll;} .luna-dom-viewer { width: 110%; max-width: 900px;}"
+    );
+    document.addEventListener("securitypolicyviolation", (e) => {
+      if (e.blockedURI == "data" && e.violatedDirective == "font-src") {
+        addErudaStyle("chromext_eruda_font_fix", eruda._font_fix);
+      }
+    });
+  };
 }
 
 function generateQuerySelector(el) {
@@ -159,4 +263,19 @@ function generateQuerySelector(el) {
     return generateQuerySelector(el.parentNode) + " > " + str;
   }
   return str;
+}
+
+function addErudaStyle(id, content) {
+  if (!document.querySelector("#eruda")) {
+    return;
+  }
+  const erudaroot = document.querySelector("#eruda").shadowRoot;
+  if (erudaroot.querySelector("style#" + id)) {
+    return;
+  }
+  const style = document.createElement("style");
+  style.id = id;
+  style.setAttribute("type", "text/css");
+  style.textContent = content;
+  erudaroot.append(style);
 }

@@ -277,8 +277,4 @@ class UserScriptProxy() {
       invokeScript(url)
     }
   }
-
-  fun fixErudaFont() {
-    evaluateJavaScript(TabModel.getEurdaFontFix())
-  }
 }

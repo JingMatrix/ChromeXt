@@ -247,6 +247,7 @@ if (typeof globalThis.eruda != "undefined") {
 		eruda.destroy();
 	} else {
 		eruda.init();
+		eruda._localConfig();
 		eruda.show();
 	}
 }
