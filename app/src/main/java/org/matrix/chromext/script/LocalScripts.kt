@@ -11,18 +11,10 @@ function GM_addStyle(css) {
 	const style = document.createElement("style");
 	style.setAttribute("type", "text/css");
 	style.textContent = css;
-
-	const head = document.querySelector("head");
-	if (!head) {
-		if (document.readyState == "loading") {
-			window.addEventListener("DOMContentLoaded", () => {
-				(document.head || document.documentElement).appendChild(style);
-			});
-		} else {
-			document.documentElement.appendChild(style);
-		};
-	} else {
-		head.appendChild(style);
+	try {
+		(document.head || document.documentElement).appendChild(style);
+	} catch {
+		window.addEventListener("DOMContentLoaded", () => {document.head.appendChild(style);});
 	}
 }
 """
@@ -31,25 +23,22 @@ const val GM_addElement =
     """
 function GM_addElement() {
 	// parent_node, tag_name, attributes
-	const l = arguments.length;
-	const element = document.createElement(arguments[l-2]);
-	for (const [key, value] of Object.entries(arguments[l-1])) {
+	if (arguments.length == 2) {
+		arguments.prepend(document.head || document.body || document.documentElement);
+	};
+	arguments.length == 3 || return;
+	const element = document.createElement(arguments[1]);
+	for (const [key, value] of Object.entries(arguments[2])) {
 		if (key != "textContent") {
 			element.setAttribute(key, value);
 		} else {
 			element.textContent = value;
 		}
 	}
-	if (l == 2) {
-		if (document.readyState == "loading") {
-			window.addEventListener("DOMContentLoaded", () => {
-				(document.head || document.body || document.documentElement).appendChild(element);
-			});
-		} else {
-			(document.head || document.body).appendChild(element);
-		}
-	} else if (l == 3) {
+	try {
 		arguments[0].appendChild(element);
+	} catch {
+		window.addEventListener("DOMContentLoaded", () => {arguments[0].appendChild(element);});
 	}
 }
 """
