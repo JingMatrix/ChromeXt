@@ -241,7 +241,7 @@ if (
     }
     addErudaStyle(
       "chromext_eruda_dom_fix",
-      "#eruda-elements div.eruda-dom-viewer-container { overflow-x: hidden;} #eruda-elements div.eruda-dom-viewer-container > div.eruda-dom-viewer { overflow-x: scroll;} .luna-dom-viewer { width: 110%; max-width: 900px;}"
+      "#eruda-elements div.eruda-dom-viewer-container { overflow-x: hidden;} #eruda-elements div.eruda-dom-viewer-container > div.eruda-dom-viewer { overflow-x: scroll;} .luna-dom-viewer { min-width: 80vw;}"
     );
     document.addEventListener("securitypolicyviolation", (e) => {
       if (e.blockedURI == "data" && e.violatedDirective == "font-src") {
