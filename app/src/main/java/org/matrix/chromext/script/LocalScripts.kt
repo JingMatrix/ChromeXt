@@ -114,7 +114,7 @@ function GM_openInTab(url, options) {
 """
 
 fun encodeScript(script: Script): String? {
-  var code = script.code
+  var code = "try{${script.code}}catch(e){console.log(e)}"
 
   var backtrick = ""
   var dollarsign = ""
@@ -163,7 +163,7 @@ fun encodeScript(script: Script): String? {
       "GM_xmlhttpRequest" -> code = GM_xmlhttpRequest + code
       "GM_info" ->
           code =
-              "const GM_info = {script:{name:'${script.id.split(":").first()}',namespace:'${script.id.split(":").last()}'}};" +
+              "const GM_info = {script:{namespace:'${script.id.split(":").dropLast(1).joinToString(separator = ":")}',name:'${script.id.split(":").last()}',antifeatures:{},options:{override:{}}}};" +
                   code
       "unsafeWindow" -> code = "const unsafeWindow = window;" + code
       "GM_log" -> code = "const GM_log = console.log.bind(console);" + code
