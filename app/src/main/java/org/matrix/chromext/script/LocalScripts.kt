@@ -114,7 +114,8 @@ function GM_openInTab(url, options) {
 """
 
 fun encodeScript(script: Script): String? {
-  var code = "try{${script.code}}catch(e){console.log(e)}"
+  // var code = "try{${script.code}}catch(e){console.log(e)}"
+  var code = script.code
 
   var backtrick = ""
   var dollarsign = ""
@@ -163,14 +164,20 @@ fun encodeScript(script: Script): String? {
       "GM_xmlhttpRequest" -> code = GM_xmlhttpRequest + code
       "GM_info" ->
           code =
-              "const GM_info = {script:{namespace:'${script.id.split(":").dropLast(1).joinToString(separator = ":")}',name:'${script.id.split(":").last()}',antifeatures:{},options:{override:{}}}};" +
+              "const GM_info = {scriptMetaStr:`${script.meta}`,script:{namespace:'${script.id.split(":").dropLast(1).joinToString(separator = ":")}',name:'${script.id.split(":").last()}',antifeatures:{},options:{override:{}}}};" +
                   code
       "unsafeWindow" -> code = "const unsafeWindow = window;" + code
       "GM_log" -> code = "const GM_log = console.log.bind(console);" + code
       "GM_deleteValue" ->
           code = "const GM_deleteValue = localStorage.removeItem.bind(localStorage);" + code
-      "GM_setValue" -> code = "const GM_setValue = localStorage.setItem.bind(localStorage);" + code
-      "GM_getValue" -> code = "const GM_getValue = localStorage.getItem.bind(localStorage);" + code
+      "GM_setValue" ->
+          code =
+              "function GM_setValue(key, value) {localStorage.setItem(key + '_ChromeXt_Value', JSON.stringify(value))};" +
+                  code
+      "GM_getValue" ->
+          code =
+              "function GM_getValue(key, default_value) {let value = localStorage.getItem(key + '_ChromeXt_Value') || default_value;try {value = JSON.parse(value)} finally {return value}};" +
+                  code
       "GM_getResourceURL" -> {
         var GM_ResourceURL = "GM_ResourceURL={"
         script.resource.forEach {
@@ -224,7 +231,7 @@ fun encodeScript(script: Script): String? {
   }
 
   if (script.shouldWrap) {
-    // Add decode function, and it finally contains only three backtricks in total
+    // Add decode function, and it finally contains only three / five backtricks in total
     code =
         """function ChromeXt_decode(src) {return src.replaceAll("${backtrick}", "`").replaceAll("${dollarsign}", "$").replaceAll("${backslash}", "\\");}""" +
             code
