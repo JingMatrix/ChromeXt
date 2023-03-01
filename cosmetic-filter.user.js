@@ -11,12 +11,12 @@ let filter = localStorage.getItem("ChromeXt_filter");
 if (filter != null) {
   filter = JSON.parse(filter).join(", ");
   try {
-    GM_addStyle(filter + " {visibility: hidden;}");
+    GM_addStyle(filter + " {display: none !important;}");
   } finally {
     window.addEventListener("load", () => {
       document.querySelectorAll(filter).forEach((node) => {
         node.hidden = true;
-        node.style.visibility = "hidden";
+        node.style.display = "none";
       });
     });
   }
