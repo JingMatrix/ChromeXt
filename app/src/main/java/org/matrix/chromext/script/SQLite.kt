@@ -39,7 +39,7 @@ class ScriptDbHelper(context: Context) :
     }
     if (oldVersion == 3 || newVersion == 4) {
       db.execSQL("ALTER TABLE script RENAME COLUMN encoded to shouldWrap")
-      db.execSQL("UPDATE script SET shouldWrap = false")
+      db.execSQL("UPDATE script SET shouldWrap = 0")
     }
     if (oldVersion == 4 || newVersion == 5) {
       db.execSQL("ALTER TABLE script ADD COLUMN resource TEXT NOT NULL DEFAULT ''")
