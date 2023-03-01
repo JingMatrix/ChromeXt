@@ -169,7 +169,6 @@ class MenuProxy() {
       MENU_KEYBOARD_ACTION = "h0"
       PREFERENCE_FRAGMENT_COMPAT = "ke2"
       ADD_PREFERENCES_FROM_RESOURCE = "T0"
-      GET_CONTEXT = "I0"
       FIND_PREFERENCE = "U0"
       SET_SUMMARY = "R"
     }
@@ -180,7 +179,6 @@ class MenuProxy() {
       MENU_KEYBOARD_ACTION = "h0"
       PREFERENCE_FRAGMENT_COMPAT = "zf2"
       ADD_PREFERENCES_FROM_RESOURCE = "U0"
-      GET_CONTEXT = "J0"
       FIND_PREFERENCE = "V0"
       SET_SUMMARY = "R"
     }

@@ -112,7 +112,8 @@ object MenuHook : BaseHook() {
           mItems.setAccessible(false)
         }
 
-    if (!Chrome.split || Chrome.version >= 109) {
+    if (!Chrome.split || Chrome.version == 109) {
+      // No idea when we need to enrich
       enrichHook =
           findMethod(proxy.preferenceFragmentCompat, true) { name == proxy.GET_CONTEXT }
               .hookAfter {
