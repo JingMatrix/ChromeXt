@@ -161,6 +161,10 @@ fun encodeScript(script: Script): String? {
       "GM_addElement" -> code = GM_addElement + code
       "GM_openInTab" -> code = GM_openInTab + code
       "GM_xmlhttpRequest" -> code = GM_xmlhttpRequest + code
+      "GM_info" ->
+          code =
+              "const GM_info = {script:{name:'${script.id.split(":").first()}',namespace:'${script.id.split(":").last()}'}};" +
+                  code
       "unsafeWindow" -> code = "const unsafeWindow = window;" + code
       "GM_log" -> code = "const GM_log = console.log.bind(console);" + code
       "GM_deleteValue" ->
