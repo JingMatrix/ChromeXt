@@ -4,21 +4,27 @@
 // @match       https://*
 // @match       http://*
 // @run-at      document-end
+// @grant       GM_addStyle
 // ==/UserScript==
 
 let filter = localStorage.getItem("ChromeXt_filter");
 if (filter != null) {
-  filter = JSON.parse(filter);
-  window.addEventListener("load", () => {
-    document.querySelectorAll(filter.join(", ")).forEach((node) => {
-      node.hidden = true;
-      node.style.display = "none";
-      node.style.visibility = "hidden";
+  filter = JSON.parse(filter).join(", ");
+  try {
+    GM_addStyle(filter + " {visibility: hidden;}");
+  } finally {
+    window.addEventListener("load", () => {
+      document.querySelectorAll(filter).forEach((node) => {
+        node.hidden = true;
+        node.style.visibility = "hidden";
+      });
     });
-  });
+  }
 }
 
-document.querySelectorAll("amp-ad,amp-embed,amp-sticky-ad").forEach((node) => node.remove());
+document
+  .querySelectorAll("amp-ad,amp-embed,amp-sticky-ad")
+  .forEach((node) => node.remove());
 
 const removeIframe = () => {
   iframes = document.querySelectorAll("iframe");
