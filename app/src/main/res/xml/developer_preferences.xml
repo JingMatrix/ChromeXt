@@ -14,10 +14,14 @@ found in the LICENSE file.
         android:title="Tracing" />
     <Preference
         android:key="eruda"
-        android:title="Update Eruda" />
+		android:title="Update Eruda" />
+	<Preference
+        android:key="gesture_mod"
+        android:title="Switch gesture navigation mode" />
     <Preference
         android:key="exit"
-        android:title="Disable developer options" />
+		android:title="Disable developer options"
+		android:summary="Click to hide this setting page (not recommended)" />
     <org.chromium.components.browser_ui.settings.TextMessagePreference
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

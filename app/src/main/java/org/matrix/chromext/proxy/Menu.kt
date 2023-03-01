@@ -6,6 +6,7 @@ import kotlin.text.Regex
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.settings.DownloadEruda
 import org.matrix.chromext.settings.ExitDevMode
+import org.matrix.chromext.settings.GestureNavMode
 import org.matrix.chromext.utils.invokeMethod
 
 class MenuProxy() {
@@ -88,6 +89,13 @@ class MenuProxy() {
         }
         return "unknown"
       }
+    }
+
+    fun getGestureMod(): Boolean {
+      val sharedPref =
+          Chrome.getContext()
+              .getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)
+      return sharedPref.getBoolean("gesture_mod", true)
     }
   }
 
@@ -181,7 +189,7 @@ class MenuProxy() {
         Chrome.getContext()
             .getSharedPreferences(
                 Chrome.getContext().getPackageName() + "_preferences", Context.MODE_PRIVATE)
-    isDeveloper = sharedPref!!.getBoolean("developer", false)
+    isDeveloper = sharedPref!!.getBoolean("developer", false) || Chrome.isDev
 
     preference = Chrome.load("androidx.preference.Preference")
     // onPreferenceClickListener = Chrome.load(ON_PREFERENCE_CLICK_LISTENER)
@@ -213,6 +221,15 @@ class MenuProxy() {
         var summary = "Click to install Eruda, size around 0.5 MiB"
         if (version != null) {
           summary = "Current version: " + version
+        }
+        obj.invokeMethod(summary) { name == SET_SUMMARY }
+      }
+      "gesture_mod" -> {
+        mClickListener.set(obj, GestureNavMode)
+        var summary = "Using system gesture navigation"
+        if (getGestureMod()) {
+          summary =
+              "Using browser gesture navigation, blocking partly system gesture on the right edge"
         }
         obj.invokeMethod(summary) { name == SET_SUMMARY }
       }

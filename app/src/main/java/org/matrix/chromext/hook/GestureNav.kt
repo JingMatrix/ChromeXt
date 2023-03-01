@@ -6,6 +6,7 @@ import android.os.Build
 import java.lang.ref.WeakReference
 import kotlin.math.roundToInt
 import org.matrix.chromext.proxy.GestureNavProxy
+import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
@@ -21,8 +22,10 @@ object GestureNavHook : BaseHook() {
     findMethod(proxy.historyNavigationCoordinator) { name == proxy.IS_FEATURE_ENABLED }
         // private boolean isFeatureEnabled()
         .hookBefore {
-          fixConflict(activity!!.get()!!)
-          it.result = true
+          if (MenuProxy.getGestureMod()) {
+            fixConflict(activity!!.get()!!)
+            it.result = true
+          }
         }
 
     findMethod(proxy.chromeTabbedActivity) { name == "onStart" }

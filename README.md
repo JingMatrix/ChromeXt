@@ -148,7 +148,7 @@ Here are corresponding files you might want / need to change:
 - [x] A mobile friendly Dev Tools front-end
 - [x] Allow user to trigger reader mode
 - [x] Support @resource API
-- [ ] Make GestureNav Fix optional
+- [x] Make GestureNav Fix optional
 - [ ] Implement fully `GM_info`
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
 - [ ] Use `adb forward` to support non-root users

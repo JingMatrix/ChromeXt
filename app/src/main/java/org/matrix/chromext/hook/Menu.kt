@@ -88,7 +88,7 @@ object MenuHook : BaseHook() {
                     .newInstance("https://github.com/JingMatrix/ChromeXt"))
           }
 
-          if (menu.size() <= 20 || !(proxy.isDeveloper || Chrome.isDev)) {
+          if (menu.size() <= 20 || TabModel.getUrl().startsWith("chrome")) {
             // Infalte only for the main_menu, which has more than 20 items at least
             return@hookBefore
           }
@@ -100,7 +100,7 @@ object MenuHook : BaseHook() {
 
           @Suppress("UNCHECKED_CAST") val items = mItems.get(menu) as ArrayList<MenuItem>
 
-          if (TabModel.getUrl().endsWith("/ChromeXt/")) {
+          if (TabModel.getUrl().endsWith("/ChromeXt/") && proxy.isDeveloper) {
             // Drop the Eruda console menu
             items.removeLast()
           }
@@ -137,7 +137,7 @@ object MenuHook : BaseHook() {
           after {
             if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
               val refThis = it
-              arrayOf("eruda", "exit").forEach {
+              arrayOf("eruda", "exit", "gesture_mod").forEach {
                 proxy.setClickListenerAndSummary(
                     findMethod(proxy.preferenceFragmentCompat) { name == proxy.FIND_PREFERENCE }
                         .invoke(refThis.thisObject, it)!!,
