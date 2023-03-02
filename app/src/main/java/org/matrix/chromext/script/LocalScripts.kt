@@ -25,7 +25,8 @@ const val GM_addElement =
 function GM_addElement() {
 	// parent_node, tag_name, attributes
 	if (arguments.length == 2) {
-		arguments.prepend(document.head || document.body || document.documentElement);
+		arguments = [document.head || document.body || document.documentElement,
+			arguments[0], arguments[1]];
 	};
 	if (arguments.length != 3) { return };
 	const element = document.createElement(arguments[1]);
