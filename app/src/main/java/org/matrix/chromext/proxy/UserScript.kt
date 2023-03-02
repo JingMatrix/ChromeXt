@@ -2,6 +2,7 @@ package org.matrix.chromext.proxy
 
 import android.content.Context
 import java.lang.reflect.Field
+import java.net.URLEncoder
 import org.matrix.chromext.BuildConfig
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.Script
@@ -228,19 +229,21 @@ class UserScriptProxy() {
 
   fun evaluateJavaScript(script: String, forceWrap: Boolean = false) {
     if (script == "") return
-    if (script.length > kMaxURLChars - 20 || forceWrap) {
+    var code = URLEncoder.encode(script, "UTF-8").replace("+", "%20")
+    if (code.length > kMaxURLChars - 20 || forceWrap) {
       val alphabet: List<Char> = ('a'..'z') + ('A'..'Z')
-      val randomString: String = List(16) { alphabet.random() }.joinToString("")
+      val randomString = List(16) { alphabet.random() }.joinToString("")
       val backtrick = List(16) { alphabet.random() }.joinToString("")
       val dollarsign = List(16) { alphabet.random() }.joinToString("")
       loadUrl("javascript: void(globalThis.${randomString} = '');")
-      script.replace("`", backtrick).replace("$", dollarsign).chunked(kMaxURLChars - 100).forEach {
-        loadUrl("javascript: void(globalThis.${randomString} += String.raw`${it}`);")
-      }
+      URLEncoder.encode(script.replace("`", backtrick).replace("$", dollarsign), "UTF-8")
+          .replace("+", "%20")
+          .chunked(kMaxURLChars - 100)
+          .forEach { loadUrl("javascript: void(globalThis.${randomString} += String.raw`${it}`);") }
       loadUrl(
-          "javascript: Function(globalThis.${randomString}.replaceAll('${backtrick}', '`').replaceAll('${dollarsign}', '$'))();")
+          "javascript: globalThis.${randomString}=globalThis.${randomString}.replaceAll('${backtrick}', '`').replaceAll('${dollarsign}', '\$');try{Function(${randomString})()}catch(e){let script=document.createElement('script');script.textContent=${randomString};document.head.append(script)};")
     } else {
-      loadUrl("javascript: ${script}")
+      loadUrl("javascript: ${code}")
     }
   }
 

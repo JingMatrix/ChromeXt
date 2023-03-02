@@ -2,7 +2,6 @@ package org.matrix.chromext.script
 
 import java.io.File
 import java.io.FileReader
-import java.net.URLEncoder
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.utils.Log
 
@@ -203,7 +202,7 @@ fun encodeScript(script: Script): String? {
     }
   }
 
-  return URLEncoder.encode(code, "UTF-8").replace("+", "%20")
+  return code
 }
 
 const val erudaToggle =
