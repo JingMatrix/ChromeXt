@@ -73,12 +73,11 @@ To commit your modifications, long press on some text and follow with a click so
 A valid UserScript would fail if the following two conditions hold _at the same time_:
 
 1. The matched website has disabled `script: 'unsafe-eval';` by [Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP);
-2. The script size is nearly 2M, or it escapes \` with backslash.
+2. The script size is nearly 2M
 
-Please note that one can, of course, use \` normally. 
 To deal with this extremely rare case, one should
 ```
-use multiple scripts of normal sizes instead of a giant script, and avoid using \` in the code.
+use multiple scripts of normal sizes instead of a giant script
 ```
 
 When using Google Pay, it is better to disable this module first.

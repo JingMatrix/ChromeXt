@@ -28,12 +28,11 @@ fun parseScript(input: String): Script? {
         var grant = mutableListOf<String>()
         var exclude = mutableListOf<String>()
         var require = mutableListOf<String>()
-        val meta = blockMatchGroup.get("metablock")?.value as String
+        val meta = (blockMatchGroup.get("metablock")?.value as String).replace("`", "")
         val code = blockMatchGroup.get("code")?.value as String
         var resource = mutableListOf<String>()
       }
-  val metablock = blockMatchGroup.get("metablock")?.value as String
-  metablock.split("\n").forEach {
+  script.meta.split("\n").forEach {
     val metaMatchGroup = metaReg.matchEntire(it)?.groups as? MatchNamedGroupCollection
     if (metaMatchGroup != null) {
       val key = metaMatchGroup.get("key")?.value as String
@@ -74,7 +73,7 @@ fun parseScript(input: String): Script? {
             script.meta,
             script.code,
             script.runAt,
-            shouldWrap = script.code.contains("\\`") && script.code.length > kMaxURLChars - 2000)
+            shouldWrap = script.code.length > kMaxURLChars - 2000)
     val id = parsed.id
     if (parsed.grant.contains("GM_getResourceText")) {
       parsed.resource.forEach {
