@@ -7,7 +7,6 @@ class IntentProxy() {
   // Grep 'Ignoring internal Chrome URL from untrustworthy source.' to get the class
   // org/chromium/chrome/browser/IntentHandler.java
   private var INTENT_HANDLER = "ji1"
-
   // Grep (Landroid/content/Context;Landroid/content/Intent;Ljava/lang/String;)V
   // to get its method startActivityForTrustedIntentInternal
   var START_ACTIVITY = "z"

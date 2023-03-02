@@ -29,7 +29,6 @@ class MenuProxy() {
   // Grep Android.PrepareMenu.OpenWebApkVisibilityCheck to get the class
   // org/chromium/chrome/browser/app/appmenu/AppMenuPropertiesDelegateImpl.java
   var APP_MENU_PROPERTIES_DELEGATE_IMPL = "of"
-
   // Grep (Landroid/view/Menu;Lorg/chromium/chrome/browser/tab/Tab;ZZ)V
   // to get method updateRequestDesktopSiteMenuItem of AppMenuPropertiesDelegateImpl
   var UPDATE_REQUEST_DESKTOP_SITE_MENU_ITEM = "q"
@@ -40,30 +39,20 @@ class MenuProxy() {
 
   // Find the super class PreferenceFragmentCompat of DeveloperSettings.smali
   var PREFERENCE_FRAGMENT_COMPAT = "pk2"
-
-  // Grep (I)V to get method addPreferencesFromResource
-  // in the class PreferenceFragmentCompat
+  // Grep (I)V to get method addPreferencesFromResource of PreferenceFragmentCompat
   var ADD_PREFERENCES_FROM_RESOURCE = "T0"
-
-  // NOT NEEDED FOR SOME SPLIT VERSION
+  // NOT NEEDED FOR MOST SPLIT VERSION
   // Inside the smali code of this method,
   // we see its super class androidx/fragment/app/c
   // has a method getContext()
   var GET_CONTEXT = "H0"
 
-  // Grep (Ljava/lang/CharSequence;)Landroidx/preference/Preference;
-  // to get method findPreference of PreferenceFragmentCompat
-  var FIND_PREFERENCE = "U0"
-
   // Grep "Preference already has a SummaryProvider set"
   // to get method setSummary of Preference
-  // and the corresponding field
   var SET_SUMMARY = "Q"
-
-  // Find field with Landroid/view/View$OnClickListener
+  // And find its field with Landroid/view/View$OnClickListener
   var CLICK_LISTENER_FIELD = "X"
 
-  var SET_CHECKED = "Y"
   // Grep ()Landroidx/preference/PreferenceScreen to get method getPreferenceScreen
   // in the class PreferenceFragmentCompat
   // val GET_PREFERENCE_SCREEN = "V0"
@@ -92,6 +81,8 @@ class MenuProxy() {
   // private val mOnClickListener: Field? = null
 
   val setChecked: Method
+
+  val findPreference: Method
 
   var isDeveloper: Boolean = false
 
@@ -128,7 +119,6 @@ class MenuProxy() {
       PREFERENCE_FRAGMENT_COMPAT = "al2"
       ADD_PREFERENCES_FROM_RESOURCE = "U0"
       GET_CONTEXT = "I0"
-      FIND_PREFERENCE = "V0"
       SET_SUMMARY = "R"
     }
 
@@ -148,7 +138,6 @@ class MenuProxy() {
       MENU_KEYBOARD_ACTION = "h0"
       PREFERENCE_FRAGMENT_COMPAT = "ke2"
       ADD_PREFERENCES_FROM_RESOURCE = "T0"
-      FIND_PREFERENCE = "U0"
       SET_SUMMARY = "R"
     }
 
@@ -158,7 +147,6 @@ class MenuProxy() {
       MENU_KEYBOARD_ACTION = "h0"
       PREFERENCE_FRAGMENT_COMPAT = "zf2"
       ADD_PREFERENCES_FROM_RESOURCE = "U0"
-      FIND_PREFERENCE = "V0"
       SET_SUMMARY = "R"
     }
 
@@ -190,12 +178,19 @@ class MenuProxy() {
         findMethod(twoStatePreference) {
           getParameterCount() == 1 && getParameterTypes().first() == Boolean::class.java
         }
+    findPreference =
+        findMethod(preferenceFragmentCompat) {
+          getParameterCount() == 1 &&
+              getParameterTypes().first() == CharSequence::class.java &&
+              getReturnType() == preference
+        }
   }
 
   fun setClickListener(obj: Any, pref: String) {
     val ctx = Chrome.getContext()
     val sharedPref =
-        ctx.getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)!!
+        ctx.getSharedPreferences(
+            Chrome.getContext().getPackageName() + "_preferences", Context.MODE_PRIVATE)
     when (pref) {
       "exit" -> {
         mClickListener.set(

@@ -139,10 +139,7 @@ object MenuHook : BaseHook() {
             if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
               val refThis = it
               arrayOf("eruda", "exit", "gesture_mod").forEach {
-                proxy.setClickListener(
-                    findMethod(proxy.preferenceFragmentCompat) { name == proxy.FIND_PREFERENCE }
-                        .invoke(refThis.thisObject, it)!!,
-                    it)
+                proxy.setClickListener(proxy.findPreference.invoke(refThis.thisObject, it)!!, it)
               }
             }
           }
