@@ -215,44 +215,38 @@ class MenuProxy() {
             })
       }
       "eruda" -> {
-        fun getErudaVersion(): String? {
-          if (!sharedPref.contains("eruda")) {
-            return null
-          }
-          var eruda = sharedPref.getString("eruda", "")
-          if (eruda == "") {
-            return null
-          } else {
-            if (eruda!!.length > 200) {
-              eruda = eruda.take(150)
-            }
-            val verisonReg = Regex("""/npm/eruda@(?<version>[\d\.]+)/eruda""")
-            val vMatchGroup = verisonReg.find(eruda)?.groups as? MatchNamedGroupCollection
-            if (vMatchGroup != null) {
-              return vMatchGroup.get("version")?.value as String
-            }
-            return "unknown"
-          }
-        }
+        val version = sharedPref.getString("eruda_version", "unknown")
+        // if (sharedPref.contains("eruda")) {
+        //   with(sharedPref.edit()) {
+        //     remove("eruda")
+        //     apply()
+        //   }
+        // }
         var summary = "Click to install Eruda, size around 0.5 MiB"
-        if (getErudaVersion() != null) {
-          summary = "Current version: " + getErudaVersion()
+        if (version != "unknown") {
+          summary = "Current version: v" + version
         }
         obj.invokeMethod(summary) { name == SET_SUMMARY }
         mClickListener.set(
             obj,
             object : OnClickListener {
               override fun onClick(v: View) {
-                Download.start(ERUD_URL, "Download/Eruda.js") {
-                  val old_version = getErudaVersion()
-                  with(sharedPref.edit()) {
-                    putString("eruda", it)
-                    apply()
+                Download.start(ERUD_URL, "Download/Eruda.js", true) {
+                  val old_version = sharedPref.getString("eruda_version", "unknown")
+                  var new_version = old_version
+                  val verisonReg = Regex("""/npm/eruda@(?<version>[\d\.]+)/eruda""")
+                  val vMatchGroup =
+                      verisonReg.find(it.take(150))?.groups as? MatchNamedGroupCollection
+                  if (vMatchGroup != null) {
+                    new_version = vMatchGroup.get("version")?.value as String
                   }
-                  val new_version = getErudaVersion()
                   if (old_version != new_version) {
-                    Log.toast(ctx, "Updated to eruda v" + getErudaVersion()!!)
-                    obj.invokeMethod("Current version: " + new_version) { name == SET_SUMMARY }
+                    with(sharedPref.edit()) {
+                      putString("eruda_version", new_version)
+                      apply()
+                    }
+                    Log.toast(ctx, "Updated to eruda v" + new_version)
+                    obj.invokeMethod("Current version: v" + new_version) { name == SET_SUMMARY }
                   } else {
                     Log.toast(ctx, "Eruda is already the lastest")
                   }

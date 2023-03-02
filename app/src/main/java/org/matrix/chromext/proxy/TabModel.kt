@@ -1,7 +1,7 @@
 package org.matrix.chromext.proxy
 
-import android.content.Context
-import android.content.SharedPreferences
+import java.io.File
+import java.io.FileReader
 import java.lang.ref.WeakReference
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.erudaToggle
@@ -50,10 +50,9 @@ object TabModel {
     val ctx = Chrome.getContext()
     var script = ""
     if (!erudaLoaded()) {
-      val sharedPref: SharedPreferences =
-          ctx.getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)
-      if (sharedPref.contains("eruda")) {
-        script += sharedPref.getString("eruda", "") + "\n"
+      val eruda = File(ctx.getExternalFilesDir(null), "Download/Eruda.js")
+      if (eruda.exists()) {
+        script += FileReader(eruda).use { it.readText() } + "\n"
         script += ctx.assets.open("local_eruda.js").bufferedReader().use { it.readText() }
         script += erudaToggle
         eruda_loaded.put(index(), true)
