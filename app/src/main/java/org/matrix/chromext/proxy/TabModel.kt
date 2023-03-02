@@ -50,7 +50,8 @@ object TabModel {
     val ctx = Chrome.getContext()
     var script = ""
     if (!erudaLoaded()) {
-      val sharedPref: SharedPreferences = ctx.getSharedPreferences("Eruda", Context.MODE_PRIVATE)
+      val sharedPref: SharedPreferences =
+          ctx.getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)
       if (sharedPref.contains("eruda")) {
         script += sharedPref.getString("eruda", "") + "\n"
         script += ctx.assets.open("local_eruda.js").bufferedReader().use { it.readText() }

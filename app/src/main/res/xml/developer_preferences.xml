@@ -15,9 +15,11 @@ found in the LICENSE file.
     <Preference
         android:key="eruda"
 		android:title="Update Eruda" />
-	<Preference
+	<org.chromium.components.browser_ui.settings.ChromeSwitchPreference
         android:key="gesture_mod"
-        android:title="Switch gesture navigation mode" />
+		android:title="Browser gesture navigation"
+		android:summaryOn="Block system gesture in the middle of right edge"
+		android:summaryOff="No support for history forward" />
     <Preference
         android:key="exit"
 		android:title="Disable developer options"

@@ -1,13 +1,18 @@
 package org.matrix.chromext.proxy
 
 import android.content.Context
+import android.view.View
+import android.view.View.OnClickListener
 import java.lang.reflect.Field
+import java.lang.reflect.Method
 import kotlin.text.Regex
 import org.matrix.chromext.Chrome
-import org.matrix.chromext.settings.DownloadEruda
-import org.matrix.chromext.settings.ExitDevMode
-import org.matrix.chromext.settings.GestureNavMode
+import org.matrix.chromext.utils.Download
+import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.invokeMethod
+
+const val ERUD_URL = "https://cdn.jsdelivr.net/npm/eruda@latest/eruda.min.js"
 
 class MenuProxy() {
   // Grep DomDistiller.InfoBarUsage to get the class
@@ -58,6 +63,7 @@ class MenuProxy() {
   // Find field with Landroid/view/View$OnClickListener
   var CLICK_LISTENER_FIELD = "X"
 
+  var SET_CHECKED = "Y"
   // Grep ()Landroidx/preference/PreferenceScreen to get method getPreferenceScreen
   // in the class PreferenceFragmentCompat
   // val GET_PREFERENCE_SCREEN = "V0"
@@ -69,42 +75,13 @@ class MenuProxy() {
   // val ON_PREFERENCE_CLICK_LISTENER = "yk2"
   // val PREFERENCE_CLICK_LISTENER_FIELD = "l"
 
-  companion object {
-    fun getErudaVersion(): String? {
-      val sharedPref = Chrome.getContext().getSharedPreferences("Eruda", Context.MODE_PRIVATE)
-      if (!sharedPref.contains("eruda")) {
-        return null
-      }
-      var eruda = sharedPref.getString("eruda", "")
-      if (eruda == "") {
-        return null
-      } else {
-        if (eruda!!.length > 200) {
-          eruda = eruda.take(150)
-        }
-        val verisonReg = Regex("""/npm/eruda@(?<version>[\d\.]+)/eruda""")
-        val vMatchGroup = verisonReg.find(eruda)?.groups as? MatchNamedGroupCollection
-        if (vMatchGroup != null) {
-          return vMatchGroup.get("version")?.value as String
-        }
-        return "unknown"
-      }
-    }
-
-    fun getGestureMod(): Boolean {
-      val sharedPref =
-          Chrome.getContext()
-              .getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)
-      return sharedPref.getBoolean("gesture_mod", true)
-    }
-  }
-
   val chromeTabbedActivity: Class<*>
   val customTabActivity: Class<*>
   val appMenuPropertiesDelegateImpl: Class<*>
   val developerSettings: Class<*>
   val preferenceFragmentCompat: Class<*>
   val readerModeManager: Class<*>
+  val twoStatePreference: Class<*>
   val gURL: Class<*>
   // val onPreferenceClickListener: Class<*>? = null
 
@@ -113,6 +90,8 @@ class MenuProxy() {
   val mDistillerUrl: Field
   val mTab: Field
   // private val mOnClickListener: Field? = null
+
+  val setChecked: Method
 
   var isDeveloper: Boolean = false
 
@@ -197,6 +176,7 @@ class MenuProxy() {
     chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
     customTabActivity = Chrome.load("org.chromium.chrome.browser.customtabs.CustomTabActivity")
     appMenuPropertiesDelegateImpl = Chrome.load(APP_MENU_PROPERTIES_DELEGATE_IMPL)
+    twoStatePreference = Chrome.load("androidx/preference/g")
     gURL = Chrome.load("org.chromium.url.GURL")
     readerModeManager = Chrome.load(READER_MODE_MANAGER)
     mClickListener = preference.getDeclaredField(CLICK_LISTENER_FIELD)
@@ -206,30 +186,93 @@ class MenuProxy() {
     mTab.setAccessible(true)
     mDistillerUrl = readerModeManager.getDeclaredField(DISTILLER_URL_FIELD)
     mDistillerUrl.setAccessible(true)
+    setChecked =
+        findMethod(twoStatePreference) {
+          getParameterCount() == 1 && getParameterTypes().first() == Boolean::class.java
+        }
   }
 
-  fun setClickListenerAndSummary(obj: Any, pref: String) {
+  fun setClickListener(obj: Any, pref: String) {
+    val ctx = Chrome.getContext()
+    val sharedPref =
+        ctx.getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)!!
     when (pref) {
       "exit" -> {
-        mClickListener.set(obj, ExitDevMode)
+        mClickListener.set(
+            obj,
+            object : OnClickListener {
+              override fun onClick(v: View) {
+                if (Chrome.isDev) {
+                  Log.toast(ctx, "This function is not available for your Chrome build")
+                  return
+                }
+                with(sharedPref.edit()) {
+                  putBoolean("developer", false)
+                  apply()
+                  Log.toast(ctx, "Please restart Chrome to apply the changes")
+                }
+              }
+            })
       }
       "eruda" -> {
-        mClickListener.set(obj, DownloadEruda)
-        val version = getErudaVersion()
+        fun getErudaVersion(): String? {
+          if (!sharedPref.contains("eruda")) {
+            return null
+          }
+          var eruda = sharedPref.getString("eruda", "")
+          if (eruda == "") {
+            return null
+          } else {
+            if (eruda!!.length > 200) {
+              eruda = eruda.take(150)
+            }
+            val verisonReg = Regex("""/npm/eruda@(?<version>[\d\.]+)/eruda""")
+            val vMatchGroup = verisonReg.find(eruda)?.groups as? MatchNamedGroupCollection
+            if (vMatchGroup != null) {
+              return vMatchGroup.get("version")?.value as String
+            }
+            return "unknown"
+          }
+        }
         var summary = "Click to install Eruda, size around 0.5 MiB"
-        if (version != null) {
-          summary = "Current version: " + version
+        if (getErudaVersion() != null) {
+          summary = "Current version: " + getErudaVersion()
         }
         obj.invokeMethod(summary) { name == SET_SUMMARY }
+        mClickListener.set(
+            obj,
+            object : OnClickListener {
+              override fun onClick(v: View) {
+                Download.start(ERUD_URL, "Download/Eruda.js") {
+                  val old_version = getErudaVersion()
+                  with(sharedPref.edit()) {
+                    putString("eruda", it)
+                    apply()
+                  }
+                  val new_version = getErudaVersion()
+                  if (old_version != new_version) {
+                    Log.toast(ctx, "Updated to eruda v" + getErudaVersion()!!)
+                    obj.invokeMethod("Current version: " + new_version) { name == SET_SUMMARY }
+                  } else {
+                    Log.toast(ctx, "Eruda is already the lastest")
+                  }
+                }
+              }
+            })
       }
       "gesture_mod" -> {
-        mClickListener.set(obj, GestureNavMode)
-        var summary = "Using system gesture navigation"
-        if (getGestureMod()) {
-          summary =
-              "Using browser gesture navigation, blocking partly system gesture on the right edge"
-        }
-        obj.invokeMethod(summary) { name == SET_SUMMARY }
+        setChecked.invoke(obj, sharedPref.getBoolean("gesture_mod", true))
+        mClickListener.set(
+            obj,
+            object : OnClickListener {
+              override fun onClick(v: View) {
+                with(sharedPref.edit()) {
+                  putBoolean("gesture_mod", !sharedPref.getBoolean("gesture_mod", true))
+                  apply()
+                }
+                setChecked.invoke(obj, sharedPref.getBoolean("gesture_mod", true))
+              }
+            })
       }
     }
   }
