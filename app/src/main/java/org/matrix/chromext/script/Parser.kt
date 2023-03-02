@@ -73,7 +73,7 @@ fun parseScript(input: String): Script? {
             script.meta,
             script.code,
             script.runAt,
-            shouldWrap = script.code.length > kMaxURLChars - 2000)
+            shouldWrap = script.code.length > kMaxURLChars - 1000)
     val id = parsed.id
     if (parsed.grant.contains("GM_getResourceText")) {
       parsed.resource.forEach {

@@ -101,23 +101,7 @@ function GM_openInTab(url, options) {
 """
 
 fun encodeScript(script: Script): String? {
-  // var code = "try{${script.code}}catch(e){console.log(e)}"
   var code = script.code
-
-  var backtrick = ""
-  var dollarsign = ""
-  var backslash = ""
-  if (script.shouldWrap) {
-    // Encode source code by simple replacement
-    val alphabet: List<Char> = ('a'..'z') + ('A'..'Z')
-    backtrick = List(16) { alphabet.random() }.joinToString("")
-    dollarsign = List(16) { alphabet.random() }.joinToString("")
-    backslash = List(16) { alphabet.random() }.joinToString("")
-    code = code.replace("`", backtrick)
-    code = code.replace("$", dollarsign)
-    code = code.replace("\\", backslash)
-    code = """Function(ChromeXt_decode(`${code}`))();"""
-  }
 
   val imports =
       script.require
@@ -217,12 +201,6 @@ fun encodeScript(script: Script): String? {
     }
   }
 
-  if (script.shouldWrap) {
-    // Add decode function, and it finally contains only three / five backtricks in total
-    code =
-        """function ChromeXt_decode(src) {return src.replaceAll("${backtrick}", "`").replaceAll("${dollarsign}", "$").replaceAll("${backslash}", "\\");}""" +
-            code
-  }
   return code
 }
 

@@ -2,7 +2,6 @@ package org.matrix.chromext.proxy
 
 import android.content.Context
 import java.lang.reflect.Field
-import java.net.URLEncoder
 import org.matrix.chromext.BuildConfig
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.Script
@@ -226,24 +225,23 @@ class UserScriptProxy() {
     }
   }
 
-  fun evaluateJavaScript(script: String) {
-    // Encode as Url makes it easier to copy and paste for debugging
+  fun evaluateJavaScript(script: String, forceWrap: Boolean = false) {
+    // Encode as Url might make it easier to copy and paste for debugging
     if (script == "") return
-    if (script.length > kMaxURLChars - 1000) {
+    if (script.length > kMaxURLChars - 20 || forceWrap) {
       val alphabet: List<Char> = ('a'..'z') + ('A'..'Z')
-      val randomString: String = List(14) { alphabet.random() }.joinToString("")
+      val randomString: String = List(16) { alphabet.random() }.joinToString("")
+      val backtrick = List(16) { alphabet.random() }.joinToString("")
+      val dollarsign = List(16) { alphabet.random() }.joinToString("")
       loadUrl("javascript: void(globalThis.${randomString} = '');")
-      script.chunked(2000000).forEach {
-        val code =
-            URLEncoder.encode(
-                    """void(globalThis.${randomString} += `${it.replace("`", "\\`")}`);""", "UTF-8")
-                .replace("+", "%20")
-        loadUrl("javascript: ${code}")
+      script.replace("`", backtrick).replace("$", dollarsign).chunked(kMaxURLChars - 100).forEach {
+        loadUrl("javascript: void(globalThis.${randomString} += String.raw`${it}`);")
       }
-      loadUrl("javascript: Function(globalThis.${randomString})();")
+      loadUrl(
+          "javascript: Function(globalThis.${randomString}.replaceAll('${backtrick}', '`').replaceAll('${dollarsign}', '$'))();")
     } else {
-      val code = URLEncoder.encode(script, "UTF-8").replace("+", "%20")
-      loadUrl("javascript: ${code}")
+      // val code = URLEncoder.encode(script, "UTF-8").replace("+", "%20")
+      loadUrl("javascript: ${script}")
     }
   }
 
