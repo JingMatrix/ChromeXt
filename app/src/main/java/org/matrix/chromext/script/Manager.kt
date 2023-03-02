@@ -97,7 +97,6 @@ class ScriptDbManger(ctx: Context) {
   }
 
   fun on(action: String, payload: String): String? {
-    val QUOTE_ESCAPE = "ChromeXt_Quote_Escape_String"
     var callback: String? = null
     when (action) {
       "installScript" -> {
@@ -110,13 +109,13 @@ class ScriptDbManger(ctx: Context) {
         }
       }
       "getIds" -> {
-        val result = getAll().map { it.id.replace("'", QUOTE_ESCAPE) }
+        val result = getAll().map { it.id }
         callback =
-            "window.dispatchEvent(new CustomEvent('script_id',{detail:['${result.joinToString(separator = "','")}']}));"
+            "window.dispatchEvent(new CustomEvent('script_id',{detail:[`${result.joinToString(separator = "`,`")}`]}));"
       }
       "getMetaById" -> {
         val ids = parseArray(payload)
-        val result = query("id = ?", ids).map { it.meta.replace("`", QUOTE_ESCAPE) }
+        val result = query("id = ?", ids).map { it.meta }
         callback =
             "window.dispatchEvent(new CustomEvent('script_meta',{detail:[`${result.joinToString(separator = "`,`")}`]}));"
       }
