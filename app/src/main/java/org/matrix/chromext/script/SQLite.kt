@@ -19,12 +19,11 @@ data class Script(
     val resource: Array<String>,
     var meta: String,
     var code: String,
-    val runAt: RunAt,
-    val shouldWrap: Boolean = false
+    val runAt: RunAt
 )
 
 private const val SQL_CREATE_ENTRIES =
-    "CREATE TABLE script (id TEXT PRIMARY KEY NOT NULL, match TEXT NOT NULL, grant TEXT NOT NULL, exclude TEXT NOT NULL, require TEXT NOT NULL, resource TEXT NOT NULL, meta TEXT NOT NULL, code TEXT NOT NULL, runAt TEXT NOT NULL, shouldWrap INTEGER NOT NULL);"
+    "CREATE TABLE script (id TEXT PRIMARY KEY NOT NULL, match TEXT NOT NULL, grant TEXT NOT NULL, exclude TEXT NOT NULL, require TEXT NOT NULL, resource TEXT NOT NULL, meta TEXT NOT NULL, code TEXT NOT NULL, runAt TEXT NOT NULL);"
 
 class ScriptDbHelper(context: Context) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
@@ -44,6 +43,14 @@ class ScriptDbHelper(context: Context) :
     if (oldVersion == 4 || newVersion == 5) {
       db.execSQL("ALTER TABLE script ADD COLUMN resource TEXT NOT NULL DEFAULT ''")
     }
+    if (oldVersion == 5 || newVersion == 6) {
+      db.execSQL(
+          "CREATE TABLE script_tmp (id TEXT PRIMARY KEY NOT NULL, match TEXT NOT NULL, grant TEXT NOT NULL, exclude TEXT NOT NULL, require TEXT NOT NULL, resource TEXT NOT NULL, meta TEXT NOT NULL, code TEXT NOT NULL, runAt TEXT NOT NULL);")
+      db.execSQL(
+          "INSERT INTO script_tmp SELECT id, match, grant, exclude, require, resource, meta, code, runAt FROM script")
+      db.execSQL("DROP TABLE script;")
+      db.execSQL("ALTER TABLE script_tmp RENAME TO script;")
+    }
 
     if (newVersion - oldVersion > 2) {
       onUpgrade(db, oldVersion, newVersion - 1)
@@ -54,7 +61,7 @@ class ScriptDbHelper(context: Context) :
   override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
 
   companion object {
-    const val DATABASE_VERSION = 5
+    const val DATABASE_VERSION = 6
     const val DATABASE_NAME = "userscript"
   }
 }

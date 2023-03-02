@@ -32,7 +32,6 @@ class ScriptDbManger(ctx: Context) {
             put("code", it.code)
             put("meta", it.meta)
             put("runAt", it.runAt.name)
-            put("shouldWrap", if (it.shouldWrap) 1 else 0)
             put("match", it.match.joinToString(separator = SEP))
             put("grant", it.grant.joinToString(separator = SEP))
             put("exclude", it.exclude.joinToString(separator = SEP))
@@ -61,14 +60,12 @@ class ScriptDbManger(ctx: Context) {
         val meta = getString(getColumnIndexOrThrow("meta"))
         val code = getString(getColumnIndexOrThrow("code"))
         val runAt = RunAt.valueOf(getString(getColumnIndexOrThrow("runAt")))
-        val shouldWrap = getInt(getColumnIndexOrThrow("shouldWrap")) > 0
         val match = getString(getColumnIndexOrThrow("match")).split(SEP).toTypedArray()
         val grant = getString(getColumnIndexOrThrow("grant")).split(SEP).toTypedArray()
         val exclude = getString(getColumnIndexOrThrow("exclude")).split(SEP).toTypedArray()
         val require = getString(getColumnIndexOrThrow("require")).split(SEP).toTypedArray()
         val resource = getString(getColumnIndexOrThrow("resource")).split(SEP).toTypedArray()
-        val script =
-            Script(id, match, grant, exclude, require, resource, meta, code, runAt, shouldWrap)
+        val script = Script(id, match, grant, exclude, require, resource, meta, code, runAt)
         scripts.add(script)
       }
     }
