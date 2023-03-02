@@ -185,7 +185,7 @@ class UserScriptProxy() {
 
   private fun loadUrl(url: String) {
     TabModel.getTab().invokeMethod(newUrl(url)) { name == LOAD_URL }
-    Log.d("loadUrl: ${url}")
+    // Log.d("loadUrl: ${url}")
   }
 
   fun newUrl(url: String): Any {
@@ -222,11 +222,11 @@ class UserScriptProxy() {
     val code = encodeScript(script)
     if (code != null) {
       evaluateJavaScript(code)
+      Log.d("Run script: ${script.code.replace("\\s+".toRegex(), " ")}")
     }
   }
 
   fun evaluateJavaScript(script: String, forceWrap: Boolean = false) {
-    // Encode as Url might make it easier to copy and paste for debugging
     if (script == "") return
     if (script.length > kMaxURLChars - 20 || forceWrap) {
       val alphabet: List<Char> = ('a'..'z') + ('A'..'Z')
@@ -240,7 +240,6 @@ class UserScriptProxy() {
       loadUrl(
           "javascript: Function(globalThis.${randomString}.replaceAll('${backtrick}', '`').replaceAll('${dollarsign}', '$'))();")
     } else {
-      // val code = URLEncoder.encode(script, "UTF-8").replace("+", "%20")
       loadUrl("javascript: ${script}")
     }
   }

@@ -2,6 +2,7 @@ package org.matrix.chromext.script
 
 import java.io.File
 import java.io.FileReader
+import java.net.URLEncoder
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.utils.Log
 
@@ -26,7 +27,7 @@ function GM_addElement() {
 	if (arguments.length == 2) {
 		arguments.prepend(document.head || document.body || document.documentElement);
 	};
-	arguments.length == 3 || return;
+	if (arguments.length != 3) { return };
 	const element = document.createElement(arguments[1]);
 	for (const [key, value] of Object.entries(arguments[2])) {
 		if (key != "textContent") {
@@ -201,7 +202,7 @@ fun encodeScript(script: Script): String? {
     }
   }
 
-  return code
+  return URLEncoder.encode(code, "UTF-8").replace("+", "%20")
 }
 
 const val erudaToggle =
