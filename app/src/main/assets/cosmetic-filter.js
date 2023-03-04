@@ -25,21 +25,4 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .querySelectorAll("amp-ad,amp-embed,amp-sticky-ad")
     .forEach((node) => node.remove());
-
-  const removeIframe = () => {
-    iframes = document.querySelectorAll("iframe");
-    iframes.forEach((node) => {
-      node.contentWindow.window.length == 0 && node.remove();
-    });
-  };
-  removeIframe();
-
-  let iframeCleaner = new MutationObserver(removeIframe);
-  iframeCleaner.observe(document.body, {
-    attributes: false,
-    characterData: false,
-    childList: true,
-    subtree: true,
-  });
-  setTimeout(() => iframeCleaner.disconnect(), 1000 * 3);
 });
