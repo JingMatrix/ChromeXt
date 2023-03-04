@@ -152,5 +152,5 @@ Here are corresponding files you might want / need to change:
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
 - [ ] Use `adb forward` to support non-root users
 - [ ] Turn Xposed into optional dependency
-- [ ] `facebook.com` and `baike.baidu.com` block Eruda
+- [ ] Eruda fails due to [Injection Sinks](https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API)
 - [ ] Add recommended scripts to the front end manager

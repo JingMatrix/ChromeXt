@@ -266,33 +266,35 @@ if (
       }
     });
   };
-}
 
-function generateQuerySelector(el) {
-  if (el.tagName.toLowerCase() == "html") return "html";
-  let str = el.tagName.toLowerCase();
-  if (el.id != "") {
-    str += "#" + el.id;
-  } else if (el.className != "") {
-    let classes = el.className.split(/\s/).filter((rule) => rule.trim() != "");
-    str += "." + classes.join(".");
-  } else {
-    return generateQuerySelector(el.parentNode) + " > " + str;
+  function generateQuerySelector(el) {
+    if (el.tagName.toLowerCase() == "html") return "html";
+    let str = el.tagName.toLowerCase();
+    if (el.id != "") {
+      str += "#" + el.id;
+    } else if (el.className != "") {
+      let classes = el.className
+        .split(/\s/)
+        .filter((rule) => rule.trim() != "");
+      str += "." + classes.join(".");
+    } else {
+      return generateQuerySelector(el.parentNode) + " > " + str;
+    }
+    return str;
   }
-  return str;
-}
 
-function addErudaStyle(id, content) {
-  if (!document.querySelector("#eruda")) {
-    return;
+  function addErudaStyle(id, content) {
+    if (!document.querySelector("#eruda")) {
+      return;
+    }
+    const erudaroot = document.querySelector("#eruda").shadowRoot;
+    if (erudaroot.querySelector("style#" + id)) {
+      return;
+    }
+    const style = document.createElement("style");
+    style.id = id;
+    style.setAttribute("type", "text/css");
+    style.textContent = content;
+    erudaroot.append(style);
   }
-  const erudaroot = document.querySelector("#eruda").shadowRoot;
-  if (erudaroot.querySelector("style#" + id)) {
-    return;
-  }
-  const style = document.createElement("style");
-  style.id = id;
-  style.setAttribute("type", "text/css");
-  style.textContent = content;
-  erudaroot.append(style);
 }
