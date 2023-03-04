@@ -29,9 +29,8 @@ object UserScriptHook : BaseHook() {
         .hookAfter {
           val url = proxy!!.parseUrl(it.args[0])!!
           TabModel.refresh(url)
-          if (url.endsWith("/ChromeXt/")) {
-            proxy!!.evaluateJavaScript("ChromeXt=console.debug;")
-          } else if (url.endsWith(".user.js")) {
+          proxy!!.evaluateJavaScript("globalThis.ChromeXt=console.debug.bind(console);")
+          if (url.endsWith(".user.js")) {
             val promptInstallUserScript =
                 Chrome.getContext().assets.open("editor.js").bufferedReader().use { it.readText() }
             proxy!!.evaluateJavaScript(promptInstallUserScript)

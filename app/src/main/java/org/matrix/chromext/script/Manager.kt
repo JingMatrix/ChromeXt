@@ -6,6 +6,7 @@ import android.database.AbstractWindowedCursor
 import android.database.CursorWindow
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.Build
+import org.matrix.chromext.Chrome
 import org.matrix.chromext.DevTools
 import org.matrix.chromext.utils.Log
 
@@ -134,6 +135,20 @@ class ScriptDbManger(ctx: Context) {
         val pages = DevTools.pages
         if (pages != "") {
           callback = "window.dispatchEvent(new CustomEvent('pages',{detail:${pages}}));"
+        }
+      }
+      "cosmeticFilter" -> {
+        val sharedPref =
+            Chrome.getContext().getSharedPreferences("CosmeticFilter", Context.MODE_PRIVATE)
+        val result = payload.split(";")
+        Log.d("Config cosmetic filters")
+        with(sharedPref.edit()) {
+          if (result.size == 1 && sharedPref.contains(result.first())) {
+            remove(result.first())
+          } else if (result.size == 2) {
+            putString(result.first(), result.last())
+          }
+          apply()
         }
       }
     }

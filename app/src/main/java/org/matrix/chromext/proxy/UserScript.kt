@@ -273,8 +273,18 @@ class UserScriptProxy() {
   // }
 
   fun didUpdateUrl(url: String) {
-    if (url.startsWith("https://") || url.startsWith("http://") || url.startsWith("file://")) {
+    val protocol = url.split("://")
+    if (arrayOf("https", "http", "file").contains(protocol.first()) && protocol.size > 1) {
       invokeScript(url)
+      val ctx = Chrome.getContext()
+      val sharedPref = ctx.getSharedPreferences("CosmeticFilter", Context.MODE_PRIVATE)
+      val origin = protocol.first() + "://" + protocol.elementAt(1).split("/").first()
+      if (sharedPref.contains(origin)) {
+        val script = ctx.assets.open("cosmetic-filter.js").bufferedReader().use { it.readText() }
+        evaluateJavaScript(
+            "globalThis.ChromeXt_filter=`${sharedPref.getString(origin, "")}`;${script}")
+        Log.d("Cosmetic filters applied to ${origin}")
+      }
     }
   }
 }

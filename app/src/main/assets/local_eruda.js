@@ -5,12 +5,27 @@ if (
   class Filter {
     #filter = [];
     constructor() {}
+    updateCosmeticFilter() {
+      let filter = "";
+      if (this.#filter.length > 0) {
+        filter = ";" + JSON.stringify(this.#filter);
+      }
+      globalThis.ChromeXt(
+        JSON.stringify({
+          action: "cosmeticFilter",
+          payload: window.location.origin + filter,
+        })
+      );
+    }
     refresh() {
       let filter = localStorage.getItem("ChromeXt_filter");
-      filter = JSON.parse(filter);
-      if (Array.isArray(filter)) {
-        this.#filter = filter;
-      } else {
+      try {
+        filter = JSON.parse(filter);
+        if (Array.isArray(filter)) {
+          this.#filter = filter;
+          this.updateCosmeticFilter();
+        }
+      } catch {
         localStorage.removeItem("ChromeXt_filter");
       }
     }
@@ -36,10 +51,12 @@ if (
     }
     #write() {
       if (this.#filter.length > 0) {
-        localStorage.setItem("ChromeXt_filter", JSON.stringify(this.#filter));
+        let filter = JSON.stringify(this.#filter);
+        localStorage.setItem("ChromeXt_filter", filter);
       } else {
         localStorage.removeItem("ChromeXt_filter");
       }
+      this.updateCosmeticFilter();
     }
     save() {
       this.#filter = [];

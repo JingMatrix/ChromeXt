@@ -109,10 +109,10 @@ After restarting Chrome, ChromeXt offers you
 For blocking internet requests, I recommend to use `AdAway` or any proxy AD Blocker such as `clash`.
 
 The content cosmetic blocker is embedded into ChromeXt with the help of eruda.
-To use it, first install this simple UserScript: [cosmetic-filter.user.js](cosmetic-filter.user.js).
-Then open the `Developer tools` from the page menu, in the `Elemnets` panel, one can use the `pointer` icon to select elements on the page.
+Oen the `Eruda console` from the page menu.
+In the `Elemnets` panel, one can use the `pointer` icon to select elements on the page.
 Once you click the `delete` icon for a selected element, a corresponding filter will be saved to the `Resources` panel.
-And the UserScript given above will then hide this element.
+These filters are saved in Chrome even after clearing the site's data.
 
 ## Contribute to this project
 
@@ -152,5 +152,5 @@ Here are corresponding files you might want / need to change:
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
 - [ ] Use `adb forward` to support non-root users
 - [ ] Turn Xposed into optional dependency
-- [ ] Facebook blocks Eruda
+- [ ] `facebook.com` and `baike.baidu.com` block Eruda
 - [ ] Add recommended scripts to the front end manager

@@ -9,9 +9,7 @@ function installScript() {
       "Allow ChromeXt to install / update this userscript?"
     );
     if (install) {
-      console.debug(
-        JSON.stringify({ action: "installScript", payload: script })
-      );
+      ChromeXt(JSON.stringify({ action: "installScript", payload: script }));
     }
   }
 }
