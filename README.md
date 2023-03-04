@@ -80,8 +80,6 @@ To deal with this extremely rare case, one should
 use multiple scripts of normal sizes instead of a giant script
 ```
 
-Avoid using scripts that match all sites, because it might render normal `URL` redirection invalid.
-
 ## Bonus
 
 ### Solution of system gesture conflicts
