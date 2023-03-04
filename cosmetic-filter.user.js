@@ -3,6 +3,8 @@
 // @namespace   JingMatrix
 // @match       https://*
 // @match       http://*
+// @exclude     https://*redirect*
+// @exclude     https://*payment*
 // @run-at      document-end
 // @grant       GM_addStyle
 // ==/UserScript==
