@@ -141,7 +141,7 @@ class ScriptDbManger(ctx: Context) {
         val sharedPref =
             Chrome.getContext().getSharedPreferences("CosmeticFilter", Context.MODE_PRIVATE)
         val result = payload.split(";")
-        Log.d("Config cosmetic filters")
+        Log.d("Config cosmetic filters: ${result}")
         with(sharedPref.edit()) {
           if (result.size == 1 && sharedPref.contains(result.first())) {
             remove(result.first())
