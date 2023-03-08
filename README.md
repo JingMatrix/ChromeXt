@@ -99,7 +99,7 @@ On other areas, only the system gesture is available.
 
 Tap five times on the Chrome version from the Chrome settings, you will see the `Developer options` menu.
 After restarting Chrome, ChromeXt offers you
-1. the `Developer tools` page menu for the UserScript manager front-end,
+1. the `Developer tools` page menu for the UserScript manager front end,
 2. the `Eruda console` page menu for other pages.
 
 ### AD Blocker solution
@@ -107,7 +107,7 @@ After restarting Chrome, ChromeXt offers you
 For blocking internet requests, I recommend to use `AdAway` or any proxy AD Blocker such as `clash`.
 
 The content cosmetic blocker is embedded into ChromeXt with the help of eruda.
-Oen the `Eruda console` from the page menu.
+Open the `Eruda console` from the page menu.
 In the `Elemnets` panel, one can use the `pointer` icon to select elements on the page.
 Once you click the `delete` icon for a selected element, a corresponding filter will be saved to the `Resources` panel.
 These filters are saved in Chrome even after clearing the site's data.
@@ -135,7 +135,7 @@ Here are corresponding files you might want / need to change:
 - [x] Support more [Tampermonkey API](https://www.tampermonkey.net/documentation.php)s
 - [x] Find elegant way to support Dev Tools for Android 11-
 - [x] Improve front end
-- [x] Add cosmetic AdBlocker using Eruda
+- [x] Add cosmetic AdBlocker using eruda
 - [x] Find way to get current interactive tab
 - [x] Remove AndroidX Room dependency to reduce app size
 - [x] Support non-split version of Android Chrome
@@ -146,6 +146,7 @@ Here are corresponding files you might want / need to change:
 - [x] Allow user to trigger reader mode
 - [x] Support @resource API
 - [x] Make GestureNav Fix optional
+- [ ] Support [urlFilter](https://developer.chrome.com/docs/extensions/reference/declarativeNetRequest/#type-RuleCondition) syntax
 - [ ] Implement fully `GM_info`
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
 - [ ] Use `adb forward` to support non-root users
