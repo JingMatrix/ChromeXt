@@ -102,20 +102,6 @@ After restarting Chrome, ChromeXt offers you
 1. the `Developer tools` page menu for the UserScript manager front end,
 2. the `Eruda console` page menu for other pages.
 
-After the version `v110`, we need to add a comandline flag to Chrome for the
-`Developer tools` to work:
-1. Turn on the flag: `chrome://flags#enable-command-line-on-non-rooted-devices`
-2. Allow the front-end url using `adb`
-```sh
-adb shell "echo '_ --remote-allow-origins=https://chrome-devtools-frontend.appspot.com' > /data/local/tmp/chrome-command-line"
-```
-Otherwise, the WebSocket for `Developer tools` is blocked with the following error message:
-```
-Rejected an incoming WebSocket connection from the %s origin.
-Use the command line flag --remote-allow-origins=%s to allow connections from this origin or --remote-allow-origins=* to allow all origins."
-```
-Here is the relevant [commit 0154cae](https://source.chromium.org/chromium/chromium/src/+/0154caeefc74530d5cb57ce71608beb1b77bca39) of Chromium.
-
 ### AD Blocker solution
 
 For blocking internet requests, I recommend to use `AdAway` or any proxy AD Blocker such as `clash`.

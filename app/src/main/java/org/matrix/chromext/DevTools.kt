@@ -2,7 +2,6 @@ package org.matrix.chromext
 
 import android.net.LocalSocket
 import android.net.LocalSocketAddress
-import android.os.Build
 import java.io.BufferedReader
 import java.io.Closeable
 import java.io.InputStream
@@ -110,16 +109,27 @@ private class forwardStreamThread(
   }
   override fun run() {
     runCatching {
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            input.transferTo(output)
-          } else {
-            while (true) {
-              val bit = input.read()
-              if (bit != -1) {
+          val bits = mutableListOf<Byte>()
+          var originHeaderFound = Chrome.version < 111
+          while (true) {
+            val bit = input.read()
+            if (bit != -1) {
+              if (tag == "client" || originHeaderFound) {
                 output.write(bit)
               } else {
-                break
+                bits.add(bit.toByte())
+                if (bit == 10) {
+                  val header = String(bits.toByteArray())
+                  if (header.startsWith("Origin: https://")) {
+                    originHeaderFound = true
+                  } else {
+                    output.write(bits.toByteArray())
+                    bits.clear()
+                  }
+                }
               }
+            } else {
+              break
             }
           }
           Log.d("An inspecting seesion from ${tag} ends")
