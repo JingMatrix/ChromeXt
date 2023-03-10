@@ -49,11 +49,11 @@ class OpenInChrome : Activity() {
           }
         }
         Log.d("Get share text: ${text}")
-        if (text.startsWith("file://") ||
-            // Not able to open chrome url
-            // text.startsWith("chrome://") ||
-            text.startsWith("data:")) {
+        if (text.startsWith("file://") || text.startsWith("data:")) {
           invokeChromeTabbed(text)
+        } else if (text.startsWith("chrome://")) {
+          // Unable to open chrome url
+          Log.toast(this, "Unable to open chrome:// scheme")
         } else {
           if (!text.contains("://")) {
             text = "https://google.com/search?q=${text.replace("#", "%23")}"
