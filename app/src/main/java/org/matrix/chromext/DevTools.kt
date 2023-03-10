@@ -2,16 +2,15 @@ package org.matrix.chromext
 
 import android.net.LocalSocket
 import android.net.LocalSocketAddress
-import java.io.BufferedReader
 import java.io.Closeable
 import java.io.InputStream
-import java.io.InputStreamReader
 import java.io.OutputStream
-import java.io.PrintWriter
 import java.net.ServerSocket
 import kotlin.concurrent.thread
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.utils.Log
+
+const val DEV_FRONT_END = "https://chrome-devtools-frontend.appspot.com"
 
 object DevTools {
 
@@ -109,29 +108,24 @@ private class forwardStreamThread(
   }
   override fun run() {
     runCatching {
-          val bits = mutableListOf<Byte>()
-          var originHeaderFound = Chrome.version < 111
-          while (true) {
-            val bit = input.read()
-            if (bit != -1) {
-              if (tag == "client" || originHeaderFound) {
-                output.write(bit)
-              } else {
-                bits.add(bit.toByte())
-                if (bit == 10) {
-                  val header = String(bits.toByteArray())
-                  if (header.startsWith("Origin: https://")) {
-                    originHeaderFound = true
-                  } else {
-                    output.write(bits.toByteArray())
-                    bits.clear()
-                  }
+          if (Chrome.version > 110 && tag == "server") {
+            val bits = mutableListOf<Byte>()
+            while (true) {
+              val bit = input.read()
+              bits.add(bit.toByte())
+              if (bit == 10) {
+                if (String(bits.toByteArray()) == "Origin: ${DEV_FRONT_END}\r\n") {
+                  break
+                } else {
+                  output.write(bits.toByteArray())
+                  bits.clear()
                 }
               }
-            } else {
-              break
             }
           }
+
+          input.copyTo(output)
+
           Log.d("An inspecting seesion from ${tag} ends")
           input.close()
           output.close()
@@ -141,7 +135,7 @@ private class forwardStreamThread(
           if (msg != "Socket closed") {
             Log.ex(it)
           } else {
-            Log.d(msg + " for a ${tag} connection")
+            Log.d(msg + " in a ${tag} connection")
           }
         }
   }
@@ -150,24 +144,19 @@ private class forwardStreamThread(
 private fun refreshDevTool(): String {
   val client = LocalSocket()
   client.connect(LocalSocketAddress("chrome_devtools_remote"))
-  val writer = PrintWriter(client.getOutputStream())
-  writer.print("GET /json HTTP/1.1\r\n")
-  writer.print("\r\n")
-  writer.flush()
-  val reader = BufferedReader(InputStreamReader(client.getInputStream()))
-  var header = true
+  client.outputStream.write("GET /json HTTP/1.1\r\n\r\n".toByteArray())
   var pages = ""
-  while (true) {
-    val text = reader.readLine()
-    if (!header) {
-      pages += text + "\n"
-    }
-    if (text.trim() == "") {
-      header = false
-    }
-    if (text.startsWith("} ]")) {
-      client.close()
-      break
+  client.inputStream.bufferedReader().use {
+    while (true) {
+      val line = it.readLine()
+      if (line.length == 0) {
+        pages = ""
+      }
+      pages += line + "\n"
+      if (line == "} ]") {
+        client.close()
+        break
+      }
     }
   }
   return pages
