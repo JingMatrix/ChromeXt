@@ -142,7 +142,7 @@ class UserScriptProxy() {
     }
 
     if (Chrome.split && Chrome.version >= 111) {
-      TAB_MODEL_IMPL = "z93"
+      TAB_MODEL_IMPL = "W93"
     }
 
     if (!BuildConfig.DEBUG) {

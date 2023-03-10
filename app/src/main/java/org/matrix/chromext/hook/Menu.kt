@@ -126,7 +126,7 @@ object MenuHook : BaseHook() {
               }
     }
 
-    findMethod(proxy.preferenceFragmentCompat) { name == proxy.ADD_PREFERENCES_FROM_RESOURCE }
+    proxy.addPreferencesFromResource
         // public void addPreferencesFromResource(Int preferencesResId)
         .hookMethod {
           before {

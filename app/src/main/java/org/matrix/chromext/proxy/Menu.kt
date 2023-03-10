@@ -15,7 +15,7 @@ import org.matrix.chromext.utils.invokeMethod
 const val ERUD_URL = "https://cdn.jsdelivr.net/npm/eruda@latest/eruda.min.js"
 
 class MenuProxy() {
-  // Grep DomDistiller.InfoBarUsage to get the class
+  // Grep chrome-distiller to get the class
   // ReaderModeManager with it method activateReaderMode
   // One get two methods, the other one is onClosed, which has
   // much shorter implements
@@ -40,7 +40,7 @@ class MenuProxy() {
   // Find the super class PreferenceFragmentCompat of DeveloperSettings.smali
   var PREFERENCE_FRAGMENT_COMPAT = "pk2"
   // Grep (I)V to get method addPreferencesFromResource of PreferenceFragmentCompat
-  var ADD_PREFERENCES_FROM_RESOURCE = "T0"
+  // var ADD_PREFERENCES_FROM_RESOURCE = "T0"
   // NOT NEEDED FOR MOST SPLIT VERSION
   // Inside the smali code of this method,
   // we see its super class androidx/fragment/app/c
@@ -84,6 +84,8 @@ class MenuProxy() {
 
   val findPreference: Method
 
+  val addPreferencesFromResource: Method
+
   var isDeveloper: Boolean = false
 
   init {
@@ -95,7 +97,6 @@ class MenuProxy() {
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "lg"
       MENU_KEYBOARD_ACTION = "v0"
       PREFERENCE_FRAGMENT_COMPAT = "Ey2"
-      // ADD_PREFERENCES_FROM_RESOURCE = "T0"
       GET_CONTEXT = "I0"
       // FIND_PREFERENCE = "U0"
       SET_SUMMARY = "P"
@@ -117,7 +118,6 @@ class MenuProxy() {
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "tf"
       MENU_KEYBOARD_ACTION = "i0"
       PREFERENCE_FRAGMENT_COMPAT = "al2"
-      ADD_PREFERENCES_FROM_RESOURCE = "U0"
       GET_CONTEXT = "I0"
       SET_SUMMARY = "R"
     }
@@ -128,7 +128,7 @@ class MenuProxy() {
       MENU_KEYBOARD_ACTION = "u0"
       PREFERENCE_FRAGMENT_COMPAT = "Ds2"
       GET_CONTEXT = "J0"
-      SET_SUMMARY = "R"
+      // SET_SUMMARY = "R"
       // CLICK_LISTENER_FIELD = "R"
     }
 
@@ -137,17 +137,14 @@ class MenuProxy() {
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "Jf"
       MENU_KEYBOARD_ACTION = "h0"
       PREFERENCE_FRAGMENT_COMPAT = "ke2"
-      ADD_PREFERENCES_FROM_RESOURCE = "T0"
-      SET_SUMMARY = "R"
+      // SET_SUMMARY = "R"
     }
 
     if (Chrome.split && Chrome.version >= 111) {
-      READER_MODE_MANAGER = "Cn2"
-      APP_MENU_PROPERTIES_DELEGATE_IMPL = "Mf"
-      MENU_KEYBOARD_ACTION = "h0"
-      PREFERENCE_FRAGMENT_COMPAT = "zf2"
-      ADD_PREFERENCES_FROM_RESOURCE = "U0"
-      SET_SUMMARY = "R"
+      READER_MODE_MANAGER = "io2"
+      APP_MENU_PROPERTIES_DELEGATE_IMPL = "Of"
+      MENU_KEYBOARD_ACTION = "B0"
+      PREFERENCE_FRAGMENT_COMPAT = "Zf2"
     }
 
     val sharedPref =
@@ -184,6 +181,12 @@ class MenuProxy() {
               getParameterTypes().first() == CharSequence::class.java &&
               getReturnType() == preference
         }
+    addPreferencesFromResource =
+        findMethod(preferenceFragmentCompat) {
+          getParameterCount() == 1 &&
+              getParameterTypes().first() == Int::class.java &&
+              getReturnType() == Void.TYPE
+        }
   }
 
   fun setClickListener(obj: Any, pref: String) {
@@ -211,12 +214,6 @@ class MenuProxy() {
       }
       "eruda" -> {
         val version = sharedPref.getString("eruda_version", "unknown")
-        // if (sharedPref.contains("eruda")) {
-        //   with(sharedPref.edit()) {
-        //     remove("eruda")
-        //     apply()
-        //   }
-        // }
         var summary = "Click to install Eruda, size around 0.5 MiB"
         if (version != "unknown") {
           summary = "Current version: v" + version
