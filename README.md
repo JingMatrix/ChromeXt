@@ -15,7 +15,7 @@ Please consider update your Android Chrome first before proceeding.
 
 Current supporting state:
 1. installation from Google Play Store: `103`, `108`, `109`, `110`, `111`
-2. installation from APK: `108`, `109`, `110`
+2. installation from APK: `108`, `109`, `110`, `111`
 
 For other versions, it might not work.
 To adapt to those versions, one only need to find out one method name and one class name in its [smali](https://github.com/JesusFreke/smali/wiki) code.

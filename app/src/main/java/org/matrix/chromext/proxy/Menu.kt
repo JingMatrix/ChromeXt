@@ -150,6 +150,13 @@ class MenuProxy() {
       // SET_SUMMARY = "R"
     }
 
+    if (!Chrome.split && Chrome.version >= 111) {
+      READER_MODE_MANAGER = "pD2"
+      APP_MENU_PROPERTIES_DELEGATE_IMPL = "Kg"
+      MENU_KEYBOARD_ACTION = "O0"
+      PREFERENCE_FRAGMENT_COMPAT = "Eu2"
+    }
+
     if (Chrome.split && Chrome.version >= 111) {
       READER_MODE_MANAGER = "io2"
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "Of"

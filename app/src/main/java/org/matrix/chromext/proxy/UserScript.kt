@@ -146,6 +146,10 @@ class UserScriptProxy() {
       TAB_MODEL_IMPL = "c83"
     }
 
+    if (!Chrome.split && Chrome.version >= 111) {
+      TAB_MODEL_IMPL = "ws3"
+    }
+
     if (Chrome.split && Chrome.version >= 111) {
       TAB_MODEL_IMPL = "W93"
     }
