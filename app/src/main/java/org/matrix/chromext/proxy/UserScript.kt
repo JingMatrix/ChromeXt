@@ -117,7 +117,12 @@ class UserScriptProxy() {
   val scriptManager: ScriptDbManger
 
   init {
-    if (!Chrome.split) {
+    if (Chrome.split && Chrome.version == 103) {
+      LOAD_URL = "f"
+      TAB_MODEL_IMPL = "Mt3"
+    }
+
+    if (!Chrome.split && Chrome.version >= 108) {
       LOAD_URL = "f"
       TAB_MODEL_IMPL = "pw3"
     }

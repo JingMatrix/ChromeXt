@@ -32,7 +32,7 @@ object GestureNavHook : BaseHook() {
           }
         }
 
-    findMethod(proxy.chromeTabbedActivity) { name == "onStart" }
+    findMethod(proxy.chromeTabbedActivity, true) { name == "onStart" }
         .hookAfter { activity = WeakReference(it.thisObject as Activity) }
   }
 

@@ -20,7 +20,12 @@ class IntentProxy() {
   val intentHandler: Class<*>
 
   init {
-    if (!Chrome.split) {
+    if (Chrome.split && Chrome.version == 103) {
+      INTENT_HANDLER = "So1"
+      START_ACTIVITY = "B"
+    }
+
+    if (!Chrome.split && Chrome.version >= 108) {
       INTENT_HANDLER = "Ot1"
     }
 

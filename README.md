@@ -14,7 +14,7 @@ installed from Google Play Store or downloaded APK from the internet.
 Please consider update your Android Chrome first before proceeding.
 
 Current supporting state:
-1. installation from Google Play Store: `108`, `109`, `110`, `111`
+1. installation from Google Play Store: `103`, `108`, `109`, `110`, `111`
 2. installation from APK: `108`, `109`, `110`
 
 For other versions, it might not work.

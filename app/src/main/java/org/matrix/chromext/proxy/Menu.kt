@@ -15,15 +15,15 @@ import org.matrix.chromext.utils.invokeMethod
 const val ERUD_URL = "https://cdn.jsdelivr.net/npm/eruda@latest/eruda.min.js"
 
 class MenuProxy() {
-  // Grep chrome-distiller to get the class
-  // ReaderModeManager with it method activateReaderMode
+  // Grep chrome-distiller to get the class ReaderModeManager
+  var READER_MODE_MANAGER = "js2"
+  // Grep DomDistiller.InfoBarUsage for its method activateReaderMode
   // One get two methods, the other one is onClosed, which has
   // much shorter implements
-  var READER_MODE_MANAGER = "js2"
   var ACTIVATE_READER_MODE = "Y0"
   // Get its current tab field
   var TAB_FIELD = "v"
-  // Also we need its gURL field
+  // Also we need its (second) gURL field
   var DISTILLER_URL_FIELD = "p"
 
   // Grep Android.PrepareMenu.OpenWebApkVisibilityCheck to get the class
@@ -89,7 +89,17 @@ class MenuProxy() {
   var isDeveloper: Boolean = false
 
   init {
-    if (!Chrome.split) {
+    if (Chrome.split && Chrome.version == 103) {
+      READER_MODE_MANAGER = "BD2"
+      ACTIVATE_READER_MODE = "X0"
+      APP_MENU_PROPERTIES_DELEGATE_IMPL = "Hg"
+      UPDATE_REQUEST_DESKTOP_SITE_MENU_ITEM = "t"
+      MENU_KEYBOARD_ACTION = "l0"
+      PREFERENCE_FRAGMENT_COMPAT = "Fu2"
+      SET_SUMMARY = "P"
+    }
+
+    if (!Chrome.split && Chrome.version >= 108) {
       READER_MODE_MANAGER = "bH2"
       TAB_FIELD = "p"
       DISTILLER_URL_FIELD = "j"

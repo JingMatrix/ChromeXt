@@ -51,7 +51,13 @@ class GestureNavProxy() {
   // identified since it contains WebContents class
 
   init {
-    if (!Chrome.split) {
+    if (Chrome.split && Chrome.version == 103) {
+      // private val SIDE_SLIDE_LAYOUT = "L43"
+      // private val HISTORY_NAVIGATION_LAYOUT = "ma1"
+      HISTORY_NAVIGATION_COORDINATOR = "ia1"
+    }
+
+    if (!Chrome.split && Chrome.version >= 108) {
       // private val SIDE_SLIDE_LAYOUT = "E83"
       // private val HISTORY_NAVIGATION_LAYOUT = "Xb1"
       HISTORY_NAVIGATION_COORDINATOR = "Ub1"
