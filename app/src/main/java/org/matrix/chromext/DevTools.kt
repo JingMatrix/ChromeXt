@@ -109,19 +109,16 @@ private class forwardStreamThread(
   override fun run() {
     runCatching {
           if (Chrome.version > 110 && tag == "server") {
-            val bits = mutableListOf<Byte>()
-            while (true) {
-              val bit = input.read()
-              bits.add(bit.toByte())
-              if (bit == 10) {
-                if (String(bits.toByteArray()) == "Origin: ${DEV_FRONT_END}\r\n") {
-                  break
-                } else {
-                  output.write(bits.toByteArray())
-                  bits.clear()
-                }
-              }
-            }
+            val HEADERS_BEFORE_SIZE = 512
+            // Hard coded number, approximate size to contains the Origin header
+            val buffer = ByteArray(HEADERS_BEFORE_SIZE)
+            input.read(buffer)
+            output.write(
+                String(buffer)
+                    .split("\r\n")
+                    .filter { it != "Origin: ${DEV_FRONT_END}" }
+                    .joinToString("\r\n")
+                    .toByteArray())
           }
 
           input.copyTo(output)
