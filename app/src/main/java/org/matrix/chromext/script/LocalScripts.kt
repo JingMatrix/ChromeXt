@@ -141,7 +141,9 @@ fun encodeScript(script: Script): String? {
       "unsafeWindow" -> code = "const unsafeWindow = window;" + code
       "GM_log" -> code = "const GM_log = console.log.bind(console);" + code
       "GM_deleteValue" ->
-          code = "const GM_deleteValue = localStorage.removeItem.bind(localStorage);" + code
+          code =
+              "function GM_deleteValue(key) {localStorage.removeItem(key + '_ChromeXt_Value')};" +
+                  code
       "GM_setValue" ->
           code =
               "function GM_setValue(key, value) {localStorage.setItem(key + '_ChromeXt_Value', JSON.stringify(value))};" +
