@@ -29,7 +29,7 @@ while a usual installation from downloaded APK gives the non-split version.
 ## Usage
 
 Currently, this project requires **Xposed framework** installed.
-However, it is possible to make Xposed framework as optional dependency.
+However, it is possible to make Xposed framework optional.
 See related progress in the `Development plans` section.
 
 You can try the following implements of it, depending on your Android version or whether having root enabled:
@@ -108,7 +108,7 @@ For blocking internet requests, I recommend to use `AdAway` or any proxy AD Bloc
 
 The content cosmetic blocker is embedded into ChromeXt with the help of eruda.
 Open the `Eruda console` from the page menu.
-In the `Elemnets` panel, one can use the `pointer` icon to select elements on the page.
+In the `Elements` panel, one can use the `pointer` icon to select elements on the page.
 Once you click the `delete` icon for a selected element, a corresponding filter will be saved to the `Resources` panel.
 These filters are saved in Chrome even after clearing the site's data.
 
