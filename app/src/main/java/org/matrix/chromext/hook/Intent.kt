@@ -1,10 +1,11 @@
 package org.matrix.chromext.hook
 
 // import org.matrix.chromext.utils.Log
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import org.matrix.chromext.convertDownloadUrl
+import android.provider.OpenableColumns
 import org.matrix.chromext.proxy.IntentProxy
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookBefore
@@ -33,8 +34,22 @@ object IntentHook : BaseHook() {
             val fileurl = convertDownloadUrl(it.args[0] as Context, intent.getData()!!)
             if (fileurl != null) {
               intent.setData(Uri.parse(fileurl))
-            } else {}
+            }
           }
         }
+  }
+
+  fun convertDownloadUrl(ctx: Context, uri: Uri): String? {
+    var fileurl: String? = null
+    ctx.getContentResolver().query(uri, null, null, null, null)?.use { cursor ->
+      cursor.moveToFirst()
+      val dataIndex = cursor.getColumnIndex("_data")
+      val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+      val filename = cursor.getString(nameIndex)
+      if (dataIndex != -1 && filename.endsWith(".user.js")) {
+        fileurl = "file://" + cursor.getString(dataIndex)
+      }
+    }
+    return fileurl
   }
 }
