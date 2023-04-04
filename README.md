@@ -42,8 +42,10 @@ The author upload releases to [Xposed-Modules-Repo](https://github.com/Xposed-Mo
 
 You can then install UserScripts from popular sources: URLs that ends with `.user.js`.
 However, this fails for scripts from some domains like `raw.githubusercontent.com`.
-For them, please download those scripts using the download button on the top of Chrome's three dot menu.
-And then if you open your downloaded scripts in Chrome, the installation prompt should show up again.
+For them, please download those scripts using the download button on the top of Chrome's three dot menu, and
+then open your downloaded scripts in Chrome. The installation prompt should show up again.
+Alternatively, it is possible to use the `Install UserScript` page menu if you simply want to install it
+without further editing.
 
 
 ### Supported API

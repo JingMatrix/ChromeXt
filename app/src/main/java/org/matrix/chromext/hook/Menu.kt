@@ -12,6 +12,7 @@ import org.matrix.chromext.R
 import org.matrix.chromext.ResourceMerge
 import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.proxy.TabModel
+import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
@@ -38,6 +39,11 @@ object MenuHook : BaseHook() {
     fun menuHandler(id: Int): Boolean {
       val name = ctx.getResources().getResourceName(id)
       when (name) {
+        "org.matrix.chromext:id/install_script_id" -> {
+          Download.start(TabModel.getUrl(), "UserScript/script.js") {
+            UserScriptHook.proxy!!.scriptManager.on("installScript", it)
+          }
+        }
         "org.matrix.chromext:id/developer_tools_id" -> DevTools.start()
         "org.matrix.chromext:id/eruda_console_id" ->
             UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
@@ -104,11 +110,18 @@ object MenuHook : BaseHook() {
             // Drop the Eruda console menu
             items.removeLast()
           }
-          val devMenuItem: MenuItem = items.removeLast()
-          devMenuItem.setVisible(!(it.args[3] as Boolean) && (it.args[2] as Boolean))
+
+          if (TabModel.getUrl().endsWith(".user.js")) {
+            // Drop the Eruda console and the Dev Tools menus
+            items.removeLast()
+            items.removeLast()
+          }
+
+          val magicMenuItem: MenuItem = items.removeLast()
+          magicMenuItem.setVisible(!(it.args[3] as Boolean) && (it.args[2] as Boolean))
           // The index 13 is just chosen by tests, to make sure that it appears before the share
           // menu
-          items.add(13, devMenuItem)
+          items.add(13, magicMenuItem)
           mItems.setAccessible(false)
         }
 
