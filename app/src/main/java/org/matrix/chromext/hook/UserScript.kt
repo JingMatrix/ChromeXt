@@ -2,6 +2,7 @@ package org.matrix.chromext.hook
 
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.DEV_FRONT_END
 import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.utils.Log
@@ -34,12 +35,12 @@ object UserScriptHook : BaseHook() {
             val promptInstallUserScript =
                 Chrome.getContext().assets.open("editor.js").bufferedReader().use { it.readText() }
             proxy!!.evaluateJavaScript(promptInstallUserScript)
-          } else if (url.startsWith("https://chrome-devtools-frontend.appspot.com/")) {
-            val mobilewidth =
+          } else if (url.startsWith(DEV_FRONT_END)) {
+            val customizeDevTool =
                 Chrome.getContext().assets.open("devtools.js").bufferedReader().use {
                   it.readText()
                 }
-            proxy!!.evaluateJavaScript("javascript: ${mobilewidth}")
+            proxy!!.evaluateJavaScript("javascript: ${customizeDevTool}")
           } else {
             proxy!!.didUpdateUrl(url)
           }
