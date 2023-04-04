@@ -31,6 +31,7 @@ object MenuHook : BaseHook() {
     val ctx = Chrome.getContext()
     ResourceMerge.enrich(ctx)
     var readerModeManager: Any? = null
+    var enableReaderMode = false
 
     proxy.readerModeManager.getDeclaredConstructors()[0].hookAfter {
       readerModeManager = it.thisObject
@@ -48,9 +49,11 @@ object MenuHook : BaseHook() {
         "org.matrix.chromext:id/eruda_console_id" ->
             UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
         "com.android.chrome:id/info_menu_id" -> {
-          // No idea why I must use getName() instead of name
-          readerModeManager!!.invokeMethod() { getName() == proxy.ACTIVATE_READER_MODE }
-          return true
+          if (enableReaderMode) {
+            // No idea why I must use getName() instead of name
+            readerModeManager!!.invokeMethod() { getName() == proxy.ACTIVATE_READER_MODE }
+            return true
+          }
         }
       }
       return false
@@ -80,11 +83,19 @@ object MenuHook : BaseHook() {
         .hookBefore {
           val menu = it.args[0] as Menu
 
-          if (menu.getItem(0).hasSubMenu()) {
+          if (menu.size() <= 20 || TabModel.getUrl().startsWith("chrome")) {
+            // Infalte only for the main_menu, which has more than 20 items at least
+            return@hookBefore
+          }
+
+          enableReaderMode =
+              menu.getItem(0).hasSubMenu() && !(it.args[3] as Boolean) && readerModeManager != null
+
+          if (enableReaderMode) {
             // The first menu item shou be the row_menu
             val infoMenu = menu.getItem(0).getSubMenu()!!.getItem(3)
             infoMenu.setIcon(R.drawable.ic_book)
-            infoMenu.setEnabled(!(it.args[3] as Boolean) && readerModeManager != null)
+            infoMenu.setEnabled(true)
             proxy.mTab.set(readerModeManager!!, it.args[1])
             proxy.mDistillerUrl.set(
                 readerModeManager!!,
@@ -92,11 +103,6 @@ object MenuHook : BaseHook() {
                 proxy.gURL
                     .getDeclaredConstructors()[1]
                     .newInstance("https://github.com/JingMatrix/ChromeXt"))
-          }
-
-          if (menu.size() <= 20 || TabModel.getUrl().startsWith("chrome")) {
-            // Infalte only for the main_menu, which has more than 20 items at least
-            return@hookBefore
           }
 
           MenuInflater(ctx).inflate(R.menu.main_menu, menu)
