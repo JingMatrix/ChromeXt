@@ -3,7 +3,6 @@ package org.matrix.chromext.proxy
 import android.content.Context
 import java.lang.reflect.Field
 import java.net.URLEncoder
-import org.matrix.chromext.BuildConfig
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDbManger
@@ -154,10 +153,6 @@ class UserScriptProxy() {
       TAB_MODEL_IMPL = "W93"
     }
 
-    if (!BuildConfig.DEBUG) {
-      updateSmali()
-    }
-
     scriptManager = ScriptDbManger(Chrome.getContext())
     tabModel = Chrome.load(TAB_MODEL_IMPL)
 
@@ -175,22 +170,6 @@ class UserScriptProxy() {
     // mVerbatimHeaders = loadUrlParams!!.getDeclaredField("h")
     // mTab = tabWebContentsDelegateAndroidImpl!!.getDeclaredField(TAB_FIELD)
     mSpec = gURL.getDeclaredField(SPEC_FIELD)
-  }
-
-  private fun updateSmali() {
-    val sharedPref = Chrome.getContext().getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
-    if (sharedPref.contains("LOAD_URL")) {
-      LOAD_URL = sharedPref.getString("LOAD_URL", LOAD_URL)!!
-    }
-    if (sharedPref.contains("TAB_MODEL_IMPL")) {
-      TAB_MODEL_IMPL = sharedPref.getString("TAB_MODEL_IMPL", TAB_MODEL_IMPL)!!
-    }
-    with(sharedPref.edit()) {
-      clear()
-      putString("LOAD_URL", LOAD_URL)
-      putString("TAB_MODEL_IMPL", TAB_MODEL_IMPL)
-      apply()
-    }
   }
 
   private fun loadUrl(url: String) {

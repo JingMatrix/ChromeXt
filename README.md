@@ -17,15 +17,6 @@ Current supporting state:
 1. installation from Google Play Store: `103`, `108`, `109`, `110`, `111`
 2. installation from APK: `108`, `109`, `110`, `111`
 
-For other versions, it might not work.
-To adapt to those versions, one only need to find out one method name and one class name in its [smali](https://github.com/JesusFreke/smali/wiki) code.
-Here is how to do that.
-First use `apktool` to decompile the `split_chrome.apk` file pulled from the installation of Chrome on your phone,
-then follow the hints in [UserScript.kt](app/src/main/java/org/matrix/chromext/proxy/UserScript.kt) to get the correct method name `LOAD_URL` and the correct class name `TAB_MODEL_IMPL`
-and modify it in the [SharedPreferences](https://developer.android.com/reference/android/content/SharedPreferences) of Chrome at `/data/data/com.android.chrome/shared_prefs/ChromeXt.xml`.
-Note that, the Chrome installed from Google Play Store is the split version
-while a usual installation from downloaded APK gives the non-split version.
-
 ## Usage
 
 Currently, this project requires **Xposed framework** installed.
