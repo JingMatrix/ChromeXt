@@ -1,6 +1,7 @@
 package org.matrix.chromext.proxy
 
 import android.content.Context
+import android.os.Build
 import android.view.View
 import android.view.View.OnClickListener
 import java.lang.reflect.Field
@@ -264,18 +265,30 @@ class MenuProxy() {
             })
       }
       "gesture_mod" -> {
-        setChecked.invoke(obj, sharedPref.getBoolean("gesture_mod", true))
-        mClickListener.set(
-            obj,
-            object : OnClickListener {
-              override fun onClick(v: View) {
-                with(sharedPref.edit()) {
-                  putBoolean("gesture_mod", !sharedPref.getBoolean("gesture_mod", true))
-                  apply()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+          setChecked.invoke(obj, sharedPref.getBoolean("gesture_mod", true))
+          mClickListener.set(
+              obj,
+              object : OnClickListener {
+                override fun onClick(v: View) {
+                  with(sharedPref.edit()) {
+                    putBoolean("gesture_mod", !sharedPref.getBoolean("gesture_mod", true))
+                    apply()
+                  }
+                  setChecked.invoke(obj, sharedPref.getBoolean("gesture_mod", true))
                 }
-                setChecked.invoke(obj, sharedPref.getBoolean("gesture_mod", true))
-              }
-            })
+              })
+        } else {
+          setChecked.invoke(obj, false)
+          mClickListener.set(
+              obj,
+              object : OnClickListener {
+                override fun onClick(_v: View) {
+                  setChecked.invoke(obj, false)
+                  Log.toast(ctx, "Only avaible after Android 10")
+                }
+              })
+        }
       }
     }
   }

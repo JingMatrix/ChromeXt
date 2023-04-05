@@ -8,7 +8,6 @@ import java.lang.ref.WeakReference
 import kotlin.math.roundToInt
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.proxy.GestureNavProxy
-import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
@@ -43,7 +42,7 @@ object GestureNavHook : BaseHook() {
       val height = decoView.getHeight()
       val excludeHeight: Int =
           (activity.getResources().getDisplayMetrics().density * 100).roundToInt()
-      Log.d("Called setSystemGestureExclusionRects with size ${width} x ${excludeHeight * 2}")
+      // Log.d("Called setSystemGestureExclusionRects with size ${width} x ${excludeHeight * 2}")
       decoView.setSystemGestureExclusionRects(
           // public Rect (int left, int top, int right, int bottom)
           listOf(Rect(width / 2, height / 2 - excludeHeight, width, height / 2 + excludeHeight)))
