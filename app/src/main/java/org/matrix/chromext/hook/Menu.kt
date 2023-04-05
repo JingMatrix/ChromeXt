@@ -114,12 +114,13 @@ object MenuHook : BaseHook() {
 
           if (TabModel.getUrl().endsWith("/ChromeXt/") && proxy.isDeveloper) {
             // Drop the Eruda console menu
-            items.dropLast(1)
+            items.removeLast()
           }
 
           if (TabModel.getUrl().endsWith(".user.js")) {
             // Drop the Eruda console and the Dev Tools menus
-            items.dropLast(2)
+            items.removeLast()
+            items.removeLast()
           }
 
           val magicMenuItem: MenuItem = items.removeLast()
