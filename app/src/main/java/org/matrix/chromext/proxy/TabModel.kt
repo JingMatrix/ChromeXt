@@ -13,12 +13,8 @@ object TabModel {
   private var eruda_loaded = mutableMapOf<Int, Boolean>()
   private var url = mutableMapOf<Int, String>()
 
-  fun update(model: Any, className: String) {
-    if (model::class.qualifiedName == className) {
-      tabModels += WeakReference(model)
-    } else {
-      Log.e("updateTabModel: ${model::class.qualifiedName} is not ${className}")
-    }
+  fun update(model: Any) {
+    tabModels += WeakReference(model)
   }
 
   fun dropModel(model: Any) {

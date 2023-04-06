@@ -18,17 +18,21 @@ object UserScriptHook : BaseHook() {
 
     proxy = UserScriptProxy()
 
-    proxy!!.tabModel.getDeclaredConstructors()[0].hookAfter {
-      TabModel.update(it.thisObject, proxy!!.TAB_MODEL_IMPL)
+    proxy!!.tabModelJniBridge.getDeclaredConstructors()[0].hookAfter {
+      TabModel.update(it.thisObject)
     }
 
-    findMethod(proxy!!.tabImpl) { name == proxy!!.LOAD_URL }
+    findMethod(proxy!!.tabImpl) {
+          getParameterCount() == 1 &&
+              getParameterTypes().first() == proxy!!.loadUrlParams &&
+              getReturnType() == Int::class.java
+        }
         .hookBefore {
           val url = proxy!!.parseUrl(it.args[0])!!
           proxy!!.userAgentHook(url, it.args[0])
         }
 
-    findMethod(proxy!!.tabModel) { name == "destroy" }
+    findMethod(proxy!!.tabModelJniBridge) { name == "destroy" }
         .hookBefore { TabModel.dropModel(it.thisObject) }
 
     findMethod(proxy!!.tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
@@ -89,15 +93,13 @@ object UserScriptHook : BaseHook() {
           }
         }
 
-    // findMethod(proxy!!.navigationControllerImpl!!) { name == proxy!!.NAVI_LOAD_URL }
+    // findMethod(proxy!!.navigationControllerImpl) {
+    //       getParameterCount() == 1 && getParameterTypes().first() == proxy!!.loadUrlParams
+    //     }
     //     // public void loadUrl(LoadUrlParams params)
-    //     .hookBefore {
+    //     .hookAfter {
     //       val url = proxy!!.parseUrl(it.args[0])!!
-    //       // proxy!!.updateNavController(it.thisObject)
-    //       if (url.endsWith("github.com/")) {
-    //         (it.method as Method).invoke(it.thisObject, proxy!!.newUrl("javascript:
-    // alert('Hello');"))
-    //       }
+    //       proxy!!.userAgentHook(url, it.args[0])
     //     }
 
     // findMethod(proxy!!.webContentsObserverProxy!!) { name == "didStartLoading" }

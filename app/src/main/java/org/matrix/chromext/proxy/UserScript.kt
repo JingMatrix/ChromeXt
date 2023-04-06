@@ -17,37 +17,11 @@ class UserScriptProxy() {
   // User should be able to change them by their own if needed
   // If a field is read-only, i.e., initilized with `val`, meaning that we are not using it yet
 
-  // Grep smali code with Tab.loadUrl to get the loadUrl function in
-  // org/chromium/chrome/browser/tab/TabImpl.smali
-  var LOAD_URL = "h"
-
-  // Grep Android.Omnibox.InputToNavigationControllerStart to get loadUrl in
-  // org/chromium/content/browser/framehost/NavigationControllerImpl.smali
-  // val NAVI_LOAD_URL = "h"
-  // ! Note: loadUrl is only called for browser-Initiated navigations
-
-  // Grep TabModelImpl to get the class TabModelImpl
-  var TAB_MODEL_IMPL = "be3"
-
   // It is possible to a HTTP POST with LoadUrlParams Class
   // grep org/chromium/content_public/common/ResourceRequestBody to get setPostData in
   // org/chromium/content_public/browser/LoadUrlParams
   // val POST_DATA = "b"
   // ! Note: this is very POWERFUL
-
-  // Grep ()I to get or goToNavigationIndex in
-  // org/chromium/content/browser/framehost/NavigationControllerImpl.smali
-  // Current tab has the biggest index, a new tab has index 0, index is stored with tab
-  // val NAVI_GOTO = "z"
-
-  // Grep (I)V to get or getLastCommittedEntryIndex in
-  // org/chromium/content/browser/framehost/NavigationControllerImpl.smali
-  // Current tab has the biggest index, a new tab has index 0, index is stored with tab
-  // val NAVI_LAST_INDEX = "e"
-
-  // Grep Android.Intent.IntentUriNavigationResult to get class
-  // org/chromium/components/external_intents/ExternalNavigationHandler.java
-  // val EXTERNAL_NAVIGATION_HANDLER = "GC0"
 
   // Grep .super Lorg/chromium/components/navigation_interception/InterceptNavigationDelegate
   // to get class org.chromium.components.external_intents.InterceptNavigationDelegateImpl
@@ -57,31 +31,13 @@ class UserScriptProxy() {
   // in INTERCEPT_NAVIGATION_DELEGATE_IMPL to get associateWithWebContents
   // val ASSOCIATE_CONTENTS = "a"
 
-  companion object {
-    // These samli code are considered stable for further releases of Chrome
-    // We give two examplar fields.
-
-    // The only field with type Ljava/lang/String in
-    // org/chromium/url/GURL.smali is for URL
-    private const val SPEC_FIELD = "a"
-    // ! Note: GURL has limited length:
-
-    // Get TabImpl field in
-    // org/chromium/chrome/browser/tab/TabWebContentsDelegateAndroidImpl.smali
-    // private const val TAB_FIELD = "a"
-
-    // Fields of org/chromium/content_public/browser/LoadUrlParams
-    // are too many to list here
-    // They are in the same order as the source code
-  }
-
   val tabWebContentsDelegateAndroidImpl: Class<*>
-
-  val tabModel: Class<*>
+  val loadUrlParams: Class<*>
   val tabImpl: Class<*>
+  val tabModelJniBridge: Class<*>
   // val interceptNavigationDelegateImpl: Class<*>? = null
 
-  // val navigationControllerImpl: Class<*>? = null
+  // val navigationControllerImpl: Class<*>
   // private val navController: Any? = null
 
   // val webContentsObserverProxy: Class<*>? = null
@@ -90,77 +46,18 @@ class UserScriptProxy() {
 
   private val gURL: Class<*>
   private val mSpec: Field
-  val mVerbatimHeaders: Field
-
-  private val loadUrlParams: Class<*>
   private val mUrl: Field
-  // private val mInitiatorOrigin: Field? = null
-  // private val mLoadUrlType: Field? = null
-  // private val mTransitionType: Field? = null
-  // private val mReferrer: Field? = null
-  // private val mExtraHeaders: Field? = null
-  // private val mNavigationHandleUserDataHost: Field? = null
-  // private val mVerbatimHeaders: Field? = null
-  // private val mUaOverrideOption: Field? = null
-  // private val mPostData: Field? = null
-  // private val mBaseUrlForDataUrl: Field? = null
-  // private val mVirtualUrlForDataUrl: Field? = null
-  // private val mDataUrlAsString: Field? = null
-  // private val mCanLoadLocalResources: Field? = null
-  // private val mIsRendererInitiated: Field? = null
-  // private val mShouldReplaceCurrentEntry: Field? = null
-  // private val mIntentReceivedTimestamp: Field? = null
-  // private val mInputStartTimestamp: Field? = null
-  // private val mHasUserGesture: Field? = null
-  // private val mShouldClearHistoryList: Field? = null
-  // private val mNavigationUIDataSupplier: Field? = null
+  private val mVerbatimHeaders: Field
 
   val scriptManager: ScriptDbManger
 
   init {
-    if (Chrome.split && Chrome.version == 103) {
-      LOAD_URL = "f"
-      TAB_MODEL_IMPL = "Mt3"
-    }
-
-    if (!Chrome.split && Chrome.version >= 108) {
-      LOAD_URL = "f"
-      TAB_MODEL_IMPL = "pw3"
-    }
-
-    if (!Chrome.split && Chrome.version >= 109) {
-      LOAD_URL = "g"
-      TAB_MODEL_IMPL = "nx3"
-    }
-
-    if (Chrome.split && Chrome.version >= 109) {
-      TAB_MODEL_IMPL = "We3"
-    }
-
-    if (!Chrome.split && Chrome.version >= 110) {
-      LOAD_URL = "g"
-      TAB_MODEL_IMPL = "qq3"
-    }
-
-    if (Chrome.split && Chrome.version >= 110) {
-      LOAD_URL = "g"
-      TAB_MODEL_IMPL = "c83"
-    }
-
-    if (!Chrome.split && Chrome.version >= 111) {
-      TAB_MODEL_IMPL = "ws3"
-    }
-
-    if (Chrome.split && Chrome.version >= 111) {
-      TAB_MODEL_IMPL = "W93"
-    }
-
     scriptManager = ScriptDbManger(Chrome.getContext())
-    tabModel = Chrome.load(TAB_MODEL_IMPL)
 
     gURL = Chrome.load("org.chromium.url.GURL")
     loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
     tabImpl = Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
+    tabModelJniBridge = Chrome.load("org.chromium.chrome.browser.tabmodel.TabModelJniBridge")
     tabWebContentsDelegateAndroidImpl =
         Chrome.load("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
     // interceptNavigationDelegateImpl =
@@ -170,13 +67,18 @@ class UserScriptProxy() {
     // webContentsObserverProxy =
     //     Chrome.load("org.chromium.content.browser.webcontents.WebContentsObserverProxy")
     mUrl = loadUrlParams.getDeclaredField("a")
-    mVerbatimHeaders = loadUrlParams.getDeclaredField("h")
+    mVerbatimHeaders =
+        loadUrlParams.getDeclaredFields().filter { it.getType() == String::class.java }.elementAt(1)
     // mTab = tabWebContentsDelegateAndroidImpl!!.getDeclaredField(TAB_FIELD)
-    mSpec = gURL.getDeclaredField(SPEC_FIELD)
+    mSpec = gURL.getDeclaredField("a")
   }
 
   private fun loadUrl(url: String) {
-    TabModel.getTab().invokeMethod(newUrl(url)) { name == LOAD_URL }
+    TabModel.getTab().invokeMethod(newUrl(url)) {
+      getParameterCount() == 1 &&
+          getParameterTypes().first() == loadUrlParams &&
+          getReturnType() == Int::class.java
+    }
     // Log.d("loadUrl: ${url}")
   }
 
@@ -253,6 +155,7 @@ class UserScriptProxy() {
     val origin = parseOrigin(url)
     if (origin != null) {
       val ctx = Chrome.getContext()
+      // Log.d("Change User-Agent header: ${origin}")
       val sharedPref = ctx.getSharedPreferences("UserAgent", Context.MODE_PRIVATE)
       if (sharedPref.contains(origin)) {
         mVerbatimHeaders.set(urlParams, "user-agent: ${sharedPref.getString(origin, "")}\r\n")
