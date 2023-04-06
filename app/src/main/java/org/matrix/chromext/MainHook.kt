@@ -67,6 +67,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
   ) {}
 
   private fun initHooks(vararg hook: BaseHook) {
+    ResourceMerge.enrich(Chrome.getContext())
     hook.forEach {
       runCatching {
             if (it.isInit) return@forEach

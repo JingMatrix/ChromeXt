@@ -28,7 +28,6 @@ object MenuHook : BaseHook() {
     // Page menu only appears after restarting chrome
 
     val ctx = Chrome.getContext()
-    ResourceMerge.enrich(ctx)
     var readerModeManager: Any? = null
 
     proxy.readerModeManager.getDeclaredConstructors()[0].hookAfter {
