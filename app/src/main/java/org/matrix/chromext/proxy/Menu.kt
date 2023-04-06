@@ -21,7 +21,7 @@ class MenuProxy() {
   // Grep chrome-distiller to get the class ReaderModeManager
   var READER_MODE_MANAGER = "js2"
   // inside the method
-  var ACTIVATE_READER_MODE = "Y0"
+  // var ACTIVATE_READER_MODE = "Y0"
 
   // Grep Android.PrepareMenu.OpenWebApkVisibilityCheck to get the class
   // org/chromium/chrome/browser/app/appmenu/AppMenuPropertiesDelegateImpl.java
@@ -41,6 +41,7 @@ class MenuProxy() {
   val mDistillerUrl: Field
   val mTab: Field
 
+  val activateReadMode: Method
   val setChecked: Method
   val setSummary: Method
 
@@ -53,13 +54,11 @@ class MenuProxy() {
   init {
     if (Chrome.split && Chrome.version == 103) {
       READER_MODE_MANAGER = "BD2"
-      ACTIVATE_READER_MODE = "X0"
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "Hg"
     }
 
     if (!Chrome.split && Chrome.version >= 108) {
       READER_MODE_MANAGER = "bH2"
-      ACTIVATE_READER_MODE = "Z0"
       APP_MENU_PROPERTIES_DELEGATE_IMPL = "lg"
     }
 
@@ -120,6 +119,9 @@ class MenuProxy() {
     mTab.setAccessible(true)
     mDistillerUrl = readerModeManager.getDeclaredFields().filter { it.type == gURL }.last()
     mDistillerUrl.setAccessible(true)
+    activateReadMode =
+        // This is purely luck, there are other methods with the same signatures
+        findMethod(readerModeManager) { getParameterCount() == 0 && getReturnType() == Void.TYPE }
     setSummary =
         findMethod(preference) {
           getParameterCount() == 1 &&

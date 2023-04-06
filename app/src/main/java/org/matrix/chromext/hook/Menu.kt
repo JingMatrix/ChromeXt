@@ -17,7 +17,6 @@ import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
 import org.matrix.chromext.utils.hookMethod
-import org.matrix.chromext.utils.invokeMethod
 
 object MenuHook : BaseHook() {
 
@@ -49,8 +48,7 @@ object MenuHook : BaseHook() {
             UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
         "com.android.chrome:id/info_menu_id" -> {
           if (proxy.mDistillerUrl.get(readerModeManager!!) != null) {
-            // No idea why I must use getName() instead of name
-            readerModeManager!!.invokeMethod() { getName() == proxy.ACTIVATE_READER_MODE }
+            proxy.activateReadMode.invoke(readerModeManager!!)
             return true
           }
         }
