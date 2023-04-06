@@ -120,8 +120,7 @@ object MenuHook : BaseHook() {
 
           val magicMenuItem: MenuItem = items.removeLast()
           magicMenuItem.setVisible(!(it.args[3] as Boolean) && (it.args[2] as Boolean))
-          // The index 13 is just chosen by tests, to make sure that it appears before the share
-          // menu
+          // The index 13 is just chosen to make sure that it appears before the share menu
           items.add(13, magicMenuItem)
           mItems.setAccessible(false)
         }

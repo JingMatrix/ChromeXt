@@ -9,30 +9,23 @@ class GestureNavProxy() {
   // To find it, we need to find out other two classes
 
   private var HISTORY_NAVIGATION_COORDINATOR = "d31"
-  // It has filed HistoryNavigationLayout
-  // with 3 matches (a 15th and two 470th lines)
-  // Moreover, its name has the same two last letters as HistoryNavigationCoordinator
+  // It has filed HistoryNavigationLayout matched in the 15th and ~500th lines
+  // Moreover, it shares the two last letters with HistoryNavigationCoordinator
 
   // private val HISTORY_NAVIGATION_LAYOUT = "g31"
-  // It field SideSlideLayout with exactly one match around the 16th line
-  // It has two fields of Ljava/lang/Runnable,
-  // one field of Lorg/chromium/base/Callback.
+  // Its field SideSlideLayout has exactly one match in the 16th line
+  // Its fields have two Ljava/lang/Runnable and a Lorg/chromium/base/Callback
 
   // private val SIDE_SLIDE_LAYOUT = "vR2"
   // It has field org/chromium/chrome/browser/gesturenav/NavigationBubble
-  // around the 43rd line; it also has other fileds
+  // in the 43rd line; it also has other fileds
   // android/view/animation/Animation$AnimationListener,
   // android/view/animation/Animation,
   // android/view/animation/DecelerateInterpolator,
 
-  // Once the class HistoryNavigationCoordinator is found, we care about its filed mEnabled
-  // and its method isFeatureEnabled() with a Boolean return value
   val historyNavigationCoordinator: Class<*>
-  // val ENABLE_FIELD = "s"
-  var IS_FEATURE_ENABLED = "b"
 
   val chromeTabbedActivity: Class<*>
-  // Even though it exposes the onLayout method, it is not the correct Layout to hook
 
   init {
     if (Chrome.split && Chrome.version == 103) {

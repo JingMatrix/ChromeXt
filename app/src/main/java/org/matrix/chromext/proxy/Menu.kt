@@ -16,12 +16,9 @@ const val ERUD_URL = "https://cdn.jsdelivr.net/npm/eruda@latest/eruda.min.js"
 
 class MenuProxy() {
 
-  // Usually, we only need to find out names for the first one in the following two paragraphs
-
   // Grep chrome-distiller to get the class ReaderModeManager
   var READER_MODE_MANAGER = "js2"
-  // inside the method
-  // var ACTIVATE_READER_MODE = "Y0"
+  // the match is inside the method activateReaderMode
 
   // Grep Android.PrepareMenu.OpenWebApkVisibilityCheck to get the class
   // org/chromium/chrome/browser/app/appmenu/AppMenuPropertiesDelegateImpl.java
@@ -99,7 +96,6 @@ class MenuProxy() {
     isDeveloper = sharedPref!!.getBoolean("developer", false) || Chrome.isDev
 
     preference = Chrome.load("androidx.preference.Preference")
-    // onPreferenceClickListener = Chrome.load(ON_PREFERENCE_CLICK_LISTENER)
     developerSettings =
         Chrome.load("org.chromium.chrome.browser.tracing.settings.DeveloperSettings")
     preferenceFragmentCompat = developerSettings.getSuperclass() as Class<*>

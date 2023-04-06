@@ -19,7 +19,9 @@ object GestureNavHook : BaseHook() {
     var activity: WeakReference<Activity>? = null
     val proxy = GestureNavProxy()
 
-    findMethod(proxy.historyNavigationCoordinator) { name == proxy.IS_FEATURE_ENABLED }
+    findMethod(proxy.historyNavigationCoordinator) {
+          getParameterCount() == 0 && getReturnType() == Boolean::class.java
+        }
         // private boolean isFeatureEnabled()
         .hookBefore {
           val sharedPref =
