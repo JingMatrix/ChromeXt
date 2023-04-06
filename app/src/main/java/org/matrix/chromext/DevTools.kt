@@ -18,7 +18,7 @@ object DevTools {
   private var port = 0
     set(value) {
       UserScriptHook.proxy!!.evaluateJavaScript(
-          "window.dispatchEvent(new CustomEvent('cdp_port',{detail:${value}}))")
+          "setTimeout(()=>{window.dispatchEvent(new CustomEvent('cdp_port',{detail:${value}}))},100)")
       field = value
     }
 
