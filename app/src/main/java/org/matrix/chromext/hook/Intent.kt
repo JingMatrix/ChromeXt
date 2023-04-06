@@ -25,7 +25,12 @@ object IntentHook : BaseHook() {
           }
         }
 
-    findMethod(proxy.intentHandler) { name == proxy.START_ACTIVITY }
+    findMethod(proxy.intentHandler) {
+          getParameterCount() == 3 &&
+              getParameterTypes().first() == Context::class.java &&
+              getParameterTypes().elementAt(1) == Intent::class.java &&
+              getParameterTypes().last() == String::class.java
+        }
         // private static void startActivityForTrustedIntentInternal(Context context, Intent
         // intent, String componentClassName)
         .hookBefore {
