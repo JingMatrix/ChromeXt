@@ -4,6 +4,7 @@ import java.io.File
 import java.io.FileReader
 import java.lang.ref.WeakReference
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.script.erudaToggle
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
@@ -11,7 +12,6 @@ import org.matrix.chromext.utils.invokeMethod
 object TabModel {
   private var tabModels = mutableListOf<WeakReference<Any>>()
   private var eruda_loaded = mutableMapOf<Int, Boolean>()
-  private var url = mutableMapOf<Int, String>()
 
   fun update(model: Any) {
     tabModels += WeakReference(model)
@@ -30,11 +30,10 @@ object TabModel {
   }
 
   fun getUrl(): String {
-    return url.get(index()) ?: ""
+    return UserScriptHook.proxy!!.parseUrl(getTab().invokeMethod { name == "getUrl" }!!) ?: ""
   }
 
   fun refresh(newUrl: String) {
-    url.put(index(), newUrl)
     eruda_loaded.put(index(), false)
   }
 
