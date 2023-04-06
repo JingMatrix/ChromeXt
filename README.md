@@ -105,6 +105,11 @@ In the `Elements` panel, one can use the `pointer` icon to select elements on th
 Once you click the `delete` icon for a selected element, a corresponding filter will be saved to the `Resources` panel.
 These filters are saved in Chrome even after clearing the site's data.
 
+### Mocking User Agent
+
+One can edit the user-agent from the `Info` panel of `Eruda console`.
+The support is still limited, might be improved later.
+
 ## Contribute to this project
 
 Before you submit your pull-requests, please ensure that the command
@@ -139,6 +144,7 @@ Here are corresponding files you might want / need to change:
 - [x] Allow user to trigger reader mode
 - [x] Support @resource API
 - [x] Make GestureNav Fix optional
+- [ ] Support mocking User-Agent
 - [ ] Support [urlFilter](https://developer.chrome.com/docs/extensions/reference/declarativeNetRequest/#type-RuleCondition) syntax
 - [ ] Implement fully `GM_info`
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
