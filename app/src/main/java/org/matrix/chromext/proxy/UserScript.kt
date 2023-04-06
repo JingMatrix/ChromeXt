@@ -78,6 +78,7 @@ class UserScriptProxy() {
   val tabWebContentsDelegateAndroidImpl: Class<*>
 
   val tabModel: Class<*>
+  val tabImpl: Class<*>
   // val interceptNavigationDelegateImpl: Class<*>? = null
 
   // val navigationControllerImpl: Class<*>? = null
@@ -89,6 +90,7 @@ class UserScriptProxy() {
 
   private val gURL: Class<*>
   private val mSpec: Field
+  val mVerbatimHeaders: Field
 
   private val loadUrlParams: Class<*>
   private val mUrl: Field
@@ -158,6 +160,7 @@ class UserScriptProxy() {
 
     gURL = Chrome.load("org.chromium.url.GURL")
     loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
+    tabImpl = Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
     tabWebContentsDelegateAndroidImpl =
         Chrome.load("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
     // interceptNavigationDelegateImpl =
@@ -167,7 +170,7 @@ class UserScriptProxy() {
     // webContentsObserverProxy =
     //     Chrome.load("org.chromium.content.browser.webcontents.WebContentsObserverProxy")
     mUrl = loadUrlParams.getDeclaredField("a")
-    // mVerbatimHeaders = loadUrlParams!!.getDeclaredField("h")
+    mVerbatimHeaders = loadUrlParams.getDeclaredField("h")
     // mTab = tabWebContentsDelegateAndroidImpl!!.getDeclaredField(TAB_FIELD)
     mSpec = gURL.getDeclaredField(SPEC_FIELD)
   }
@@ -246,32 +249,42 @@ class UserScriptProxy() {
     return null
   }
 
-  // fun updateNavController(controller: Any): Boolean {
-  //   if (controller::class.qualifiedName == navigationControllerImpl!!.name) {
-  //     if (navController != controller) {
-  //       Log.i("navController updated")
-  //       // navController = controller
-  //     }
-  //     return true
-  //   }
-  //   Log.e(
-  //       "updateNavController: ${controller::class.qualifiedName} is not
-  // ${navigationControllerImpl!!.name}")
-  //   return false
-  // }
+  fun userAgentHook(url: String, urlParams: Any) {
+    val origin = parseOrigin(url)
+    if (origin != null) {
+      val ctx = Chrome.getContext()
+      val sharedPref = ctx.getSharedPreferences("UserAgent", Context.MODE_PRIVATE)
+      if (sharedPref.contains(origin)) {
+        mVerbatimHeaders.set(urlParams, "user-agent: ${sharedPref.getString(origin, "")}\r\n")
+      }
+    }
+  }
 
-  fun didUpdateUrl(url: String) {
+  private fun parseOrigin(url: String): String? {
     val protocol = url.split("://")
     if (arrayOf("https", "http", "file").contains(protocol.first()) && protocol.size > 1) {
+      return protocol.first() + "://" + protocol.elementAt(1).split("/").first()
+    } else {
+      return null
+    }
+  }
+
+  fun didUpdateUrl(url: String) {
+    val origin = parseOrigin(url)
+    if (origin != null) {
       invokeScript(url)
       val ctx = Chrome.getContext()
-      val sharedPref = ctx.getSharedPreferences("CosmeticFilter", Context.MODE_PRIVATE)
-      val origin = protocol.first() + "://" + protocol.elementAt(1).split("/").first()
+      var sharedPref = ctx.getSharedPreferences("CosmeticFilter", Context.MODE_PRIVATE)
       if (sharedPref.contains(origin)) {
         val script = ctx.assets.open("cosmetic-filter.js").bufferedReader().use { it.readText() }
         evaluateJavaScript(
             "globalThis.ChromeXt_filter=`${sharedPref.getString(origin, "")}`;${script}")
         Log.d("Cosmetic filters applied to ${origin}")
+      }
+      sharedPref = ctx.getSharedPreferences("UserAgent", Context.MODE_PRIVATE)
+      if (sharedPref.contains(origin)) {
+        evaluateJavaScript(
+            "Object.defineProperties(window.navigator,{userAgent:{value:'${sharedPref.getString(origin, "")}'}});")
       }
     }
   }

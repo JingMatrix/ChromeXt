@@ -158,9 +158,42 @@ if (
       return this;
     }
   }
+  class info extends eruda.Info {
+    _render() {
+      const infos = this._infos;
+      this._infos = infos.filter((info) => info.name != "User Agent");
+      super._render();
+      this._infos = infos;
+    }
+    _renderHtml(html) {
+      if (html.startsWith("<ul>")) {
+        super._renderHtml(
+          `<ul><li class="chromext-user-agent"><h2 class="eruda-title">User Agent<span class="eruda-icon-copy eruda-copy"></span></h2><div class="eruda-content" contenteditable="true">${navigator.userAgent}</div></li>` +
+            html.substring(4)
+        );
+      } else {
+        super._renderHtml(html);
+      }
+    }
+    _bindEvent() {
+      this._$el.on("click", "li.chromext-user-agent > h2 > span", () => {
+        globalThis.ChromeXt(
+          JSON.stringify({
+            action: "userAgent",
+            payload:
+              window.location.origin +
+              "!" +
+              this._$el.find("li.chromext-user-agent > div").text(),
+          })
+        );
+      });
+      super._bindEvent();
+    }
+  }
 
   eruda.Elements = elements;
   eruda.Resources = resources;
+  eruda.Info = info;
   eruda._configured = true;
   eruda._font_fix = `
 	[class^='eruda-icon-']:before {
@@ -259,6 +292,10 @@ if (
     addErudaStyle(
       "chromext_eruda_dom_fix",
       "#eruda-elements div.eruda-dom-viewer-container { overflow-x: hidden;} #eruda-elements div.eruda-dom-viewer-container > div.eruda-dom-viewer { overflow-x: scroll;} .luna-dom-viewer { min-width: 80vw;}"
+    );
+    addErudaStyle(
+      "chromext_plugin",
+      "li.chromext-user-agent .eruda-icon-copy:before { content: '💾'; font-size: 11px;}"
     );
     document.addEventListener("securitypolicyviolation", (e) => {
       if (e.blockedURI == "data" && e.violatedDirective == "font-src") {

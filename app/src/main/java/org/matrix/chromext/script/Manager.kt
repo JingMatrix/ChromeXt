@@ -151,6 +151,19 @@ class ScriptDbManger(ctx: Context) {
           apply()
         }
       }
+      "userAgent" -> {
+        val sharedPref = Chrome.getContext().getSharedPreferences("UserAgent", Context.MODE_PRIVATE)
+        val result = payload.split("!")
+        Log.d("Config user-agent: ${result}")
+        with(sharedPref.edit()) {
+          if (result.size == 1 && sharedPref.contains(result.first())) {
+            remove(result.first())
+          } else if (result.size == 2) {
+            putString(result.first(), result.last())
+          }
+          apply()
+        }
+      }
     }
     return callback
   }

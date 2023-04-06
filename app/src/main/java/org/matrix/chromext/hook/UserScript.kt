@@ -22,6 +22,12 @@ object UserScriptHook : BaseHook() {
       TabModel.update(it.thisObject, proxy!!.TAB_MODEL_IMPL)
     }
 
+    findMethod(proxy!!.tabImpl) { name == proxy!!.LOAD_URL }
+        .hookBefore {
+          val url = proxy!!.parseUrl(it.args[0])!!
+          proxy!!.userAgentHook(url, it.args[0])
+        }
+
     findMethod(proxy!!.tabModel) { name == "destroy" }
         .hookBefore { TabModel.dropModel(it.thisObject) }
 
@@ -41,7 +47,7 @@ object UserScriptHook : BaseHook() {
                   it.readText()
                 }
             proxy!!.evaluateJavaScript("javascript: ${customizeDevTool}")
-          } else {
+          } else if (!url.endsWith("/ChromeXt/")) {
             proxy!!.didUpdateUrl(url)
           }
         }
