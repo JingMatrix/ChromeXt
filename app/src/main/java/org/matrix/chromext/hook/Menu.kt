@@ -31,7 +31,6 @@ object MenuHook : BaseHook() {
     val ctx = Chrome.getContext()
     ResourceMerge.enrich(ctx)
     var readerModeManager: Any? = null
-    var enableReaderMode = false
 
     proxy.readerModeManager.getDeclaredConstructors()[0].hookAfter {
       readerModeManager = it.thisObject
@@ -49,7 +48,7 @@ object MenuHook : BaseHook() {
         "org.matrix.chromext:id/eruda_console_id" ->
             UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
         "com.android.chrome:id/info_menu_id" -> {
-          if (enableReaderMode) {
+          if (proxy.mDistillerUrl.get(readerModeManager!!) != null) {
             // No idea why I must use getName() instead of name
             readerModeManager!!.invokeMethod() { getName() == proxy.ACTIVATE_READER_MODE }
             return true
@@ -88,21 +87,19 @@ object MenuHook : BaseHook() {
             return@hookBefore
           }
 
-          enableReaderMode =
-              menu.getItem(0).hasSubMenu() && !(it.args[3] as Boolean) && readerModeManager != null
-
-          if (enableReaderMode) {
+          if (menu.getItem(0).hasSubMenu() &&
+              !(it.args[3] as Boolean) &&
+              readerModeManager != null) {
             // The first menu item shou be the row_menu
             val infoMenu = menu.getItem(0).getSubMenu()!!.getItem(3)
             infoMenu.setIcon(R.drawable.ic_book)
             infoMenu.setEnabled(true)
             proxy.mTab.set(readerModeManager!!, it.args[1])
+            val MOCK_READ_URL = "https://github.com/JingMatrix/ChromeXt"
+            // We need a mock url to finish the cleanup logic readerModeManager
             proxy.mDistillerUrl.set(
                 readerModeManager!!,
-                // We need a mock url to finish the cleanup logic readerModeManager
-                proxy.gURL
-                    .getDeclaredConstructors()[1]
-                    .newInstance("https://github.com/JingMatrix/ChromeXt"))
+                proxy.gURL.getDeclaredConstructors()[1].newInstance(MOCK_READ_URL))
           }
 
           MenuInflater(ctx).inflate(R.menu.main_menu, menu)
