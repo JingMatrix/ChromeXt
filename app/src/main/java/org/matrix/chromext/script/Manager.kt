@@ -15,9 +15,11 @@ private const val SEP = ""
 class ScriptDbManger(ctx: Context) {
 
   private val dbHelper: SQLiteOpenHelper
+  val scripts: MutableList<Script>
 
   init {
     dbHelper = ScriptDbHelper(ctx)
+    scripts = query()
   }
 
   fun insert(vararg script: Script) {
@@ -46,15 +48,15 @@ class ScriptDbManger(ctx: Context) {
   }
 
   private fun query(
-      selection: String?,
-      selectionArgs: Array<String>?,
-  ): Array<Script> {
+      selection: String? = null,
+      selectionArgs: Array<String>? = null,
+  ): MutableList<Script> {
     val db = dbHelper.readableDatabase
     val cursor = db.query("script", null, selection, selectionArgs, null, null, null)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
       (cursor as AbstractWindowedCursor).setWindow(CursorWindow("max", 1024 * 1024 * 10))
     }
-    val scripts = mutableListOf<Script>()
+    val quried_scripts = mutableListOf<Script>()
     with(cursor) {
       while (moveToNext()) {
         val id = getString(getColumnIndexOrThrow("id"))
@@ -67,15 +69,11 @@ class ScriptDbManger(ctx: Context) {
         val require = getString(getColumnIndexOrThrow("require")).split(SEP).toTypedArray()
         val resource = getString(getColumnIndexOrThrow("resource")).split(SEP).toTypedArray()
         val script = Script(id, match, grant, exclude, require, resource, meta, code, runAt)
-        scripts.add(script)
+        quried_scripts.add(script)
       }
     }
     cursor.close()
-    return scripts.toTypedArray()
-  }
-
-  fun getAll(): Array<Script> {
-    return query(null, null)
+    return quried_scripts
   }
 
   private fun delete(ids: Array<String>) {
@@ -104,32 +102,37 @@ class ScriptDbManger(ctx: Context) {
         } else {
           Log.i("Install script ${script.id}")
           insert(script)
+          scripts.removeAll(scripts.filter { it.id == script.id })
+          scripts.add(script)
         }
       }
       "getIds" -> {
-        val result = getAll().map { it.id }
+        val result = scripts.map { it.id }
         callback =
             "window.dispatchEvent(new CustomEvent('script_id',{detail:[`${result.joinToString(separator = "`,`")}`]}));"
       }
       "getMetaById" -> {
         val ids = parseArray(payload)
-        val result = query("id = ?", ids).map { it.meta }
+        val result = scripts.filter { ids.contains(it.id) }.map { it.meta }
         callback =
             "window.dispatchEvent(new CustomEvent('script_meta',{detail:[`${result.joinToString(separator = "`,`")}`]}));"
       }
       "updateMetaForId" -> {
         val CHROMEXT_SPLIT = "ChromeXt_Split_For_Metadata_Update"
         val result = payload.split(CHROMEXT_SPLIT)
-        val match = query("id = ?", arrayOf(result[0]))
-        if (match.size > 0) {
+        val match = scripts.filter { it.id == result[0] }
+        if (match.size == 1) {
           val script = match.first()
           val newScript = parseScript(result[1] + "\n" + script.code)
           insert(newScript!!)
+          scripts.remove(script)
+          scripts.add(newScript)
         }
       }
       "deleteScriptById" -> {
         val ids = parseArray(payload)
         delete(ids)
+        scripts.removeAll(scripts.filter { ids.contains(it.id) })
       }
       "getPages" -> {
         val pages = DevTools.pages
@@ -147,6 +150,8 @@ class ScriptDbManger(ctx: Context) {
             remove(result.first())
           } else if (result.size == 2) {
             putString(result.first(), result.last())
+          } else {
+            callback = "alert('Invalid Cosmetic Filters');"
           }
           apply()
         }
@@ -155,13 +160,13 @@ class ScriptDbManger(ctx: Context) {
         val sharedPref = Chrome.getContext().getSharedPreferences("UserAgent", Context.MODE_PRIVATE)
         val result = payload.split("!")
         Log.d("Config user-agent: ${result}")
-        with(sharedPref.edit()) {
-          if (result.size == 1 && sharedPref.contains(result.first())) {
-            remove(result.first())
-          } else if (result.size == 2) {
+        if (result.size == 2) {
+          with(sharedPref.edit()) {
             putString(result.first(), result.last())
+            apply()
           }
-          apply()
+        } else {
+          callback = "alert('Invalid User-Agent');"
         }
       }
     }

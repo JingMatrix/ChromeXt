@@ -23,7 +23,7 @@ fun urlMatch(match: String, url: String): Boolean {
     // Recover those *. killed by replacements
     // pattern = pattern.replace("[\\w\\-]*?\\.", "[\\w\\-\\.]*?")
 
-    Log.d("Java regex matching ${pattern} against ${url}: ${Regex(pattern).matches(url)}")
+    Log.d("Matching ${pattern} against ${url}: ${Regex(pattern).matches(url)}")
     return Regex(pattern).matches(url)
   } else {
     return false

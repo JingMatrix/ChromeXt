@@ -89,7 +89,7 @@ class UserScriptProxy() {
   }
 
   private fun invokeScript(url: String) {
-    scriptManager.getAll().forEach {
+    scriptManager.scripts.forEach {
       val script = it
       var run = false
 
