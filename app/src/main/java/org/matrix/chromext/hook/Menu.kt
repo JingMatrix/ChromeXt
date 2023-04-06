@@ -58,16 +58,13 @@ object MenuHook : BaseHook() {
       return false
     }
 
-    findMethod(proxy.chromeTabbedActivity) { name == proxy.MENU_KEYBOARD_ACTION }
-        // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
-        .hookBefore {
-          if (menuHandler(it.args[0] as Int)) {
-            it.result = true
-          }
+    findMethod(proxy.chromeTabbedActivity) {
+          // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
+          getParameterCount() == 2 &&
+              getParameterTypes().first() == Int::class.java &&
+              getParameterTypes().last() == Boolean::class.java &&
+              getReturnType() == Boolean::class.java
         }
-
-    findMethod(proxy.customTabActivity) { name == proxy.MENU_KEYBOARD_ACTION }
-        // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
         .hookBefore {
           if (menuHandler(it.args[0] as Int)) {
             it.result = true
@@ -75,7 +72,10 @@ object MenuHook : BaseHook() {
         }
 
     findMethod(proxy.appMenuPropertiesDelegateImpl) {
-          name == proxy.UPDATE_REQUEST_DESKTOP_SITE_MENU_ITEM
+          getParameterCount() == 4 &&
+              getParameterTypes().first() == Menu::class.java &&
+              getParameterTypes().last() == Boolean::class.java &&
+              getReturnType() == Void.TYPE
         }
         // protected void updateRequestDesktopSiteMenuItem(Menu menu, @Nullable Tab currentTab,
         //         boolean canShowRequestDesktopSite, boolean isChromeScheme)
@@ -95,11 +95,12 @@ object MenuHook : BaseHook() {
             infoMenu.setIcon(R.drawable.ic_book)
             infoMenu.setEnabled(true)
             proxy.mTab.set(readerModeManager!!, it.args[1])
-            val MOCK_READ_URL = "https://github.com/JingMatrix/ChromeXt"
-            // We need a mock url to finish the cleanup logic readerModeManager
             proxy.mDistillerUrl.set(
                 readerModeManager!!,
-                proxy.gURL.getDeclaredConstructors()[1].newInstance(MOCK_READ_URL))
+                proxy.gURL
+                    .getDeclaredConstructors()[1]
+                    .newInstance("https://github.com/JingMatrix/ChromeXt"))
+            // We need a mock url to finish the cleanup logic readerModeManager
           }
 
           MenuInflater(ctx).inflate(R.menu.main_menu, menu)
@@ -131,7 +132,9 @@ object MenuHook : BaseHook() {
     if (!Chrome.split || Chrome.version == 109) {
       // No idea when we need to enrich
       enrichHook =
-          findMethod(proxy.preferenceFragmentCompat, true) { name == proxy.GET_CONTEXT }
+          findMethod(proxy.preferenceFragmentCompat.getSuperclass() as Class<*>) {
+                getParameterCount() == 0 && getReturnType() == Context::class.java
+              }
               .hookAfter {
                 if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
                   ResourceMerge.enrich(it.getResult() as Context)

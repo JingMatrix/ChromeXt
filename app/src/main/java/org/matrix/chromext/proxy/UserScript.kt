@@ -13,36 +13,20 @@ import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
 
 class UserScriptProxy() {
-  // These smali code names are possible to change when Chrome updates
-  // User should be able to change them by their own if needed
-  // If a field is read-only, i.e., initilized with `val`, meaning that we are not using it yet
-
   // It is possible to a HTTP POST with LoadUrlParams Class
   // grep org/chromium/content_public/common/ResourceRequestBody to get setPostData in
   // org/chromium/content_public/browser/LoadUrlParams
   // val POST_DATA = "b"
   // ! Note: this is very POWERFUL
 
-  // Grep .super Lorg/chromium/components/navigation_interception/InterceptNavigationDelegate
-  // to get class org.chromium.components.external_intents.InterceptNavigationDelegateImpl
-  // val INTERCEPT_NAVIGATION_DELEGATE_IMPL = "yi1"
-
-  // Grep (Lorg/chromium/content_public/browser/WebContents;)V
-  // in INTERCEPT_NAVIGATION_DELEGATE_IMPL to get associateWithWebContents
-  // val ASSOCIATE_CONTENTS = "a"
-
   val tabWebContentsDelegateAndroidImpl: Class<*>
   val loadUrlParams: Class<*>
-  val tabImpl: Class<*>
   val tabModelJniBridge: Class<*>
-  // val interceptNavigationDelegateImpl: Class<*>? = null
+  val navigationControllerImpl: Class<*>
 
-  // val navigationControllerImpl: Class<*>
-  // private val navController: Any? = null
-
-  // val webContentsObserverProxy: Class<*>? = null
-
-  // private val navigationHandle: Class<*>? = null
+  // val tabImpl: Class<*>
+  // val webContentsObserverProxy: Class<*>
+  // private val navigationHandle: Class<*>
 
   private val gURL: Class<*>
   private val mSpec: Field
@@ -56,20 +40,17 @@ class UserScriptProxy() {
 
     gURL = Chrome.load("org.chromium.url.GURL")
     loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
-    tabImpl = Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
+    // tabImpl = Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
     tabModelJniBridge = Chrome.load("org.chromium.chrome.browser.tabmodel.TabModelJniBridge")
     tabWebContentsDelegateAndroidImpl =
         Chrome.load("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
-    // interceptNavigationDelegateImpl =
-    //     Chrome.load(INTERCEPT_NAVIGATION_DELEGATE_IMPL)
-    // navigationControllerImpl =
-    //     Chrome.load("org.chromium.content.browser.framehost.NavigationControllerImpl")
+    navigationControllerImpl =
+        Chrome.load("org.chromium.content.browser.framehost.NavigationControllerImpl")
     // webContentsObserverProxy =
     //     Chrome.load("org.chromium.content.browser.webcontents.WebContentsObserverProxy")
     mUrl = loadUrlParams.getDeclaredField("a")
     mVerbatimHeaders =
         loadUrlParams.getDeclaredFields().filter { it.getType() == String::class.java }.elementAt(1)
-    // mTab = tabWebContentsDelegateAndroidImpl!!.getDeclaredField(TAB_FIELD)
     mSpec = gURL.getDeclaredField("a")
   }
 
@@ -89,25 +70,19 @@ class UserScriptProxy() {
   }
 
   private fun invokeScript(url: String) {
-    scriptManager.scripts.forEach {
+    scriptManager.scripts.forEach loop@{
       val script = it
-      var run = false
-
       script.exclude.forEach {
         if (it != "" && urlMatch(it, url)) {
-          return
+          return@loop
         }
       }
-
       script.match.forEach {
-        if (!run && urlMatch(it, url)) {
-          run = true
+        if (urlMatch(it, url)) {
+          evaluateJavaScript(script)
+          Log.i("${script.id} injected")
+          return@loop
         }
-      }
-
-      if (run) {
-        evaluateJavaScript(script)
-        Log.i("${script.id} injected")
       }
     }
   }
@@ -165,7 +140,7 @@ class UserScriptProxy() {
 
   private fun parseOrigin(url: String): String? {
     val protocol = url.split("://")
-    if (arrayOf("https", "http", "file").contains(protocol.first()) && protocol.size > 1) {
+    if (protocol.size > 1 && arrayOf("https", "http", "file").contains(protocol.first())) {
       return protocol.first() + "://" + protocol.elementAt(1).split("/").first()
     } else {
       return null

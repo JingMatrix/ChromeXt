@@ -22,16 +22,6 @@ object UserScriptHook : BaseHook() {
       TabModel.update(it.thisObject)
     }
 
-    findMethod(proxy!!.tabImpl) {
-          getParameterCount() == 1 &&
-              getParameterTypes().first() == proxy!!.loadUrlParams &&
-              getReturnType() == Int::class.java
-        }
-        .hookBefore {
-          val url = proxy!!.parseUrl(it.args[0])!!
-          proxy!!.userAgentHook(url, it.args[0])
-        }
-
     findMethod(proxy!!.tabModelJniBridge) { name == "destroy" }
         .hookBefore { TabModel.dropModel(it.thisObject) }
 
@@ -39,7 +29,7 @@ object UserScriptHook : BaseHook() {
         // public void onUpdateUrl(GURL url)
         .hookAfter {
           val url = proxy!!.parseUrl(it.args[0])!!
-          TabModel.refresh(url)
+          // Log.i("TabWebContentsDelegateAndroid hooked ${url}")
           proxy!!.evaluateJavaScript("globalThis.ChromeXt=console.debug.bind(console);")
           if (url.endsWith(".user.js")) {
             val promptInstallUserScript =
@@ -54,6 +44,7 @@ object UserScriptHook : BaseHook() {
           } else if (!url.endsWith("/ChromeXt/")) {
             proxy!!.didUpdateUrl(url)
           }
+          TabModel.refresh(url)
         }
 
     findMethod(proxy!!.tabWebContentsDelegateAndroidImpl) { name == "addMessageToConsole" }
@@ -93,12 +84,24 @@ object UserScriptHook : BaseHook() {
           }
         }
 
-    // findMethod(proxy!!.navigationControllerImpl) {
-    //       getParameterCount() == 1 && getParameterTypes().first() == proxy!!.loadUrlParams
+    findMethod(proxy!!.navigationControllerImpl) {
+          getParameterCount() == 1 && getParameterTypes().first() == proxy!!.loadUrlParams
+        }
+        // public void loadUrl(LoadUrlParams params)
+        .hookBefore {
+          val url = proxy!!.parseUrl(it.args[0])!!
+          // Log.i("NavigationController hooked ${url}")
+          proxy!!.userAgentHook(url, it.args[0])
+        }
+
+    // findMethod(proxy!!.tabImpl) {
+    //       getParameterCount() == 1 &&
+    //           getParameterTypes().first() == proxy!!.loadUrlParams &&
+    //           getReturnType() == Int::class.java
     //     }
-    //     // public void loadUrl(LoadUrlParams params)
-    //     .hookAfter {
+    //     .hookBefore {
     //       val url = proxy!!.parseUrl(it.args[0])!!
+    //       Log.i("Tab hooked ${url}")
     //       proxy!!.userAgentHook(url, it.args[0])
     //     }
 
