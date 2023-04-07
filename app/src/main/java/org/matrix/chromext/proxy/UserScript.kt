@@ -1,6 +1,5 @@
 package org.matrix.chromext.proxy
 
-import android.content.Context
 import java.lang.reflect.Field
 import java.net.URLEncoder
 import org.matrix.chromext.Chrome
@@ -129,11 +128,9 @@ class UserScriptProxy() {
   fun userAgentHook(url: String, urlParams: Any) {
     val origin = parseOrigin(url)
     if (origin != null) {
-      val ctx = Chrome.getContext()
       // Log.d("Change User-Agent header: ${origin}")
-      val sharedPref = ctx.getSharedPreferences("UserAgent", Context.MODE_PRIVATE)
-      if (sharedPref.contains(origin)) {
-        mVerbatimHeaders.set(urlParams, "user-agent: ${sharedPref.getString(origin, "")}\r\n")
+      if (scriptManager.userAgents.contains(origin)) {
+        mVerbatimHeaders.set(urlParams, "user-agent: ${scriptManager.userAgents.get(origin)}\r\n")
       }
     }
   }
@@ -151,18 +148,18 @@ class UserScriptProxy() {
     val origin = parseOrigin(url)
     if (origin != null) {
       invokeScript(url)
-      val ctx = Chrome.getContext()
-      var sharedPref = ctx.getSharedPreferences("CosmeticFilter", Context.MODE_PRIVATE)
-      if (sharedPref.contains(origin)) {
-        val script = ctx.assets.open("cosmetic-filter.js").bufferedReader().use { it.readText() }
+      if (scriptManager.cosmeticFilters.contains(origin)) {
+        val script =
+            Chrome.getContext().assets.open("cosmetic-filter.js").bufferedReader().use {
+              it.readText()
+            }
         evaluateJavaScript(
-            "globalThis.ChromeXt_filter=`${sharedPref.getString(origin, "")}`;${script}")
+            "globalThis.ChromeXt_filter=`${scriptManager.cosmeticFilters.get(origin)}`;${script}")
         Log.d("Cosmetic filters applied to ${origin}")
       }
-      sharedPref = ctx.getSharedPreferences("UserAgent", Context.MODE_PRIVATE)
-      if (sharedPref.contains(origin)) {
+      if (scriptManager.userAgents.contains(origin)) {
         evaluateJavaScript(
-            "Object.defineProperties(window.navigator,{userAgent:{value:'${sharedPref.getString(origin, "")}'}});")
+            "Object.defineProperties(window.navigator,{userAgent:{value:'${scriptManager.userAgents.get(origin)}'}});")
       }
     }
   }

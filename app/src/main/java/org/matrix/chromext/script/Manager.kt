@@ -16,10 +16,19 @@ class ScriptDbManger(ctx: Context) {
 
   private val dbHelper: SQLiteOpenHelper
   val scripts: MutableList<Script>
+  val userAgents = mutableMapOf<String, String>()
+  val cosmeticFilters = mutableMapOf<String, String>()
 
   init {
     dbHelper = ScriptDbHelper(ctx)
     scripts = query()
+    @Suppress("UNCHECKED_CAST")
+    cosmeticFilters.putAll(
+        ctx.getSharedPreferences("CosmeticFilter", Context.MODE_PRIVATE).getAll()
+            as Map<String, String>)
+    @Suppress("UNCHECKED_CAST")
+    userAgents.putAll(
+        ctx.getSharedPreferences("UserAgent", Context.MODE_PRIVATE).getAll() as Map<String, String>)
   }
 
   fun insert(vararg script: Script) {
@@ -148,8 +157,10 @@ class ScriptDbManger(ctx: Context) {
         with(sharedPref.edit()) {
           if (result.size == 1 && sharedPref.contains(result.first())) {
             remove(result.first())
+            cosmeticFilters.remove(result.first())
           } else if (result.size == 2) {
             putString(result.first(), result.last())
+            cosmeticFilters.put(result.first(), result.last())
           } else {
             callback = "alert('Invalid Cosmetic Filters');"
           }
@@ -163,6 +174,7 @@ class ScriptDbManger(ctx: Context) {
         if (result.size == 2) {
           with(sharedPref.edit()) {
             putString(result.first(), result.last())
+            userAgents.put(result.first(), result.last())
             apply()
           }
         } else {
