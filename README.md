@@ -7,15 +7,9 @@ Add UserScript support to Chrome using Xposed framework
 We hook a `onUpdateUrl` function in [UserScript.kt](app/src/main/java/org/matrix/chromext/hook/UserScript.kt),
 add URL comparison there and evaluate JavaScript using the `javascript:` scheme.
 
-### Adapt to your Chrome version
-
 We pay our main efforts to support the latest _stable_ version of Android Chrome
 installed from Google Play Store or downloaded APK from the internet.
 Please consider update your Android Chrome first before proceeding.
-
-Current supporting state:
-1. installation from Google Play Store: `103`, `108`, `109`, `110`, `111`
-2. installation from APK: `108`, `109`, `110`, `111`
 
 ## Usage
 
@@ -77,13 +71,13 @@ use multiple scripts of normal sizes instead of a giant script
 
 ### Solution of system gesture conflicts
 
+Current supporting state for this feature:
+1. Android: `>= 10`
+2. installation from Google Play Store: `103 ~ 111`
+3. installation from APK: `108 ~ 111`
+
 The forward and backward gestures of Chrome are now available near the vertical center of screen.
 On other areas, only the system gesture is available.
-<!-- To enable forward gesture in chrome, with the help of this module, -->
-<!-- one only needs to disable the right back gesture by -->
-<!-- ```sh -->
-<!-- adb shell settings put secure back_gesture_inset_scale_right -1 -->
-<!-- ``` -->
 
 ### Dev Tools for developers
 
