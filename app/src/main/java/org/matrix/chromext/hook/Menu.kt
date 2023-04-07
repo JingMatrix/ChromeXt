@@ -36,27 +36,30 @@ object MenuHook : BaseHook() {
     var mTab: Field? = null
     var activateReadMode: Method? = null
 
-    findReaderHook =
-        proxy.emptyTabObserver.getDeclaredConstructors()[0].hookAfter {
-          val subType = it.thisObject::class.java
-          if (subType.getInterfaces().size == 1 &&
-              subType.getDeclaredFields().find {
-                it.toString().startsWith("public org.chromium.ui.modelutil.PropertyModel")
-              } != null) {
-            readerModeManager = it.thisObject
-            findReaderHook!!.unhook()
-            mTab =
+    val observerConstructors = proxy.emptyTabObserver.getDeclaredConstructors()
+    if (observerConstructors.size > 0) {
+      findReaderHook =
+          observerConstructors.first().hookAfter {
+            val subType = it.thisObject::class.java
+            if (subType.getInterfaces().size == 1 &&
                 subType.getDeclaredFields().find {
-                  it.toString().startsWith("public final org.chromium.chrome.browser.tab.Tab")
-                }!!
-            mTab!!.setAccessible(true)
-            mDistillerUrl = subType.getDeclaredFields().filter { it.type == proxy.gURL }.last()
-            mDistillerUrl!!.setAccessible(true)
-            activateReadMode =
-                // This is purely luck, there are other methods with the same signatures
-                findMethod(subType) { getParameterCount() == 0 && getReturnType() == Void.TYPE }
+                  it.toString().startsWith("public org.chromium.ui.modelutil.PropertyModel")
+                } != null) {
+              readerModeManager = it.thisObject
+              findReaderHook!!.unhook()
+              mTab =
+                  subType.getDeclaredFields().find {
+                    it.toString().startsWith("public final org.chromium.chrome.browser.tab.Tab")
+                  }!!
+              mTab!!.setAccessible(true)
+              mDistillerUrl = subType.getDeclaredFields().filter { it.type == proxy.gURL }.last()
+              mDistillerUrl!!.setAccessible(true)
+              activateReadMode =
+                  // This is purely luck, there are other methods with the same signatures
+                  findMethod(subType) { getParameterCount() == 0 && getReturnType() == Void.TYPE }
+            }
           }
-        }
+    }
 
     fun menuHandler(id: Int): Boolean {
       val name = ctx.getResources().getResourceName(id)
@@ -152,9 +155,9 @@ object MenuHook : BaseHook() {
 
                 val magicMenuItem: MenuItem = items.removeLast()
                 magicMenuItem.setVisible(!(it.args[3] as Boolean) && (it.args[2] as Boolean))
-                // The index 13 is just chosen to make sure that it
+                // The index 14 is just chosen to make sure that it
                 // appears before the share menu
-                items.add(13, magicMenuItem)
+                items.add(14, magicMenuItem)
                 mItems.setAccessible(false)
               }
         }
