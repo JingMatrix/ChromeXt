@@ -64,8 +64,8 @@ class UserScriptProxy() {
 
   fun newUrl(url: String): Any {
     return loadUrlParams
-        .getDeclaredConstructor(String::class.java, Int::class.java)
-        .newInstance(url, 0)
+        .getDeclaredConstructor(gURL)
+        .newInstance(gURL.getDeclaredConstructors()[1].newInstance(url))
   }
 
   private fun invokeScript(url: String) {

@@ -19,12 +19,14 @@ private const val PACKAGE_CHROME = "com.android.chrome"
 private const val PACKAGE_BETA = "com.chrome.beta"
 private const val PACKAGE_DEV = "com.chrome.dev"
 private const val PACKAGE_CANARY = "com.chrome.canary"
+private const val PACKAGE_BROMITE = "org.bromite.bromite"
 
 fun filterPackage(packageName: String): Boolean {
   return packageName == PACKAGE_BETA ||
       packageName == PACKAGE_DEV ||
       packageName == PACKAGE_CANARY ||
-      packageName == PACKAGE_CHROME
+      packageName == PACKAGE_CHROME ||
+      packageName == PACKAGE_BROMITE
 }
 
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitPackageResources {

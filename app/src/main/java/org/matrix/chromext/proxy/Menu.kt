@@ -8,10 +8,10 @@ import java.lang.reflect.Field
 import java.lang.reflect.Method
 import kotlin.text.Regex
 import org.matrix.chromext.Chrome
-import org.matrix.chromext.hook.GestureNavHook
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
+import org.matrix.chromext.utils.hookBefore
 
 const val ERUD_URL = "https://cdn.jsdelivr.net/npm/eruda@latest/eruda.min.js"
 
@@ -53,10 +53,13 @@ class MenuProxy() {
     twoStatePreference = Chrome.load("androidx/preference/g")
     gURL = Chrome.load("org.chromium.url.GURL")
     emptyTabObserver =
-        Chrome.load("org.chromium.chrome.browser.contextualsearch.ContextualSearchTabHelper")
-            .getSuperclass() as Class<*>
+        Chrome.load("org.chromium.chrome.browser.login.ChromeHttpAuthHandler").getSuperclass()
+            as Class<*>
     mClickListener =
-        preference.getDeclaredFields().find { it.getType() == OnClickListener::class.java }!!
+        preference.getDeclaredFields().find {
+          it.getType() == OnClickListener::class.java ||
+              it.getType().getInterfaces().contains(OnClickListener::class.java)
+        }!!
     mClickListener.setAccessible(true)
 
     setSummary =
@@ -83,89 +86,100 @@ class MenuProxy() {
         }
   }
 
-  fun setClickListener(obj: Any, pref: String) {
+  fun setClickListener(preferences: Map<String, Any>) {
     val ctx = Chrome.getContext()
     val sharedPref =
         ctx.getSharedPreferences(
             Chrome.getContext().getPackageName() + "_preferences", Context.MODE_PRIVATE)
-    when (pref) {
-      "exit" -> {
-        mClickListener.set(
-            obj,
-            object : OnClickListener {
-              override fun onClick(v: View) {
-                if (Chrome.isDev) {
-                  Log.toast(ctx, "This function is not available for your Chrome build")
-                  return
-                }
-                with(sharedPref.edit()) {
-                  putBoolean("developer", false)
-                  apply()
-                  Log.toast(ctx, "Please restart Chrome to apply the changes")
-                }
-              }
-            })
-      }
-      "eruda" -> {
-        val version = sharedPref.getString("eruda_version", "unknown")
-        var summary = "Click to install Eruda, size around 0.5 MiB"
-        if (version != "unknown") {
-          summary = "Current version: v" + version
-        }
-        setSummary.invoke(obj, summary)
-        mClickListener.set(
-            obj,
-            object : OnClickListener {
-              override fun onClick(v: View) {
-                Download.start(ERUD_URL, "Download/Eruda.js", true) {
-                  val old_version = sharedPref.getString("eruda_version", "unknown")
-                  var new_version = old_version
-                  val verisonReg = Regex("""/npm/eruda@(?<version>[\d\.]+)/eruda""")
-                  val vMatchGroup =
-                      verisonReg.find(it.take(150))?.groups as? MatchNamedGroupCollection
-                  if (vMatchGroup != null) {
-                    new_version = vMatchGroup.get("version")?.value as String
+
+    val version = sharedPref.getString("eruda_version", "unknown")
+    var summary = "Click to install Eruda, size around 0.5 MiB"
+    if (version != "unknown") {
+      summary = "Current version: v" + version
+    }
+    setSummary.invoke(preferences["eruda"], summary)
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      setChecked.invoke(preferences["gesture_mod"], sharedPref.getBoolean("gesture_mod", true))
+    } else {
+      setChecked.invoke(preferences["gesture_mod"], false)
+    }
+
+    val listeners =
+        mapOf(
+            "exit" to
+                fun(_: Any) {
+                  if (Chrome.isDev) {
+                    Log.toast(ctx, "This function is not available for your Chrome build")
+                    return
                   }
-                  if (old_version != new_version) {
-                    with(sharedPref.edit()) {
-                      putString("eruda_version", new_version)
-                      apply()
-                    }
-                    Log.toast(ctx, "Updated to eruda v" + new_version)
-                    setSummary.invoke(obj, "Current version: v" + new_version)
-                  } else {
-                    Log.toast(ctx, "Eruda is already the lastest")
-                  }
-                }
-              }
-            })
-      }
-      "gesture_mod" -> {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && GestureNavHook.isInit) {
-          setChecked.invoke(obj, sharedPref.getBoolean("gesture_mod", true))
-          mClickListener.set(
-              obj,
-              object : OnClickListener {
-                override fun onClick(v: View) {
                   with(sharedPref.edit()) {
-                    putBoolean("gesture_mod", !sharedPref.getBoolean("gesture_mod", true))
+                    putBoolean("developer", false)
                     apply()
                   }
-                  setChecked.invoke(obj, sharedPref.getBoolean("gesture_mod", true))
-                }
-              })
-        } else {
-          setChecked.invoke(obj, false)
-          mClickListener.set(
-              obj,
-              object : OnClickListener {
-                override fun onClick(_v: View) {
-                  setChecked.invoke(obj, false)
-                  Log.toast(ctx, "Function unavaible for your Chrome or Android versions")
-                }
-              })
-        }
+                  Log.toast(ctx, "Please restart Chrome to apply the changes")
+                },
+            "eruda" to
+                fun(obj: Any) {
+                  Download.start(ERUD_URL, "Download/Eruda.js", true) {
+                    val old_version = sharedPref.getString("eruda_version", "unknown")
+                    var new_version = old_version
+                    val verisonReg = Regex("""/npm/eruda@(?<version>[\d\.]+)/eruda""")
+                    val vMatchGroup =
+                        verisonReg.find(it.take(150))?.groups as? MatchNamedGroupCollection
+                    if (vMatchGroup != null) {
+                      new_version = vMatchGroup.get("version")?.value as String
+                    }
+                    if (old_version != new_version) {
+                      with(sharedPref.edit()) {
+                        putString("eruda_version", new_version)
+                        apply()
+                      }
+                      Log.toast(ctx, "Updated to eruda v" + new_version)
+                      setSummary.invoke(obj, "Current version: v" + new_version)
+                    } else {
+                      Log.toast(ctx, "Eruda is already the lastest")
+                    }
+                  }
+                },
+            "gesture_mod" to
+                fun(obj: Any) {
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val enabled = sharedPref.getBoolean("gesture_mod", true)
+                    setChecked.invoke(obj, !enabled)
+                    Log.i("Was checked? ${enabled}")
+                    with(sharedPref.edit()) {
+                      putBoolean("gesture_mod", !enabled)
+                      apply()
+                    }
+                  } else {
+                    setChecked.invoke(obj, false)
+                    Log.toast(ctx, "Feature unavaible for your Chrome or Android versions")
+                  }
+                })
+
+    if (mClickListener.getType() == OnClickListener::class.java) {
+      preferences.forEach { (name, pref) ->
+        mClickListener.set(
+            pref,
+            object : OnClickListener {
+              override fun onClick(v: View) {
+                listeners[name]?.invoke(pref)
+              }
+            })
       }
+    } else {
+      val mPreference = mClickListener.getType().getDeclaredFields().first()
+      findMethod(mClickListener.getType()) { name == "onClick" }
+          .hookBefore {
+            preferences.forEach(
+                fun(name: String, pref: Any) {
+                  if (pref == mPreference.get(it.thisObject)) {
+                    listeners[name]?.invoke(pref)
+                    it.result = true
+                  }
+                })
+          }
     }
   }
 }
