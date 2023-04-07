@@ -35,31 +35,31 @@ object MenuHook : BaseHook() {
     var mDistillerUrl: Field? = null
     var mTab: Field? = null
     var activateReadMode: Method? = null
+    val MOCK_READER_URL = "https://github.com/JingMatrix/ChromeXt"
 
-    val observerConstructors = proxy.emptyTabObserver.getDeclaredConstructors()
-    if (observerConstructors.size > 0) {
-      findReaderHook =
-          observerConstructors.first().hookAfter {
-            val subType = it.thisObject::class.java
-            if (subType.getInterfaces().size == 1 &&
-                subType.getDeclaredFields().find {
-                  it.toString().startsWith("public org.chromium.ui.modelutil.PropertyModel")
-                } != null) {
-              readerModeManager = it.thisObject
-              findReaderHook!!.unhook()
-              mTab =
+    findReaderHook =
+        findMethod(proxy.emptyTabObserver) { getParameterCount() == 6 }
+            // A method has the most code must be called for the initialization
+            .hookAfter {
+              val subType = it.thisObject::class.java
+              if (subType.getInterfaces().size == 1 &&
                   subType.getDeclaredFields().find {
-                    it.toString().startsWith("public final org.chromium.chrome.browser.tab.Tab")
-                  }!!
-              mTab!!.setAccessible(true)
-              mDistillerUrl = subType.getDeclaredFields().filter { it.type == proxy.gURL }.last()
-              mDistillerUrl!!.setAccessible(true)
-              activateReadMode =
-                  // This is purely luck, there are other methods with the same signatures
-                  findMethod(subType) { getParameterCount() == 0 && getReturnType() == Void.TYPE }
+                    it.toString().startsWith("public org.chromium.ui.modelutil.PropertyModel")
+                  } != null) {
+                readerModeManager = it.thisObject
+                findReaderHook!!.unhook()
+                mTab =
+                    subType.getDeclaredFields().find {
+                      it.toString().startsWith("public final org.chromium.chrome.browser.tab.Tab")
+                    }!!
+                mTab!!.setAccessible(true)
+                mDistillerUrl = subType.getDeclaredFields().filter { it.type == proxy.gURL }.last()
+                mDistillerUrl!!.setAccessible(true)
+                activateReadMode =
+                    // This is purely luck, there are other methods with the same signatures
+                    findMethod(subType) { getParameterCount() == 0 && getReturnType() == Void.TYPE }
+              }
             }
-          }
-    }
 
     fun menuHandler(id: Int): Boolean {
       val name = ctx.getResources().getResourceName(id)
@@ -73,7 +73,10 @@ object MenuHook : BaseHook() {
         "org.matrix.chromext:id/eruda_console_id" ->
             UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
         ctx.getPackageName() + ":id/info_menu_id" -> {
-          if (readerModeManager != null && mDistillerUrl!!.get(readerModeManager!!) != null) {
+          // Log.d(mDistillerUrl!!.get(readerModeManager!!) as String)
+          if (readerModeManager != null &&
+              mDistillerUrl!!.get(readerModeManager!!) ==
+                  proxy.gURL.getDeclaredConstructors()[1].newInstance(MOCK_READER_URL)) {
             activateReadMode!!.invoke(readerModeManager!!)
             return true
           }
@@ -129,9 +132,7 @@ object MenuHook : BaseHook() {
                   mTab!!.set(readerModeManager!!, it.args[1])
                   mDistillerUrl!!.set(
                       readerModeManager!!,
-                      proxy.gURL
-                          .getDeclaredConstructors()[1]
-                          .newInstance("https://github.com/JingMatrix/ChromeXt"))
+                      proxy.gURL.getDeclaredConstructors()[1].newInstance(MOCK_READER_URL))
                   // We need a mock url to finish the cleanup logic readerModeManager
                 }
 
