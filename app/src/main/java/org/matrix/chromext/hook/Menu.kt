@@ -69,7 +69,7 @@ object MenuHook : BaseHook() {
         "org.matrix.chromext:id/developer_tools_id" -> DevTools.start()
         "org.matrix.chromext:id/eruda_console_id" ->
             UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
-        "com.android.chrome:id/info_menu_id" -> {
+        ctx.getPackageName() + ":id/info_menu_id" -> {
           if (readerModeManager != null && mDistillerUrl!!.get(readerModeManager!!) != null) {
             activateReadMode!!.invoke(readerModeManager!!)
             return true

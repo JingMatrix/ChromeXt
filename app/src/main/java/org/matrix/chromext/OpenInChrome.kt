@@ -10,12 +10,12 @@ import org.matrix.chromext.utils.Log
 private const val TAG = "ChromeXt"
 
 class OpenInChrome : Activity() {
+  val defaultPackage = "com.android.chrome"
 
   fun invokeChromeTabbed(url: String) {
     val chromeMain =
         Intent(Intent.ACTION_MAIN)
-            .setComponent(
-                ComponentName("com.android.chrome", "com.google.android.apps.chrome.Main"))
+            .setComponent(ComponentName(defaultPackage, "com.google.android.apps.chrome.Main"))
     // Ensure that Chrome is started
     startActivity(chromeMain)
     startActivity(chromeMain.putExtra("ChromeXt", url))
@@ -25,7 +25,7 @@ class OpenInChrome : Activity() {
     super.onCreate(savedInstanceState)
     val intent: Intent = getIntent()
     val destination: ComponentName =
-        ComponentName("com.android.chrome", "com.google.android.apps.chrome.IntentDispatcher")
+        ComponentName(defaultPackage, "com.google.android.apps.chrome.IntentDispatcher")
     if (intent.action == Intent.ACTION_VIEW) {
       intent.setComponent(destination)
       intent.setDataAndType(intent.getData(), "text/html")

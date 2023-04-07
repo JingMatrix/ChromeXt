@@ -26,7 +26,8 @@ object GestureNavHook : BaseHook() {
         .hookBefore {
           val sharedPref =
               Chrome.getContext()
-                  .getSharedPreferences("com.android.chrome_preferences", Context.MODE_PRIVATE)
+                  .getSharedPreferences(
+                      Chrome.getContext().getPackageName() + "_preferences", Context.MODE_PRIVATE)
           if (sharedPref.getBoolean("gesture_mod", true)) {
             fixConflict(activity!!.get()!!)
             it.result = true
