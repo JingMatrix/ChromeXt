@@ -16,29 +16,17 @@ const val ERUD_URL = "https://cdn.jsdelivr.net/npm/eruda@latest/eruda.min.js"
 
 class MenuProxy() {
 
-  // Grep chrome-distiller to get the class ReaderModeManager
-  var READER_MODE_MANAGER = "js2"
-  // the match is inside the method activateReaderMode
-
-  // Grep Android.PrepareMenu.OpenWebApkVisibilityCheck to get the class
-  // org/chromium/chrome/browser/app/appmenu/AppMenuPropertiesDelegateImpl.java
-  var APP_MENU_PROPERTIES_DELEGATE_IMPL = "of"
-
   val chromeTabbedActivity: Class<*>
   val customTabActivity: Class<*>
-  val appMenuPropertiesDelegateImpl: Class<*>
   val developerSettings: Class<*>
   val preferenceFragmentCompat: Class<*>
-  val readerModeManager: Class<*>
+  val emptyTabObserver: Class<*>
   val twoStatePreference: Class<*>
   val gURL: Class<*>
 
   private val preference: Class<*>
   private val mClickListener: Field
-  val mDistillerUrl: Field
-  val mTab: Field
 
-  val activateReadMode: Method
   val setChecked: Method
   val setSummary: Method
 
@@ -49,46 +37,6 @@ class MenuProxy() {
   var isDeveloper: Boolean = false
 
   init {
-    if (Chrome.split && Chrome.version == 103) {
-      READER_MODE_MANAGER = "BD2"
-      APP_MENU_PROPERTIES_DELEGATE_IMPL = "Hg"
-    }
-
-    if (!Chrome.split && Chrome.version >= 108) {
-      READER_MODE_MANAGER = "bH2"
-      APP_MENU_PROPERTIES_DELEGATE_IMPL = "lg"
-    }
-
-    if (!Chrome.split && Chrome.version >= 109) {
-      READER_MODE_MANAGER = "KH2"
-      APP_MENU_PROPERTIES_DELEGATE_IMPL = "rg"
-    }
-
-    if (Chrome.split && Chrome.version >= 109) {
-      READER_MODE_MANAGER = "Ss2"
-      APP_MENU_PROPERTIES_DELEGATE_IMPL = "tf"
-    }
-
-    if (!Chrome.split && Chrome.version >= 110) {
-      READER_MODE_MANAGER = "lB2"
-      APP_MENU_PROPERTIES_DELEGATE_IMPL = "Fg"
-    }
-
-    if (Chrome.split && Chrome.version >= 110) {
-      READER_MODE_MANAGER = "pm2"
-      APP_MENU_PROPERTIES_DELEGATE_IMPL = "Jf"
-    }
-
-    if (!Chrome.split && Chrome.version >= 111) {
-      READER_MODE_MANAGER = "pD2"
-      APP_MENU_PROPERTIES_DELEGATE_IMPL = "Kg"
-    }
-
-    if (Chrome.split && Chrome.version >= 111) {
-      READER_MODE_MANAGER = "io2"
-      APP_MENU_PROPERTIES_DELEGATE_IMPL = "Of"
-    }
-
     val sharedPref =
         Chrome.getContext()
             .getSharedPreferences(
@@ -101,23 +49,15 @@ class MenuProxy() {
     preferenceFragmentCompat = developerSettings.getSuperclass() as Class<*>
     chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
     customTabActivity = Chrome.load("org.chromium.chrome.browser.customtabs.CustomTabActivity")
-    appMenuPropertiesDelegateImpl = Chrome.load(APP_MENU_PROPERTIES_DELEGATE_IMPL)
     twoStatePreference = Chrome.load("androidx/preference/g")
     gURL = Chrome.load("org.chromium.url.GURL")
-    readerModeManager = Chrome.load(READER_MODE_MANAGER)
+    emptyTabObserver =
+        Chrome.load("org.chromium.chrome.browser.contextualsearch.ContextualSearchTabHelper")
+            .getSuperclass() as Class<*>
     mClickListener =
         preference.getDeclaredFields().find { it.getType() == OnClickListener::class.java }!!
     mClickListener.setAccessible(true)
-    mTab =
-        readerModeManager.getDeclaredFields().find {
-          it.toString().startsWith("public final org.chromium.chrome.browser.tab.Tab")
-        }!!
-    mTab.setAccessible(true)
-    mDistillerUrl = readerModeManager.getDeclaredFields().filter { it.type == gURL }.last()
-    mDistillerUrl.setAccessible(true)
-    activateReadMode =
-        // This is purely luck, there are other methods with the same signatures
-        findMethod(readerModeManager) { getParameterCount() == 0 && getReturnType() == Void.TYPE }
+
     setSummary =
         findMethod(preference) {
           getParameterCount() == 1 &&
