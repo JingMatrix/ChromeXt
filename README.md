@@ -71,11 +71,6 @@ use multiple scripts of normal sizes instead of a giant script
 
 ### Solution of system gesture conflicts
 
-Current supporting state for this feature:
-1. Android: `>= 10`
-2. installation from Google Play Store: `103 ~ 111`
-3. installation from APK: `108 ~ 111`
-
 The forward and backward gestures of Chrome are now available near the vertical center of screen.
 On other areas, only the system gesture is available.
 
@@ -139,6 +134,7 @@ Here are corresponding files you might want / need to change:
 - [x] Support @resource API
 - [x] Make GestureNav Fix optional
 - [ ] Support mocking User-Agent
+- [ ] Add an open source License
 - [ ] Support [urlFilter](https://developer.chrome.com/docs/extensions/reference/declarativeNetRequest/#type-RuleCondition) syntax
 - [ ] Implement fully `GM_info`
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
