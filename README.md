@@ -11,6 +11,8 @@ We pay our main efforts to support the latest _stable_ version of Android Chrome
 installed from Google Play Store or downloaded APK from the internet.
 Please consider update your Android Chrome first before proceeding.
 
+Normally, [Bromite](https://github.com/bromite/bromite) is also supported.
+
 ## Usage
 
 Currently, this project requires **Xposed framework** installed.
@@ -23,7 +25,7 @@ You can try the following implements of it, depending on your Android version or
 [VirtualXposed](https://github.com/android-hacker/VirtualXposed), [Dreamland](https://github.com/canyie/Dreamland).
 
 Pick up the latest built APK from my repo's [GitHub Action](https://github.com/JingMatrix/ChromeXt/actions/workflows/android.yml) and install it.
-The author upload releases to [Xposed-Modules-Repo](https://github.com/Xposed-Modules-Repo/org.matrix.chromext/releases) when needed, but not that frequently.
+The author uploads releases to [Xposed-Modules-Repo](https://github.com/Xposed-Modules-Repo/org.matrix.chromext/releases) when needed, but not that frequently.
 
 You can then install UserScripts from popular sources: URLs that ends with `.user.js`.
 However, this fails for scripts from some domains like `raw.githubusercontent.com`.
@@ -76,9 +78,6 @@ On other areas, only the system gesture is available.
 
 ### Dev Tools for developers
 
-<!-- Currently, I implement this feature only for Android 11+. -->
-<!-- I might implement it for older Android versions if there are some requests for doing so. -->
-
 Tap five times on the Chrome version from the Chrome settings, you will see the `Developer options` menu.
 After restarting Chrome, ChromeXt offers you
 1. the `Developer tools` page menu for the UserScript manager front end,
@@ -97,7 +96,9 @@ These filters are saved in Chrome even after clearing the site's data.
 ### Mocking User Agent
 
 One can edit the user-agent from the `Info` panel of `Eruda console`.
+Clicking on the header of `User-Agent` will restore the default user-agent.
 The support is still limited, might be improved later.
+A valid user-agent should not contain the character `!`.
 
 ## Contribute to this project
 
@@ -133,9 +134,9 @@ Here are corresponding files you might want / need to change:
 - [x] Allow user to trigger reader mode
 - [x] Support @resource API
 - [x] Make GestureNav Fix optional
-- [ ] Support mocking User-Agent
-- [ ] Add an open source License
-- [ ] Support [urlFilter](https://developer.chrome.com/docs/extensions/reference/declarativeNetRequest/#type-RuleCondition) syntax
+- [x] Add an open source License
+- [ ] ~~Support mocking User-Agent~~
+- [ ] ~~Support [urlFilter](https://developer.chrome.com/docs/extensions/reference/declarativeNetRequest/#type-RuleCondition) syntax~~
 - [ ] Implement fully `GM_info`
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
 - [ ] Use `adb forward` to support non-root users
