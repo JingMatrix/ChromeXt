@@ -168,7 +168,7 @@ if (
     _renderHtml(html) {
       if (html.startsWith("<ul>")) {
         super._renderHtml(
-          `<ul><li class="chromext-user-agent"><h2 class="eruda-title">User Agent<span class="eruda-icon-copy eruda-copy"></span></h2><div class="eruda-content" contenteditable="true">${navigator.userAgent}</div></li>` +
+          `<ul><li class="chromext-user-agent"><h2 class="eruda-title">User Agent<span class="eruda-icon-copy"></span></h2><div class="eruda-content" contenteditable="true">${navigator.userAgent}</div></li>` +
             html.substring(4)
         );
       } else {
@@ -176,7 +176,9 @@ if (
       }
     }
     _bindEvent() {
-      this._$el.on("click", "li.chromext-user-agent > h2 > span", () => {
+      this._$el.on("click", "li.chromext-user-agent > h2 > span", (e) => {
+        this._container.notify("User-Agent config saved");
+        e.stopPropagation();
         globalThis.ChromeXt(
           JSON.stringify({
             action: "userAgent",
@@ -184,6 +186,16 @@ if (
               window.location.origin +
               "!" +
               this._$el.find("li.chromext-user-agent > div").text(),
+          })
+        );
+      });
+
+      this._$el.on("click", "li.chromext-user-agent > h2", () => {
+        this._container.notify("User-Agent will be restored after refresh");
+        globalThis.ChromeXt(
+          JSON.stringify({
+            action: "userAgent",
+            payload: window.location.origin,
           })
         );
       });

@@ -171,14 +171,17 @@ class ScriptDbManger(ctx: Context) {
         val sharedPref = Chrome.getContext().getSharedPreferences("UserAgent", Context.MODE_PRIVATE)
         val result = payload.split("!")
         Log.d("Config user-agent: ${result}")
-        if (result.size == 2) {
-          with(sharedPref.edit()) {
+        with(sharedPref.edit()) {
+          if (result.size == 1 && sharedPref.contains(result.first())) {
+            remove(result.first())
+            userAgents.remove(result.first())
+          } else if (result.size == 2) {
             putString(result.first(), result.last())
             userAgents.put(result.first(), result.last())
-            apply()
+          } else {
+            callback = "alert('Invalid User-Agent');"
           }
-        } else {
-          callback = "alert('Invalid User-Agent');"
+          apply()
         }
       }
     }
