@@ -8,6 +8,7 @@ import java.lang.reflect.Field
 import java.lang.reflect.Method
 import kotlin.text.Regex
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.hook.GestureNavHook
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
@@ -140,7 +141,7 @@ class MenuProxy() {
             })
       }
       "gesture_mod" -> {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && GestureNavHook.isInit) {
           setChecked.invoke(obj, sharedPref.getBoolean("gesture_mod", true))
           mClickListener.set(
               obj,
@@ -160,7 +161,7 @@ class MenuProxy() {
               object : OnClickListener {
                 override fun onClick(_v: View) {
                   setChecked.invoke(obj, false)
-                  Log.toast(ctx, "Only avaible after Android 10")
+                  Log.toast(ctx, "Function unavaible for your Chrome or Android versions")
                 }
               })
         }
