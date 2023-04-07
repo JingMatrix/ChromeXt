@@ -44,7 +44,7 @@ object UserScriptHook : BaseHook() {
           } else if (!url.endsWith("/ChromeXt/")) {
             proxy!!.didUpdateUrl(url)
           }
-          TabModel.refresh(url)
+          TabModel.refresh()
         }
 
     findMethod(proxy!!.tabWebContentsDelegateAndroidImpl) { name == "addMessageToConsole" }

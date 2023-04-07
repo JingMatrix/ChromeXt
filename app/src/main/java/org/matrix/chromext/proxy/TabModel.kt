@@ -33,7 +33,7 @@ object TabModel {
     return UserScriptHook.proxy!!.parseUrl(getTab().invokeMethod { name == "getUrl" }!!) ?: ""
   }
 
-  fun refresh(newUrl: String) {
+  fun refresh() {
     eruda_loaded.put(index(), false)
   }
 
