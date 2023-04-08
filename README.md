@@ -85,13 +85,40 @@ After restarting Chrome, ChromeXt offers you
 
 ### AD Blocker solution
 
-For blocking internet requests, I recommend to use `AdAway` or any proxy AD Blocker such as `clash`.
+For blocking network requests, I recommend to use `AdAway` or any proxy AD Blocker such as `clash`.
 
-The content cosmetic blocker is embedded into ChromeXt with the help of eruda.
+A content cosmetic blocker is embedded into ChromeXt with the help of eruda.
 Open the `Eruda console` from the page menu.
 In the `Elements` panel, one can use the `pointer` icon to select elements on the page.
-Once you click the `delete` icon for a selected element, a corresponding filter will be saved to the `Resources` panel.
-These filters are saved in Chrome even after clearing the site's data.
+After clicking the `delete` icon for a selected element, a corresponding filter will be saved to the `Resources` panel.
+These filters are saved in the browser even after clearing the site's data.
+
+Another way to block ADs is using the [Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src) to block some scripts from loading.
+<details>
+    <summary>Click to show an exemplar UserScript:</summary>
+
+```javascript
+// ==UserScript==
+// @name	Yinghuacd Mobile
+// @namespace	JingMatrix
+// @exclude	http://m.yinghuacd.com/
+// @match	http://m.yinghuacd.com/*
+// @run-at	document-start
+// ==/UserScript==
+
+const meta = document.createElement("meta");
+meta.setAttribute("http-equiv", "Content-Security-Policy");
+meta.setAttribute("content", "script-src http://m.yinghuacd.com/js/js/;");
+try {
+  document.head.append(meta);
+} catch {
+  setTimeout(() => {
+    document.head.append(meta);
+  }, 0);
+}
+```
+</details>
+
 
 ### Mocking User Agent
 
