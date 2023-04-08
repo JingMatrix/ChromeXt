@@ -67,7 +67,7 @@ class UserScriptProxy() {
     ScriptDbManager.scripts.forEach loop@{
       val script = it
       script.exclude.forEach {
-        if (it != "" && urlMatch(it, url)) {
+        if (urlMatch(it, url)) {
           return@loop
         }
       }

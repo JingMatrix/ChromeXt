@@ -63,16 +63,19 @@ object ScriptDbManager {
     }
     val quried_scripts = mutableListOf<Script>()
     with(cursor) {
+      fun getValueFromColumn(name: String): Array<String> {
+        return getString(getColumnIndexOrThrow(name)).split(SEP).filter { it != "" }.toTypedArray()
+      }
       while (moveToNext()) {
         val id = getString(getColumnIndexOrThrow("id"))
         val meta = getString(getColumnIndexOrThrow("meta"))
         val code = getString(getColumnIndexOrThrow("code"))
         val runAt = RunAt.valueOf(getString(getColumnIndexOrThrow("runAt")))
-        val match = getString(getColumnIndexOrThrow("match")).split(SEP).toTypedArray()
-        val grant = getString(getColumnIndexOrThrow("grant")).split(SEP).toTypedArray()
-        val exclude = getString(getColumnIndexOrThrow("exclude")).split(SEP).toTypedArray()
-        val require = getString(getColumnIndexOrThrow("require")).split(SEP).toTypedArray()
-        val resource = getString(getColumnIndexOrThrow("resource")).split(SEP).toTypedArray()
+        val match = getValueFromColumn("match")
+        val grant = getValueFromColumn("grant")
+        val exclude = getValueFromColumn("exclude")
+        val require = getValueFromColumn("require")
+        val resource = getValueFromColumn("resource")
         val script = Script(id, match, grant, exclude, require, resource, meta, code, runAt)
         quried_scripts.add(script)
       }

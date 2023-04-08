@@ -107,11 +107,7 @@ fun encodeScript(script: Script): String? {
   val imports =
       script.require
           .map {
-            if (it != "") {
-              """try{await import("${it}")}catch(e){console.log(e);GM_addElement('script', {src:'${it}'})}"""
-            } else {
-              it
-            }
+            """try{await import("${it}")}catch(e){console.log(e);GM_addElement('script', {src:'${it}'})}"""
           }
           .joinToString(separator = ";")
   if (imports != "") {
@@ -126,9 +122,6 @@ fun encodeScript(script: Script): String? {
 
   script.grant.forEach granting@{
     val function = it
-    if (function == "") {
-      return@granting
-    }
     when (function) {
       "GM_addStyle" -> code = GM_addStyle + code
       "GM_addElement" -> code = GM_addElement + code
@@ -156,8 +149,8 @@ fun encodeScript(script: Script): String? {
         var GM_ResourceURL = "GM_ResourceURL={"
         script.resource.forEach {
           val content = it.split(" ")
+          if (content.size != 2) return@granting
           val name = content.first()
-          if (name == "") return@granting
           val url = content.last()
           GM_ResourceURL += name + ":'" + url + "',"
         }

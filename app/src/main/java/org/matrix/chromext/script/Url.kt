@@ -10,7 +10,7 @@ fun urlMatch(match: String, url: String): Boolean {
   }
 
   if ("*" !in pattern) {
-    return pattern in url
+    return pattern == url
   }
 
   if ("://" in pattern) {
