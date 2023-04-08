@@ -13,8 +13,7 @@ object Chrome {
   private var longVersion: Long = 0
   var split = true
   var isDev = false
-  var version = 108
-  // Might be extended to support different versions
+  var version = 0
 
   fun init(ctx: Context) {
     mContext = WeakReference(ctx)
@@ -30,7 +29,7 @@ object Chrome {
     if (!split) {
       state = "non-split"
     }
-    Log.i("Get Chrome: ${packageName}, v${packageInfo!!.versionName}, ${state}")
+    Log.i("Package: ${packageName}, v${packageInfo!!.versionName}, ${state}")
     setVersion()
   }
 
