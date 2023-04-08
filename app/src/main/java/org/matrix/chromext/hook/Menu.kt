@@ -28,6 +28,7 @@ object MenuHook : BaseHook() {
     val proxy = MenuProxy()
     var enrichHook: Unhook? = null
     var findReaderHook: Unhook? = null
+    var findMenuHook: Unhook? = null
 
     // Page menu only appears after restarting chrome
 
@@ -93,75 +94,76 @@ object MenuHook : BaseHook() {
           }
         }
 
-    findMethod(proxy.chromeTabbedActivity) {
-          getParameterCount() == 0 &&
-              getReturnType().isInterface() &&
-              getReturnType().getDeclaredMethods().size > 6
-        }
-        .hookAfter {
-          val appMenuPropertiesDelegateImpl = it.result::class.java.getSuperclass() as Class<*>
+    findMenuHook =
+        findMethod(proxy.chromeTabbedActivity) {
+              getParameterCount() == 0 &&
+                  getReturnType().isInterface() &&
+                  getReturnType().getDeclaredMethods().size > 6
+            }
+            .hookAfter {
+              val appMenuPropertiesDelegateImpl = it.result::class.java.getSuperclass() as Class<*>
+              findMenuHook!!.unhook()
+              findMethod(appMenuPropertiesDelegateImpl, true) {
+                    getParameterCount() == 4 &&
+                        getParameterTypes().first() == Menu::class.java &&
+                        getParameterTypes().last() == Boolean::class.java &&
+                        getReturnType() == Void.TYPE
+                  }
+                  // protected void updateRequestDesktopSiteMenuItem(Menu menu, @Nullable Tab
+                  // currentTab, boolean canShowRequestDesktopSite, boolean isChromeScheme)
+                  .hookBefore {
+                    val menu = it.args[0] as Menu
 
-          findMethod(appMenuPropertiesDelegateImpl, true) {
-                getParameterCount() == 4 &&
-                    getParameterTypes().first() == Menu::class.java &&
-                    getParameterTypes().last() == Boolean::class.java &&
-                    getReturnType() == Void.TYPE
-              }
-              // protected void updateRequestDesktopSiteMenuItem(Menu menu, @Nullable Tab
-              // currentTab, boolean canShowRequestDesktopSite, boolean isChromeScheme)
-              .hookBefore {
-                val menu = it.args[0] as Menu
+                    if (menu.size() <= 20 || TabModel.getUrl().startsWith("chrome")) {
+                      // Infalte only for the main_menu, which has more than 20 items at least
+                      return@hookBefore
+                    }
 
-                if (menu.size() <= 20 || TabModel.getUrl().startsWith("chrome")) {
-                  // Infalte only for the main_menu, which has more than 20 items at least
-                  return@hookBefore
-                }
+                    if (menu.getItem(0).hasSubMenu() && readerModeManager != null) {
+                      // The first menu item shou be the row_menu
+                      // Brave browser not supported for unknown reason
+                      val infoMenu = menu.getItem(0).getSubMenu()!!.getItem(3)
+                      infoMenu.setIcon(R.drawable.ic_book)
+                      infoMenu.setEnabled(true)
+                      val mId = infoMenu::class.java.getDeclaredField("mId")
+                      mId.setAccessible(true)
+                      mId.set(infoMenu, READER_MODE_ID)
+                      mId.setAccessible(false)
+                      mTab!!.set(readerModeManager!!, it.args[1])
+                      mDistillerUrl!!.set(
+                          readerModeManager!!,
+                          proxy.gURL
+                              .getDeclaredConstructors()[1]
+                              .newInstance("https://github.com/JingMatrix/ChromeXt"))
+                      // We need a mock url to finish the cleanup logic readerModeManager
+                    }
 
-                if (menu.getItem(0).hasSubMenu() && readerModeManager != null) {
-                  // The first menu item shou be the row_menu
-                  // Brave browser not supported for unknown reason
-                  val infoMenu = menu.getItem(0).getSubMenu()!!.getItem(3)
-                  infoMenu.setIcon(R.drawable.ic_book)
-                  infoMenu.setEnabled(true)
-                  val mId = infoMenu::class.java.getDeclaredField("mId")
-                  mId.setAccessible(true)
-                  mId.set(infoMenu, READER_MODE_ID)
-                  mId.setAccessible(false)
-                  mTab!!.set(readerModeManager!!, it.args[1])
-                  mDistillerUrl!!.set(
-                      readerModeManager!!,
-                      proxy.gURL
-                          .getDeclaredConstructors()[1]
-                          .newInstance("https://github.com/JingMatrix/ChromeXt"))
-                  // We need a mock url to finish the cleanup logic readerModeManager
-                }
+                    MenuInflater(ctx).inflate(R.menu.main_menu, menu)
 
-                MenuInflater(ctx).inflate(R.menu.main_menu, menu)
+                    val mItems = menu::class.java.getDeclaredField("mItems")
+                    mItems.setAccessible(true)
 
-                val mItems = menu::class.java.getDeclaredField("mItems")
-                mItems.setAccessible(true)
+                    @Suppress("UNCHECKED_CAST") val items = mItems.get(menu) as ArrayList<MenuItem>
 
-                @Suppress("UNCHECKED_CAST") val items = mItems.get(menu) as ArrayList<MenuItem>
+                    if (TabModel.getUrl().endsWith("/ChromeXt/") && proxy.isDeveloper) {
+                      // Drop the Eruda console menu
+                      items.removeLast()
+                    }
 
-                if (TabModel.getUrl().endsWith("/ChromeXt/") && proxy.isDeveloper) {
-                  // Drop the Eruda console menu
-                  items.removeLast()
-                }
+                    if (TabModel.getUrl().endsWith(".user.js")) {
+                      // Drop the Eruda console and the Dev Tools menus
+                      items.removeLast()
+                      items.removeLast()
+                    }
 
-                if (TabModel.getUrl().endsWith(".user.js")) {
-                  // Drop the Eruda console and the Dev Tools menus
-                  items.removeLast()
-                  items.removeLast()
-                }
-
-                val magicMenuItem: MenuItem = items.removeLast()
-                magicMenuItem.setVisible(!(it.args[3] as Boolean) && (it.args[2] as Boolean))
-                // The index 14 is just chosen to make sure that it
-                // appears before the share menu
-                items.add(14, magicMenuItem)
-                mItems.setAccessible(false)
-              }
-        }
+                    val magicMenuItem: MenuItem = items.removeLast()
+                    magicMenuItem.setVisible(!(it.args[3] as Boolean) && (it.args[2] as Boolean))
+                    // The index 14 is just chosen to make sure that it
+                    // appears before the share menu
+                    items.add(14, magicMenuItem)
+                    mItems.setAccessible(false)
+                  }
+            }
 
     if (!Chrome.split || Chrome.version == 109) {
       // No idea when we need to enrich
