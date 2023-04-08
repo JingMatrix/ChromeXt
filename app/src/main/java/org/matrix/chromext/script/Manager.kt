@@ -4,7 +4,6 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.AbstractWindowedCursor
 import android.database.CursorWindow
-import android.database.sqlite.SQLiteOpenHelper
 import android.os.Build
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DevTools
@@ -12,26 +11,21 @@ import org.matrix.chromext.utils.Log
 
 private const val SEP = ""
 
-class ScriptDbManger(ctx: Context) {
+object ScriptDbManager {
 
-  private val dbHelper: SQLiteOpenHelper
-  val scripts: MutableList<Script>
-  val userAgents = mutableMapOf<String, String>()
-  val cosmeticFilters = mutableMapOf<String, String>()
+  val scripts = query()
 
-  init {
-    dbHelper = ScriptDbHelper(ctx)
-    scripts = query()
-    @Suppress("UNCHECKED_CAST")
-    cosmeticFilters.putAll(
-        ctx.getSharedPreferences("CosmeticFilter", Context.MODE_PRIVATE).getAll()
-            as Map<String, String>)
-    @Suppress("UNCHECKED_CAST")
-    userAgents.putAll(
-        ctx.getSharedPreferences("UserAgent", Context.MODE_PRIVATE).getAll() as Map<String, String>)
-  }
+  @Suppress("UNCHECKED_CAST")
+  val cosmeticFilters =
+      Chrome.getContext().getSharedPreferences("CosmeticFilter", Context.MODE_PRIVATE).getAll()
+          as MutableMap<String, String>
+  @Suppress("UNCHECKED_CAST")
+  val userAgents =
+      Chrome.getContext().getSharedPreferences("UserAgent", Context.MODE_PRIVATE).getAll()
+          as MutableMap<String, String>
 
-  fun insert(vararg script: Script) {
+  private fun insert(vararg script: Script) {
+    val dbHelper = ScriptDbHelper(Chrome.getContext())
     val db = dbHelper.writableDatabase
     script.forEach {
       val lines = db.delete("script", "id = ?", arrayOf(it.id))
@@ -54,12 +48,14 @@ class ScriptDbManger(ctx: Context) {
         Log.e("Insertion failed with: " + it.id)
       }
     }
+    dbHelper.close()
   }
 
   private fun query(
       selection: String? = null,
       selectionArgs: Array<String>? = null,
   ): MutableList<Script> {
+    val dbHelper = ScriptDbHelper(Chrome.getContext())
     val db = dbHelper.readableDatabase
     val cursor = db.query("script", null, selection, selectionArgs, null, null, null)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -82,16 +78,8 @@ class ScriptDbManger(ctx: Context) {
       }
     }
     cursor.close()
-    return quried_scripts
-  }
-
-  private fun delete(ids: Array<String>) {
-    val db = dbHelper.writableDatabase
-    db.delete("script", "id = ?", ids)
-  }
-
-  fun close() {
     dbHelper.close()
+    return quried_scripts
   }
 
   private fun parseArray(str: String): Array<String> {
@@ -99,6 +87,30 @@ class ScriptDbManger(ctx: Context) {
         .split("\",\"")
         .map { it.replace("\\", "") }
         .toTypedArray()
+  }
+
+  private fun syncSharedPreference(
+      payload: String,
+      item: String,
+      separator: String,
+      cache: MutableMap<String, String>
+  ): String? {
+    val sharedPref = Chrome.getContext().getSharedPreferences(item, Context.MODE_PRIVATE)
+    val result = payload.split(separator)
+    Log.d("Config ${item}: ${result}")
+    with(sharedPref.edit()) {
+      if (result.size == 1 && sharedPref.contains(result.first())) {
+        remove(result.first())
+        cache.remove(result.first())
+      } else if (result.size == 2) {
+        putString(result.first(), result.last())
+        cache.put(result.first(), result.last())
+      } else {
+        return "alert('Invalid ${item}');"
+      }
+      apply()
+    }
+    return null
   }
 
   fun on(action: String, payload: String): String? {
@@ -140,8 +152,11 @@ class ScriptDbManger(ctx: Context) {
       }
       "deleteScriptById" -> {
         val ids = parseArray(payload)
-        delete(ids)
+        val dbHelper = ScriptDbHelper(Chrome.getContext())
+        val db = dbHelper.writableDatabase
+        db.delete("script", "id = ?", ids)
         scripts.removeAll(scripts.filter { ids.contains(it.id) })
+        dbHelper.close()
       }
       "getPages" -> {
         val pages = DevTools.pages
@@ -150,39 +165,10 @@ class ScriptDbManger(ctx: Context) {
         }
       }
       "cosmeticFilter" -> {
-        val sharedPref =
-            Chrome.getContext().getSharedPreferences("CosmeticFilter", Context.MODE_PRIVATE)
-        val result = payload.split(";")
-        Log.d("Config cosmetic filters: ${result}")
-        with(sharedPref.edit()) {
-          if (result.size == 1 && sharedPref.contains(result.first())) {
-            remove(result.first())
-            cosmeticFilters.remove(result.first())
-          } else if (result.size == 2) {
-            putString(result.first(), result.last())
-            cosmeticFilters.put(result.first(), result.last())
-          } else {
-            callback = "alert('Invalid Cosmetic Filters');"
-          }
-          apply()
-        }
+        callback = syncSharedPreference(payload, "CosmeticFilter", ",", cosmeticFilters)
       }
       "userAgent" -> {
-        val sharedPref = Chrome.getContext().getSharedPreferences("UserAgent", Context.MODE_PRIVATE)
-        val result = payload.split("!")
-        Log.d("Config user-agent: ${result}")
-        with(sharedPref.edit()) {
-          if (result.size == 1 && sharedPref.contains(result.first())) {
-            remove(result.first())
-            userAgents.remove(result.first())
-          } else if (result.size == 2) {
-            putString(result.first(), result.last())
-            userAgents.put(result.first(), result.last())
-          } else {
-            callback = "alert('Invalid User-Agent');"
-          }
-          apply()
-        }
+        callback = syncSharedPreference(payload, "UserAgent", "!", userAgents)
       }
     }
     return callback

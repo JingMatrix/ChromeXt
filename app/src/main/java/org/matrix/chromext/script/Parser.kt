@@ -4,8 +4,6 @@ import kotlin.text.Regex
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
 
-// const size_t kMaxURLChars = 2 * 1024 * 1024; in chromium/src/ur/url_constants.cc
-// const uint32 kMaxURLChars = 2097152; in chromium/src/url/mojom/url.mojom
 const val kMaxURLChars = 2097152
 
 private val blocksReg =

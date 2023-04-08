@@ -14,6 +14,7 @@ import org.matrix.chromext.R
 import org.matrix.chromext.ResourceMerge
 import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.proxy.TabModel
+import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
@@ -66,7 +67,7 @@ object MenuHook : BaseHook() {
       when (name) {
         "org.matrix.chromext:id/install_script_id" -> {
           Download.start(TabModel.getUrl(), "UserScript/script.js") {
-            UserScriptHook.proxy!!.scriptManager.on("installScript", it)
+            ScriptDbManager.on("installScript", it)
           }
         }
         "org.matrix.chromext:id/developer_tools_id" -> DevTools.start()

@@ -5,6 +5,7 @@ import org.matrix.chromext.Chrome
 import org.matrix.chromext.DEV_FRONT_END
 import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.proxy.UserScriptProxy
+import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
@@ -59,7 +60,7 @@ object UserScriptHook : BaseHook() {
                   val action = data.getString("action")
                   val payload = data.getString("payload")
                   runCatching {
-                        val callback = proxy!!.scriptManager.on(action, payload)
+                        val callback = ScriptDbManager.on(action, payload)
                         if (callback != null) {
                           proxy!!.evaluateJavaScript(callback)
                         }
@@ -103,28 +104,6 @@ object UserScriptHook : BaseHook() {
     //       val url = proxy!!.parseUrl(it.args[0])!!
     //       Log.i("Tab hooked ${url}")
     //       proxy!!.userAgentHook(url, it.args[0])
-    //     }
-
-    // findMethod(proxy!!.webContentsObserverProxy!!) { name == "didStartLoading" }
-    //     // public void didStartLoading(GURL url)
-    //     .hookBefore {
-    //       val url = proxy!!.parseUrl(it.args[0])!!
-    //       proxy!!.didStartLoading(url)
-    //     }
-
-    // findMethod(proxy!!.webContentsObserverProxy!!) { name == "didStopLoading" }
-    //     // public void didStopLoading(GURL url, boolean isKnownValid)
-    //     .hookAfter {
-    //       val url = proxy!!.parseUrl(it.args[0])!!
-    //       proxy!!.didStopLoading(url)
-    //     }
-
-    // findMethod(proxy!!.interceptNavigationDelegateImpl!!) { name == "shouldIgnoreNavigation" }
-    //     // public boolean shouldIgnoreNavigation(NavigationHandle navigationHandle, GURL
-    //     // escapedUrl)
-    //     .hookAfter {
-    //       // Not using it yet, could help AdAway in the future
-    //       // Source code not stable yet, we should postpone relevant implements
     //     }
 
   }

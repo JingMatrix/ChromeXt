@@ -4,7 +4,7 @@ import java.lang.reflect.Field
 import java.net.URLEncoder
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.Script
-import org.matrix.chromext.script.ScriptDbManger
+import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.script.encodeScript
 import org.matrix.chromext.script.kMaxURLChars
 import org.matrix.chromext.script.urlMatch
@@ -12,11 +12,9 @@ import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
 
 class UserScriptProxy() {
-  // It is possible to a HTTP POST with LoadUrlParams Class
+  // It is possible to do a HTTP POST with LoadUrlParams Class
   // grep org/chromium/content_public/common/ResourceRequestBody to get setPostData in
   // org/chromium/content_public/browser/LoadUrlParams
-  // val POST_DATA = "b"
-  // ! Note: this is very POWERFUL
 
   val tabWebContentsDelegateAndroidImpl: Class<*>
   val loadUrlParams: Class<*>
@@ -32,10 +30,7 @@ class UserScriptProxy() {
   private val mUrl: Field
   private val mVerbatimHeaders: Field
 
-  val scriptManager: ScriptDbManger
-
   init {
-    scriptManager = ScriptDbManger(Chrome.getContext())
 
     gURL = Chrome.load("org.chromium.url.GURL")
     loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
@@ -69,7 +64,7 @@ class UserScriptProxy() {
   }
 
   private fun invokeScript(url: String) {
-    scriptManager.scripts.forEach loop@{
+    ScriptDbManager.scripts.forEach loop@{
       val script = it
       script.exclude.forEach {
         if (it != "" && urlMatch(it, url)) {
@@ -129,8 +124,8 @@ class UserScriptProxy() {
     val origin = parseOrigin(url)
     if (origin != null) {
       // Log.d("Change User-Agent header: ${origin}")
-      if (scriptManager.userAgents.contains(origin)) {
-        mVerbatimHeaders.set(urlParams, "user-agent: ${scriptManager.userAgents.get(origin)}\r\n")
+      if (ScriptDbManager.userAgents.contains(origin)) {
+        mVerbatimHeaders.set(urlParams, "user-agent: ${ScriptDbManager.userAgents.get(origin)}\r\n")
       }
     }
   }
@@ -148,18 +143,18 @@ class UserScriptProxy() {
     val origin = parseOrigin(url)
     if (origin != null) {
       invokeScript(url)
-      if (scriptManager.cosmeticFilters.contains(origin)) {
+      if (ScriptDbManager.cosmeticFilters.contains(origin)) {
         val script =
             Chrome.getContext().assets.open("cosmetic-filter.js").bufferedReader().use {
               it.readText()
             }
         evaluateJavaScript(
-            "globalThis.ChromeXt_filter=`${scriptManager.cosmeticFilters.get(origin)}`;${script}")
+            "globalThis.ChromeXt_filter=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${script}")
         Log.d("Cosmetic filters applied to ${origin}")
       }
-      if (scriptManager.userAgents.contains(origin)) {
+      if (ScriptDbManager.userAgents.contains(origin)) {
         evaluateJavaScript(
-            "Object.defineProperties(window.navigator,{userAgent:{value:'${scriptManager.userAgents.get(origin)}'}});")
+            "Object.defineProperties(window.navigator,{userAgent:{value:'${ScriptDbManager.userAgents.get(origin)}'}});")
       }
     }
   }
