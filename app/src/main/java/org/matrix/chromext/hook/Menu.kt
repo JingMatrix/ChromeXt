@@ -36,7 +36,7 @@ object MenuHook : BaseHook() {
     var mDistillerUrl: Field? = null
     var mTab: Field? = null
     var activateReadMode: Method? = null
-    val MOCK_READER_URL = "https://github.com/JingMatrix/ChromeXt"
+    val READER_MODE_ID = 31415926
 
     findReaderHook =
         findMethod(proxy.emptyTabObserver) { getParameterCount() == 6 }
@@ -63,8 +63,11 @@ object MenuHook : BaseHook() {
             }
 
     fun menuHandler(id: Int): Boolean {
-      val name = ctx.getResources().getResourceName(id)
-      when (name) {
+      if (id == READER_MODE_ID) {
+        activateReadMode!!.invoke(readerModeManager!!)
+        return true
+      }
+      when (ctx.getResources().getResourceName(id)) {
         "org.matrix.chromext:id/install_script_id" -> {
           Download.start(TabModel.getUrl(), "UserScript/script.js") {
             ScriptDbManager.on("installScript", it)
@@ -73,15 +76,6 @@ object MenuHook : BaseHook() {
         "org.matrix.chromext:id/developer_tools_id" -> DevTools.start()
         "org.matrix.chromext:id/eruda_console_id" ->
             UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
-        ctx.getPackageName() + ":id/info_menu_id" -> {
-          // Log.d(mDistillerUrl!!.get(readerModeManager!!) as String)
-          if (readerModeManager != null &&
-              mDistillerUrl!!.get(readerModeManager!!) ==
-                  proxy.gURL.getDeclaredConstructors()[1].newInstance(MOCK_READER_URL)) {
-            activateReadMode!!.invoke(readerModeManager!!)
-            return true
-          }
-        }
       }
       return false
     }
@@ -123,18 +117,22 @@ object MenuHook : BaseHook() {
                   return@hookBefore
                 }
 
-                if (menu.getItem(0).hasSubMenu() &&
-                    menu.getItem(0).getSubMenu()!!.size() > 4 &&
-                    !(it.args[3] as Boolean) &&
-                    readerModeManager != null) {
+                if (menu.getItem(0).hasSubMenu() && readerModeManager != null) {
                   // The first menu item shou be the row_menu
+                  // Brave browser not supported for unknown reason
                   val infoMenu = menu.getItem(0).getSubMenu()!!.getItem(3)
                   infoMenu.setIcon(R.drawable.ic_book)
                   infoMenu.setEnabled(true)
+                  val mId = infoMenu::class.java.getDeclaredField("mId")
+                  mId.setAccessible(true)
+                  mId.set(infoMenu, READER_MODE_ID)
+                  mId.setAccessible(false)
                   mTab!!.set(readerModeManager!!, it.args[1])
                   mDistillerUrl!!.set(
                       readerModeManager!!,
-                      proxy.gURL.getDeclaredConstructors()[1].newInstance(MOCK_READER_URL))
+                      proxy.gURL
+                          .getDeclaredConstructors()[1]
+                          .newInstance("https://github.com/JingMatrix/ChromeXt"))
                   // We need a mock url to finish the cleanup logic readerModeManager
                 }
 
