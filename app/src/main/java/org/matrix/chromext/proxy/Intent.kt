@@ -20,7 +20,11 @@ class IntentProxy() {
             .getDeclaredFields()
             .find {
               it.toString().startsWith("public final ") &&
-                  it.getType().getDeclaredFields().find { it.getType() == Pair::class.java } != null
+                  (it.getType().getDeclaredFields().find { it.getType() == Pair::class.java } !=
+                      null ||
+                      it.getType().getSuperclass().getDeclaredFields().find {
+                        it.getType() == Pair::class.java
+                      } != null)
             }!!
             .getType()
   }

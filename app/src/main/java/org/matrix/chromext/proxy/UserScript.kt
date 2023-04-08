@@ -58,9 +58,15 @@ class UserScriptProxy() {
   }
 
   fun newUrl(url: String): Any {
-    return loadUrlParams
-        .getDeclaredConstructor(gURL)
-        .newInstance(gURL.getDeclaredConstructors()[1].newInstance(url))
+    val constructor = loadUrlParams.getDeclaredConstructors().first()
+    val types = constructor.getParameterTypes()
+    if (types.size == 2 && types.first() == Int::class.java) {
+      return constructor.newInstance(0, url)
+    } else if (types.size == 2 && types.first() == String::class.java) {
+      return constructor.newInstance(url, 0)
+    } else {
+      return constructor.newInstance(url)
+    }
   }
 
   private fun invokeScript(url: String) {

@@ -50,10 +50,13 @@ class MenuProxy() {
     preferenceFragmentCompat = developerSettings.getSuperclass() as Class<*>
     chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
     customTabActivity = Chrome.load("org.chromium.chrome.browser.customtabs.CustomTabActivity")
-    twoStatePreference = Chrome.load("androidx/preference/g")
+    twoStatePreference =
+        Chrome.load("org.chromium.components.browser_ui.settings.ChromeSwitchPreference")
+            .getSuperclass()
     gURL = Chrome.load("org.chromium.url.GURL")
     emptyTabObserver =
         Chrome.load("org.chromium.chrome.browser.login.ChromeHttpAuthHandler").getSuperclass()
+            as Class<*>
             as Class<*>
     mClickListener =
         preference.getDeclaredFields().find {
@@ -69,17 +72,17 @@ class MenuProxy() {
               getReturnType() == Void.TYPE
         }
     setChecked =
-        findMethod(twoStatePreference) {
+        findMethod(twoStatePreference, true) {
           getParameterCount() == 1 && getParameterTypes().first() == Boolean::class.java
         }
     findPreference =
-        findMethod(preferenceFragmentCompat) {
+        findMethod(preferenceFragmentCompat, true) {
           getParameterCount() == 1 &&
               getParameterTypes().first() == CharSequence::class.java &&
               getReturnType() == preference
         }
     addPreferencesFromResource =
-        findMethod(preferenceFragmentCompat) {
+        findMethod(preferenceFragmentCompat, true) {
           getParameterCount() == 1 &&
               getParameterTypes().first() == Int::class.java &&
               getReturnType() == Void.TYPE
@@ -147,7 +150,6 @@ class MenuProxy() {
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     val enabled = sharedPref.getBoolean("gesture_mod", true)
                     setChecked.invoke(obj, !enabled)
-                    Log.i("Was checked? ${enabled}")
                     with(sharedPref.edit()) {
                       putBoolean("gesture_mod", !enabled)
                       apply()

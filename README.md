@@ -11,7 +11,7 @@ We pay our main efforts to support the latest _stable_ version of Android Chrome
 installed from Google Play Store or downloaded APK from the internet.
 Please consider update your Android Chrome first before proceeding.
 
-Normally, [Bromite](https://github.com/bromite/bromite) is also supported.
+Normally, [Bromite](https://github.com/bromite/bromite) and [Brave](https://github.com/brave/brave-browser) are also supported.
 
 ## Usage
 
@@ -164,6 +164,7 @@ Here are corresponding files you might want / need to change:
 - [x] Add an open source License
 - [ ] ~~Support mocking User-Agent~~
 - [ ] ~~Support [urlFilter](https://developer.chrome.com/docs/extensions/reference/declarativeNetRequest/#type-RuleCondition) syntax~~
+- [ ] Improve `Open in Chrome` function
 - [ ] Implement fully `GM_info`
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
 - [ ] Use `adb forward` to support non-root users

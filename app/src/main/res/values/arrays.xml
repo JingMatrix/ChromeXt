@@ -6,5 +6,6 @@
     <item>com.chrome.dev</item>
     <item>com.chrome.canary</item>
     <item>org.bromite.bromite</item>
+	<item>com.brave.browser</item>
     </string-array>
 </resources>

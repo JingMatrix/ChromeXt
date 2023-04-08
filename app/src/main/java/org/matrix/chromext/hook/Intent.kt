@@ -25,7 +25,7 @@ object IntentHook : BaseHook() {
           }
         }
 
-    findMethod(proxy.intentHandler) {
+    findMethod(proxy.intentHandler, true) {
           getParameterCount() == 3 &&
               getParameterTypes().first() == Context::class.java &&
               getParameterTypes().elementAt(1) == Intent::class.java &&

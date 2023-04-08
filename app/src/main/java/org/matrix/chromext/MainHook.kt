@@ -15,29 +15,28 @@ import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 
-private const val PACKAGE_CHROME = "com.android.chrome"
-private const val PACKAGE_BETA = "com.chrome.beta"
-private const val PACKAGE_DEV = "com.chrome.dev"
-private const val PACKAGE_CANARY = "com.chrome.canary"
-private const val PACKAGE_BROMITE = "org.bromite.bromite"
-
 fun filterPackage(packageName: String): Boolean {
-  return packageName == PACKAGE_BETA ||
-      packageName == PACKAGE_DEV ||
-      packageName == PACKAGE_CANARY ||
-      packageName == PACKAGE_CHROME ||
-      packageName == PACKAGE_BROMITE
+  return arrayOf(
+          "com.android.chrome",
+          "com.chrome.beta",
+          "com.chrome.dev",
+          "com.chrome.canary",
+          "org.bromite.bromite",
+          "com.brave.browser")
+      .contains(packageName)
 }
 
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitPackageResources {
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
     if (filterPackage(lpparam.packageName)) {
       runCatching {
-            findMethod(
-                    lpparam.classLoader.loadClass(
-                        "org.chromium.chrome.browser.base.SplitChromeApplication")) {
-                      name == "attachBaseContext"
-                    }
+            Chrome.split = true
+            var entryPoint = "org.chromium.chrome.browser.base.SplitChromeApplication"
+            runCatching { lpparam.classLoader.loadClass(entryPoint) }
+                .onFailure {
+                  entryPoint = "org.chromium.chrome.browser.base.SplitMonochromeApplication"
+                }
+            findMethod(lpparam.classLoader.loadClass(entryPoint)) { name == "attachBaseContext" }
                 .hookAfter {
                   val ctx = (it.args[0] as Context).createContextForSplit("chrome")
                   Chrome.init(ctx)

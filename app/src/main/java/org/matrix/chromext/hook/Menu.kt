@@ -107,7 +107,7 @@ object MenuHook : BaseHook() {
         .hookAfter {
           val appMenuPropertiesDelegateImpl = it.result::class.java.getSuperclass() as Class<*>
 
-          findMethod(appMenuPropertiesDelegateImpl) {
+          findMethod(appMenuPropertiesDelegateImpl, true) {
                 getParameterCount() == 4 &&
                     getParameterTypes().first() == Menu::class.java &&
                     getParameterTypes().last() == Boolean::class.java &&
@@ -124,6 +124,7 @@ object MenuHook : BaseHook() {
                 }
 
                 if (menu.getItem(0).hasSubMenu() &&
+                    menu.getItem(0).getSubMenu()!!.size() > 4 &&
                     !(it.args[3] as Boolean) &&
                     readerModeManager != null) {
                   // The first menu item shou be the row_menu
