@@ -3,14 +3,17 @@ package org.matrix.chromext
 import android.app.Activity
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager.ApplicationInfoFlags
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import org.matrix.chromext.utils.Log
 
-private const val TAG = "ChromeXt"
+const val TAG = "ChromeXt"
 
 class OpenInChrome : Activity() {
-  val defaultPackage = "com.android.chrome"
+  var defaultPackage = "com.android.chrome"
 
   fun invokeChromeTabbed(url: String) {
     val chromeMain =
@@ -23,6 +26,21 @@ class OpenInChrome : Activity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    val installedApplications: List<ApplicationInfo>
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      installedApplications =
+          getPackageManager().getInstalledApplications(ApplicationInfoFlags.of(0))
+    } else {
+      @Suppress("DEPRECATION")
+      installedApplications = getPackageManager().getInstalledApplications(0)
+    }
+    val avaiblePackages = supportedPackages.intersect(installedApplications.map { it.packageName })
+    if (avaiblePackages.size == 0) {
+      Log.toast(this, "No supported Chrome installed")
+      finish()
+    } else {
+      defaultPackage = avaiblePackages.last()
+    }
     val intent: Intent = getIntent()
     val destination: ComponentName =
         ComponentName(defaultPackage, "com.google.android.apps.chrome.IntentDispatcher")

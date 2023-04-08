@@ -5,8 +5,7 @@ import android.util.Log
 import android.widget.Toast
 import de.robv.android.xposed.XposedBridge
 import org.matrix.chromext.BuildConfig
-
-const val TAG = "ChromeXt"
+import org.matrix.chromext.TAG
 
 object Log {
   fun i(msg: String) {

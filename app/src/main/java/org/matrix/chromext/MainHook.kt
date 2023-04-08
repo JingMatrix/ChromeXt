@@ -15,20 +15,18 @@ import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 
-fun filterPackage(packageName: String): Boolean {
-  return arrayOf(
-          "com.android.chrome",
-          "com.chrome.beta",
-          "com.chrome.dev",
-          "com.chrome.canary",
-          "org.bromite.bromite",
-          "com.brave.browser")
-      .contains(packageName)
-}
+val supportedPackages =
+    arrayOf(
+        "com.android.chrome",
+        "com.chrome.beta",
+        "com.chrome.dev",
+        "com.chrome.canary",
+        "org.bromite.bromite",
+        "com.brave.browser")
 
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitPackageResources {
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
-    if (filterPackage(lpparam.packageName)) {
+    if (supportedPackages.contains(lpparam.packageName)) {
       runCatching {
             Chrome.split = true
             var entryPoint = "org.chromium.chrome.browser.base.SplitChromeApplication"

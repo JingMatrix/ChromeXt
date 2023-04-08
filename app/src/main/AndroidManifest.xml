@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+	<queries>
+		<package android:name="com.android.chrome"/>
+		<package android:name="com.chrome.beta"/>
+		<package android:name="com.chrome.canary"/>
+		<package android:name="com.chrome.dev"/>
+		<package android:name="org.bromite.bromite"/>
+		<package android:name="com.brave.browser"/>
+	</queries>
 
     <application
         android:icon="@mipmap/ic_launcher"

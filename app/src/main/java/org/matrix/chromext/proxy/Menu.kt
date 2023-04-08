@@ -52,11 +52,10 @@ class MenuProxy() {
     customTabActivity = Chrome.load("org.chromium.chrome.browser.customtabs.CustomTabActivity")
     twoStatePreference =
         Chrome.load("org.chromium.components.browser_ui.settings.ChromeSwitchPreference")
-            .getSuperclass()
+            .getSuperclass() as Class<*>
     gURL = Chrome.load("org.chromium.url.GURL")
     emptyTabObserver =
         Chrome.load("org.chromium.chrome.browser.login.ChromeHttpAuthHandler").getSuperclass()
-            as Class<*>
             as Class<*>
     mClickListener =
         preference.getDeclaredFields().find {

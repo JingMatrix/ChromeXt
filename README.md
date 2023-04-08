@@ -164,7 +164,7 @@ Here are corresponding files you might want / need to change:
 - [x] Add an open source License
 - [ ] ~~Support mocking User-Agent~~
 - [ ] ~~Support [urlFilter](https://developer.chrome.com/docs/extensions/reference/declarativeNetRequest/#type-RuleCondition) syntax~~
-- [ ] Improve `Open in Chrome` function
+- [x] Improve `Open in Chrome` function
 - [ ] Implement fully `GM_info`
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
 - [ ] Use `adb forward` to support non-root users
