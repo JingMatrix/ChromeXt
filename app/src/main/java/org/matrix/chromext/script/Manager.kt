@@ -92,11 +92,10 @@ object ScriptDbManager {
   private fun syncSharedPreference(
       payload: String,
       item: String,
-      separator: String,
       cache: MutableMap<String, String>
   ): String? {
     val sharedPref = Chrome.getContext().getSharedPreferences(item, Context.MODE_PRIVATE)
-    val result = payload.split(separator)
+    val result = payload.split(SEP)
     Log.d("Config ${item}: ${result}")
     with(sharedPref.edit()) {
       if (result.size == 1 && sharedPref.contains(result.first())) {
@@ -165,10 +164,10 @@ object ScriptDbManager {
         }
       }
       "cosmeticFilter" -> {
-        callback = syncSharedPreference(payload, "CosmeticFilter", ",", cosmeticFilters)
+        callback = syncSharedPreference(payload, "CosmeticFilter", cosmeticFilters)
       }
       "userAgent" -> {
-        callback = syncSharedPreference(payload, "UserAgent", "!", userAgents)
+        callback = syncSharedPreference(payload, "UserAgent", userAgents)
       }
     }
     return callback

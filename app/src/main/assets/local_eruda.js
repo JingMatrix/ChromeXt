@@ -8,7 +8,7 @@ if (
     updateCosmeticFilter() {
       let filter = "";
       if (this.#filter.length > 0) {
-        filter = ";" + JSON.stringify(this.#filter);
+        filter = "" + JSON.stringify(this.#filter);
       }
       globalThis.ChromeXt(
         JSON.stringify({
@@ -184,7 +184,7 @@ if (
             action: "userAgent",
             payload:
               window.location.origin +
-              "!" +
+              "" +
               this._$el.find("li.chromext-user-agent > div").text(),
           })
         );

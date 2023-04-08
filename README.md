@@ -98,7 +98,7 @@ These filters are saved in Chrome even after clearing the site's data.
 One can edit the user-agent from the `Info` panel of `Eruda console`.
 Clicking on the header of `User-Agent` will restore the default user-agent.
 The support is still limited, might be improved later.
-A valid user-agent should not contain the character `!`.
+A valid user-agent should only contain ASCII characters.
 
 ## Contribute to this project
 
