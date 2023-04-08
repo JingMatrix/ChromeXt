@@ -14,7 +14,7 @@ function GM_addStyle(css) {
 	try {
 		(document.head || document.documentElement).appendChild(style);
 	} catch {
-		window.addEventListener("DOMContentLoaded", () => {document.head.appendChild(style);});
+		setTimeout(() => {document.head.appendChild(style);}, 0);
 	}
 }
 """
@@ -24,8 +24,7 @@ const val GM_addElement =
 function GM_addElement() {
 	// parent_node, tag_name, attributes
 	if (arguments.length == 2) {
-		arguments = [document.head || document.body || document.documentElement,
-			arguments[0], arguments[1]];
+		arguments = [document.head, arguments[0], arguments[1]];
 	};
 	if (arguments.length != 3) { return };
 	const element = document.createElement(arguments[1]);
@@ -39,7 +38,7 @@ function GM_addElement() {
 	try {
 		arguments[0].appendChild(element);
 	} catch {
-		window.addEventListener("DOMContentLoaded", () => {arguments[0].appendChild(element);});
+		setTimeout(() => {document.head.appendChild(element);}, 0);
 	}
 }
 """
@@ -104,27 +103,17 @@ function GM_openInTab(url, options) {
 fun encodeScript(script: Script): String? {
   var code = script.code
 
-  val imports =
-      script.require
-          .map {
-            """try{await import("${it}")}catch(e){console.log(e);GM_addElement('script', {src:'${it}'})}"""
-          }
-          .joinToString(separator = ";")
-  if (imports != "") {
-    code = """(async ()=>{${GM_addElement};${imports};${code}})();"""
-  }
-
   when (script.runAt) {
     RunAt.START -> {}
-    RunAt.END -> code = """window.addEventListener("DOMContentLoaded",()=>{${code}});"""
-    RunAt.IDLE -> code = """window.addEventListener("load",()=>{${code}});"""
+    RunAt.END -> code = "window.addEventListener('DOMContentLoaded',()=>{${code}});"
+    RunAt.IDLE -> code = "window.addEventListener('load',()=>{${code}});"
   }
 
   script.grant.forEach granting@{
     val function = it
     when (function) {
       "GM_addStyle" -> code = GM_addStyle + code
-      "GM_addElement" -> code = GM_addElement + code
+      "GM_addElement" -> if (script.require.size == 0) code = GM_addElement + code
       "GM_openInTab" -> code = GM_openInTab + code
       "GM_xmlhttpRequest" -> code = GM_xmlhttpRequest + code
       "GM_info" ->
@@ -192,9 +181,14 @@ fun encodeScript(script: Script): String? {
                   code
       else ->
           code =
-              """function ${function}(...args) {console.error("${function} is not implemented in ChromeXt yet, called with", args)}""" +
+              "function ${function}(...args) {console.error('${function} is not implemented in ChromeXt yet, called with', args)}" +
                   code
     }
+  }
+
+  if (script.require.size > 0) {
+    code =
+        "(async ()=>{${script.require.map{"await import('${it}')"}.joinToString(";")};${code}})();"
   }
 
   return code
