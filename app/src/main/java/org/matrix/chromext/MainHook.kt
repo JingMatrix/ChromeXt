@@ -22,7 +22,8 @@ val supportedPackages =
         "com.chrome.dev",
         "com.chrome.canary",
         "org.bromite.bromite",
-        "com.brave.browser")
+        "com.brave.browser",
+        "com.brave.browser_beta")
 
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitPackageResources {
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {

@@ -7,6 +7,7 @@
 		<package android:name="com.chrome.dev"/>
 		<package android:name="org.bromite.bromite"/>
 		<package android:name="com.brave.browser"/>
+		<package android:name="com.brave.browser_beta"/>
 	</queries>
 
     <application

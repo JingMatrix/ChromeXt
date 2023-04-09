@@ -7,5 +7,6 @@
     <item>com.chrome.canary</item>
     <item>org.bromite.bromite</item>
 	<item>com.brave.browser</item>
+	<item>com.brave.browser_beta</item>
     </string-array>
 </resources>
