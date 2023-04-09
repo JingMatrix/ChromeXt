@@ -14,7 +14,7 @@ found in the LICENSE file.
         android:title="Tracing" />
     <Preference
         android:key="eruda"
-		android:title="Update Eruda" />
+		android:title="Update eruda console" />
 	<org.chromium.components.browser_ui.settings.ChromeSwitchPreference
         android:key="gesture_mod"
 		android:title="Browser gesture navigation"

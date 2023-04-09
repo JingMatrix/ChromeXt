@@ -36,6 +36,7 @@ class MenuProxy() {
   val addPreferencesFromResource: Method
 
   var isDeveloper: Boolean = false
+  var clickHooked: Boolean = false
 
   init {
     val sharedPref =
@@ -169,14 +170,19 @@ class MenuProxy() {
               }
             })
       }
-    } else {
+    } else if (!clickHooked) {
+      clickHooked = true
       val mPreference = mClickListener.getType().getDeclaredFields().first()
+      val prefTitles =
+          preferences.entries.map { (name, pref) ->
+            Pair(name, pref.toString().split(" ").take(3).joinToString(" "))
+          }
       findMethod(mClickListener.getType()) { name == "onClick" }
           .hookBefore {
-            preferences.forEach(
-                fun(name: String, pref: Any) {
-                  if (pref == mPreference.get(it.thisObject)) {
-                    listeners[name]?.invoke(pref)
+            prefTitles.forEach(
+                fun(p: Pair<String, String>) {
+                  if (mPreference.get(it.thisObject)!!.toString().startsWith(p.second)) {
+                    listeners[p.first]?.invoke(mPreference.get(it.thisObject)!!)
                     it.result = true
                   }
                 })
