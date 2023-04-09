@@ -84,6 +84,13 @@ if (
     }
   }
 
+  function c(str) {
+    return str
+      .split(" ")
+      .map((it) => "eruda-" + it)
+      .join(" ");
+  }
+
   class resources extends eruda.Resources {
     _bindEvent() {
       super._bindEvent();
@@ -104,25 +111,47 @@ if (
           eruda._filter.save();
           self.refreshChromeXtFilter();
           container.notify("Filter Saved");
+        })
+        .on("click", ".script-command", (e) => {
+          const index = e.curTarget.dataset.index;
+          ChromeXt.MenuCommand[index].listener(e);
+		  eruda.hide();
         });
     }
     _initTpl() {
       super._initTpl();
+      if (typeof ChromeXt.MenuCommand != "undefined") {
+        this._$el.prepend(
+          "<div class='eruda-section eruda-ChromeXt-MenuCommand'></div>"
+        );
+        this._$ChromeXtMenuCommand = this._$el.find(
+          ".eruda-ChromeXt-MenuCommand"
+        );
+      }
       this._$el.prepend(
         "<div class='eruda-section eruda-ChromeXt-filter'></div>"
       );
       this._$ChromeXtFilter = this._$el.find(".eruda-ChromeXt-filter");
     }
     refresh() {
-      return super.refresh().refreshChromeXtFilter();
+      return super.refresh().refreshChromeXtFilter().refreshMenuCommand();
+    }
+    refreshMenuCommand() {
+      if (
+        typeof ChromeXt.MenuCommand != "undefined" &&
+        ChromeXt.MenuCommand.length > 0
+      ) {
+        const commands = ChromeXt.MenuCommand.map(
+          (command, index) => `<span data-index=${index} style="padding: 0.3em; margin: 0.3em; border: 0.5px solid violet;" class="script-command">${command.title}</span>`
+        ).join("");
+        this._$ChromeXtMenuCommand.html(`<h2 class="${c(
+          "title"
+        )}">UserScript Commands</h2>
+		<div style="display: flex; flex-wrap: wrap; justify-content: space-around;">${commands}</div>
+      `);
+      }
     }
     refreshChromeXtFilter() {
-      const c = (str) => {
-        return str
-          .split(" ")
-          .map((it) => "eruda-" + it)
-          .join(" ");
-      };
       let filterHtml = "<li></li>";
 
       let filter = eruda._filter.get();

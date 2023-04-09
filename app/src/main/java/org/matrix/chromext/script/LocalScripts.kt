@@ -100,6 +100,41 @@ function GM_openInTab(url, options) {
 }
 """
 
+const val GM_registerMenuCommand =
+    """
+function GM_registerMenuCommand(title, listener, accessKey="Dummy") {
+	if (typeof ChromeXt.MenuCommand == "undefined") {
+		ChromeXt.MenuCommand = [];
+	}
+	ChromeXt.MenuCommand.push({title, listener});
+	return ChromeXt.MenuCommand.length - 1;
+}
+"""
+
+const val GM_addValueChangeListener =
+    """
+function GM_addValueChangeListener(key, listener) {
+	if (typeof ChromeXt.ValueChangeListener == "undefined") {
+		ChromeXt.ValueChangeListener = [];
+	}
+	ChromeXt.ValueChangeListener.push({key, listener});
+	return ChromeXt.ValueChangeListener.length - 1;
+}
+"""
+
+const val GM_setValue =
+    """
+function GM_setValue(key, value) {
+	if (typeof ChromeXt.ValueChangeListener != undefined) {
+		const old_value = localStorage.getItem(key + '_ChromeXt_Value');
+		if (old_value != null) {
+			ChromeXt.ValueChangeListener.forEach(e => {if (e.key == key) {e.listener(JSON.parse(old_value), value, false)}});
+		}
+	}
+	localStorage.setItem(key + '_ChromeXt_Value', JSON.stringify(value));
+}
+"""
+
 fun encodeScript(script: Script): String? {
   var code = script.code
 
@@ -109,30 +144,38 @@ fun encodeScript(script: Script): String? {
     RunAt.IDLE -> code = "window.addEventListener('load',()=>{${code}});"
   }
 
+  code =
+      "const GM_info = {scriptMetaStr:`${script.meta}`,script:{namespace:'${script.id.split(":").dropLast(1).joinToString(separator = ":")}',name:'${script.id.split(":").last()}',antifeatures:{},options:{override:{}}}};" +
+          code
+
   script.grant.forEach granting@{
     val function = it
     when (function) {
       "GM_addStyle" -> code = GM_addStyle + code
       "GM_addElement" -> if (script.require.size == 0) code = GM_addElement + code
       "GM_openInTab" -> code = GM_openInTab + code
+      "GM_info" -> return@granting
       "GM_xmlhttpRequest" -> code = GM_xmlhttpRequest + code
-      "GM_info" ->
-          code =
-              "const GM_info = {scriptMetaStr:`${script.meta}`,script:{namespace:'${script.id.split(":").dropLast(1).joinToString(separator = ":")}',name:'${script.id.split(":").last()}',antifeatures:{},options:{override:{}}}};" +
-                  code
       "unsafeWindow" -> code = "const unsafeWindow = window;" + code
       "GM_log" -> code = "const GM_log = console.log.bind(console);" + code
       "GM_deleteValue" ->
           code =
               "function GM_deleteValue(key) {localStorage.removeItem(key + '_ChromeXt_Value')};" +
                   code
-      "GM_setValue" ->
-          code =
-              "function GM_setValue(key, value) {localStorage.setItem(key + '_ChromeXt_Value', JSON.stringify(value))};" +
-                  code
+      "GM_setValue" -> code = GM_setValue + code
       "GM_getValue" ->
           code =
               "function GM_getValue(key, default_value) {let value = localStorage.getItem(key + '_ChromeXt_Value') || default_value;try {value = JSON.parse(value)} finally {return value}};" +
+                  code
+      "GM_addValueChangeListener" -> code = GM_addValueChangeListener + code
+      "GM_removeValueChangeListener" ->
+          code =
+              "function GM_removeValueChangeListener(index) {ChromeXt.ValueChangeListener.splice(index, 1)};" +
+                  code
+      "GM_registerMenuCommand" -> code = GM_registerMenuCommand + code
+      "GM_unregisterMenuCommand" ->
+          code =
+              "function GM_unregisterMenuCommand(index) {ChromeXt.MenuCommand.splice(index, 1)};" +
                   code
       "GM_getResourceURL" -> {
         var GM_ResourceURL = "GM_ResourceURL={"
