@@ -43,8 +43,8 @@ Currently, ChromeXt supports only the following APIs since they are everything t
 2. @match (must present and conform to the [Chrome Standard](https://developer.chrome.com/docs/extensions/mv2/match_patterns/))
 3. @include = @match, @exclude
 4. @run-at: document-start, document-end, document-idle (the default and fallback value)
-5. @grant GM_addStyle, GM_addElement, GM_xmlhttpRequest, GM_openInTab, GM_registerMenuCommand (`Resources` panel of eruda), GM_unregisterMenuCommand, unsafeWindow (= window)
-6. @require (partially supported), @resource (Without [Subresource Integrity](https://www.tampermonkey.net/documentation.php#api:Subresource_Integrity))
+5. @grant GM_addStyle, GM_addElement, GM_xmlhttpRequest, GM_openInTab, GM_registerMenuCommand (`Resources` panel of eruda), GM_unregisterMenuCommand, GM_download, unsafeWindow (= window)
+6. @require, @resource (Without [Subresource Integrity](https://www.tampermonkey.net/documentation.php#api:Subresource_Integrity))
 
 These APIs are implemented differently from the official ones, see the source file [LocalScripts.kt](app/src/main/java/org/matrix/chromext/script/LocalScripts.kt) if you have doubts or questions.
 

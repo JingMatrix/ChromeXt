@@ -57,17 +57,12 @@ function GM_xmlhttpRequest(details) {
 	for (const [key, value] of Object.entries(details)) {
 		if (key.startsWith("on")) {
 			xmlhr.addEventListener(key.substring(2), value);
+		} else {
+			xmlhr[key] = value;
 		}
 	}
-	if ("timeout" in details) {
-		xmlhr.timeout = details.timeout;
-	}
 
-	details.user = details.use || null;
-	details.password = details.password || null;
-	details.synchronous = details.synchronous || false;
-
-	xmlhr.open(details.method, details.url, !details.synchronous || true, details.user, details.password);
+	xmlhr.open(details.method, details.url, !details.synchronous || true, details.user || null, details.password || null);
 
 	if ("headers" in details) {
 		for (const header in details.headers) {
@@ -86,6 +81,27 @@ function GM_xmlhttpRequest(details) {
 	}
 
 	return xmlhr;
+}
+"""
+
+const val GM_download =
+    """
+function GM_download(details) {
+	if (arguments.length == 2) {
+		details = {url: arguments[0], name: arguments[1]}
+	}
+	return GM_xmlhttpRequest({
+		url: details.url, responseType: 'blob',
+		onloadend: (event) => {
+			const xhr = event.target;
+			if (xhr.status !== 200) return console.error('Error loading: ', details.url, xhr);
+			const link = document.createElement('a');
+			link.href = URL.createObjectURL(xhr.response);
+			link.download = details.name;
+			link.dispatchEvent(new MouseEvent('click'));
+			setTimeout(URL.revokeObjectURL(link.href), 1000);
+		}
+	});
 }
 """
 
@@ -170,12 +186,6 @@ fun encodeScript(script: Script): String? {
             "})();"
   }
 
-  when (script.runAt) {
-    RunAt.START -> {}
-    RunAt.END -> code = "window.addEventListener('DOMContentLoaded',()=>{${code}});"
-    RunAt.IDLE -> code = "window.addEventListener('load',()=>{${code}});"
-  }
-
   code =
       GM_bootstrap +
           "const GM_info = {scriptMetaStr:`${script.meta}`,script:{antifeatures:{},options:{override:{}}}};GM_bootstrap();" +
@@ -188,7 +198,9 @@ fun encodeScript(script: Script): String? {
       "GM_addElement" -> if (script.require.size == 0) code = GM_addElement + code
       "GM_openInTab" -> code = GM_openInTab + code
       "GM_info" -> return@granting
-      "GM_xmlhttpRequest" -> code = GM_xmlhttpRequest + code
+      "GM_download" -> code = GM_xmlhttpRequest + GM_download + code
+      "GM_xmlhttpRequest" ->
+          if (!script.grant.contains("GM_download")) code = GM_xmlhttpRequest + code
       "unsafeWindow" -> code = "const unsafeWindow = window;" + code
       "GM_log" -> code = "const GM_log = console.log.bind(console);" + code
       "GM_deleteValue" ->
@@ -260,6 +272,12 @@ fun encodeScript(script: Script): String? {
               "function ${function}(...args) {console.error('${function} is not implemented in ChromeXt yet, called with', args)}" +
                   code
     }
+  }
+
+  when (script.runAt) {
+    RunAt.START -> code = "(()=>{${code}})();"
+    RunAt.END -> code = "window.addEventListener('DOMContentLoaded',()=>{${code}});"
+    RunAt.IDLE -> code = "window.addEventListener('load',()=>{${code}});"
   }
 
   return code
