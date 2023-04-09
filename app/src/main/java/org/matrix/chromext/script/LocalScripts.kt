@@ -45,7 +45,7 @@ function GM_addElement() {
 
 const val GM_xmlhttpRequest =
     """
-function GM_xmlhttpRequest(/* object */ details) {
+function GM_xmlhttpRequest(details) {
 	details.method = details.method ? details.method.toUpperCase() : "GET";
 
 	if (!details.url) {
@@ -140,13 +140,13 @@ const val GM_bootstrap =
 function GM_bootstrap() {
 	const row = /\/\/\s+@(\S+)\s+(.+)/g;
 	const meta = GM_info.script;
-	let match = ""
-    while ((match = row.exec(GM_info.scriptMetaStr)) !== null) {
-        if (meta[match[1]]) {
-            if (typeof meta[match[1]] == "string") meta[match[1]] = [meta[match[1]]];
-            meta[match[1]].push(match[2]);
-        } else meta[match[1]] = match[2];
-    }
+	let match;
+	while ((match = row.exec(GM_info.scriptMetaStr)) !== null) {
+		if (meta[match[1]]) {
+			if (typeof meta[match[1]] == "string") meta[match[1]] = [meta[match[1]]];
+			meta[match[1]].push(match[2]);
+		} else meta[match[1]] = match[2];
+	}
 }
 """
 
@@ -155,6 +155,19 @@ fun encodeScript(script: Script): String? {
 
   if (!script.meta.startsWith("// ==UserScript==")) {
     code = script.meta + code
+  }
+
+  if (script.require.size > 0) {
+    code =
+        GM_addElement +
+            "(async ()=> {" +
+            script.require
+                .map {
+                  "try{await import('${it}')}catch{GM_addElement('script',{textContent: await (await fetch('${it}')).text()})};"
+                }
+                .joinToString("") +
+            code +
+            "})();"
   }
 
   when (script.runAt) {
@@ -247,13 +260,6 @@ fun encodeScript(script: Script): String? {
               "function ${function}(...args) {console.error('${function} is not implemented in ChromeXt yet, called with', args)}" +
                   code
     }
-  }
-
-  if (script.require.size > 0) {
-    code =
-        GM_addElement +
-            script.require.map { "GM_addElement('script', {src: '${it}'});" }.joinToString("") +
-            code
   }
 
   return code
