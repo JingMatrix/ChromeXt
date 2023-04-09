@@ -163,6 +163,12 @@ function GM_bootstrap() {
 			meta[match[1]].push(match[2]);
 		} else meta[match[1]] = match[2];
 	}
+	meta.includes = meta.include;
+	meta.matches = meta.match;
+	meta.excludes = meta.exclude;
+	delete meta.include;
+	delete meta.match;
+	delete meta.exclude;
 }
 """
 

@@ -3,11 +3,15 @@ package org.matrix.chromext.script
 import kotlin.text.Regex
 import org.matrix.chromext.utils.Log
 
-fun urlMatch(match: String, url: String): Boolean {
+fun urlMatch(match: String, url: String, strict: Boolean): Boolean {
   var pattern = match
 
   if ("*" !in pattern) {
-    return pattern == url
+    if (strict) {
+      return pattern == url
+    } else {
+      return pattern in url
+    }
   }
 
   if ("://" in pattern) {

@@ -73,12 +73,12 @@ class UserScriptProxy() {
     ScriptDbManager.scripts.forEach loop@{
       val script = it
       script.exclude.forEach {
-        if (urlMatch(it, url)) {
+        if (urlMatch(it, url, true)) {
           return@loop
         }
       }
       script.match.forEach {
-        if (urlMatch(it, url)) {
+        if (urlMatch(it, url, false)) {
           evaluateJavaScript(script)
           Log.i("${script.id} injected")
           return@loop
