@@ -101,9 +101,11 @@ object ScriptDbManager {
     val result = payload.split(SEP)
     Log.d("Config ${item}: ${result}")
     with(sharedPref.edit()) {
-      if (result.size == 1 && sharedPref.contains(result.first())) {
-        remove(result.first())
-        cache.remove(result.first())
+      if (result.size == 1) {
+        if (cache.containsKey(result.first())) {
+          remove(result.first())
+          cache.remove(result.first())
+        }
       } else if (result.size == 2) {
         putString(result.first(), result.last())
         cache.put(result.first(), result.last())
