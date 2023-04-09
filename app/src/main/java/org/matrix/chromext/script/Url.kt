@@ -5,9 +5,6 @@ import org.matrix.chromext.utils.Log
 
 fun urlMatch(match: String, url: String): Boolean {
   var pattern = match
-  if (pattern == "https://*" || pattern == "http://*" || pattern == "file://*") {
-    return match.split(":")[0] == url.split(":")[0]
-  }
 
   if ("*" !in pattern) {
     return pattern == url
@@ -23,8 +20,9 @@ fun urlMatch(match: String, url: String): Boolean {
     // Recover those *. killed by replacements
     // pattern = pattern.replace("[\\w\\-]*?\\.", "[\\w\\-\\.]*?")
 
-    Log.d("Matching ${pattern} against ${url}: ${Regex(pattern).matches(url)}")
-    return Regex(pattern).matches(url)
+    val result = Regex(pattern).matches(url)
+    Log.d("Matching ${pattern} against ${url}: ${result}")
+    return result
   } else {
     return false
   }

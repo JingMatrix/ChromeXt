@@ -135,8 +135,27 @@ function GM_setValue(key, value) {
 }
 """
 
+const val GM_bootstrap =
+    """
+function GM_bootstrap() {
+	const row = /\/\/\s+@(\S+)\s+(.+)/g;
+	const meta = GM_info.script;
+	let match = ""
+    while ((match = row.exec(GM_info.scriptMetaStr)) !== null) {
+        if (meta[match[1]]) {
+            if (typeof meta[match[1]] == "string") meta[match[1]] = [meta[match[1]]];
+            meta[match[1]].push(match[2]);
+        } else meta[match[1]] = match[2];
+    }
+}
+"""
+
 fun encodeScript(script: Script): String? {
   var code = script.code
+
+  if (!script.meta.startsWith("// ==UserScript==")) {
+    code = script.meta + code
+  }
 
   when (script.runAt) {
     RunAt.START -> {}
@@ -145,7 +164,8 @@ fun encodeScript(script: Script): String? {
   }
 
   code =
-      "const GM_info = {scriptMetaStr:`${script.meta}`,script:{namespace:'${script.id.split(":").dropLast(1).joinToString(separator = ":")}',name:'${script.id.split(":").last()}',antifeatures:{},options:{override:{}}}};" +
+      GM_bootstrap +
+          "const GM_info = {scriptMetaStr:`${script.meta}`,script:{antifeatures:{},options:{override:{}}}};GM_bootstrap();" +
           code
 
   script.grant.forEach granting@{
@@ -231,7 +251,9 @@ fun encodeScript(script: Script): String? {
 
   if (script.require.size > 0) {
     code =
-        "(async ()=>{${script.require.map{"await import('${it}')"}.joinToString(";")};${code}})();"
+        GM_addElement +
+            script.require.map { "GM_addElement('script', {src: '${it}'});" }.joinToString("") +
+            code
   }
 
   return code

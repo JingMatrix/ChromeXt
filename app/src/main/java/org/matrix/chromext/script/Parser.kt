@@ -8,7 +8,7 @@ const val kMaxURLChars = 2097152
 
 private val blocksReg =
     Regex(
-        """[\S\s]*?(?<metablock>// ==UserScript==\r?\n([\S\s]*?)\r?\n// ==/UserScript==)(?<code>[\S\s]*)""")
+        """(?<metablock>[\S\s]*?// ==UserScript==\r?\n([\S\s]*?)\r?\n// ==/UserScript==)(?<code>[\S\s]*)""")
 private val metaReg = Regex("""^//\s+@(?<key>[\w-]+)\s+(?<value>.+)""")
 
 fun parseScript(input: String): Script? {
