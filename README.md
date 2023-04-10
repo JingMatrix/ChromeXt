@@ -94,31 +94,7 @@ After clicking the `delete` icon for a selected element, a corresponding filter 
 These filters are saved in the browser even after clearing the site's data.
 
 Another way to block ADs is using the [Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src) to block some scripts from loading.
-<details>
-    <summary>Click to show an exemplar UserScript:</summary>
-
-```javascript
-// ==UserScript==
-// @name	Yinghuacd Mobile
-// @namespace	JingMatrix
-// @exclude	http://m.yinghuacd.com/
-// @match	http://m.yinghuacd.com/*
-// @run-at	document-start
-// ==/UserScript==
-
-const meta = document.createElement("meta");
-meta.setAttribute("http-equiv", "Content-Security-Policy");
-meta.setAttribute("content", "script-src http://m.yinghuacd.com/js/js/;");
-try {
-  document.head.append(meta);
-} catch {
-  setTimeout(() => {
-    document.head.append(meta);
-  }, 0);
-}
-```
-</details>
-
+See the official [Content-Security-Policy Blocker](CSP.user.js) UserScript.
 
 ### Mocking User Agent
 
@@ -166,8 +142,8 @@ Here are corresponding files you might want / need to change:
 - [ ] ~~Support [urlFilter](https://developer.chrome.com/docs/extensions/reference/declarativeNetRequest/#type-RuleCondition) syntax~~
 - [x] Improve `Open in Chrome` function
 - [x] Implement fully `GM_info`
+- [x] Eruda fails due to [Injection Sinks](https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API)
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
 - [ ] Use `adb forward` to support non-root users
 - [ ] Turn Xposed into optional dependency
-- [ ] Eruda fails due to [Injection Sinks](https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API)
 - [ ] Add recommended scripts to the front end manager

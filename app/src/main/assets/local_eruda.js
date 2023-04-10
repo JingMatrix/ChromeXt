@@ -2,6 +2,11 @@ if (
   typeof globalThis.eruda != "undefined" &&
   typeof eruda._configured == "undefined"
 ) {
+  const meta = document.createElement("meta");
+  meta.setAttribute("name", "viewport");
+  meta.setAttribute("content", "width=device-width, initial-scale=1");
+  document.head.prepend(meta);
+
   class Filter {
     #filter = [];
     constructor() {}
@@ -115,7 +120,7 @@ if (
         .on("click", ".script-command", (e) => {
           const index = e.curTarget.dataset.index;
           ChromeXt.MenuCommand[index].listener(e);
-		  eruda.hide();
+          eruda.hide();
         });
     }
     _initTpl() {
@@ -142,7 +147,8 @@ if (
         ChromeXt.MenuCommand.length > 0
       ) {
         const commands = ChromeXt.MenuCommand.map(
-          (command, index) => `<span data-index=${index} style="padding: 0.3em; margin: 0.3em; border: 0.5px solid violet;" class="script-command">${command.title}</span>`
+          (command, index) =>
+            `<span data-index=${index} style="padding: 0.3em; margin: 0.3em; border: 0.5px solid violet;" class="script-command">${command.title}</span>`
         ).join("");
         this._$ChromeXtMenuCommand.html(`<h2 class="${c(
           "title"
@@ -374,5 +380,21 @@ if (
     style.setAttribute("type", "text/css");
     style.textContent = content;
     erudaroot.append(style);
+  }
+} else if (typeof globalThis.eruda == "undefined") {
+  const meta = document.head.querySelector(
+    "meta[content=\"script-src 'none'\"]"
+  );
+  if (meta && meta.getAttribute("http-equiv") == "Content-Security-Policy") {
+    alert(
+      "Content-Security-Policy is set, but you need to fully restart the browser to clean cached third-party JavaScripts."
+    );
+  } else {
+    const response = confirm(
+      "Eruda is blocked, it is advisable to use the official 'Content-Security-Policy Blocker' UserScript to block JavaScripts on this website.\n\nDo you want to proceed in this way?"
+    );
+    if (response) {
+      localStorage.setItem("CSPBlocker", "script-src 'none'");
+    }
   }
 }
