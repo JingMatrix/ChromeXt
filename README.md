@@ -4,7 +4,7 @@ Add UserScript support to Chrome using Xposed framework
 
 ##  How does it work?
 
-We hook a `onUpdateUrl` function in [UserScript.kt](app/src/main/java/org/matrix/chromext/hook/UserScript.kt),
+We hook an `onUpdateUrl` function in [UserScript.kt](app/src/main/java/org/matrix/chromext/hook/UserScript.kt),
 add URL comparison there and evaluate JavaScript using the `javascript:` scheme.
 
 We pay our main efforts to support the latest _stable_ version of Android Chrome
@@ -59,7 +59,7 @@ To commit your modifications, long press on some text and follow with a click so
 
 ### Limitations
 
-A valid UserScript would fail if the following two conditions hold _at the same time_:
+A valid UserScript fails if the following two conditions hold _at the same time_:
 
 1. The matched website has disabled `script: 'unsafe-eval';` by [Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP);
 2. The script size is nearly 2M.
