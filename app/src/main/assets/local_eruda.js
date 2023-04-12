@@ -382,9 +382,8 @@ if (
     erudaroot.append(style);
   }
 } else if (typeof globalThis.eruda == "undefined") {
-  const meta = document.head.querySelector(
-    "meta[content=\"script-src 'none'\"]"
-  );
+  const cspRule = "script-src 'none'";
+  const meta = document.head.querySelector(`meta[content="${cspRule}"]`);
   if (meta && meta.getAttribute("http-equiv") == "Content-Security-Policy") {
     alert(
       "Content-Security-Policy is set, but you need to fully restart the browser to clean cached third-party JavaScripts."
@@ -394,7 +393,13 @@ if (
       "Eruda is blocked, it is advisable to use the official 'Content-Security-Policy Blocker' UserScript to block JavaScripts on this website.\n\nDo you want to proceed in this way?"
     );
     if (response) {
-      localStorage.setItem("CSPBlocker", "script-src 'none'");
+      if (localStorage.getItem("CSPBlocker") == cspRule) {
+        window.open(
+          "https://raw.githubusercontent.com/JingMatrix/ChromeXt/master/CSP.user.js"
+        );
+      } else {
+        localStorage.setItem("CSPBlocker", cspRule);
+      }
     }
   }
 }
