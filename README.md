@@ -61,7 +61,7 @@ To commit your modifications, long press on some text and follow with a click so
 
 A valid UserScript fails if the following two conditions hold _at the same time_:
 
-1. The matched website has disabled `script: 'unsafe-eval';` by [Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP);
+1. The matched website has disabled `script-src 'unsafe-eval';` by [Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP);
 2. The script size is nearly 2M.
 
 To deal with this extremely rare case, one should
