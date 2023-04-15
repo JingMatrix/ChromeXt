@@ -5,29 +5,27 @@ Use of this source code is governed by a BSD-style license that can be
 found in the LICENSE file.
 -->
 
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orderingFromXml="true">
-    <Preference
-        android:fragment="org.chromium.chrome.browser.tracing.settings.TracingSettings"
-        android:key="tracing"
-        android:title="Tracing" />
-    <Preference
-        android:key="eruda"
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:orderingFromXml="true">
+	<Preference
+		android:fragment="org.chromium.chrome.browser.tracing.settings.TracingSettings"
+		android:key="tracing"
+		android:title="Tracing" />
+	<Preference
+		android:key="eruda"
 		android:title="Update eruda console" />
 	<org.chromium.components.browser_ui.settings.ChromeSwitchPreference
-        android:key="gesture_mod"
+		android:key="gesture_mod"
 		android:title="Browser gesture navigation"
 		android:summaryOn="Block system gesture in the middle of right edge"
 		android:summaryOff="No support for history forward" />
-    <Preference
-        android:key="exit"
+	<Preference
+		android:key="exit"
 		android:title="Disable developer options"
 		android:summary="Click to hide this setting page (not recommended)" />
-    <org.chromium.components.browser_ui.settings.TextMessagePreference
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:enabled="false"
-        android:key="beta_stable_hint"
-        android:title="Hint: You can also enable Developer options on Beta/Stable channels by tapping the Chrome version in &quot;Settings > About Chrome&quot; multiple times." />
+	<org.chromium.components.browser_ui.settings.TextMessagePreference
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:enabled="false"
+		android:key="beta_stable_hint"
+		android:title="Hint: You can also enable Developer options on Beta/Stable channels by tapping the Chrome version in &quot;Settings > About Chrome&quot; multiple times." />
 </PreferenceScreen>

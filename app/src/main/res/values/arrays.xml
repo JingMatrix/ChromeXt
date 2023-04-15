@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string-array name="xposedscope">
-    <item>com.android.chrome</item>
-    <item>com.chrome.beta</item>
-    <item>com.chrome.dev</item>
-    <item>com.chrome.canary</item>
-    <item>org.bromite.bromite</item>
-	<item>com.brave.browser</item>
-	<item>com.brave.browser_beta</item>
-    </string-array>
+	<string-array name="xposedscope">
+		<item>com.android.chrome</item>
+		<item>com.chrome.beta</item>
+		<item>com.chrome.dev</item>
+		<item>com.chrome.canary</item>
+		<item>org.bromite.bromite</item>
+		<item>com.brave.browser</item>
+		<item>com.brave.browser_beta</item>
+	</string-array>
 </resources>
