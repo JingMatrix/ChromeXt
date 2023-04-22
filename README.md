@@ -12,7 +12,7 @@ installed from Google Play Store or downloaded APK from the internet.
 Please consider update your Android Chrome first before proceeding.
 
 Normally, [Bromite](https://github.com/bromite/bromite) and [Brave](https://github.com/brave/brave-browser) are also supported.
-The support for `Edge` is limited, no good way to hook its page menu.
+The support for `Edge` is limited, no idea how to hook its page menu.
 
 ## Usage
 
@@ -144,7 +144,7 @@ Here are corresponding files you might want / need to change:
 - [x] Improve `Open in Chrome` function
 - [x] Implement fully `GM_info`
 - [x] Eruda fails due to [Injection Sinks](https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API)
-- [ ] Fully support Egde browser
+- [ ] ~~Fully support Egde browser~~
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
 - [ ] Use `adb forward` to support non-root users
 - [ ] Turn Xposed into optional dependency
