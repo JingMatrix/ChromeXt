@@ -12,3 +12,4 @@ local.properties
 com.android.chrome
 com.chrome.*
 com.brave.browser
+com.microsoft.emmx

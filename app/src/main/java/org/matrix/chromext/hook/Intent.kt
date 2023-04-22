@@ -15,7 +15,7 @@ object IntentHook : BaseHook() {
 
     val proxy = IntentProxy()
 
-    findMethod(proxy.chromeTabbedActivity) { name == "onNewIntent" }
+    findMethod(proxy.chromeTabbedActivity) { name == "onNewIntent" || name == "onMAMNewIntent" }
         .hookBefore {
           val intent = it.args[0] as Intent
           if (intent.hasExtra("ChromeXt")) {

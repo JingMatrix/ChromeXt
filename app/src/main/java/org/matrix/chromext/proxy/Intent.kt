@@ -1,6 +1,7 @@
 package org.matrix.chromext.proxy
 
 import android.util.Pair
+import java.lang.reflect.Modifier
 import org.matrix.chromext.Chrome
 
 class IntentProxy() {
@@ -19,7 +20,7 @@ class IntentProxy() {
         Chrome.load("org.chromium.chrome.browser.app.ChromeActivity")
             .getDeclaredFields()
             .find {
-              it.toString().startsWith("public final ") &&
+              Modifier.isFinal(it.getModifiers()) &&
                   (it.getType().getDeclaredFields().find { it.getType() == Pair::class.java } !=
                       null ||
                       it.getType().getSuperclass().getDeclaredFields().find {

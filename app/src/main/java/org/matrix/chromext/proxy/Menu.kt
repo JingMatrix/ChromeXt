@@ -95,10 +95,14 @@ class MenuProxy() {
         ctx.getSharedPreferences(
             Chrome.getContext().getPackageName() + "_preferences", Context.MODE_PRIVATE)
 
-    val version = sharedPref.getString("eruda_version", "unknown")
     var summary = "Click to install Eruda, size around 0.5 MiB"
-    if (version != "unknown") {
-      summary = "Current version: v" + version
+    if (!Chrome.isEdge) {
+      val version = sharedPref.getString("eruda_version", "unknown")
+      if (version != "unknown") {
+        summary = "Current version: v" + version
+      }
+    } else {
+      summary = "Eruda and DevTools are not available for Egde yet"
     }
     setSummary.invoke(preferences["eruda"], summary)
 
@@ -124,6 +128,10 @@ class MenuProxy() {
                 },
             "eruda" to
                 fun(obj: Any) {
+                  if (Chrome.isEdge) {
+                    Log.toast(ctx, "We may support Edge soon!")
+                    return
+                  }
                   Download.start(ERUD_URL, "Download/Eruda.js", true) {
                     val old_version = sharedPref.getString("eruda_version", "unknown")
                     var new_version = old_version

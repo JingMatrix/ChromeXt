@@ -14,6 +14,7 @@ object Chrome {
   var split = true
   var isDev = false
   var version = 0
+  var isEdge = false
 
   fun init(ctx: Context) {
     mContext = WeakReference(ctx)
@@ -28,6 +29,9 @@ object Chrome {
     var state = "split"
     if (!split) {
       state = "non-split"
+    }
+    if (packageName == "com.microsoft.emmx") {
+      isEdge = true
     }
     Log.i("Package: ${packageName}, v${packageInfo!!.versionName}, ${state}")
     setVersion()
