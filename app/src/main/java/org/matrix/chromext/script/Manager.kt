@@ -7,7 +7,6 @@ import android.database.CursorWindow
 import android.os.Build
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DevTools
-import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.utils.Log
 
 private const val SEP = ""
@@ -138,14 +137,6 @@ object ScriptDbManager {
           callback = encodeScript(scripts.last())
         } else {
           callback = "alert('Fail to install ${payload}');"
-        }
-      }
-      "runCommand" -> {
-        when (payload) {
-          "openEruda" -> {
-            TabModel.refresh()
-            callback = TabModel.openEruda()
-          }
         }
       }
       "getIds" -> {
