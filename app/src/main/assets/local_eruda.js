@@ -384,18 +384,18 @@ if (
 } else if (typeof globalThis.eruda == "undefined") {
   const cspRule = "script-src 'none'";
   const meta = document.head.querySelector(`meta[content="${cspRule}"]`);
-  globalThis.reloadPageFirst =
-    meta && meta.getAttribute("http-equiv") == "Content-Security-Policy";
-  if (globalThis.reloadPageFirst) {
+  if (meta && meta.getAttribute("http-equiv") == "Content-Security-Policy") {
     alert(
       "Content-Security-Policy is set, but you need to reload the page or fully restart the browser to clean cached third-party JavaScripts."
     );
-    window.location.reload();
   } else {
-    const response = confirm(
-      "Eruda is blocked, it is advisable to use the official 'Content-Security-Policy Blocker' UserScript to block JavaScripts on this website.\n\nDo you want to proceed in this way?"
-    );
-    if (response) {
+    let shouldInstallCSP = true;
+    if (localStorage.getItem("CSPBlocker") != cspRule) {
+      shouldInstallCSP = confirm(
+        "Eruda is blocked, it is advisable to use the official 'Content-Security-Policy Blocker' UserScript to block JavaScripts on this website.\n\nDo you want to proceed in this way?"
+      );
+    }
+    if (shouldInstallCSP) {
       localStorage.setItem("CSPBlocker", cspRule);
       globalThis.ChromeXt(
         JSON.stringify({

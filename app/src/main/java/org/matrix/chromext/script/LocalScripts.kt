@@ -300,7 +300,9 @@ if (typeof globalThis.eruda != "undefined") {
 		eruda._localConfig();
 		eruda.show();
 	}
-} else if (!globalThis.reloadPageFirst) {
-	globalThis.ChromeXt(JSON.stringify({action: "runCommand", payload: "openEruda"}));
+} else if (!globalThis.stopRetryLoadEruda) {
+	globalThis.stopRetryLoadEruda = true;
+    window.location.reload();
+	alert("Eruda needs to reload the page");
 }
 """
