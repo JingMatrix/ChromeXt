@@ -16,6 +16,7 @@ import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Download
+import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
@@ -26,7 +27,8 @@ object MenuHook : BaseHook() {
   override fun init() {
 
     val proxy = MenuProxy()
-    var enrichHook: Unhook? = null
+    var preferenceEnrichHook: Unhook? = null
+    var menuEnrichHook: Unhook? = null
     var findReaderHook: Unhook? = null
     var findMenuHook: Unhook? = null
 
@@ -48,6 +50,7 @@ object MenuHook : BaseHook() {
                   subType.getDeclaredFields().find {
                     it.toString().startsWith("public org.chromium.ui.modelutil.PropertyModel")
                   } != null) {
+                Log.i(subType.toString())
                 readerModeManager = it.thisObject
                 findReaderHook!!.unhook()
                 mTab =
@@ -165,21 +168,24 @@ object MenuHook : BaseHook() {
                   }
             }
 
-    if (!Chrome.split || Chrome.version == 109) {
-      // No idea when we need to enrich
-      enrichHook =
-          findMethod(proxy.preferenceFragmentCompat.getSuperclass() as Class<*>) {
-                getParameterCount() == 0 && getReturnType() == Context::class.java
+    preferenceEnrichHook =
+        findMethod(proxy.preferenceFragmentCompat.getSuperclass() as Class<*>) {
+              getParameterCount() == 0 && getReturnType() == Context::class.java
+              // Purely luck to get a method returning the context
+            }
+            .hookAfter {
+              if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
+                ResourceMerge.enrich(it.getResult() as Context)
+                preferenceEnrichHook!!.unhook()
               }
-              .hookAfter {
-                if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
-                  ResourceMerge.enrich(it.getResult() as Context)
-                  if (enrichHook != null) {
-                    enrichHook!!.unhook()
-                  }
-                }
-              }
-    }
+            }
+
+    menuEnrichHook =
+        proxy.windowAndroid.getDeclaredConstructors()[1].hookAfter {
+          val context = it.args[0] as Context
+          ResourceMerge.enrich(context)
+          menuEnrichHook!!.unhook()
+        }
 
     proxy.addPreferencesFromResource
         // public void addPreferencesFromResource(Int preferencesResId)
