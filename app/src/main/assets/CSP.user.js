@@ -24,7 +24,7 @@ if (cspRule) {
 GM_registerMenuCommand("No JavaScript", () => { localStorage.setItem("CSPBlocker", "script-src 'none'") });
 GM_registerMenuCommand("No Third-Party", () => { localStorage.setItem("CSPBlocker", "default-src 'unsafe-inline' 'self'") });
 GM_registerMenuCommand("Edit CSP rules", () => {
-	const newrule = prompt("Editing CSP rules", cspRule || "");
+	const newrule = prompt("Editing CSP rules", localStorage.getItem("CSPBlocker") || "");
 	if (newrule && newrule != "") {
 		localStorage.setItem("CSPBlocker", newrule)
 	}

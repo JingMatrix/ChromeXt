@@ -95,7 +95,7 @@ After clicking the `delete` icon for a selected element, a corresponding filter 
 These filters are saved in the browser even after clearing the site's data.
 
 Another way to block ADs is using the [Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src) to block some scripts from loading.
-See the official [Content-Security-Policy Blocker](CSP.user.js) UserScript.
+See the official [Content-Security-Policy Blocker](app/src/main/assets/CSP.user.js) UserScript.
 
 ### Mocking User Agent
 

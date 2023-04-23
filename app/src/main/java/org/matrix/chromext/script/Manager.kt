@@ -7,6 +7,7 @@ import android.database.CursorWindow
 import android.os.Build
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DevTools
+import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.utils.Log
 
 private const val SEP = ""
@@ -129,6 +130,22 @@ object ScriptDbManager {
           insert(script)
           scripts.removeAll(scripts.filter { it.id == script.id })
           scripts.add(script)
+        }
+      }
+      "installDefault" -> {
+        val code = Chrome.getContext().assets.open(payload).bufferedReader().use { it.readText() }
+        if (this.on("installScript", code) == null) {
+          callback = encodeScript(scripts.last())
+        } else {
+          callback = "alert('Fail to install ${payload}');"
+        }
+      }
+      "runCommand" -> {
+        when (payload) {
+          "openEruda" -> {
+            TabModel.refresh()
+            callback = TabModel.openEruda()
+          }
         }
       }
       "getIds" -> {

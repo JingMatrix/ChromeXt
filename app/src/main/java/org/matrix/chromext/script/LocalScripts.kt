@@ -300,5 +300,7 @@ if (typeof globalThis.eruda != "undefined") {
 		eruda._localConfig();
 		eruda.show();
 	}
+} else if (!globalThis.reloadPageFirst) {
+	globalThis.ChromeXt(JSON.stringify({action: "runCommand", payload: "openEruda"}));
 }
 """
