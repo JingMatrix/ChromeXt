@@ -2,6 +2,7 @@ package org.matrix.chromext
 
 import android.net.LocalSocket
 import android.net.LocalSocketAddress
+import android.os.Process
 import java.io.Closeable
 import java.io.InputStream
 import java.io.OutputStream
@@ -60,7 +61,11 @@ private class Forward(forwarder: ServerSocket) : Thread() {
     runCatching {
           while (true) {
             val client = LocalSocket()
-            client.connect(LocalSocketAddress("chrome_devtools_remote"))
+
+            runCatching { client.connect(LocalSocketAddress("chrome_devtools_remote")) }
+                .onFailure {
+                  client.connect(LocalSocketAddress("chrome_devtools_remote_" + Process.myPid()))
+                }
 
             if (client.isConnected()) {
               Log.d("New connection to Chrome DevTools")
@@ -154,7 +159,8 @@ private fun InputStream.pipe(out: OutputStream, bufferSize: Int = DEFAULT_BUFFER
 
 private fun refreshDevTool(): String {
   val client = LocalSocket()
-  client.connect(LocalSocketAddress("chrome_devtools_remote"))
+  runCatching { client.connect(LocalSocketAddress("chrome_devtools_remote")) }
+      .onFailure { client.connect(LocalSocketAddress("chrome_devtools_remote_" + Process.myPid())) }
   client.outputStream.write("GET /json HTTP/1.1\r\n\r\n".toByteArray())
   var pages = ""
   client.inputStream.bufferedReader().use {

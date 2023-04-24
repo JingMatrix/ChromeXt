@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager.PackageInfoFlags
 import android.os.Build
+import android.os.Process
 import java.lang.ref.WeakReference
 import org.matrix.chromext.utils.Log
 
@@ -33,7 +34,7 @@ object Chrome {
       isVivaldi = true
       isDev = true
     }
-    Log.i("Package: ${packageName}, v${packageInfo!!.versionName}")
+    Log.i("Package: ${packageName}, v${packageInfo!!.versionName}, pid ${Process.myPid()}")
     setVersion()
 
     ResourceMerge.enrich(ctx)
