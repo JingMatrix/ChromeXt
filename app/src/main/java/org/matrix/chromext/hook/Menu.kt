@@ -1,7 +1,6 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
-import android.os.Build
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
@@ -188,25 +187,25 @@ object MenuHook : BaseHook() {
           }
         }
 
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-      preferenceEnrichHook =
-          findMethod(proxy.preferenceFragmentCompat, true) {
-                getParameterCount() == 0 && getReturnType() == Context::class.java
-                // Purely luck to get a method returning the context
+    // Usually, only some versions of Chrome or Android < 11 need the following context-enriching
+    // code; it better to run them, just in case
+    preferenceEnrichHook =
+        findMethod(proxy.preferenceFragmentCompat, true) {
+              getParameterCount() == 0 && getReturnType() == Context::class.java
+              // Purely luck to get a method returning the context
+            }
+            .hookAfter {
+              if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
+                ResourceMerge.enrich(it.getResult() as Context)
+                preferenceEnrichHook!!.unhook()
               }
-              .hookAfter {
-                if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
-                  ResourceMerge.enrich(it.getResult() as Context)
-                  preferenceEnrichHook!!.unhook()
-                }
-              }
+            }
 
-      menuEnrichHook =
-          proxy.windowAndroid.getDeclaredConstructors()[1].hookAfter {
-            val context = it.args[0] as Context
-            ResourceMerge.enrich(context)
-            menuEnrichHook!!.unhook()
-          }
-    }
+    menuEnrichHook =
+        proxy.windowAndroid.getDeclaredConstructors()[1].hookAfter {
+          val context = it.args[0] as Context
+          ResourceMerge.enrich(context)
+          menuEnrichHook!!.unhook()
+        }
   }
 }

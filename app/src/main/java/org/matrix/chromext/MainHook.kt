@@ -1,10 +1,8 @@
 package org.matrix.chromext
 
 import android.content.Context
-import de.robv.android.xposed.IXposedHookInitPackageResources
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
-import de.robv.android.xposed.callbacks.XC_InitPackageResources
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import org.matrix.chromext.hook.BaseHook
 import org.matrix.chromext.hook.GestureNavHook
@@ -26,7 +24,7 @@ val supportedPackages =
         "com.brave.browser",
         "com.brave.browser_beta")
 
-class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitPackageResources {
+class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
     if (supportedPackages.contains(lpparam.packageName)) {
       var entryPoint = "org.chromium.chrome.browser.base.SplitChromeApplication"
@@ -44,10 +42,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitP
   override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
     ResourceMerge.init(startupParam.modulePath)
   }
-
-  override fun handleInitPackageResources(
-      resparam: XC_InitPackageResources.InitPackageResourcesParam
-  ) {}
 
   private fun initHooks(vararg hook: BaseHook) {
     ResourceMerge.enrich(Chrome.getContext())
