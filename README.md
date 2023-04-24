@@ -10,8 +10,11 @@ add URL comparison there and evaluate JavaScript using the `javascript:` scheme.
 We pay our main efforts to support the latest _stable_ version of Android Chrome.
 Please consider update your Android Chrome first before proceeding.
 
-Normally, [Bromite](https://github.com/bromite/bromite) and [Brave](https://github.com/brave/brave-browser) are also supported.
-The support for `Edge` is limited, no idea how to hook its page menu.
+Chromium based browsers,
+[Bromite](https://github.com/bromite/bromite) and [Brave](https://github.com/brave/brave-browser) are also fully supported.
+There are partially supports for
+1. [Egde](https://www.microsoft.com/en-us/edge/download), no page menu;
+2. [Vivaldi](https://vivaldi.com/fr/android/), no `Developer options` menu.
 
 ## Usage
 

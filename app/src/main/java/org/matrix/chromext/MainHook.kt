@@ -19,8 +19,9 @@ val supportedPackages =
         "com.chrome.beta",
         "com.chrome.dev",
         "com.chrome.canary",
-        "org.bromite.bromite",
+        "com.vivaldi.browser",
         "com.microsoft.emmx",
+        "org.bromite.bromite",
         "com.brave.browser",
         "com.brave.browser_beta")
 
