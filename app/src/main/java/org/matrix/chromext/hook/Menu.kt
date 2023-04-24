@@ -26,10 +26,6 @@ object MenuHook : BaseHook() {
   override fun init() {
 
     val proxy = MenuProxy()
-    var preferenceEnrichHook: Unhook? = null
-    var menuEnrichHook: Unhook? = null
-    var findReaderHook: Unhook? = null
-    var findMenuHook: Unhook? = null
 
     // Page menu only appears after restarting chrome
 
@@ -40,6 +36,7 @@ object MenuHook : BaseHook() {
     var activateReadMode: Method? = null
     val READER_MODE_ID = 31415926
 
+    var findReaderHook: Unhook? = null
     findReaderHook =
         findMethod(proxy.emptyTabObserver) { getParameterCount() == 6 }
             // A method has the most code must be called for the initialization
@@ -95,6 +92,7 @@ object MenuHook : BaseHook() {
           }
         }
 
+    var findMenuHook: Unhook? = null
     findMenuHook =
         findMethod(proxy.chromeTabbedActivity) {
               getParameterCount() == 0 &&
@@ -187,8 +185,11 @@ object MenuHook : BaseHook() {
           }
         }
 
-    // Usually, only some versions of Chrome or Android < 11 need the following context-enriching
-    // code; it better to run them, just in case
+    // Usually, only some versions of Chrome or Android < 11
+    // need the following context-enriching code.
+    // It is better to always run them, just in case.
+    var preferenceEnrichHook: Unhook? = null
+    var menuEnrichHook: Unhook? = null
     preferenceEnrichHook =
         findMethod(proxy.preferenceFragmentCompat, true) {
               getParameterCount() == 0 && getReturnType() == Context::class.java

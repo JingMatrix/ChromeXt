@@ -30,6 +30,8 @@ object Chrome {
     }
     Log.i("Package: ${packageName}, v${packageInfo!!.versionName}")
     setVersion()
+
+    ResourceMerge.enrich(ctx)
   }
 
   fun getContext(): Context {
