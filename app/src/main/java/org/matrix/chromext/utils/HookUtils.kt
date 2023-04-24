@@ -28,8 +28,6 @@ fun Method.hookBefore(
       })
 }
 
-fun Method.hookBefore(hooker: Hooker) = this.hookBefore(XCallback.PRIORITY_DEFAULT, hooker)
-
 fun Method.hookAfter(
     priority: Int = XCallback.PRIORITY_DEFAULT,
     hooker: Hooker
@@ -44,8 +42,6 @@ fun Method.hookAfter(
             }
       })
 }
-
-fun Method.hookAfter(hooker: Hooker) = this.hookAfter(XCallback.PRIORITY_DEFAULT, hooker)
 
 fun Constructor<*>.hookMethod(hookCallback: XC_MethodHook): XC_MethodHook.Unhook {
   return XposedBridge.hookMethod(this, hookCallback)
@@ -65,8 +61,6 @@ fun Constructor<*>.hookAfter(
             }
       })
 }
-
-fun Constructor<*>.hookAfter(hooker: Hooker) = this.hookAfter(XCallback.PRIORITY_DEFAULT, hooker)
 
 class XposedHookFactory(priority: Int = XCallback.PRIORITY_DEFAULT) : XC_MethodHook(priority) {
   private var beforeMethod: Hooker? = null
