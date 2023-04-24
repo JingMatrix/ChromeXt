@@ -31,6 +31,7 @@ object Chrome {
     }
     if (packageName == "com.vivaldi.browser") {
       isVivaldi = true
+      isDev = true
     }
     Log.i("Package: ${packageName}, v${packageInfo!!.versionName}")
     setVersion()

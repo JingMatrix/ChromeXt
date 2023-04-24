@@ -6,6 +6,7 @@ import java.lang.ref.WeakReference
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.script.erudaToggle
+import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
 
@@ -52,7 +53,10 @@ object TabModel {
         script += erudaToggle
         eruda_loaded.put(index(), true)
       } else {
-        Log.toast(ctx, "Please update Eruda in the Developer options menu")
+        Log.toast(ctx, "Updating Eruda...")
+        Download.start(ERUD_URL, "Download/Eruda.js", true) {
+          Log.toast(ctx, "Eruda is prepared now")
+        }
       }
     } else {
       script = erudaToggle
