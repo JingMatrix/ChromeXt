@@ -149,6 +149,7 @@ Here are corresponding files you might want / need to change:
 - [x] Implement fully `GM_info`
 - [x] Eruda fails due to [Injection Sinks](https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API)
 - [ ] ~~Fully support Egde browser~~
+- [ ] Get correct Chromium version
 - [ ] Fix page menu injection position
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
 - [ ] Use `adb forward` to support non-root users

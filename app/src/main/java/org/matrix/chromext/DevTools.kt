@@ -108,7 +108,7 @@ private class forwardStreamThread(
   }
   override fun run() {
     runCatching {
-          if (Chrome.version > 110 && tag == "server") {
+          if (tag == "server") {
             val HEADERS_BEFORE_SIZE = 512
             // Hard coded number, approximate size to contains the Origin header
             val buffer = ByteArray(HEADERS_BEFORE_SIZE)
@@ -121,7 +121,7 @@ private class forwardStreamThread(
                     .toByteArray())
           }
 
-          input.copyTo(output)
+          input.pipe(output)
 
           Log.d("An inspecting seesion from ${tag} ends")
           input.close()
@@ -136,6 +136,20 @@ private class forwardStreamThread(
           }
         }
   }
+}
+
+private fun InputStream.pipe(out: OutputStream, bufferSize: Int = DEFAULT_BUFFER_SIZE): Long {
+  var bytesCopied: Long = 0
+  val buffer = ByteArray(bufferSize)
+  var bytes = read(buffer)
+  while (bytes >= 0) {
+    // Uncomment to debug
+    // Log.i(String(buffer))
+    out.write(buffer, 0, bytes)
+    bytesCopied += bytes
+    bytes = read(buffer)
+  }
+  return bytesCopied
 }
 
 private fun refreshDevTool(): String {
