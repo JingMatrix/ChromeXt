@@ -25,6 +25,7 @@ class MenuProxy() {
   val twoStatePreference: Class<*>
   val gURL: Class<*>
   val windowAndroid: Class<*>
+  // val mainSettings: Class<*>
 
   private val preference: Class<*>
   private val mClickListener: Field
@@ -52,6 +53,7 @@ class MenuProxy() {
     preferenceFragmentCompat = developerSettings.getSuperclass() as Class<*>
     chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
     windowAndroid = Chrome.load("org.chromium.ui.base.WindowAndroid")
+    // mainSettings = Chrome.load("org.chromium.chrome.browser.settings.MainSettings")
     customTabActivity = Chrome.load("org.chromium.chrome.browser.customtabs.CustomTabActivity")
     twoStatePreference =
         Chrome.load("org.chromium.components.browser_ui.settings.ChromeSwitchPreference")

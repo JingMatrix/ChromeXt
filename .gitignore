@@ -9,7 +9,4 @@
 .cxx
 local.properties
 *.apk
-com.android.chrome
-com.chrome.*
-com.brave.browser
-com.microsoft.emmx
+com.*

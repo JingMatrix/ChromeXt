@@ -185,6 +185,20 @@ object MenuHook : BaseHook() {
           }
         }
 
+    // if (Chrome.isVivaldi) {
+    //   findMethod(proxy.mainSettings) {
+    //         getParameterCount() == 1 &&
+    //             getParameterTypes().first() == String::class.java &&
+    //             getReturnType() == proxy.preference
+    //       }
+    //       // Preference addPreferenceIfAbsent(String key)
+    //       .hookBefore {
+    //         // if ((it.args[0] as String) == "homepage") {
+    //         //   (it.method as Method).invoke(it.thisObject, "developer")
+    //         // }
+    //       }
+    // }
+
     // Usually, only some versions of Chrome or Android < 11
     // need the following context-enriching code.
     // It is better to always run them, just in case.

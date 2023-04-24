@@ -14,6 +14,7 @@ object Chrome {
   var isDev = false
   var version = 0
   var isEdge = false
+  var isVivaldi = false
 
   fun init(ctx: Context) {
     mContext = WeakReference(ctx)
@@ -27,6 +28,9 @@ object Chrome {
     isDev = packageName.contains("canary") || packageName.contains("dev")
     if (packageName == "com.microsoft.emmx") {
       isEdge = true
+    }
+    if (packageName == "com.vivaldi.browser") {
+      isVivaldi = true
     }
     Log.i("Package: ${packageName}, v${packageInfo!!.versionName}")
     setVersion()
