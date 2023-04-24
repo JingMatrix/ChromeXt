@@ -143,13 +143,19 @@ private class forwardStreamThread(
   }
 }
 
-private fun InputStream.pipe(out: OutputStream, bufferSize: Int = DEFAULT_BUFFER_SIZE): Long {
+private fun InputStream.pipe(
+    out: OutputStream,
+    debug: Boolean = false,
+    bufferSize: Int = DEFAULT_BUFFER_SIZE
+): Long {
+  if (!debug) {
+    return this.copyTo(out, bufferSize)
+  }
   var bytesCopied: Long = 0
   val buffer = ByteArray(bufferSize)
   var bytes = read(buffer)
+  Log.d(String(buffer))
   while (bytes >= 0) {
-    // Uncomment to debug
-    // Log.i(String(buffer))
     out.write(buffer, 0, bytes)
     bytesCopied += bytes
     bytes = read(buffer)
