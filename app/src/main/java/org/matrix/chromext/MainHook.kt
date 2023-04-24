@@ -22,6 +22,7 @@ val supportedPackages =
         "com.vivaldi.browser",
         "com.microsoft.emmx",
         "org.bromite.bromite",
+        "us.spotco.mulch",
         "com.brave.browser",
         "com.brave.browser_beta")
 

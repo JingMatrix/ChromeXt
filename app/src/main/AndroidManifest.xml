@@ -8,6 +8,7 @@
 		<package android:name="com.vivaldi.browser"/>
 		<package android:name="com.microsoft.emmx"/>
 		<package android:name="org.bromite.bromite"/>
+		<package android:name="us.spotco.mulch"/>
 		<package android:name="com.brave.browser"/>
 		<package android:name="com.brave.browser_beta"/>
 	</queries>

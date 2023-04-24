@@ -11,8 +11,10 @@ We pay our main efforts to support the latest _stable_ version of Android Chrome
 Please consider update your Android Chrome first before proceeding.
 
 Chromium based browsers,
-[Bromite](https://github.com/bromite/bromite) and [Brave](https://github.com/brave/brave-browser) are also fully supported.
-There are partially supports for
+[Bromite](https://github.com/bromite/bromite),
+[Mulch](https://gitlab.com/divested-mobile/mulch),
+and [Brave](https://github.com/brave/brave-browser) are also fully supported.
+There are partial supports for
 1. [Egde](https://www.microsoft.com/en-us/edge/download), no page menu;
 2. [Vivaldi](https://vivaldi.com/fr/android/), no `Developer options` menu.
 
