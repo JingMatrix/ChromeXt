@@ -24,6 +24,7 @@ class OpenInChrome : Activity() {
     startActivity(chromeMain.putExtra("ChromeXt", url))
   }
 
+  @Suppress("QueryPermissionsNeeded")
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     val installedApplications: List<ApplicationInfo>
