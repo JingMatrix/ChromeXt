@@ -11,7 +11,6 @@ object Chrome {
   private var mContext: WeakReference<Context>? = null
   private var packageInfo: PackageInfo? = null
   private var longVersion: Long = 0
-  var split = true
   var isDev = false
   var version = 0
   var isEdge = false
@@ -26,14 +25,10 @@ object Chrome {
       packageInfo = ctx.getPackageManager().getPackageInfo(packageName, 0)
     }
     isDev = packageName.contains("canary") || packageName.contains("dev")
-    var state = "split"
-    if (!split) {
-      state = "non-split"
-    }
     if (packageName == "com.microsoft.emmx") {
       isEdge = true
     }
-    Log.i("Package: ${packageName}, v${packageInfo!!.versionName}, ${state}")
+    Log.i("Package: ${packageName}, v${packageInfo!!.versionName}")
     setVersion()
   }
 

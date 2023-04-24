@@ -1,6 +1,7 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
+import android.os.Build
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
@@ -16,7 +17,6 @@ import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Download
-import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
@@ -50,7 +50,6 @@ object MenuHook : BaseHook() {
                   subType.getDeclaredFields().find {
                     it.toString().startsWith("public org.chromium.ui.modelutil.PropertyModel")
                   } != null) {
-                Log.i(subType.toString())
                 readerModeManager = it.thisObject
                 findReaderHook!!.unhook()
                 mTab =
@@ -168,25 +167,6 @@ object MenuHook : BaseHook() {
                   }
             }
 
-    preferenceEnrichHook =
-        findMethod(proxy.preferenceFragmentCompat.getSuperclass() as Class<*>) {
-              getParameterCount() == 0 && getReturnType() == Context::class.java
-              // Purely luck to get a method returning the context
-            }
-            .hookAfter {
-              if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
-                ResourceMerge.enrich(it.getResult() as Context)
-                preferenceEnrichHook!!.unhook()
-              }
-            }
-
-    menuEnrichHook =
-        proxy.windowAndroid.getDeclaredConstructors()[1].hookAfter {
-          val context = it.args[0] as Context
-          ResourceMerge.enrich(context)
-          menuEnrichHook!!.unhook()
-        }
-
     proxy.addPreferencesFromResource
         // public void addPreferencesFromResource(Int preferencesResId)
         .hookMethod {
@@ -207,5 +187,26 @@ object MenuHook : BaseHook() {
             }
           }
         }
+
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+      preferenceEnrichHook =
+          findMethod(proxy.preferenceFragmentCompat, true) {
+                getParameterCount() == 0 && getReturnType() == Context::class.java
+                // Purely luck to get a method returning the context
+              }
+              .hookAfter {
+                if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
+                  ResourceMerge.enrich(it.getResult() as Context)
+                  preferenceEnrichHook!!.unhook()
+                }
+              }
+
+      menuEnrichHook =
+          proxy.windowAndroid.getDeclaredConstructors()[1].hookAfter {
+            val context = it.args[0] as Context
+            ResourceMerge.enrich(context)
+            menuEnrichHook!!.unhook()
+          }
+    }
   }
 }

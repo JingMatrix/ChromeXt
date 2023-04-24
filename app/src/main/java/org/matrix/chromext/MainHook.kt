@@ -29,32 +29,14 @@ val supportedPackages =
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit, IXposedHookInitPackageResources {
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
     if (supportedPackages.contains(lpparam.packageName)) {
-      runCatching {
-            Chrome.split = true
-            var entryPoint = "org.chromium.chrome.browser.base.SplitChromeApplication"
-            runCatching { lpparam.classLoader.loadClass(entryPoint) }
-                .onFailure {
-                  entryPoint = "org.chromium.chrome.browser.base.SplitMonochromeApplication"
-                }
-            findMethod(lpparam.classLoader.loadClass(entryPoint)) { name == "attachBaseContext" }
-                .hookAfter {
-                  val ctx = (it.args[0] as Context).createContextForSplit("chrome")
-                  Chrome.init(ctx)
-                  initHooks(UserScriptHook, GestureNavHook, MenuHook, IntentHook)
-                }
-          }
-          .onFailure {
-            Chrome.split = false
-            findMethod(
-                    lpparam.classLoader.loadClass(
-                        "org.chromium.chrome.browser.ChromeTabbedActivity"),
-                    true) {
-                      name == "onCreate"
-                    }
-                .hookAfter {
-                  Chrome.init(it.thisObject as Context)
-                  initHooks(UserScriptHook, GestureNavHook, MenuHook, IntentHook)
-                }
+      var entryPoint = "org.chromium.chrome.browser.base.SplitChromeApplication"
+      runCatching { lpparam.classLoader.loadClass(entryPoint) }
+          .onFailure { entryPoint = "org.chromium.chrome.browser.base.SplitMonochromeApplication" }
+      findMethod(lpparam.classLoader.loadClass(entryPoint)) { name == "attachBaseContext" }
+          .hookAfter {
+            val ctx = (it.args[0] as Context).createContextForSplit("chrome")
+            Chrome.init(ctx)
+            initHooks(UserScriptHook, GestureNavHook, MenuHook, IntentHook)
           }
     }
   }

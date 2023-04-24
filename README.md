@@ -7,8 +7,7 @@ Add UserScript support to Chrome using Xposed framework
 We hook an `onUpdateUrl` function in [UserScript.kt](app/src/main/java/org/matrix/chromext/hook/UserScript.kt),
 add URL comparison there and evaluate JavaScript using the `javascript:` scheme.
 
-We pay our main efforts to support the latest _stable_ version of Android Chrome
-installed from Google Play Store or downloaded APK from the internet.
+We pay our main efforts to support the latest _stable_ version of Android Chrome.
 Please consider update your Android Chrome first before proceeding.
 
 Normally, [Bromite](https://github.com/bromite/bromite) and [Brave](https://github.com/brave/brave-browser) are also supported.

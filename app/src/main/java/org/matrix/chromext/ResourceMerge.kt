@@ -25,6 +25,7 @@ object ResourceMerge {
         isChromeEnriched = true
       }
     }
+
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
       val resLoader = ResourcesLoader()
       resLoader.addProvider(
@@ -32,7 +33,6 @@ object ResourceMerge {
               ParcelFileDescriptor.open(
                   File(URI.create("file://" + module_path!!)),
                   ParcelFileDescriptor.MODE_READ_ONLY)))
-
       ctx.getResources().addLoaders(resLoader)
     } else {
       ctx.assets.invokeMethod(module_path!!) { name == "addAssetPath" }
