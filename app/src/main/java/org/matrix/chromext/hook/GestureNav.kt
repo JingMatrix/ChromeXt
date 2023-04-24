@@ -34,14 +34,17 @@ object GestureNavHook : BaseHook() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
               it.result = Insets.of(0, 0, 0, 0)
             }
-            fixConflict(activity!!.get()!!, true)
+            fixConflict(activity?.get(), true)
           } else {
-            fixConflict(activity!!.get()!!, false)
+            fixConflict(activity?.get(), false)
           }
         }
   }
 
-  fun fixConflict(activity: Activity, excludeSystemGesture: Boolean) {
+  fun fixConflict(activity: Activity?, excludeSystemGesture: Boolean) {
+    if (activity == null) {
+      return
+    }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
       val decoView = activity.getWindow().getDecorView()
       val width = decoView.getWidth()
