@@ -88,6 +88,8 @@ After restarting Chrome, ChromeXt offers you
 1. the `Developer tools` page menu for the UserScript manager front end,
 2. the `Eruda console` page menu for other pages.
 
+For `Edge` browser, the menu is moved to the left corner inside the URL input bar.
+
 ### AD Blocker solution
 
 For blocking network requests, I recommend to use `AdAway` or any proxy AD Blocker such as `clash`.
@@ -148,7 +150,8 @@ Here are corresponding files you might want / need to change:
 - [x] Improve `Open in Chrome` function
 - [x] Implement fully `GM_info`
 - [x] Eruda fails due to [Injection Sinks](https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API)
-- [ ] ~~Fully support Egde browser~~
+- [ ] Fix Edge browser DevTools inspect url
+- [ ] Improve Egde browser support
 - [ ] Get correct Chromium version
 - [ ] Fix page menu injection position
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
