@@ -3,6 +3,7 @@ package org.matrix.chromext.proxy
 import java.io.File
 import java.io.FileReader
 import java.lang.ref.WeakReference
+import java.util.Collections
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.script.erudaToggle
@@ -34,8 +35,13 @@ object TabModel {
     return UserScriptHook.proxy!!.parseUrl(getTab().invokeMethod { name == "getUrl" }!!) ?: ""
   }
 
-  fun refresh() {
+  fun refresh(tab: Any) {
     eruda_loaded.put(index(), false)
+    val n = tabModels.size
+    if (n > 1 && getTab() != tab) {
+      // Only fix for incognito mode, should be sufficient for normal usage
+      Collections.swap(tabModels, n - 1, n - 2)
+    }
   }
 
   fun erudaLoaded(): Boolean {

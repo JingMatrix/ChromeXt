@@ -24,6 +24,7 @@ class UserScriptProxy() {
   // val tabImpl: Class<*>
   // val webContentsObserverProxy: Class<*>
   // private val navigationHandle: Class<*>
+  val mTab: Field
 
   private val gURL: Class<*>
   private val mSpec: Field
@@ -46,6 +47,7 @@ class UserScriptProxy() {
     mVerbatimHeaders =
         loadUrlParams.getDeclaredFields().filter { it.getType() == String::class.java }.elementAt(1)
     mSpec = gURL.getDeclaredField("a")
+    mTab = tabWebContentsDelegateAndroidImpl.getDeclaredField("a")
   }
 
   private fun loadUrl(url: String) {
