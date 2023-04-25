@@ -47,8 +47,20 @@ object MenuHook : BaseHook() {
       val mRowWrapper =
           pageInfoView.getDeclaredFields().find { it.type == LinearLayout::class.java }
       pageInfoView.getDeclaredConstructors()[0].hookAfter {
-        (erudaView.getParent() as LinearLayout).removeView(erudaView)
-        (mRowWrapper!!.get(it.thisObject) as LinearLayout).addView(erudaView)
+        val url = TabModel.getUrl()
+        if (!url.startsWith("edge://")) {
+          if (url.endsWith("/ChromeXt/")) {
+            erudaView.setText("Open developer tools")
+            erudaView.setOnClickListener { DevTools.start() }
+          } else {
+            erudaView.setText("Open eruda console")
+            erudaView.setOnClickListener {
+              UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
+            }
+          }
+          (erudaView.getParent() as LinearLayout).removeView(erudaView)
+          (mRowWrapper!!.get(it.thisObject) as LinearLayout).addView(erudaView)
+        }
       }
 
       Chrome.load("org.chromium.chrome.browser.dom_distiller.ReaderModeManager")
