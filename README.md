@@ -14,9 +14,9 @@ Chromium based browsers,
 [Bromite](https://github.com/bromite/bromite),
 [Mulch](https://gitlab.com/divested-mobile/mulch),
 and [Brave](https://github.com/brave/brave-browser) are also fully supported.
-There are partial supports for
-1. [Egde](https://www.microsoft.com/en-us/edge/download), no page menu;
-2. [Vivaldi](https://vivaldi.com/fr/android/), no `Developer options` menu.
+Due to different design ideas, supports for the following browsers are not perfect:
+1. [Egde](https://www.microsoft.com/en-us/edge/download), `DevTools` front end is removed by its authors;
+2. [Vivaldi](https://vivaldi.com/fr/android/), `Developer options` menu is removed by its authors.
 
 ## Usage
 
@@ -150,8 +150,8 @@ Here are corresponding files you might want / need to change:
 - [x] Improve `Open in Chrome` function
 - [x] Implement fully `GM_info`
 - [x] Eruda fails due to [Injection Sinks](https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API)
+- [x] Hide page_info panel automatically
 - [ ] ~~Fix Edge browser DevTools inspect url~~
-- [ ] Hide page_info panel automatically
 - [ ] Get correct Chromium version
 - [ ] Fix page menu injection position
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine

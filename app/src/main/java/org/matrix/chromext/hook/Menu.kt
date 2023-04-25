@@ -5,8 +5,6 @@ import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import de.robv.android.xposed.XC_MethodHook.Unhook
@@ -25,6 +23,7 @@ import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
 import org.matrix.chromext.utils.hookMethod
+import org.matrix.chromext.utils.invokeMethod
 
 object MenuHook : BaseHook() {
 
@@ -40,41 +39,37 @@ object MenuHook : BaseHook() {
     var mTab: Field? = null
     var activateReadMode: Method? = null
     val READER_MODE_ID = 31415926
+
+    // Add eruda menu to page_info dialog
     val erudaView =
         View.inflate(Chrome.getContext(), R.layout.page_info, null)
             .findViewById(R.id.page_info_eruda_row) as TextView
+    var mWebContentsObserver: Any? = null
+    proxy.webContentsObserver.getDeclaredConstructors()[0].hookAfter {
+      mWebContentsObserver = it.thisObject
+    }
+    proxy.pageInfoView.getDeclaredConstructors()[0].hookAfter {
+      val url = TabModel.getUrl()
+      if (Chrome.isEdge && !url.startsWith("edge://")) {
+        if (url.endsWith("/ChromeXt/")) {
+          erudaView.setText("Open developer tools")
+          erudaView.setOnClickListener {
+            DevTools.start()
+            mWebContentsObserver!!.invokeMethod() { name == "destroy" }
+          }
+        } else {
+          erudaView.setText("Open eruda console")
+          erudaView.setOnClickListener {
+            UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
+            mWebContentsObserver!!.invokeMethod() { name == "destroy" }
+          }
+        }
+        (erudaView.getParent() as LinearLayout).removeView(erudaView)
+        (proxy.mRowWrapper.get(it.thisObject) as LinearLayout).addView(erudaView)
+      }
+    }
 
     if (Chrome.isEdge) {
-      val pageInfoView = Chrome.load("org.chromium.components.page_info.PageInfoView")
-      val mRowWrapper =
-          pageInfoView.getDeclaredFields().find { it.type == LinearLayout::class.java }
-      // val pageInfoController =
-      // Chrome.load("org.chromium.components.page_info.PageInfoController")
-      // var infoController: Any? = null
-      // pageInfoController.getDeclaredConstructors()[0].hookAfter { infoController = it.thisObject
-      // }
-      pageInfoView.getDeclaredConstructors()[0].hookAfter {
-        val infoView = it.thisObject as FrameLayout
-        val url = TabModel.getUrl()
-        if (!url.startsWith("edge://")) {
-          if (url.endsWith("/ChromeXt/")) {
-            erudaView.setText("Open developer tools")
-            erudaView.setOnClickListener {
-              DevTools.start()
-              (infoView.parent as ViewGroup).removeAllViews()
-            }
-          } else {
-            erudaView.setText("Open eruda console")
-            erudaView.setOnClickListener {
-              UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
-              (infoView.parent as ViewGroup).removeAllViews()
-            }
-          }
-          (erudaView.getParent() as LinearLayout).removeView(erudaView)
-          (mRowWrapper!!.get(it.thisObject) as LinearLayout).addView(erudaView)
-        }
-      }
-
       Chrome.load("org.chromium.chrome.browser.dom_distiller.ReaderModeManager")
           .getDeclaredConstructors()[0]
           .hookAfter { readerModeManager = it.thisObject }

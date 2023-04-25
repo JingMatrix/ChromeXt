@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.Build
 import android.view.View
 import android.view.View.OnClickListener
+import android.widget.FrameLayout
+import android.widget.LinearLayout
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import kotlin.text.Regex
@@ -26,8 +28,14 @@ class MenuProxy() {
   val gURL: Class<*>
   val windowAndroid: Class<*>
   // val mainSettings: Class<*>
+  val pageInfoView: Class<*>
+  val webContentsObserver: Class<*>
 
+  private val pageInfoController: Class<*>
   private val preference: Class<*>
+
+  val mRowWrapper: Field
+
   private val mClickListener: Field
 
   val setChecked: Method
@@ -59,6 +67,28 @@ class MenuProxy() {
         Chrome.load("org.chromium.components.browser_ui.settings.ChromeSwitchPreference")
             .getSuperclass() as Class<*>
     gURL = Chrome.load("org.chromium.url.GURL")
+
+    pageInfoController = Chrome.load("org.chromium.components.page_info.PageInfoController")
+    if (Chrome.isEdge) {
+      pageInfoView = Chrome.load("org.chromium.components.page_info.PageInfoView")
+    } else {
+      pageInfoView =
+          pageInfoController
+              .getDeclaredFields()
+              .find { it.type.getSuperclass() == FrameLayout::class.java }!!
+              .type
+    }
+    mRowWrapper = pageInfoView.getDeclaredFields().find { it.type == LinearLayout::class.java }!!
+    webContentsObserver =
+        // A particular WebContentsObserver designed for PageInfoController
+        pageInfoController
+            .getDeclaredFields()
+            .find {
+              it.type.getDeclaredFields().size == 1 &&
+                  it.type.getDeclaredFields()[0].type == pageInfoController
+            }!!
+            .type
+
     emptyTabObserver =
         Chrome.load("org.chromium.chrome.browser.login.ChromeHttpAuthHandler").getSuperclass()
             as Class<*>
