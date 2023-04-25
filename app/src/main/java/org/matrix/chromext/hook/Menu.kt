@@ -4,6 +4,9 @@ import android.content.Context
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
+import android.view.View
+import android.widget.LinearLayout
+import android.widget.TextView
 import de.robv.android.xposed.XC_MethodHook.Unhook
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -35,6 +38,23 @@ object MenuHook : BaseHook() {
     var mTab: Field? = null
     var activateReadMode: Method? = null
     val READER_MODE_ID = 31415926
+    val erudaView =
+        View.inflate(Chrome.getContext(), R.layout.page_info, null)
+            .findViewById(R.id.page_info_eruda_row) as TextView
+
+    if (Chrome.isEdge) {
+      val pageInfoView = Chrome.load("org.chromium.components.page_info.PageInfoView")
+      val mRowWrapper =
+          pageInfoView.getDeclaredFields().find { it.type == LinearLayout::class.java }
+      pageInfoView.getDeclaredConstructors()[0].hookAfter {
+        (erudaView.getParent() as LinearLayout).removeView(erudaView)
+        (mRowWrapper!!.get(it.thisObject) as LinearLayout).addView(erudaView)
+      }
+
+      Chrome.load("org.chromium.chrome.browser.dom_distiller.ReaderModeManager")
+          .getDeclaredConstructors()[0]
+          .hookAfter { readerModeManager = it.thisObject }
+    }
 
     var findReaderHook: Unhook? = null
     findReaderHook =
