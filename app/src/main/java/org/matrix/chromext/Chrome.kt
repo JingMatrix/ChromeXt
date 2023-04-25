@@ -26,8 +26,8 @@ object Chrome {
       @Suppress("DEPRECATION")
       packageInfo = ctx.getPackageManager().getPackageInfo(packageName, 0)
     }
-    isDev = packageName.contains("canary") || packageName.contains("dev")
-    if (packageName == "com.microsoft.emmx") {
+    isDev = packageName.endsWith("canary") || packageName.endsWith("dev")
+    if (packageName.startsWith("com.microsoft.emmx")) {
       isEdge = true
     }
     if (packageName == "com.vivaldi.browser") {

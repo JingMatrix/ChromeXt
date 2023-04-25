@@ -7,6 +7,9 @@
 		<package android:name="com.chrome.dev"/>
 		<package android:name="com.vivaldi.browser"/>
 		<package android:name="com.microsoft.emmx"/>
+		<package android:name="com.microsoft.emmx.beta"/>
+		<package android:name="com.microsoft.emmx.dev"/>
+		<package android:name="com.microsoft.emmx.canary"/>
 		<package android:name="org.bromite.bromite"/>
 		<package android:name="us.spotco.mulch"/>
 		<package android:name="com.brave.browser"/>
