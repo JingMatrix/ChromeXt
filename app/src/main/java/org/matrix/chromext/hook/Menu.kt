@@ -5,6 +5,8 @@ import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import de.robv.android.xposed.XC_MethodHook.Unhook
@@ -46,16 +48,26 @@ object MenuHook : BaseHook() {
       val pageInfoView = Chrome.load("org.chromium.components.page_info.PageInfoView")
       val mRowWrapper =
           pageInfoView.getDeclaredFields().find { it.type == LinearLayout::class.java }
+      // val pageInfoController =
+      // Chrome.load("org.chromium.components.page_info.PageInfoController")
+      // var infoController: Any? = null
+      // pageInfoController.getDeclaredConstructors()[0].hookAfter { infoController = it.thisObject
+      // }
       pageInfoView.getDeclaredConstructors()[0].hookAfter {
+        val infoView = it.thisObject as FrameLayout
         val url = TabModel.getUrl()
         if (!url.startsWith("edge://")) {
           if (url.endsWith("/ChromeXt/")) {
             erudaView.setText("Open developer tools")
-            erudaView.setOnClickListener { DevTools.start() }
+            erudaView.setOnClickListener {
+              DevTools.start()
+              (infoView.parent as ViewGroup).removeAllViews()
+            }
           } else {
             erudaView.setText("Open eruda console")
             erudaView.setOnClickListener {
               UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
+              (infoView.parent as ViewGroup).removeAllViews()
             }
           }
           (erudaView.getParent() as LinearLayout).removeView(erudaView)
