@@ -32,7 +32,6 @@ class UserScriptProxy() {
   private val mVerbatimHeaders: Field
 
   init {
-
     gURL = Chrome.load("org.chromium.url.GURL")
     loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
     // tabImpl = Chrome.load("org.chromium.chrome.browser.tab.TabImpl")

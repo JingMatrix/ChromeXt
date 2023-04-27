@@ -62,7 +62,7 @@ object UserScriptHook : BaseHook() {
                   runCatching {
                         val callback = ScriptDbManager.on(action, payload)
                         if (callback != null) {
-                          TabModel.refresh(proxy!!.mTab.get(it.thisObject)!!)
+                          TabModel.refresh(proxy!!.mTab.get(it.thisObject)!!, false)
                           proxy!!.evaluateJavaScript(callback)
                         }
                       }

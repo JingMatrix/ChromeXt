@@ -35,12 +35,14 @@ object TabModel {
     return UserScriptHook.proxy!!.parseUrl(getTab().invokeMethod { name == "getUrl" }!!) ?: ""
   }
 
-  fun refresh(tab: Any) {
-    eruda_loaded.put(index(), false)
+  fun refresh(tab: Any, refreshEruda: Boolean = true) {
     val n = tabModels.size
     if (n > 1 && getTab() != tab) {
       // Only fix for incognito mode, should be sufficient for normal usage
       Collections.swap(tabModels, n - 1, n - 2)
+    }
+    if (refreshEruda) {
+      eruda_loaded.put(index(), false)
     }
   }
 
@@ -62,6 +64,7 @@ object TabModel {
         Log.toast(ctx, "Updating Eruda...")
         Download.start(ERUD_URL, "Download/Eruda.js", true) {
           Log.toast(ctx, "Eruda is prepared now")
+          eruda_loaded.put(index(), true)
         }
       }
     } else {

@@ -344,11 +344,17 @@ if (
       "chromext_plugin",
       "li.chromext-user-agent .eruda-icon-copy:before { content: '💾'; font-size: 11px;}"
     );
-    document.addEventListener("securitypolicyviolation", (e) => {
-      if (e.blockedURI == "data" && e.violatedDirective == "font-src") {
-        addErudaStyle("chromext_eruda_font_fix", eruda._font_fix);
-      }
-    });
+    if (typeof eruda._shouldFixfont == "undefined") {
+      eruda._shouldFixfont = false;
+      document.addEventListener("securitypolicyviolation", (e) => {
+        if (e.blockedURI == "data" && e.violatedDirective == "font-src") {
+          eruda._shouldFixfont = true;
+          addErudaStyle("chromext_eruda_font_fix", eruda._font_fix);
+        }
+      });
+    } else if (eruda._shouldFixfont) {
+      addErudaStyle("chromext_eruda_font_fix", eruda._font_fix);
+    }
   };
 
   function generateQuerySelector(el) {
