@@ -33,28 +33,9 @@ class ScriptDbHelper(context: Context) :
   }
 
   override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-    if (oldVersion == 2 || newVersion == 3) {
-      db.execSQL("ALTER TABLE script ADD COLUMN meta TEXT NOT NULL DEFAULT ''")
-    }
-    if (oldVersion == 3 || newVersion == 4) {
-      db.execSQL("ALTER TABLE script RENAME COLUMN encoded to shouldWrap")
-      db.execSQL("UPDATE script SET shouldWrap = 0")
-    }
-    if (oldVersion == 4 || newVersion == 5) {
-      db.execSQL("ALTER TABLE script ADD COLUMN resource TEXT NOT NULL DEFAULT ''")
-    }
-    if (oldVersion == 5 || newVersion == 6) {
-      db.execSQL(
-          "CREATE TABLE script_tmp (id TEXT PRIMARY KEY NOT NULL, match TEXT NOT NULL, grant TEXT NOT NULL, exclude TEXT NOT NULL, require TEXT NOT NULL, resource TEXT NOT NULL, meta TEXT NOT NULL, code TEXT NOT NULL, runAt TEXT NOT NULL);")
-      db.execSQL(
-          "INSERT INTO script_tmp SELECT id, match, grant, exclude, require, resource, meta, code, runAt FROM script")
+    if (newVersion == 6) {
       db.execSQL("DROP TABLE script;")
-      db.execSQL("ALTER TABLE script_tmp RENAME TO script;")
-    }
-
-    if (newVersion - oldVersion > 2) {
-      onUpgrade(db, oldVersion, newVersion - 1)
-      onUpgrade(db, newVersion - 1, newVersion)
+      onCreate(db)
     }
   }
 

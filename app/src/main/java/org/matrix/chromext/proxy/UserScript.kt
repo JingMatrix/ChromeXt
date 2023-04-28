@@ -21,9 +21,6 @@ class UserScriptProxy() {
   val tabModelJniBridge: Class<*>
   val navigationControllerImpl: Class<*>
 
-  // val tabImpl: Class<*>
-  // val webContentsObserverProxy: Class<*>
-  // private val navigationHandle: Class<*>
   val mTab: Field
 
   private val gURL: Class<*>
@@ -34,14 +31,11 @@ class UserScriptProxy() {
   init {
     gURL = Chrome.load("org.chromium.url.GURL")
     loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
-    // tabImpl = Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
     tabModelJniBridge = Chrome.load("org.chromium.chrome.browser.tabmodel.TabModelJniBridge")
     tabWebContentsDelegateAndroidImpl =
         Chrome.load("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
     navigationControllerImpl =
         Chrome.load("org.chromium.content.browser.framehost.NavigationControllerImpl")
-    // webContentsObserverProxy =
-    //     Chrome.load("org.chromium.content.browser.webcontents.WebContentsObserverProxy")
     mUrl = loadUrlParams.getDeclaredField("a")
     mVerbatimHeaders =
         loadUrlParams.getDeclaredFields().filter { it.getType() == String::class.java }.elementAt(1)
@@ -55,7 +49,6 @@ class UserScriptProxy() {
           getParameterTypes().first() == loadUrlParams &&
           getReturnType() == Int::class.java
     }
-    // Log.d("loadUrl: ${url}")
   }
 
   fun newUrl(url: String): Any {

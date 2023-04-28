@@ -4,7 +4,6 @@
 // @match	https://*
 // @run-at	document-start
 // @grant GM_registerMenuCommand
-// @downloadURL https://raw.githubusercontent.com/JingMatrix/ChromeXt/master/CSP.user.js
 // ==/UserScript==
 
 const cspRule = localStorage.getItem("CSPBlocker");

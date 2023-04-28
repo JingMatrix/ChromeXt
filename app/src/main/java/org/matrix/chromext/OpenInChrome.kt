@@ -3,10 +3,7 @@ package org.matrix.chromext
 import android.app.Activity
 import android.content.ComponentName
 import android.content.Intent
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager.ApplicationInfoFlags
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import org.matrix.chromext.utils.Log
 
@@ -27,14 +24,8 @@ class OpenInChrome : Activity() {
   @Suppress("QueryPermissionsNeeded")
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    val installedApplications: List<ApplicationInfo>
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      installedApplications =
-          getPackageManager().getInstalledApplications(ApplicationInfoFlags.of(0))
-    } else {
-      @Suppress("DEPRECATION")
-      installedApplications = getPackageManager().getInstalledApplications(0)
-    }
+    @Suppress("DEPRECATION")
+    val installedApplications = getPackageManager().getInstalledApplications(0)
     val avaiblePackages = supportedPackages.intersect(installedApplications.map { it.packageName })
     if (avaiblePackages.size == 0) {
       Log.toast(this, "No supported Chrome installed")

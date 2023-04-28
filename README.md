@@ -153,7 +153,7 @@ Here are corresponding files you might want / need to change:
 - [x] Eruda fails due to [Injection Sinks](https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API)
 - [x] Hide page_info panel automatically
 - [ ] ~~Fix Edge browser DevTools inspect url~~
-- [ ] Get correct Chromium version
+- [ ] ~~Get correct Chromium version~~
 - [ ] Fix page menu injection position
 - [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
 - [ ] Use `adb forward` to support non-root users
