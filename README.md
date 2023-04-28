@@ -12,6 +12,7 @@ Please consider update your Android Chrome first before proceeding.
 
 Chromium based browsers,
 [Bromite](https://github.com/bromite/bromite),
+[Thorium](https://github.com/Alex313031/thorium),
 [Mulch](https://gitlab.com/divested-mobile/mulch),
 and [Brave](https://github.com/brave/brave-browser) are also fully supported.
 Due to different design ideas, supports for the following browsers are not perfect:
