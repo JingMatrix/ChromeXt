@@ -245,17 +245,14 @@ object MenuHook : BaseHook() {
     //       }
     // }
 
-    var preferenceEnrichHook: Unhook? = null
-    preferenceEnrichHook =
-        findMethod(proxy.preferenceFragmentCompat, true) {
-              getParameterCount() == 0 && getReturnType() == Context::class.java
-              // Purely luck to get a method returning the context
-            }
-            .hookAfter {
-              if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
-                ResourceMerge.enrich(it.getResult() as Context)
-                preferenceEnrichHook!!.unhook()
-              }
-            }
+    findMethod(proxy.preferenceFragmentCompat, true) {
+          getParameterCount() == 0 && getReturnType() == Context::class.java
+          // Purely luck to get a method returning the context
+        }
+        .hookAfter {
+          if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
+            ResourceMerge.enrich(it.getResult() as Context)
+          }
+        }
   }
 }
