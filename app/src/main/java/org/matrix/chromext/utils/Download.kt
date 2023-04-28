@@ -57,6 +57,7 @@ object Download {
             if (!keep) {
               downloadManager.remove(downloadId)
             }
+            Chrome.getContext().unregisterReceiver(this)
           }
         }
       }

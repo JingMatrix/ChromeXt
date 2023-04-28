@@ -33,7 +33,9 @@ android {
     targetCompatibility = JavaVersion.VERSION_18
   }
 
-  lintOptions { disable("Internationalization") }
+  lintOptions {
+    disable("Internationalization", "UnsafeIntentLaunch", "UnspecifiedRegisterReceiverFlag")
+  }
 
   kotlinOptions { jvmTarget = JavaVersion.VERSION_18.toString() }
 }

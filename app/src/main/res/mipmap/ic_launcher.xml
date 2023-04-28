@@ -6,7 +6,7 @@ found in the LICENSE file.
 -->
 
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android" >
-	<background android:drawable="@android:color/white"/>
+	<background android:drawable="@android:color/transparent"/>
 	<foreground android:drawable="@mipmap/layered_app_icon"/>
 	<monochrome android:drawable="@drawable/themed_app_icon"/>
 </adaptive-icon>
