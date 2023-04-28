@@ -1,7 +1,6 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
-import android.graphics.Color
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
@@ -55,12 +54,8 @@ object MenuHook : BaseHook() {
                 .getDeclaredConstructors()[0]
                 .newInstance(Chrome.getContext(), null) as ViewGroup
         erudaRow.setVisibility(View.VISIBLE)
-        erudaRow.setPadding(17, 0, 0, 0)
         val icon = proxy.mIcon.get(erudaRow) as ImageView
         icon.setImageResource(R.drawable.ic_devtools)
-        icon.setColorFilter(Color.parseColor("#aaaaaa"))
-        icon.layoutParams.height = 43
-        icon.layoutParams.width = 43
         val subTitle = proxy.mSubtitle.get(erudaRow) as TextView
         (subTitle.getParent() as? ViewGroup)?.removeView(subTitle)
         val title = proxy.mTitle.get(erudaRow) as TextView
