@@ -10,7 +10,6 @@ import org.matrix.chromext.hook.IntentHook
 import org.matrix.chromext.hook.MenuHook
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.utils.Log
-import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 
 val supportedPackages =
@@ -32,13 +31,11 @@ val supportedPackages =
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
     if (supportedPackages.contains(lpparam.packageName)) {
-      var entryPoint = "org.chromium.chrome.browser.base.SplitChromeApplication"
-      runCatching { lpparam.classLoader.loadClass(entryPoint) }
-          .onFailure { entryPoint = "org.chromium.chrome.browser.base.SplitMonochromeApplication" }
-      findMethod(lpparam.classLoader.loadClass(entryPoint)) { name == "attachBaseContext" }
+      lpparam.classLoader
+          .loadClass("org.chromium.ui.base.WindowAndroid")
+          .getDeclaredConstructors()[1]
           .hookAfter {
-            val ctx = (it.args[0] as Context).createContextForSplit("chrome")
-            Chrome.init(ctx)
+            Chrome.init(it.args[0] as Context)
             initHooks(UserScriptHook, GestureNavHook, MenuHook, IntentHook)
           }
     }

@@ -1,10 +1,13 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
+import android.graphics.Color
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import de.robv.android.xposed.XC_MethodHook.Unhook
@@ -33,7 +36,6 @@ object MenuHook : BaseHook() {
 
     // Page menu only appears after restarting chrome
 
-    val ctx = Chrome.getContext()
     var readerModeManager: Any? = null
     var mDistillerUrl: Field? = null
     var mTab: Field? = null
@@ -41,9 +43,6 @@ object MenuHook : BaseHook() {
     val READER_MODE_ID = 31415926
 
     // Add eruda menu to page_info dialog
-    val erudaView =
-        View.inflate(Chrome.getContext(), R.layout.page_info, null)
-            .findViewById(R.id.page_info_eruda_row) as TextView
     var mWebContentsObserver: Any? = null
     proxy.webContentsObserver.getDeclaredConstructors()[0].hookAfter {
       mWebContentsObserver = it.thisObject
@@ -51,21 +50,34 @@ object MenuHook : BaseHook() {
     proxy.pageInfoView.getDeclaredConstructors()[0].hookAfter {
       val url = TabModel.getUrl()
       if (Chrome.isEdge && !url.startsWith("edge://")) {
+        val erudaRow =
+            proxy.pageInfoRowView
+                .getDeclaredConstructors()[0]
+                .newInstance(Chrome.getContext(), null) as ViewGroup
+        erudaRow.setVisibility(View.VISIBLE)
+        erudaRow.setPadding(17, 0, 0, 0)
+        val icon = proxy.mIcon.get(erudaRow) as ImageView
+        icon.setImageResource(R.drawable.ic_devtools)
+        icon.setColorFilter(Color.parseColor("#aaaaaa"))
+        icon.layoutParams.height = 43
+        icon.layoutParams.width = 43
+        val subTitle = proxy.mSubtitle.get(erudaRow) as TextView
+        (subTitle.getParent() as? ViewGroup)?.removeView(subTitle)
+        val title = proxy.mTitle.get(erudaRow) as TextView
         if (url.endsWith("/ChromeXt/")) {
-          erudaView.setText("Open developer tools")
-          erudaView.setOnClickListener {
+          title.setText("Open developer tools")
+          erudaRow.setOnClickListener {
             DevTools.start()
             mWebContentsObserver!!.invokeMethod() { name == "destroy" }
           }
         } else {
-          erudaView.setText("Open eruda console")
-          erudaView.setOnClickListener {
+          title.setText("Open eruda console")
+          erudaRow.setOnClickListener {
             UserScriptHook.proxy!!.evaluateJavaScript(TabModel.openEruda())
             mWebContentsObserver!!.invokeMethod() { name == "destroy" }
           }
         }
-        (erudaView.getParent() as LinearLayout).removeView(erudaView)
-        (proxy.mRowWrapper.get(it.thisObject) as LinearLayout).addView(erudaView)
+        (proxy.mRowWrapper.get(it.thisObject) as LinearLayout).addView(erudaRow)
       }
     }
 
@@ -105,7 +117,7 @@ object MenuHook : BaseHook() {
         activateReadMode!!.invoke(readerModeManager!!)
         return true
       }
-      when (ctx.getResources().getResourceName(id)) {
+      when (Chrome.getContext().resources.getResourceName(id)) {
         "org.matrix.chromext:id/install_script_id" -> {
           Download.start(TabModel.getUrl(), "UserScript/script.js") {
             ScriptDbManager.on("installScript", it)
@@ -176,7 +188,7 @@ object MenuHook : BaseHook() {
                       // We need a mock url to finish the cleanup logic readerModeManager
                     }
 
-                    MenuInflater(ctx).inflate(R.menu.main_menu, menu)
+                    MenuInflater(Chrome.getContext()).inflate(R.menu.main_menu, menu)
 
                     val mItems = menu::class.java.getDeclaredField("mItems")
                     mItems.setAccessible(true)
@@ -238,11 +250,7 @@ object MenuHook : BaseHook() {
     //       }
     // }
 
-    // Usually, only some versions of Chrome or Android < 11
-    // need the following context-enriching code.
-    // It is better to always run them, just in case.
     var preferenceEnrichHook: Unhook? = null
-    var menuEnrichHook: Unhook? = null
     preferenceEnrichHook =
         findMethod(proxy.preferenceFragmentCompat, true) {
               getParameterCount() == 0 && getReturnType() == Context::class.java
@@ -254,12 +262,5 @@ object MenuHook : BaseHook() {
                 preferenceEnrichHook!!.unhook()
               }
             }
-
-    menuEnrichHook =
-        proxy.windowAndroid.getDeclaredConstructors()[1].hookAfter {
-          val context = it.args[0] as Context
-          ResourceMerge.enrich(context)
-          menuEnrichHook!!.unhook()
-        }
   }
 }

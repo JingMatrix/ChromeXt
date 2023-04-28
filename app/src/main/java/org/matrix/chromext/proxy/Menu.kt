@@ -29,12 +29,16 @@ class MenuProxy() {
   val windowAndroid: Class<*>
   // val mainSettings: Class<*>
   val pageInfoView: Class<*>
+  val pageInfoRowView: Class<*>
   val webContentsObserver: Class<*>
 
   private val pageInfoController: Class<*>
   private val preference: Class<*>
 
   val mRowWrapper: Field
+  val mIcon: Field
+  val mTitle: Field
+  val mSubtitle: Field
 
   private val mClickListener: Field
 
@@ -69,6 +73,10 @@ class MenuProxy() {
     gURL = Chrome.load("org.chromium.url.GURL")
 
     pageInfoController = Chrome.load("org.chromium.components.page_info.PageInfoController")
+    pageInfoRowView = Chrome.load("org.chromium.components.page_info.PageInfoRowView")
+    mIcon = pageInfoRowView.getDeclaredFields()[0]
+    mTitle = pageInfoRowView.getDeclaredFields()[1]
+    mSubtitle = pageInfoRowView.getDeclaredFields()[2]
     if (Chrome.isEdge) {
       pageInfoView = Chrome.load("org.chromium.components.page_info.PageInfoView")
     } else {

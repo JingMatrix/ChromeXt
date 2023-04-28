@@ -19,6 +19,12 @@ object Chrome {
 
   fun init(ctx: Context) {
     mContext = WeakReference(ctx)
+    ResourceMerge.enrich(ctx)
+
+    if (version != 0) {
+      // Switching color theme will construct new WindowAndroid instance
+      return
+    }
     val packageName = ctx.getPackageName()
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
       packageInfo = ctx.getPackageManager().getPackageInfo(packageName, PackageInfoFlags.of(0))
@@ -36,8 +42,6 @@ object Chrome {
     }
     Log.i("Package: ${packageName}, v${packageInfo!!.versionName}, pid ${Process.myPid()}")
     setVersion()
-
-    ResourceMerge.enrich(ctx)
   }
 
   fun getContext(): Context {
