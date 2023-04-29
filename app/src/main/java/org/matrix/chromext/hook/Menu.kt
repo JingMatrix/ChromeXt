@@ -19,12 +19,7 @@ import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.ScriptDbManager
-import org.matrix.chromext.utils.Download
-import org.matrix.chromext.utils.findMethod
-import org.matrix.chromext.utils.hookAfter
-import org.matrix.chromext.utils.hookBefore
-import org.matrix.chromext.utils.hookMethod
-import org.matrix.chromext.utils.invokeMethod
+import org.matrix.chromext.utils.*
 
 object readerMode {
   val ID = 31415926
@@ -41,7 +36,7 @@ object readerMode {
   fun enable() {
     val mDistillerUrl =
         readerModeManager!!.getDeclaredFields().filter { it.type == UserScriptProxy.gURL }.last()!!
-    val activateReadMode =
+    val activateReaderMode =
         // This is purely luck, there are other methods with the same signatures
         findMethod(readerModeManager!!) { getParameterCount() == 0 && getReturnType() == Void.TYPE }
 
@@ -56,7 +51,7 @@ object readerMode {
             .newInstance("https://github.com/JingMatrix/ChromeXt"))
     mDistillerUrl.setAccessible(false)
 
-    activateReadMode.invoke(manager)
+    activateReaderMode.invoke(manager)
   }
 }
 
@@ -68,9 +63,9 @@ object MenuHook : BaseHook() {
 
     if (Chrome.isEdge) {
       // Add eruda menu to page_info dialog
-      var mWebContentsObserver: Any? = null
-      proxy.webContentsObserver.getDeclaredConstructors()[0].hookAfter {
-        mWebContentsObserver = it.thisObject
+      var pageInfoController: Any? = null
+      proxy.pageInfoControllerRef.getDeclaredConstructors()[0].hookAfter {
+        pageInfoController = it.thisObject
       }
       proxy.pageInfoView.getDeclaredConstructors()[0].hookAfter {
         val url = TabModel.getUrl()
@@ -89,13 +84,13 @@ object MenuHook : BaseHook() {
             title.setText("Open developer tools")
             erudaRow.setOnClickListener {
               DevTools.start()
-              mWebContentsObserver!!.invokeMethod() { name == "destroy" }
+              pageInfoController!!.invokeMethod() { name == "destroy" }
             }
           } else {
             title.setText("Open eruda console")
             erudaRow.setOnClickListener {
               UserScriptProxy.evaluateJavaScript(TabModel.openEruda())
-              mWebContentsObserver!!.invokeMethod() { name == "destroy" }
+              pageInfoController!!.invokeMethod() { name == "destroy" }
             }
           }
           (proxy.mRowWrapper.get(it.thisObject) as LinearLayout).addView(erudaRow)
@@ -158,14 +153,14 @@ object MenuHook : BaseHook() {
                     .hookBefore {
                       val menu = it.args[0] as Menu
 
-                      if (menu.size() <= 20 || TabModel.getUrl().startsWith("chrome")) {
+                      if (menu.size() <= 20) {
                         // Infalte only for the main_menu, which has more than 20 items at least
                         return@hookBefore
                       }
 
                       if (menu.getItem(0).hasSubMenu() && readerMode.isInit()) {
                         // The first menu item shou be the row_menu
-                        // Brave browser not supported for unknown reason
+                        // Brave browser has already replaced this menu
                         val infoMenu = menu.getItem(0).getSubMenu()!!.getItem(3)
                         infoMenu.setIcon(R.drawable.ic_book)
                         infoMenu.setEnabled(true)
@@ -196,9 +191,17 @@ object MenuHook : BaseHook() {
 
                       val magicMenuItem: MenuItem = items.removeLast()
                       magicMenuItem.setVisible(!(it.args[3] as Boolean) && (it.args[2] as Boolean))
-                      // The index 14 is just chosen to make sure that it
-                      // appears before the share menu
-                      items.add(14, magicMenuItem)
+                      val position =
+                          items
+                              .withIndex()
+                              .filter {
+                                Chrome.getContext()
+                                    .resources
+                                    .getResourceName(it.value.getItemId())
+                                    .endsWith("id/divider_line_id")
+                              }
+                              .map { it.index }[1]
+                      items.add(position + 1, magicMenuItem)
                       mItems.setAccessible(false)
                     }
               }
@@ -209,7 +212,7 @@ object MenuHook : BaseHook() {
             val subType = it.thisObject::class.java
             if (subType.getInterfaces().size == 1 &&
                 subType.getDeclaredFields().find {
-                  it.toString().startsWith("public org.chromium.ui.modelutil.PropertyModel")
+                  it.getType() == Chrome.load("org.chromium.ui.modelutil.PropertyModel")
                 } != null) {
               readerMode.init(subType)
               findReaderHook!!.unhook()

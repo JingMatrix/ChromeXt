@@ -6,6 +6,7 @@ import android.view.View
 import android.view.View.OnClickListener
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import java.lang.ref.WeakReference
 import kotlin.text.Regex
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.utils.Download
@@ -24,15 +25,10 @@ object MenuProxy {
               Chrome.getContext().getPackageName() + "_preferences", Context.MODE_PRIVATE)!!
           .getBoolean("developer", false) || Chrome.isDev
 
-  private val preference = Chrome.load("androidx.preference.Preference")
   val developerSettings =
       Chrome.load("org.chromium.chrome.browser.tracing.settings.DeveloperSettings")
-  val preferenceFragmentCompat = developerSettings.getSuperclass() as Class<*>
   val chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
   val windowAndroid = Chrome.load("org.chromium.ui.base.WindowAndroid")
-  private val twoStatePreference =
-      Chrome.load("org.chromium.components.browser_ui.settings.ChromeSwitchPreference")
-          .getSuperclass() as Class<*>
   val gURL = Chrome.load("org.chromium.url.GURL")
 
   private val pageInfoController =
@@ -50,37 +46,43 @@ object MenuProxy {
             .find { it.type.getSuperclass() == FrameLayout::class.java }!!
             .type
       }
-
   val mRowWrapper = pageInfoView.getDeclaredFields().find { it.type == LinearLayout::class.java }!!
-  val webContentsObserver =
+  val pageInfoControllerRef =
       // A particular WebContentsObserver designed for PageInfoController
       pageInfoController
           .getDeclaredFields()
           .find {
             it.type.getDeclaredFields().size == 1 &&
-                it.type.getDeclaredFields()[0].type == pageInfoController
+                (it.type.getDeclaredFields()[0].type == pageInfoController ||
+                    it.type.getDeclaredFields()[0].type == WeakReference::class.java)
           }!!
           .type
 
   val emptyTabObserver =
       Chrome.load("org.chromium.chrome.browser.login.ChromeHttpAuthHandler").getSuperclass()
           as Class<*>
+
+  private val preference = Chrome.load("androidx.preference.Preference")
   private val mClickListener =
       preference.getDeclaredFields().find {
         it.getType() == OnClickListener::class.java ||
             it.getType().getInterfaces().contains(OnClickListener::class.java)
       }!!
-
   private val setSummary =
       findMethod(preference) {
         getParameterCount() == 1 &&
             getParameterTypes().first() == CharSequence::class.java &&
             getReturnType() == Void.TYPE
       }
+  private val twoStatePreference =
+      Chrome.load("org.chromium.components.browser_ui.settings.ChromeSwitchPreference")
+          .getSuperclass() as Class<*>
   private val setChecked =
       findMethod(twoStatePreference, true) {
         getParameterCount() == 1 && getParameterTypes().first() == Boolean::class.java
       }
+
+  val preferenceFragmentCompat = developerSettings.getSuperclass() as Class<*>
   val findPreference =
       findMethod(preferenceFragmentCompat, true) {
         getParameterCount() == 1 &&
