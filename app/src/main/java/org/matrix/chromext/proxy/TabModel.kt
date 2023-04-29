@@ -5,7 +5,6 @@ import java.io.FileReader
 import java.lang.ref.WeakReference
 import java.util.Collections
 import org.matrix.chromext.Chrome
-import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.script.erudaToggle
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
@@ -32,7 +31,7 @@ object TabModel {
   }
 
   fun getUrl(): String {
-    return UserScriptHook.proxy!!.parseUrl(getTab().invokeMethod { name == "getUrl" }!!) ?: ""
+    return UserScriptProxy.parseUrl(getTab().invokeMethod { name == "getUrl" }!!) ?: ""
   }
 
   fun refresh(tab: Any, refreshEruda: Boolean = true) {

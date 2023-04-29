@@ -8,7 +8,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.net.ServerSocket
 import kotlin.concurrent.thread
-import org.matrix.chromext.hook.UserScriptHook
+import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.utils.Log
 
 const val DEV_FRONT_END = "https://chrome-devtools-frontend.appspot.com"
@@ -18,7 +18,7 @@ object DevTools {
   private var forwarding: Forward? = null
   private var port = 0
     set(value) {
-      UserScriptHook.proxy!!.evaluateJavaScript(
+      UserScriptProxy.evaluateJavaScript(
           "setTimeout(()=>{window.dispatchEvent(new CustomEvent('cdp_port',{detail:${value}}))},100)")
       field = value
     }

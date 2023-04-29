@@ -1,6 +1,5 @@
 package org.matrix.chromext.proxy
 
-import java.lang.reflect.Field
 import java.net.URLEncoder
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.Script
@@ -11,37 +10,24 @@ import org.matrix.chromext.script.urlMatch
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
 
-class UserScriptProxy() {
+object UserScriptProxy {
   // It is possible to do a HTTP POST with LoadUrlParams Class
   // grep org/chromium/content_public/common/ResourceRequestBody to get setPostData in
   // org/chromium/content_public/browser/LoadUrlParams
 
-  val tabWebContentsDelegateAndroidImpl: Class<*>
-  val loadUrlParams: Class<*>
-  val tabModelJniBridge: Class<*>
-  val navigationControllerImpl: Class<*>
+  val gURL = Chrome.load("org.chromium.url.GURL")
+  val loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
+  val tabModelJniBridge = Chrome.load("org.chromium.chrome.browser.tabmodel.TabModelJniBridge")
+  val tabWebContentsDelegateAndroidImpl =
+      Chrome.load("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
+  val navigationControllerImpl =
+      Chrome.load("org.chromium.content.browser.framehost.NavigationControllerImpl")
+  val mTab = tabWebContentsDelegateAndroidImpl.getDeclaredField("a")
 
-  val mTab: Field
-
-  private val gURL: Class<*>
-  private val mSpec: Field
-  private val mUrl: Field
-  private val mVerbatimHeaders: Field
-
-  init {
-    gURL = Chrome.load("org.chromium.url.GURL")
-    loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
-    tabModelJniBridge = Chrome.load("org.chromium.chrome.browser.tabmodel.TabModelJniBridge")
-    tabWebContentsDelegateAndroidImpl =
-        Chrome.load("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
-    navigationControllerImpl =
-        Chrome.load("org.chromium.content.browser.framehost.NavigationControllerImpl")
-    mUrl = loadUrlParams.getDeclaredField("a")
-    mVerbatimHeaders =
-        loadUrlParams.getDeclaredFields().filter { it.getType() == String::class.java }.elementAt(1)
-    mSpec = gURL.getDeclaredField("a")
-    mTab = tabWebContentsDelegateAndroidImpl.getDeclaredField("a")
-  }
+  private val mUrl = loadUrlParams.getDeclaredField("a")
+  private val mVerbatimHeaders =
+      loadUrlParams.getDeclaredFields().filter { it.getType() == String::class.java }.elementAt(1)
+  private val mSpec = gURL.getDeclaredField("a")
 
   private fun loadUrl(url: String) {
     TabModel.getTab().invokeMethod(newUrl(url)) {

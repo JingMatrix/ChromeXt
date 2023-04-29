@@ -6,8 +6,6 @@ import android.view.View
 import android.view.View.OnClickListener
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import java.lang.reflect.Field
-import java.lang.reflect.Method
 import kotlin.text.Regex
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.utils.Download
@@ -17,119 +15,84 @@ import org.matrix.chromext.utils.hookBefore
 
 const val ERUD_URL = "https://cdn.jsdelivr.net/npm/eruda@latest/eruda.min.js"
 
-class MenuProxy() {
+object MenuProxy {
+  private var clickHooked: Boolean = false
 
-  val chromeTabbedActivity: Class<*>
-  val customTabActivity: Class<*>
-  val developerSettings: Class<*>
-  val preferenceFragmentCompat: Class<*>
-  val emptyTabObserver: Class<*>
-  val twoStatePreference: Class<*>
-  val gURL: Class<*>
-  val windowAndroid: Class<*>
-  // val mainSettings: Class<*>
-  val pageInfoView: Class<*>
-  val pageInfoRowView: Class<*>
-  val webContentsObserver: Class<*>
+  val isDeveloper =
+      Chrome.getContext()
+          .getSharedPreferences(
+              Chrome.getContext().getPackageName() + "_preferences", Context.MODE_PRIVATE)!!
+          .getBoolean("developer", false) || Chrome.isDev
 
-  private val pageInfoController: Class<*>
-  private val preference: Class<*>
+  private val preference = Chrome.load("androidx.preference.Preference")
+  val developerSettings =
+      Chrome.load("org.chromium.chrome.browser.tracing.settings.DeveloperSettings")
+  val preferenceFragmentCompat = developerSettings.getSuperclass() as Class<*>
+  val chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
+  val windowAndroid = Chrome.load("org.chromium.ui.base.WindowAndroid")
+  private val twoStatePreference =
+      Chrome.load("org.chromium.components.browser_ui.settings.ChromeSwitchPreference")
+          .getSuperclass() as Class<*>
+  val gURL = Chrome.load("org.chromium.url.GURL")
 
-  val mRowWrapper: Field
-  val mIcon: Field
-  val mTitle: Field
-  val mSubtitle: Field
-
-  private val mClickListener: Field
-
-  val setChecked: Method
-  val setSummary: Method
-
-  val findPreference: Method
-
-  val addPreferencesFromResource: Method
-
-  var isDeveloper: Boolean = false
-  var clickHooked: Boolean = false
-
-  init {
-    val sharedPref =
-        Chrome.getContext()
-            .getSharedPreferences(
-                Chrome.getContext().getPackageName() + "_preferences", Context.MODE_PRIVATE)
-    isDeveloper = sharedPref!!.getBoolean("developer", false) || Chrome.isDev
-
-    preference = Chrome.load("androidx.preference.Preference")
-    developerSettings =
-        Chrome.load("org.chromium.chrome.browser.tracing.settings.DeveloperSettings")
-    preferenceFragmentCompat = developerSettings.getSuperclass() as Class<*>
-    chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
-    windowAndroid = Chrome.load("org.chromium.ui.base.WindowAndroid")
-    // mainSettings = Chrome.load("org.chromium.chrome.browser.settings.MainSettings")
-    customTabActivity = Chrome.load("org.chromium.chrome.browser.customtabs.CustomTabActivity")
-    twoStatePreference =
-        Chrome.load("org.chromium.components.browser_ui.settings.ChromeSwitchPreference")
-            .getSuperclass() as Class<*>
-    gURL = Chrome.load("org.chromium.url.GURL")
-
-    pageInfoController = Chrome.load("org.chromium.components.page_info.PageInfoController")
-    pageInfoRowView = Chrome.load("org.chromium.components.page_info.PageInfoRowView")
-    mIcon = pageInfoRowView.getDeclaredFields()[0]
-    mTitle = pageInfoRowView.getDeclaredFields()[1]
-    mSubtitle = pageInfoRowView.getDeclaredFields()[2]
-    if (Chrome.isEdge) {
-      pageInfoView = Chrome.load("org.chromium.components.page_info.PageInfoView")
-    } else {
-      pageInfoView =
-          pageInfoController
-              .getDeclaredFields()
-              .find { it.type.getSuperclass() == FrameLayout::class.java }!!
-              .type
-    }
-    mRowWrapper = pageInfoView.getDeclaredFields().find { it.type == LinearLayout::class.java }!!
-    webContentsObserver =
-        // A particular WebContentsObserver designed for PageInfoController
+  private val pageInfoController =
+      Chrome.load("org.chromium.components.page_info.PageInfoController")
+  val pageInfoRowView = Chrome.load("org.chromium.components.page_info.PageInfoRowView")
+  val mIcon = pageInfoRowView.getDeclaredFields()[0]
+  val mTitle = pageInfoRowView.getDeclaredFields()[1]
+  val mSubtitle = pageInfoRowView.getDeclaredFields()[2]
+  val pageInfoView =
+      if (Chrome.isEdge) {
+        Chrome.load("org.chromium.components.page_info.PageInfoView")
+      } else {
         pageInfoController
             .getDeclaredFields()
-            .find {
-              it.type.getDeclaredFields().size == 1 &&
-                  it.type.getDeclaredFields()[0].type == pageInfoController
-            }!!
+            .find { it.type.getSuperclass() == FrameLayout::class.java }!!
             .type
+      }
 
-    emptyTabObserver =
-        Chrome.load("org.chromium.chrome.browser.login.ChromeHttpAuthHandler").getSuperclass()
-            as Class<*>
-    mClickListener =
-        preference.getDeclaredFields().find {
-          it.getType() == OnClickListener::class.java ||
-              it.getType().getInterfaces().contains(OnClickListener::class.java)
-        }!!
-    mClickListener.setAccessible(true)
+  val mRowWrapper = pageInfoView.getDeclaredFields().find { it.type == LinearLayout::class.java }!!
+  val webContentsObserver =
+      // A particular WebContentsObserver designed for PageInfoController
+      pageInfoController
+          .getDeclaredFields()
+          .find {
+            it.type.getDeclaredFields().size == 1 &&
+                it.type.getDeclaredFields()[0].type == pageInfoController
+          }!!
+          .type
 
-    setSummary =
-        findMethod(preference) {
-          getParameterCount() == 1 &&
-              getParameterTypes().first() == CharSequence::class.java &&
-              getReturnType() == Void.TYPE
-        }
-    setChecked =
-        findMethod(twoStatePreference, true) {
-          getParameterCount() == 1 && getParameterTypes().first() == Boolean::class.java
-        }
-    findPreference =
-        findMethod(preferenceFragmentCompat, true) {
-          getParameterCount() == 1 &&
-              getParameterTypes().first() == CharSequence::class.java &&
-              getReturnType() == preference
-        }
-    addPreferencesFromResource =
-        findMethod(preferenceFragmentCompat, true) {
-          getParameterCount() == 1 &&
-              getParameterTypes().first() == Int::class.java &&
-              getReturnType() == Void.TYPE
-        }
-  }
+  val emptyTabObserver =
+      Chrome.load("org.chromium.chrome.browser.login.ChromeHttpAuthHandler").getSuperclass()
+          as Class<*>
+  private val mClickListener =
+      preference.getDeclaredFields().find {
+        it.getType() == OnClickListener::class.java ||
+            it.getType().getInterfaces().contains(OnClickListener::class.java)
+      }!!
+
+  private val setSummary =
+      findMethod(preference) {
+        getParameterCount() == 1 &&
+            getParameterTypes().first() == CharSequence::class.java &&
+            getReturnType() == Void.TYPE
+      }
+  private val setChecked =
+      findMethod(twoStatePreference, true) {
+        getParameterCount() == 1 && getParameterTypes().first() == Boolean::class.java
+      }
+  val findPreference =
+      findMethod(preferenceFragmentCompat, true) {
+        getParameterCount() == 1 &&
+            getParameterTypes().first() == CharSequence::class.java &&
+            getReturnType() == preference
+      }
+  val addPreferencesFromResource =
+      findMethod(preferenceFragmentCompat, true) {
+        getParameterCount() == 1 &&
+            getParameterTypes().first() == Int::class.java &&
+            getReturnType() == Void.TYPE
+      }
 
   fun setClickListener(preferences: Map<String, Any>) {
     val ctx = Chrome.getContext()
@@ -202,6 +165,7 @@ class MenuProxy() {
                   }
                 })
 
+    mClickListener.setAccessible(true)
     if (mClickListener.getType() == OnClickListener::class.java) {
       preferences.forEach { (name, pref) ->
         mClickListener.set(
@@ -230,5 +194,6 @@ class MenuProxy() {
                 })
           }
     }
+    mClickListener.setAccessible(false)
   }
 }

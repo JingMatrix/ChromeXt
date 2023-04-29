@@ -11,9 +11,10 @@ import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookBefore
 
 object IntentHook : BaseHook() {
+
   override fun init() {
 
-    val proxy = IntentProxy()
+    val proxy = IntentProxy
 
     findMethod(proxy.chromeTabbedActivity) { name == "onNewIntent" || name == "onMAMNewIntent" }
         .hookBefore {
