@@ -1,7 +1,6 @@
 package org.matrix.chromext
 
 import android.content.Context
-import android.os.Process
 import java.lang.ref.WeakReference
 import org.matrix.chromext.utils.Log
 
@@ -24,7 +23,7 @@ object Chrome {
     isEdge = packageName.startsWith("com.microsoft.emmx")
     isVivaldi = packageName == "com.vivaldi.browser"
     isDev = packageName.endsWith("canary") || packageName.endsWith("dev") || isVivaldi
-    Log.i("Package: ${packageName}, v${packageInfo!!.versionName}, pid ${Process.myPid()}")
+    Log.i("Package: ${packageName}, v${packageInfo!!.versionName}")
   }
 
   fun getContext(): Context {
