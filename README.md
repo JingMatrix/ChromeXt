@@ -17,18 +17,17 @@ Chromium based browsers,
 and [Brave](https://github.com/brave/brave-browser) are also fully supported.
 Due to different design ideas, supports for the following browsers are not perfect:
 1. [Egde](https://www.microsoft.com/en-us/edge/download), `DevTools` front end is removed by its authors;
-2. [Vivaldi](https://vivaldi.com/fr/android/), `Developer options` menu is removed by its authors.
+2. [Vivaldi](https://vivaldi.com/en/android/), `Developer options` menu is removed by its authors.
 
 ## Usage
 
 Currently, this project requires **Xposed framework** installed.
-However, it is possible to make Xposed framework optional.
-See related progress in the `Development plans` section.
+~~However, it is possible to make Xposed framework optional.
+See related progress in the `Development plans` section.~~
 
 You can try the following implements of it, depending on your Android version or whether having root enabled:
-[LSPosed](https://github.com/LSPosed/LSPosed), [LSPatch](https://github.com/LSPosed/LSPatch),
-[EdXposed](https://github.com/ElderDrivers/EdXposed), [TaiChi](https://github.com/taichi-framework/TaiChi),
-[VirtualXposed](https://github.com/android-hacker/VirtualXposed), [Dreamland](https://github.com/canyie/Dreamland).
+[LSPosed](https://github.com/LSPosed/LSPosed) and
+[LSPatch](https://github.com/LSPosed/LSPatch) (technically not supported yet due to [isolated process issue](https://github.com/LSPosed/LSPatch/issues/190), we are working on it).
 
 Pick up the latest built APK from my repo's [GitHub Action](https://github.com/JingMatrix/ChromeXt/actions/workflows/android.yml) and install it.
 The author uploads releases to [Xposed-Modules-Repo](https://github.com/Xposed-Modules-Repo/org.matrix.chromext/releases) when needed, but not that frequently.
@@ -154,8 +153,9 @@ Here are corresponding files you might want / need to change:
 - [x] Hide page_info panel automatically
 - [ ] ~~Fix Edge browser DevTools inspect url~~
 - [ ] ~~Get correct Chromium version~~
-- [ ] Fix page menu injection position
-- [ ] Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine
-- [ ] Use `adb forward` to support non-root users
-- [ ] Turn Xposed into optional dependency
+- [x] Fix page menu injection position
+- [ ] ~~Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine~~
+- [ ] ~~Use `adb forward` to support non-root users~~
+- [ ] ~~Turn Xposed into optional dependency~~
+- [ ] Support [LSPatch for isolated process](https://github.com/LSPosed/LSPatch/issues/190)
 - [ ] Add recommended scripts to the front end manager
