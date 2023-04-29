@@ -62,8 +62,7 @@ object TabModel {
       } else {
         Log.toast(ctx, "Updating Eruda...")
         Download.start(ERUD_URL, "Download/Eruda.js", true) {
-          Log.toast(ctx, "Eruda is prepared now")
-          eruda_loaded.put(index(), true)
+          UserScriptProxy.evaluateJavaScript(openEruda())
         }
       }
     } else {
