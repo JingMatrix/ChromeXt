@@ -289,20 +289,5 @@ fun encodeScript(script: Script): String? {
   return code
 }
 
-const val erudaToggle =
-    """
-if (typeof globalThis.eruda != "undefined") {
-	if (eruda._isInit) {
-		eruda.hide();
-		eruda.destroy();
-	} else {
-		eruda.init();
-		eruda._localConfig();
-		eruda.show();
-	}
-} else if (!globalThis.stopRetryLoadEruda) {
-	globalThis.stopRetryLoadEruda = true;
-    window.location.reload();
-	alert("Eruda needs to reload the page");
-}
-"""
+const val openEruda =
+    "try{ if (eruda._isInit) { eruda.hide(); eruda.destroy(); } else { eruda.init(); eruda._localConfig(); eruda.show(); } } catch (e) { globalThis.ChromeXt(JSON.stringify({ action: 'loadEruda', payload: ''})) }"

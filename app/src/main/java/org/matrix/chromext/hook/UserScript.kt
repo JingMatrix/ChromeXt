@@ -27,7 +27,7 @@ object UserScriptHook : BaseHook() {
     findMethod(proxy.tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
         // public void onUpdateUrl(GURL url)
         .hookAfter {
-          TabModel.refresh(proxy.mTab.get(it.thisObject)!!)
+          TabModel.refresh(proxy.mTab.get(it.thisObject))
           val url = proxy.parseUrl(it.args[0])!!
           // Log.i("TabWebContentsDelegateAndroid hooked ${url}")
           proxy.evaluateJavaScript("globalThis.ChromeXt=console.debug.bind(console);")
@@ -60,7 +60,7 @@ object UserScriptHook : BaseHook() {
                   runCatching {
                         val callback = ScriptDbManager.on(action, payload)
                         if (callback != null) {
-                          TabModel.refresh(proxy.mTab.get(it.thisObject)!!, false)
+                          TabModel.refresh(proxy.mTab.get(it.thisObject))
                           proxy.evaluateJavaScript(callback)
                         }
                       }

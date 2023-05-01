@@ -19,6 +19,7 @@ import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.ScriptDbManager
+import org.matrix.chromext.script.openEruda
 import org.matrix.chromext.utils.*
 
 object readerMode {
@@ -89,7 +90,7 @@ object MenuHook : BaseHook() {
           } else {
             title.setText("Open eruda console")
             erudaRow.setOnClickListener {
-              UserScriptProxy.evaluateJavaScript(TabModel.openEruda())
+              UserScriptProxy.evaluateJavaScript(openEruda)
               pageInfoController!!.invokeMethod() { name == "destroy" }
             }
           }
@@ -112,8 +113,7 @@ object MenuHook : BaseHook() {
             }
           }
           "org.matrix.chromext:id/developer_tools_id" -> DevTools.start()
-          "org.matrix.chromext:id/eruda_console_id" ->
-              UserScriptProxy.evaluateJavaScript(TabModel.openEruda())
+          "org.matrix.chromext:id/eruda_console_id" -> UserScriptProxy.evaluateJavaScript(openEruda)
         }
         return false
       }

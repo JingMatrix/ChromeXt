@@ -5,8 +5,12 @@ import android.content.Context
 import android.database.AbstractWindowedCursor
 import android.database.CursorWindow
 import android.os.Build
+import java.io.File
+import java.io.FileReader
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DevTools
+import org.matrix.chromext.proxy.ERUD_URL
+import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
 
 private const val SEP = ""
@@ -133,10 +137,20 @@ object ScriptDbManager {
       }
       "installDefault" -> {
         val code = Chrome.getContext().assets.open(payload).bufferedReader().use { it.readText() }
-        if (this.on("installScript", code) == null) {
-          callback = encodeScript(scripts.last())
-        } else {
+        if (on("installScript", code) != null) {
           callback = "alert('Fail to install ${payload}');"
+        }
+      }
+      "loadEruda" -> {
+        val ctx = Chrome.getContext()
+        val eruda = File(ctx.getExternalFilesDir(null), "Download/Eruda.js")
+        if (eruda.exists()) {
+          callback = FileReader(eruda).use { it.readText() } + "\n"
+          callback += ctx.assets.open("local_eruda.js").bufferedReader().use { it.readText() }
+          callback += "eruda.init(); eruda._localConfig(); eruda.show();"
+        } else {
+          Log.toast(ctx, "Updating Eruda...")
+          Download.start(ERUD_URL, "Download/Eruda.js", true) { on("loadEruda", "") }
         }
       }
       "getIds" -> {
