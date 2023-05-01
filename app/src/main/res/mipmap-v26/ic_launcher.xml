@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android" >
+	<background android:drawable="@android:color/white"/>
+	<foreground >
+		<inset
+			android:drawable="@drawable/ic_chrome"
+			android:insetTop="7.2dp"
+			android:insetBottom="7.2dp"
+			android:insetLeft="7.2dp"
+			android:insetRight="7.2dp"
+			/>
+	</foreground >
+</adaptive-icon>

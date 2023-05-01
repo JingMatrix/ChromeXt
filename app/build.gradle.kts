@@ -10,7 +10,7 @@ android {
 
   defaultConfig {
     applicationId = "org.matrix.chromext"
-    minSdk = 26
+    minSdk = 21
     targetSdk = 33
     versionCode = 6
     versionName = "3.0.0"
@@ -34,7 +34,12 @@ android {
   }
 
   lintOptions {
-    disable("Internationalization", "UnsafeIntentLaunch", "UnspecifiedRegisterReceiverFlag")
+    disable(
+        "Internationalization",
+        "UnsafeIntentLaunch",
+        "UnspecifiedRegisterReceiverFlag",
+        "VectorPath",
+        "Usability:Icons")
   }
 
   kotlinOptions { jvmTarget = JavaVersion.VERSION_18.toString() }
