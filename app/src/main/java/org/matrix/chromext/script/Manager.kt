@@ -10,6 +10,7 @@ import java.io.FileReader
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DevTools
 import org.matrix.chromext.proxy.ERUD_URL
+import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
 
@@ -150,7 +151,9 @@ object ScriptDbManager {
           callback += "eruda.init(); eruda._localConfig(); eruda.show();"
         } else {
           Log.toast(ctx, "Updating Eruda...")
-          Download.start(ERUD_URL, "Download/Eruda.js", true) { on("loadEruda", "") }
+          Download.start(ERUD_URL, "Download/Eruda.js", true) {
+            UserScriptProxy.evaluateJavaScript(on("loadEruda", "")!!)
+          }
         }
       }
       "getIds" -> {
