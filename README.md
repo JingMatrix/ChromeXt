@@ -42,9 +42,9 @@ without further editing.
 
 ### Supported API
 
-Currently, ChromeXt supports only the following APIs since they are everything the author needs to perform all sort of tasks.
+Currently, ChromeXt supports almost all [Tampermonkey APIs](https://www.tampermonkey.net/documentation.php?locale=en):
 
-1. @name (colons and backslashes not allowed), @namespace (backslashes not allowed), other similar properties' implements depends on the manage front end
+1. @name (colons and backslashes not allowed), @namespace (backslashes not allowed), @description and so on
 2. @match (must present and conform to the [Chrome Standard](https://developer.chrome.com/docs/extensions/mv2/match_patterns/))
 3. @include = @match, @exclude
 4. @run-at: document-start, document-end, document-idle (the default and fallback value)
@@ -74,13 +74,6 @@ To deal with this extremely rare case, one should
 use multiple scripts of normal sizes instead of a giant script
 ```
 
-## Bonus
-
-### Solution of system gesture conflicts
-
-The forward and backward gestures of Chrome are now available near the vertical center of screen.
-On other areas, only the system gesture is available.
-
 ### Dev Tools for developers
 
 Tap five times on the Chrome version from the Chrome settings, you will see the `Developer options` menu.
@@ -88,7 +81,16 @@ After restarting Chrome, ChromeXt offers you
 1. the `Developer tools` page menu for the UserScript manager front end,
 2. the `Eruda console` page menu for other pages.
 
-For `Edge` browser, the menu is moved to the left corner inside the URL input bar.
+For `Edge` browser, these menus are moved to the page info menu,
+which locates at the left corner inside the URL input bar.
+
+## Bonus
+
+### Solution of system gesture conflicts
+
+The history forward gesture of Chrome is now available near the vertical center of screen.
+On other areas, only the system gesture is available.
+One can disable it through the `Developer options` menu.
 
 ### AD Blocker solution
 
@@ -97,7 +99,8 @@ For blocking network requests, I recommend to use `AdAway` or any proxy AD Block
 A content cosmetic blocker is embedded into ChromeXt with the help of eruda.
 Open the `Eruda console` from the page menu.
 In the `Elements` panel, one can use the `pointer` icon to select elements on the page.
-After clicking the `delete` icon for a selected element, a corresponding filter will be saved to the `Resources` panel.
+After clicking the `delete` icon for a selected element, a corresponding filter will be saved to the `Resources` panel,
+where one can manage previous added filters.
 These filters are saved in the browser even after clearing the site's data.
 
 Another way to block ADs is using the [Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src) to block some scripts from loading.
@@ -106,9 +109,10 @@ See the official [Content-Security-Policy Blocker](app/src/main/assets/CSP.user.
 ### Mocking User Agent
 
 One can edit the user-agent from the `Info` panel of `Eruda console`.
-Clicking on the header of `User-Agent` will restore the default user-agent.
-The support is still limited, might be improved later.
 A valid user-agent should only contain ASCII characters.
+Note the ChromeXt only changes the [user-agent] HTTP header, which
+is [deprecated](https://wicg.github.io/ua-client-hints/#user-agent) now.
+We recommend use DevTools to fully mock User Agent.
 
 ## Contribute to this project
 
@@ -119,12 +123,11 @@ Here are corresponding files you might want / need to change:
 1. Front end: [manager.vue](https://github.com/JingMatrix/viteblog/tree/master/components/ChromeXt/manager.vue)
 2. Tampermonkey API: [LocalScripts.kt](app/src/main/java/org/matrix/chromext/script/LocalScripts.kt)
 3. Eruda configuration: [local_eruda.js](app/src/main/assets/local_eruda.js)
-4. Support more versions: [proxy](app/src/main/java/org/matrix/chromext/proxy)
 
 ## Development plans
 
 - [x] Make it possible to pass intents to Chrome with `file` scheme
-- [x] Fix encoding problem for Chrome downloaded Javascript files
+- [x] Fix encoding problem for Chrome downloaded JavaScript files
 - [x] Inject module resource into Chrome
 - [x] Implement developer tools
 - [x] Use local versions of [eruda](https://github.com/liriliri/eruda)
@@ -140,7 +143,7 @@ Here are corresponding files you might want / need to change:
 - [x] Solve the menu hook problem for non-split versions
 - [x] Handle multiple Tab Model
 - [x] Forward Dev Tools server socket
-- [x] A mobile friendly Dev Tools front-end
+- [x] A mobile friendly Dev Tools front end
 - [x] Allow user to trigger reader mode
 - [x] Support @resource API
 - [x] Make GestureNav Fix optional
