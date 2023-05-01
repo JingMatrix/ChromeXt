@@ -11,12 +11,10 @@ object Chrome {
   var isVivaldi = false
 
   fun init(ctx: Context) {
-    ResourceMerge.enrich(ctx)
-    if (mContext != null) {
-      // Switching color theme will construct new WindowAndroid instance
-      return
-    }
+    val initialized = mContext != null
     mContext = WeakReference(ctx)
+
+    if (initialized) return
     val packageName = ctx.getPackageName()
     @Suppress("DEPRECATION")
     val packageInfo = ctx.getPackageManager().getPackageInfo(packageName, 0)

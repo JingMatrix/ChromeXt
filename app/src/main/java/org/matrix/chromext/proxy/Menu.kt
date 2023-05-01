@@ -82,7 +82,7 @@ object MenuProxy {
         getParameterCount() == 1 && getParameterTypes().first() == Boolean::class.java
       }
 
-  val preferenceFragmentCompat = developerSettings.getSuperclass() as Class<*>
+  private val preferenceFragmentCompat = developerSettings.getSuperclass() as Class<*>
   val findPreference =
       findMethod(preferenceFragmentCompat, true) {
         getParameterCount() == 1 &&

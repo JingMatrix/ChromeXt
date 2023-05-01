@@ -1,6 +1,7 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
+import android.os.Bundle
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
@@ -10,6 +11,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import de.robv.android.xposed.XC_MethodHook.Unhook
+import java.lang.reflect.Modifier
 import java.util.ArrayList
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DevTools
@@ -69,12 +71,12 @@ object MenuHook : BaseHook() {
         pageInfoController = it.thisObject
       }
       proxy.pageInfoView.getDeclaredConstructors()[0].hookAfter {
+        val ctx = it.args[0] as Context
+        ResourceMerge.enrich(ctx)
         val url = TabModel.getUrl()
         if (!url.startsWith("edge://")) {
           val erudaRow =
-              proxy.pageInfoRowView
-                  .getDeclaredConstructors()[0]
-                  .newInstance(Chrome.getContext(), null) as ViewGroup
+              proxy.pageInfoRowView.getDeclaredConstructors()[0].newInstance(ctx, null) as ViewGroup
           erudaRow.setVisibility(View.VISIBLE)
           val icon = proxy.mIcon.get(erudaRow) as ImageView
           icon.setImageResource(R.drawable.ic_devtools)
@@ -101,12 +103,12 @@ object MenuHook : BaseHook() {
       // readerMode.init(Chrome.load("org.chromium.chrome.browser.dom_distiller.ReaderModeManager"))
     } else {
 
-      fun menuHandler(id: Int): Boolean {
+      fun menuHandler(ctx: Context, id: Int): Boolean {
         if (id == readerMode.ID) {
           readerMode.enable()
           return true
         }
-        when (Chrome.getContext().resources.getResourceName(id)) {
+        when (ctx.resources.getResourceName(id)) {
           "org.matrix.chromext:id/install_script_id" -> {
             Download.start(TabModel.getUrl(), "UserScript/script.js") {
               ScriptDbManager.on("installScript", it)
@@ -126,7 +128,7 @@ object MenuHook : BaseHook() {
                 getReturnType() == Boolean::class.java
           }
           .hookBefore {
-            if (menuHandler(it.args[0] as Int)) {
+            if (menuHandler(it.thisObject as Context, it.args[0] as Int)) {
               it.result = true
             }
           }
@@ -139,9 +141,14 @@ object MenuHook : BaseHook() {
                     getReturnType().getDeclaredMethods().size > 6
               }
               .hookAfter {
+                findMenuHook!!.unhook()
                 val appMenuPropertiesDelegateImpl =
                     it.result::class.java.getSuperclass() as Class<*>
-                findMenuHook!!.unhook()
+                val mContext =
+                    appMenuPropertiesDelegateImpl.getDeclaredFields().find {
+                      it.type == Context::class.java
+                    }!!
+                mContext.setAccessible(true)
                 findMethod(appMenuPropertiesDelegateImpl, true) {
                       getParameterCount() == 4 &&
                           getParameterTypes().first() == Menu::class.java &&
@@ -151,6 +158,8 @@ object MenuHook : BaseHook() {
                     // protected void updateRequestDesktopSiteMenuItem(Menu menu, @Nullable Tab
                     // currentTab, boolean canShowRequestDesktopSite, boolean isChromeScheme)
                     .hookBefore {
+                      val ctx = mContext.get(it.thisObject) as Context
+                      ResourceMerge.enrich(ctx)
                       val menu = it.args[0] as Menu
 
                       if (menu.size() <= 20 ||
@@ -172,7 +181,7 @@ object MenuHook : BaseHook() {
                         mId.setAccessible(false)
                       }
 
-                      MenuInflater(Chrome.getContext()).inflate(R.menu.main_menu, menu)
+                      MenuInflater(ctx).inflate(R.menu.main_menu, menu)
 
                       val mItems = menu::class.java.getDeclaredField("mItems")
                       mItems.setAccessible(true)
@@ -197,8 +206,7 @@ object MenuHook : BaseHook() {
                           items
                               .withIndex()
                               .filter {
-                                Chrome.getContext()
-                                    .resources
+                                ctx.resources
                                     .getResourceName(it.value.getItemId())
                                     .endsWith("id/divider_line_id")
                               }
@@ -255,13 +263,18 @@ object MenuHook : BaseHook() {
     //       }
     // }
 
-    findMethod(proxy.preferenceFragmentCompat, true) {
-          getParameterCount() == 0 && getReturnType() == Context::class.java
-          // Purely luck to get a method returning the context
+    findMethod(proxy.developerSettings, true) {
+          Modifier.isStatic(getModifiers()) &&
+              getParameterCount() == 3 &&
+              getParameterTypes()[0] == Context::class.java &&
+              getParameterTypes()[1] == String::class.java &&
+              getParameterTypes()[2] == Bundle::class.java
+          // public static Fragment instantiate(Context context,
+          // String fname, @Nullable Bundle args)
         }
         .hookAfter {
-          if (it.thisObject::class.java == proxy.developerSettings) {
-            ResourceMerge.enrich(it.getResult() as Context)
+          if (it.result::class.java == proxy.developerSettings) {
+            ResourceMerge.enrich(it.args[0] as Context)
           }
         }
   }

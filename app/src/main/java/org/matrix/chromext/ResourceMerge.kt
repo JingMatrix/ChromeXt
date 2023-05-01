@@ -12,9 +12,7 @@ object ResourceMerge {
   }
 
   fun enrich(ctx: Context) {
+    // Log.d("Enriching context for " + ctx.toString())
     ctx.assets.invokeMethod(module_path!!) { name == "addAssetPath" }
-    // (ctx.assets.invokeMethod() { name == "getApkAssets" } as Array<*>).forEach {
-    //   Log.d(it.toString())
-    // }
   }
 }
