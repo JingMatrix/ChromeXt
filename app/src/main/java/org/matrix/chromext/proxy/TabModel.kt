@@ -22,16 +22,16 @@ object TabModel {
     tabModels.removeAll { it.get()!! == model }
   }
 
-  fun index(): Int {
+  private fun index(): Int {
     return tabModels.last().get()!!.invokeMethod() { name == "index" } as Int
   }
 
-  fun getTab(): Any {
-    return tabModels.last().get()!!.invokeMethod(index()) { name == "getTabAt" }!!
+  fun getTab(): Any? {
+    return tabModels.last().get()!!.invokeMethod(index()) { name == "getTabAt" }
   }
 
   fun getUrl(): String {
-    return UserScriptProxy.parseUrl(getTab().invokeMethod { name == "getUrl" }!!) ?: ""
+    return UserScriptProxy.parseUrl(getTab()?.invokeMethod { name == "getUrl" }) ?: ""
   }
 
   fun refresh(tab: Any, refreshEruda: Boolean = true) {
@@ -45,7 +45,7 @@ object TabModel {
     }
   }
 
-  fun erudaLoaded(): Boolean {
+  private fun erudaLoaded(): Boolean {
     return eruda_loaded.get(index()) ?: false
   }
 

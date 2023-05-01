@@ -30,14 +30,14 @@ object UserScriptProxy {
   private val mSpec = gURL.getDeclaredField("a")
 
   private fun loadUrl(url: String) {
-    TabModel.getTab().invokeMethod(newUrl(url)) {
+    TabModel.getTab()?.invokeMethod(newUrl(url)) {
       getParameterCount() == 1 &&
           getParameterTypes().first() == loadUrlParams &&
           getReturnType() == Int::class.java
     }
   }
 
-  fun newUrl(url: String): Any {
+  private fun newUrl(url: String): Any {
     val constructor = loadUrlParams.getDeclaredConstructors().first()
     val types = constructor.getParameterTypes()
     if (types.size == 2 && types.first() == Int::class.java) {
@@ -95,14 +95,15 @@ object UserScriptProxy {
     }
   }
 
-  fun parseUrl(packed: Any): String? {
-    if (packed::class.qualifiedName == loadUrlParams.name) {
+  fun parseUrl(packed: Any?): String? {
+    if (packed == null) {
+      return null
+    } else if (packed::class.java == loadUrlParams) {
       return mUrl.get(packed) as String
-    } else if (packed::class.qualifiedName == gURL.name) {
+    } else if (packed::class.java == gURL) {
       return mSpec.get(packed) as String
     }
-    Log.e(
-        "parseUrl: ${packed::class.qualifiedName} is not ${loadUrlParams.name} nor ${gURL.getName()}")
+    Log.e("parseUrl: ${packed::class.qualifiedName} is not ${loadUrlParams.name} nor ${gURL.name}")
     return null
   }
 

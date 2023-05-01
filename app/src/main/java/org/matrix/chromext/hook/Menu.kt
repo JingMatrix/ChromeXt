@@ -153,7 +153,9 @@ object MenuHook : BaseHook() {
                     .hookBefore {
                       val menu = it.args[0] as Menu
 
-                      if (menu.size() <= 20) {
+                      if (menu.size() <= 20 ||
+                          !(it.args[2] as Boolean) ||
+                          (it.args[3] as Boolean)) {
                         // Infalte only for the main_menu, which has more than 20 items at least
                         return@hookBefore
                       }
@@ -190,7 +192,7 @@ object MenuHook : BaseHook() {
                       }
 
                       val magicMenuItem: MenuItem = items.removeLast()
-                      magicMenuItem.setVisible(!(it.args[3] as Boolean) && (it.args[2] as Boolean))
+                      magicMenuItem.setVisible(true)
                       val position =
                           items
                               .withIndex()
@@ -211,9 +213,7 @@ object MenuHook : BaseHook() {
           proxy.emptyTabObserver.getDeclaredConstructors()[0].hookAfter {
             val subType = it.thisObject::class.java
             if (subType.getInterfaces().size == 1 &&
-                subType.getDeclaredFields().find {
-                  it.getType() == Chrome.load("org.chromium.ui.modelutil.PropertyModel")
-                } != null) {
+                subType.getDeclaredFields().find { it.getType() == proxy.propertyModel } != null) {
               readerMode.init(subType)
               findReaderHook!!.unhook()
             }
@@ -224,13 +224,13 @@ object MenuHook : BaseHook() {
         // public void addPreferencesFromResource(Int preferencesResId)
         .hookMethod {
           before {
-            if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
+            if (it.thisObject::class.java == proxy.developerSettings) {
               it.args[0] = R.xml.developer_preferences
             }
           }
 
           after {
-            if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
+            if (it.thisObject::class.java == proxy.developerSettings) {
               val refThis = it
               val preferences = mutableMapOf<String, Any>()
               arrayOf("eruda", "exit", "gesture_mod").forEach {
@@ -260,7 +260,7 @@ object MenuHook : BaseHook() {
           // Purely luck to get a method returning the context
         }
         .hookAfter {
-          if (it.thisObject::class.qualifiedName == proxy.developerSettings.name) {
+          if (it.thisObject::class.java == proxy.developerSettings) {
             ResourceMerge.enrich(it.getResult() as Context)
           }
         }

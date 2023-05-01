@@ -29,7 +29,7 @@ object MenuProxy {
       Chrome.load("org.chromium.chrome.browser.tracing.settings.DeveloperSettings")
   val chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
   val windowAndroid = Chrome.load("org.chromium.ui.base.WindowAndroid")
-  val gURL = Chrome.load("org.chromium.url.GURL")
+  val propertyModel = Chrome.load("org.chromium.ui.modelutil.PropertyModel")
 
   private val pageInfoController =
       Chrome.load("org.chromium.components.page_info.PageInfoController")
