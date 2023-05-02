@@ -14,6 +14,9 @@ object Chrome {
     val initialized = mContext != null
     mContext = WeakReference(ctx)
 
+    // To load JS files from assets
+    ResourceMerge.enrich(ctx)
+
     if (initialized) return
     val packageName = ctx.getPackageName()
     @Suppress("DEPRECATION")
