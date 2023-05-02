@@ -13,19 +13,19 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: set up JDK 18
+    - name: set up JDK 19
       uses: actions/setup-java@v3
       with:
-        java-version: '18'
+        java-version: '19'
         distribution: 'temurin'
 
     - name: Build with Gradle
-      run: ./gradlew build
+      run: ./gradlew app:assembleRelease
         
     - name: Rename signed apk
       run: mv app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/ChromeXt.apk
 
-    - uses: r0adkll/sign-android-release@v1
+    - uses: noriban/sign-android-release@v3
       name: Sign app APK
       id: sign_app
       with:
