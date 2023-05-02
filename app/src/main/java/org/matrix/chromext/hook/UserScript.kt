@@ -29,7 +29,6 @@ object UserScriptHook : BaseHook() {
         .hookAfter {
           TabModel.refresh(proxy.mTab.get(it.thisObject))
           val url = proxy.parseUrl(it.args[0])!!
-          // Log.i("TabWebContentsDelegateAndroid hooked ${url}")
           proxy.evaluateJavaScript("globalThis.ChromeXt=console.debug.bind(console);")
           if (url.endsWith(".user.js")) {
             val promptInstallUserScript =
@@ -90,20 +89,7 @@ object UserScriptHook : BaseHook() {
         // public void loadUrl(LoadUrlParams params)
         .hookBefore {
           val url = proxy.parseUrl(it.args[0])!!
-          // Log.i("NavigationController hooked ${url}")
           proxy.userAgentHook(url, it.args[0])
         }
-
-    // findMethod(proxy.tabImpl) {
-    //       getParameterCount() == 1 &&
-    //           getParameterTypes().first() == proxy.loadUrlParams &&
-    //           getReturnType() == Int::class.java
-    //     }
-    //     .hookBefore {
-    //       val url = proxy.parseUrl(it.args[0])!!
-    //       Log.i("Tab hooked ${url}")
-    //       proxy.userAgentHook(url, it.args[0])
-    //     }
-
   }
 }

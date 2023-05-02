@@ -28,7 +28,6 @@ object MenuProxy {
   val developerSettings =
       Chrome.load("org.chromium.chrome.browser.tracing.settings.DeveloperSettings")
   val chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
-  val windowAndroid = Chrome.load("org.chromium.ui.base.WindowAndroid")
   val propertyModel = Chrome.load("org.chromium.ui.modelutil.PropertyModel")
 
   private val pageInfoController =
