@@ -26,20 +26,22 @@ android {
     }
   }
 
-  androidResources { additionalParameters("--allow-reserved-package-id", "--package-id", "0x45") }
+  androidResources {
+    additionalParameters += listOf("--allow-reserved-package-id", "--package-id", "0x45")
+  }
 
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_18
     targetCompatibility = JavaVersion.VERSION_18
   }
 
-  lintOptions {
-    disable(
-        "Internationalization",
-        "UnsafeIntentLaunch",
-        "UnspecifiedRegisterReceiverFlag",
-        "VectorPath",
-        "Usability:Icons")
+  lint {
+    disable +=
+        listOf(
+            "Internationalization",
+            "UnsafeIntentLaunch",
+            "UnspecifiedRegisterReceiverFlag",
+            "Usability:Icons")
   }
 
   kotlinOptions { jvmTarget = JavaVersion.VERSION_18.toString() }
