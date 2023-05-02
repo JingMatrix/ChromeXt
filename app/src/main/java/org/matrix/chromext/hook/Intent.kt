@@ -29,10 +29,8 @@ object IntentHook : BaseHook() {
 
     findMethod(proxy.intentHandler, true) {
           Modifier.isStatic(getModifiers()) &&
-              getParameterCount() == 3 &&
-              getParameterTypes()[0] == Context::class.java &&
-              getParameterTypes()[1] == Intent::class.java &&
-              getParameterTypes()[2] == String::class.java
+              getParameterTypes() contentDeepEquals
+                  arrayOf(Context::class.java, Intent::class.java, String::class.java)
         }
         // private static void startActivityForTrustedIntentInternal(Context context,
         // Intent intent, String componentClassName)

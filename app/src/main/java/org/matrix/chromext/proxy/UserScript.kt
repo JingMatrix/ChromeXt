@@ -31,8 +31,7 @@ object UserScriptProxy {
 
   private fun loadUrl(url: String) {
     TabModel.getTab()?.invokeMethod(newUrl(url)) {
-      getParameterCount() == 1 &&
-          getParameterTypes().first() == loadUrlParams &&
+      getParameterTypes() contentDeepEquals arrayOf(loadUrlParams) &&
           getReturnType() == Int::class.java
     }
   }
@@ -40,9 +39,9 @@ object UserScriptProxy {
   private fun newUrl(url: String): Any {
     val constructor = loadUrlParams.getDeclaredConstructors().first()
     val types = constructor.getParameterTypes()
-    if (types.size == 2 && types.first() == Int::class.java) {
+    if (types contentDeepEquals arrayOf(Int::class.java, String::class.java)) {
       return constructor.newInstance(0, url)
-    } else if (types.size == 2 && types.first() == String::class.java) {
+    } else if (types contentDeepEquals arrayOf(String::class.java, Int::class.java)) {
       return constructor.newInstance(url, 0)
     } else {
       return constructor.newInstance(url)

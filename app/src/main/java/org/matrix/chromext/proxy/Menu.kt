@@ -29,6 +29,7 @@ object MenuProxy {
       Chrome.load("org.chromium.chrome.browser.tracing.settings.DeveloperSettings")
   val chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
   val propertyModel = Chrome.load("org.chromium.ui.modelutil.PropertyModel")
+  val tab = Chrome.load("org.chromium.chrome.browser.tab.Tab")
 
   private val pageInfoController =
       Chrome.load("org.chromium.components.page_info.PageInfoController")
@@ -69,8 +70,7 @@ object MenuProxy {
       }!!
   private val setSummary =
       findMethod(preference) {
-        getParameterCount() == 1 &&
-            getParameterTypes().first() == CharSequence::class.java &&
+        getParameterTypes() contentDeepEquals arrayOf(CharSequence::class.java) &&
             getReturnType() == Void.TYPE
       }
   private val twoStatePreference =
@@ -78,20 +78,18 @@ object MenuProxy {
           .getSuperclass() as Class<*>
   private val setChecked =
       findMethod(twoStatePreference, true) {
-        getParameterCount() == 1 && getParameterTypes().first() == Boolean::class.java
+        getParameterTypes() contentDeepEquals arrayOf(Boolean::class.java)
       }
 
   private val preferenceFragmentCompat = developerSettings.getSuperclass() as Class<*>
   val findPreference =
       findMethod(preferenceFragmentCompat, true) {
-        getParameterCount() == 1 &&
-            getParameterTypes().first() == CharSequence::class.java &&
+        getParameterTypes() contentDeepEquals arrayOf(CharSequence::class.java) &&
             getReturnType() == preference
       }
   val addPreferencesFromResource =
       findMethod(preferenceFragmentCompat, true) {
-        getParameterCount() == 1 &&
-            getParameterTypes().first() == Int::class.java &&
+        getParameterTypes() contentDeepEquals arrayOf(Int::class.java) &&
             getReturnType() == Void.TYPE
       }
 

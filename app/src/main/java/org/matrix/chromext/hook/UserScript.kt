@@ -84,7 +84,7 @@ object UserScriptHook : BaseHook() {
         }
 
     findMethod(proxy.navigationControllerImpl) {
-          getParameterCount() == 1 && getParameterTypes().first() == proxy.loadUrlParams
+          getParameterTypes() contentDeepEquals arrayOf(proxy.loadUrlParams)
         }
         // public void loadUrl(LoadUrlParams params)
         .hookBefore {

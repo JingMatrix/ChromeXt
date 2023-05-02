@@ -41,7 +41,9 @@ object readerMode {
         readerModeManager!!.getDeclaredFields().filter { it.type == UserScriptProxy.gURL }.last()!!
     val activateReaderMode =
         // This is purely luck, there are other methods with the same signatures
-        findMethod(readerModeManager!!) { getParameterCount() == 0 && getReturnType() == Void.TYPE }
+        findMethod(readerModeManager!!) {
+          getParameterTypes().size == 0 && getReturnType() == Void.TYPE
+        }
 
     val manager =
         readerModeManager!!.getDeclaredConstructors()[0].newInstance(TabModel.getTab(), null)
@@ -122,9 +124,7 @@ object MenuHook : BaseHook() {
 
       findMethod(proxy.chromeTabbedActivity) {
             // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
-            getParameterCount() == 2 &&
-                getParameterTypes().first() == Int::class.java &&
-                getParameterTypes().last() == Boolean::class.java &&
+            getParameterTypes() contentDeepEquals arrayOf(Int::class.java, Boolean::class.java) &&
                 getReturnType() == Boolean::class.java
           }
           .hookBefore {
@@ -136,7 +136,7 @@ object MenuHook : BaseHook() {
       var findMenuHook: Unhook? = null
       findMenuHook =
           findMethod(proxy.chromeTabbedActivity) {
-                getParameterCount() == 0 &&
+                getParameterTypes().size == 0 &&
                     getReturnType().isInterface() &&
                     getReturnType().getDeclaredMethods().size > 6
               }
@@ -150,10 +150,12 @@ object MenuHook : BaseHook() {
                     }!!
                 mContext.setAccessible(true)
                 findMethod(appMenuPropertiesDelegateImpl, true) {
-                      getParameterCount() == 4 &&
-                          getParameterTypes().first() == Menu::class.java &&
-                          getParameterTypes().last() == Boolean::class.java &&
-                          getReturnType() == Void.TYPE
+                      getParameterTypes() contentDeepEquals
+                          arrayOf(
+                              Menu::class.java,
+                              proxy.tab,
+                              Boolean::class.java,
+                              Boolean::class.java) && getReturnType() == Void.TYPE
                     }
                     // protected void updateRequestDesktopSiteMenuItem(Menu menu, @Nullable Tab
                     // currentTab, boolean canShowRequestDesktopSite, boolean isChromeScheme)
@@ -249,26 +251,10 @@ object MenuHook : BaseHook() {
           }
         }
 
-    // if (Chrome.isVivaldi) {
-    //   findMethod(proxy.mainSettings) {
-    //         getParameterCount() == 1 &&
-    //             getParameterTypes().first() == String::class.java &&
-    //             getReturnType() == proxy.preference
-    //       }
-    //       // Preference addPreferenceIfAbsent(String key)
-    //       .hookBefore {
-    //         // if ((it.args[0] as String) == "homepage") {
-    //         //   (it.method as Method).invoke(it.thisObject, "developer")
-    //         // }
-    //       }
-    // }
-
     findMethod(proxy.developerSettings, true) {
           Modifier.isStatic(getModifiers()) &&
-              getParameterCount() == 3 &&
-              getParameterTypes()[0] == Context::class.java &&
-              getParameterTypes()[1] == String::class.java &&
-              getParameterTypes()[2] == Bundle::class.java
+              getParameterTypes() contentDeepEquals
+                  arrayOf(Context::class.java, String::class.java, Bundle::class.java)
           // public static Fragment instantiate(Context context,
           // String fname, @Nullable Bundle args)
         }
