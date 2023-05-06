@@ -76,10 +76,9 @@ use multiple scripts of normal sizes instead of a giant script
 
 ### Dev Tools for developers
 
-Tap five times on the Chrome version from the Chrome settings, you will see the `Developer options` menu.
-After restarting Chrome, ChromeXt offers you
-1. the `Developer tools` page menu for the UserScript manager front end,
-2. the `Eruda console` page menu for other pages.
+From three dots page menu, ChromeXt offers you
+1. `Developer tools` in the UserScript manager front end,
+2. `Eruda console` in other pages.
 
 For `Edge` browser, these menus are moved to the page info menu,
 which locates at the left corner inside the URL input bar.
@@ -91,6 +90,7 @@ which locates at the left corner inside the URL input bar.
 The history forward gesture of Chrome is now available near the vertical center of screen.
 On other areas, only the system gesture is available.
 One can disable it through the `Developer options` menu.
+(Tap seven times on the Chrome version from the Chrome settings, you will see the `Developer options` menu.)
 
 ### AD Blocker solution
 
@@ -110,7 +110,7 @@ See the official [Content-Security-Policy Blocker](app/src/main/assets/CSP.user.
 
 One can edit the user-agent from the `Info` panel of `Eruda console`.
 A valid user-agent should only contain ASCII characters.
-Note the ChromeXt only changes the [user-agent] HTTP header, which
+Currently, ChromeXt only changes the `User-Agent` HTTP header, which
 is [deprecated](https://wicg.github.io/ua-client-hints/#user-agent) now.
 We recommend use DevTools to fully mock User Agent.
 
