@@ -19,12 +19,6 @@ const val ERUD_URL = "https://cdn.jsdelivr.net/npm/eruda@latest/eruda.min.js"
 object MenuProxy {
   private var clickHooked: Boolean = false
 
-  val isDeveloper =
-      Chrome.getContext()
-          .getSharedPreferences(
-              Chrome.getContext().getPackageName() + "_preferences", Context.MODE_PRIVATE)!!
-          .getBoolean("developer", false) || Chrome.isDev
-
   val developerSettings =
       Chrome.load("org.chromium.chrome.browser.tracing.settings.DeveloperSettings")
   val chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")

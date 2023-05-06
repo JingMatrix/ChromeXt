@@ -191,7 +191,7 @@ object MenuHook : BaseHook() {
                       @Suppress("UNCHECKED_CAST")
                       val items = mItems.get(menu) as ArrayList<MenuItem>
 
-                      if (TabModel.getUrl().endsWith("/ChromeXt/") && proxy.isDeveloper) {
+                      if (TabModel.getUrl().endsWith("/ChromeXt/")) {
                         // Drop the Eruda console menu
                         items.removeLast()
                       }

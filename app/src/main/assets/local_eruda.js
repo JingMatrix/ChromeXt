@@ -346,6 +346,7 @@ if (
 	`;
   eruda._localConfig = () => {
     if (!document.querySelector("#eruda")) {
+      reloadEruda();
       return;
     }
     addErudaStyle(
@@ -362,6 +363,12 @@ if (
         if (e.blockedURI == "data" && e.violatedDirective == "font-src") {
           eruda._shouldFixfont = true;
           addErudaStyle("chromext_eruda_font_fix", eruda._font_fix);
+        } else if (
+          e.blockedURI == "inline" &&
+          e.target == document.querySelector("#eruda")
+        ) {
+          e.target.remove();
+          alert("Impossible to load Eruda, please consider using DevTools.");
         }
       });
     } else if (eruda._shouldFixfont) {
