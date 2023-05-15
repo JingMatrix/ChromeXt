@@ -2,11 +2,6 @@ if (
   typeof globalThis.eruda != "undefined" &&
   typeof eruda._configured == "undefined"
 ) {
-  const meta = document.createElement("meta");
-  meta.setAttribute("name", "viewport");
-  meta.setAttribute("content", "width=device-width, initial-scale=1");
-  document.head.prepend(meta);
-
   class Filter {
     #filter = [];
     constructor() {}
@@ -226,6 +221,7 @@ if (
                 this._$el.find("li.chromext-user-agent > div").text(),
             })
           );
+
         }
       );
 
