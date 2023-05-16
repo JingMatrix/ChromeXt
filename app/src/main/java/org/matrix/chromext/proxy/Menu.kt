@@ -25,6 +25,10 @@ object MenuProxy {
   val propertyModel = Chrome.load("org.chromium.ui.modelutil.PropertyModel")
   val tab = Chrome.load("org.chromium.chrome.browser.tab.Tab")
 
+  // val tabWebContentsUserData =
+  //     Chrome.load("org.chromium.chrome.browser.tab.TabFavicon").getSuperclass() as Class<*>
+  // val overscrollRefreshHandler = Chrome.load("org.chromium.ui.OverscrollRefreshHandler")
+
   private val pageInfoController =
       Chrome.load("org.chromium.components.page_info.PageInfoController")
   val pageInfoRowView = Chrome.load("org.chromium.components.page_info.PageInfoRowView")

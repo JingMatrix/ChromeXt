@@ -119,8 +119,7 @@ object MenuHook : BaseHook() {
           "org.matrix.chromext:id/developer_tools_id" -> DevTools.start()
           "org.matrix.chromext:id/eruda_console_id" -> UserScriptProxy.evaluateJavaScript(openEruda)
           "${ctx.getPackageName()}:id/reload_menu_id" -> {
-            ScriptDbManager.on("loadUrl", TabModel.getUrl())
-            return true
+            return ScriptDbManager.on("userAgentSpoof", TabModel.getUrl()) != null
           }
         }
         return false
@@ -233,6 +232,23 @@ object MenuHook : BaseHook() {
             }
           }
     }
+
+    // var findSwipeRefreshHandler: Unhook? = null
+    // findSwipeRefreshHandler =
+    //     proxy.tabWebContentsUserData.getDeclaredConstructors()[0].hookAfter {
+    //       val subType = it.thisObject::class.java
+    //       if (subType.getInterfaces() contentDeepEquals arrayOf(proxy.overscrollRefreshHandler))
+    //		{
+    //         findSwipeRefreshHandler!!.unhook()
+    //         findMethod(subType) { name == "release" }
+    //             // public void release(boolean allowRefresh)
+    //             .hookBefore {
+    //               if (it.args[0] as Boolean) {
+    //                 it.args[0] = ScriptDbManager.on("userAgentSpoof", TabModel.getUrl()) == null
+    //               }
+    //             }
+    //       }
+    //     }
 
     proxy.addPreferencesFromResource
         // public void addPreferencesFromResource(Int preferencesResId)

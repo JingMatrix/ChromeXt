@@ -143,10 +143,12 @@ object ScriptDbManager {
           callback = "alert('Fail to install ${payload}');"
         }
       }
-      "loadUrl" -> {
+      "userAgentSpoof" -> {
         val loadUrlParams = UserScriptProxy.newLoadUrlParams(payload)
-        UserScriptProxy.userAgentHook(payload, loadUrlParams)
-        UserScriptProxy.loadUrl.invoke(TabModel.getTab(), loadUrlParams)
+        if (UserScriptProxy.userAgentHook(payload, loadUrlParams)) {
+          UserScriptProxy.loadUrl.invoke(TabModel.getTab(), loadUrlParams)
+          callback = "console.log('User-Agent spoofed');"
+        }
       }
       "loadEruda" -> {
         val ctx = Chrome.getContext()

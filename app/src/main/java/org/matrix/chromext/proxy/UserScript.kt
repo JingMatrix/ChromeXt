@@ -108,14 +108,16 @@ object UserScriptProxy {
     return null
   }
 
-  fun userAgentHook(url: String, urlParams: Any) {
+  fun userAgentHook(url: String, urlParams: Any): Boolean {
     val origin = parseOrigin(url)
     if (origin != null) {
       // Log.d("Change User-Agent header: ${origin}")
       if (ScriptDbManager.userAgents.contains(origin)) {
         mVerbatimHeaders.set(urlParams, "user-agent: ${ScriptDbManager.userAgents.get(origin)}\r\n")
+        return true
       }
     }
+    return false
   }
 
   private fun parseOrigin(url: String): String? {

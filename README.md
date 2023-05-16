@@ -106,13 +106,17 @@ These filters are saved in the browser even after clearing the site's data.
 Another way to block ADs is using the [Content-Security-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src) to block some scripts from loading.
 See the official [Content-Security-Policy Blocker](app/src/main/assets/CSP.user.js) UserScript.
 
-### Mocking User Agent
+### User-Agent spoofing
 
-One can edit the user-agent from the `Info` panel of `Eruda console`.
-A valid user-agent should only contain ASCII characters.
+One can edit the User-Agent from the `Info` panel of `Eruda console`.
+A valid User-Agent should contain only ASCII characters.
 Currently, ChromeXt only changes the `User-Agent` HTTP header, which
-is [deprecated](https://wicg.github.io/ua-client-hints/#user-agent) now.
-We recommend use DevTools to fully mock User Agent.
+works well but is [deprecated](https://wicg.github.io/ua-client-hints/#user-agent).
+
+For the User-Agent spoofing to take effects, you might need to refresh the page using the reload button in the page menu.
+(By contrast, a swipe refresh might be insufficient.)
+
+Note that the DevTools can also change User-Agent.
 
 ## Contribute to this project
 
