@@ -118,6 +118,10 @@ object MenuHook : BaseHook() {
           }
           "org.matrix.chromext:id/developer_tools_id" -> DevTools.start()
           "org.matrix.chromext:id/eruda_console_id" -> UserScriptProxy.evaluateJavaScript(openEruda)
+          "${ctx.getPackageName()}:id/reload_menu_id" -> {
+            ScriptDbManager.on("loadUrl", TabModel.getUrl())
+            return true
+          }
         }
         return false
       }

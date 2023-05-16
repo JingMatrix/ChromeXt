@@ -17,6 +17,11 @@ object UserScriptHook : BaseHook() {
 
     val proxy = UserScriptProxy
 
+    val promptInstallUserScript =
+        Chrome.getContext().assets.open("editor.js").bufferedReader().use { it.readText() }
+    val customizeDevTool =
+        Chrome.getContext().assets.open("devtools.js").bufferedReader().use { it.readText() }
+
     proxy.tabModelJniBridge.getDeclaredConstructors()[0].hookAfter {
       TabModel.update(it.thisObject)
     }
@@ -31,15 +36,9 @@ object UserScriptHook : BaseHook() {
           val url = proxy.parseUrl(it.args[0])!!
           proxy.evaluateJavaScript("globalThis.ChromeXt=console.debug.bind(console);")
           if (url.endsWith(".user.js")) {
-            val promptInstallUserScript =
-                Chrome.getContext().assets.open("editor.js").bufferedReader().use { it.readText() }
             proxy.evaluateJavaScript(promptInstallUserScript)
           } else if (url.startsWith(DEV_FRONT_END)) {
-            val customizeDevTool =
-                Chrome.getContext().assets.open("devtools.js").bufferedReader().use {
-                  it.readText()
-                }
-            proxy.evaluateJavaScript("javascript: ${customizeDevTool}")
+            proxy.evaluateJavaScript(customizeDevTool)
           } else if (!url.endsWith("/ChromeXt/")) {
             proxy.didUpdateUrl(url)
           }

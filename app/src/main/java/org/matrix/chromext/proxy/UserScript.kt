@@ -8,7 +8,7 @@ import org.matrix.chromext.script.encodeScript
 import org.matrix.chromext.script.kMaxURLChars
 import org.matrix.chromext.script.urlMatch
 import org.matrix.chromext.utils.Log
-import org.matrix.chromext.utils.invokeMethod
+import org.matrix.chromext.utils.findMethod
 
 object UserScriptProxy {
   // It is possible to do a HTTP POST with LoadUrlParams Class
@@ -23,6 +23,11 @@ object UserScriptProxy {
   val navigationControllerImpl =
       Chrome.load("org.chromium.content.browser.framehost.NavigationControllerImpl")
   val mTab = tabWebContentsDelegateAndroidImpl.getDeclaredField("a")
+  val loadUrl =
+      findMethod(Chrome.load("org.chromium.chrome.browser.tab.TabImpl")) {
+        getParameterTypes() contentDeepEquals arrayOf(loadUrlParams) &&
+            getReturnType() == Int::class.java
+      }
 
   private val mUrl = loadUrlParams.getDeclaredField("a")
   private val mVerbatimHeaders =
@@ -30,13 +35,10 @@ object UserScriptProxy {
   private val mSpec = gURL.getDeclaredField("a")
 
   private fun loadUrl(url: String) {
-    TabModel.getTab()?.invokeMethod(newUrl(url)) {
-      getParameterTypes() contentDeepEquals arrayOf(loadUrlParams) &&
-          getReturnType() == Int::class.java
-    }
+    loadUrl.invoke(TabModel.getTab(), newLoadUrlParams(url))
   }
 
-  private fun newUrl(url: String): Any {
+  fun newLoadUrlParams(url: String): Any {
     val constructor = loadUrlParams.getDeclaredConstructors().first()
     val types = constructor.getParameterTypes()
     if (types contentDeepEquals arrayOf(Int::class.java, String::class.java)) {

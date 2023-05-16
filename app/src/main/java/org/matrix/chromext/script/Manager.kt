@@ -10,6 +10,7 @@ import java.io.FileReader
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DevTools
 import org.matrix.chromext.proxy.ERUD_URL
+import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
@@ -141,6 +142,11 @@ object ScriptDbManager {
         if (on("installScript", code) != null) {
           callback = "alert('Fail to install ${payload}');"
         }
+      }
+      "loadUrl" -> {
+        val loadUrlParams = UserScriptProxy.newLoadUrlParams(payload)
+        UserScriptProxy.userAgentHook(payload, loadUrlParams)
+        UserScriptProxy.loadUrl.invoke(TabModel.getTab(), loadUrlParams)
       }
       "loadEruda" -> {
         val ctx = Chrome.getContext()
