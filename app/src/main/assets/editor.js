@@ -1,13 +1,13 @@
 let old_script = "";
-let asked = false;
 
 function installScript() {
   let script = document.querySelector("body > pre").innerText;
   if (script != old_script) {
     old_script = script;
-    let install = confirm(
-      "Allow ChromeXt to install / update this userscript?"
-    );
+    let install = arguments.length > 0;
+    if (!install) {
+      install = confirm("Allow ChromeXt to install / update this userscript?");
+    }
     if (install) {
       ChromeXt(JSON.stringify({ action: "installScript", payload: script }));
     }
@@ -72,19 +72,4 @@ if (document.readyState == "complete") {
   window.onload = editor;
 }
 
-addEventListener("contextmenu", () => {
-  addEventListener(
-    "click",
-    (event) => {
-      if (!asked) {
-        event.preventDefault();
-        setTimeout(() => {
-          asked = false;
-          installScript();
-        }, 100);
-        asked = true;
-      }
-    },
-    { once: true }
-  );
-});
+addEventListener("beforeunload", installScript);

@@ -59,8 +59,8 @@ To manage scripts installed by `ChromeXt`, here are a simple front end hosted on
 
 ### Edit scripts before installing them
 
-If you cancel the prompt to install a new UserScript, you can then edit it directly in Chrome.
-To commit your modifications, long press on some text and follow with a click somewhere, the installation prompt should appear again.
+If you cancel the prompt of installing a new UserScript, then you can edit it directly in Chrome.
+The edited UserScript is automatically installed when the page is unloaded, for example, after refreshing the page.
 
 ### Limitations
 
