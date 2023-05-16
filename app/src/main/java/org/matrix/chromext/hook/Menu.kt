@@ -112,8 +112,12 @@ object MenuHook : BaseHook() {
         }
         when (ctx.resources.getResourceName(id)) {
           "org.matrix.chromext:id/install_script_id" -> {
-            Download.start(TabModel.getUrl(), "UserScript/script.js") {
-              ScriptDbManager.on("installScript", it)
+            if (TabModel.getUrl().startsWith("https://raw.githubusercontent.com/")) {
+              Download.start(TabModel.getUrl(), "UserScript/script.js") {
+                ScriptDbManager.on("installScript", it)
+              }
+            } else {
+              UserScriptProxy.evaluateJavaScript("installScript(true);")
             }
           }
           "org.matrix.chromext:id/developer_tools_id" -> DevTools.start()

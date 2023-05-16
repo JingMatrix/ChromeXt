@@ -1,10 +1,9 @@
 let old_script = "";
 
-function installScript() {
+function installScript(install = false) {
   let script = document.querySelector("body > pre").innerText;
   if (script != old_script) {
     old_script = script;
-    let install = arguments.length > 0;
     if (!install) {
       install = confirm("Allow ChromeXt to install / update this userscript?");
     }
@@ -71,5 +70,3 @@ if (document.readyState == "complete") {
 } else {
   window.onload = editor;
 }
-
-addEventListener("beforeunload", installScript);
