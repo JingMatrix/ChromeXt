@@ -19,6 +19,7 @@ val supportedPackages =
         "com.chrome.dev",
         "com.chrome.canary",
         "com.vivaldi.browser",
+        "com.vivaldi.browser.snapshot",
         "com.microsoft.emmx",
         "com.microsoft.emmx.beta",
         "com.microsoft.emmx.dev",
