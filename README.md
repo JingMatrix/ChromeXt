@@ -68,7 +68,7 @@ To deal with this extremely rare case, one should
 use multiple scripts of normal sizes instead of a giant script
 ```
 
-### Dev Tools for developers
+### DevTools for developers
 
 From three dots page menu, ChromeXt offers you
 1. `Developer tools` in the UserScript manager front end,
@@ -136,7 +136,7 @@ Here are corresponding files you might want / need to change:
 - [x] Improve eruda incorporation with Chrome
 - [x] Add more information in the preference screen
 - [x] Support more [Tampermonkey API](https://www.tampermonkey.net/documentation.php)s
-- [x] Find elegant way to support Dev Tools for Android 11-
+- [x] Find elegant way to support DevTools for Android 11-
 - [x] Improve front end
 - [x] Add cosmetic AdBlocker using eruda
 - [x] Find way to get current interactive tab
@@ -144,8 +144,8 @@ Here are corresponding files you might want / need to change:
 - [x] Support non-split version of Android Chrome
 - [x] Solve the menu hook problem for non-split versions
 - [x] Handle multiple Tab Model
-- [x] Forward Dev Tools server socket
-- [x] A mobile friendly Dev Tools front end
+- [x] Forward DevTools server socket
+- [x] A mobile friendly DevTools front end
 - [x] Allow user to trigger reader mode
 - [x] Support @resource API
 - [x] Make GestureNav Fix optional
