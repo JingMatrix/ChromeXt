@@ -1,14 +1,11 @@
 # ChromeXt
 
-Add UserScript support to Chrome using Xposed framework
+Add UserScript and DevTools supports to Chrome using Xposed framework
 
 ##  How does it work?
 
-We hook an `onUpdateUrl` function in [UserScript.kt](app/src/main/java/org/matrix/chromext/hook/UserScript.kt),
+We hook the `onUpdateUrl` function in [UserScript.kt](app/src/main/java/org/matrix/chromext/hook/UserScript.kt),
 add URL comparison there and evaluate JavaScript using the `javascript:` scheme.
-
-We pay our main efforts to support the latest _stable_ version of Android Chrome.
-Please consider update your Android Chrome first before proceeding.
 
 Chromium based browsers,
 [Bromite](https://github.com/bromite/bromite),
@@ -21,13 +18,10 @@ Due to different design ideas, supports for the following browsers are not perfe
 
 ## Usage
 
-Currently, this project requires **Xposed framework** installed.
-~~However, it is possible to make Xposed framework optional.
-See related progress in the `Development plans` section.~~
-
-You can try the following implements of it, depending on your Android version or whether having root enabled:
-[LSPosed](https://github.com/LSPosed/LSPosed) and
-[LSPatch](https://github.com/LSPosed/LSPatch) (technically not supported yet due to [isolated process issue](https://github.com/LSPosed/LSPatch/issues/190), we are working on it).
+Currently, this project requires **Xposed framework** installed, such as
+[LSPosed](https://github.com/LSPosed/LSPosed) for root users.
+For non-root users, unfortunately
+[LSPatch](https://github.com/LSPosed/LSPatch) is technically not supported yet due to [isolated process issue](https://github.com/LSPosed/LSPatch/issues/190); we are working on it.
 
 Pick up the latest built APK from my repo's [GitHub Action](https://github.com/JingMatrix/ChromeXt/actions/workflows/android.yml) and install it.
 The author uploads releases to [Xposed-Modules-Repo](https://github.com/Xposed-Modules-Repo/org.matrix.chromext/releases) when needed, but not that frequently.
@@ -92,6 +86,10 @@ On other areas, only the system gesture is available.
 One can disable it through the `Developer options` menu.
 (Tap seven times on the Chrome version from the Chrome settings, you will see the `Developer options` menu.)
 
+### Enable Reader Mode manually
+
+ChromeXt adds a book icon in the page menu to enable reader mode manually.
+
 ### AD Blocker solution
 
 For blocking network requests, I recommend to use `AdAway` or any proxy AD Blocker such as `clash`.
@@ -113,7 +111,7 @@ A valid User-Agent should contain only ASCII characters.
 Currently, ChromeXt only changes the `User-Agent` HTTP header, which
 works well but is [deprecated](https://wicg.github.io/ua-client-hints/#user-agent).
 
-For the User-Agent spoofing to take effects, you might need to refresh the page using the reload button in the page menu.
+When the User-Agent spoofing is not working, refresh the page using the reload button in the page menu.
 (By contrast, a swipe refresh might be insufficient.)
 
 Note that the DevTools can also change User-Agent.
