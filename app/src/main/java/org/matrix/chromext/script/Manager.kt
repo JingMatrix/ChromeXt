@@ -160,7 +160,7 @@ object ScriptDbManager {
         } else {
           Log.toast(ctx, "Updating Eruda...")
           Download.start(ERUD_URL, "Download/Eruda.js", true) {
-            UserScriptProxy.evaluateJavaScript(on("loadEruda", "")!!)
+            UserScriptProxy.evaluateJavascript(on("loadEruda", "")!!)
           }
         }
       }

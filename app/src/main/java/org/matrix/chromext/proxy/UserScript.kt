@@ -50,7 +50,7 @@ object UserScriptProxy {
     }
   }
 
-  private fun invokeScript(url: String) {
+  fun invokeScript(url: String) {
     ScriptDbManager.scripts.forEach loop@{
       val script = it
       script.exclude.forEach {
@@ -60,7 +60,7 @@ object UserScriptProxy {
       }
       script.match.forEach {
         if (urlMatch(it, url, false)) {
-          evaluateJavaScript(script)
+          evaluateJavascript(script)
           Log.i("${script.id} injected")
           return@loop
         }
@@ -68,15 +68,15 @@ object UserScriptProxy {
     }
   }
 
-  private fun evaluateJavaScript(script: Script) {
+  private fun evaluateJavascript(script: Script) {
     val code = encodeScript(script)
     if (code != null) {
-      evaluateJavaScript(code)
+      evaluateJavascript(code)
       Log.d("Run script: ${script.code.replace("\\s+".toRegex(), " ")}")
     }
   }
 
-  fun evaluateJavaScript(script: String, forceWrap: Boolean = false) {
+  fun evaluateJavascript(script: String, forceWrap: Boolean = false) {
     if (script == "") return
     var code = URLEncoder.encode(script, "UTF-8").replace("+", "%20")
     if (code.length > kMaxURLChars - 20 || forceWrap) {
@@ -120,32 +120,12 @@ object UserScriptProxy {
     return false
   }
 
-  private fun parseOrigin(url: String): String? {
+  fun parseOrigin(url: String): String? {
     val protocol = url.split("://")
     if (protocol.size > 1 && arrayOf("https", "http", "file").contains(protocol.first())) {
       return protocol.first() + "://" + protocol.elementAt(1).split("/").first()
     } else {
       return null
-    }
-  }
-
-  fun didUpdateUrl(url: String) {
-    val origin = parseOrigin(url)
-    if (origin != null) {
-      invokeScript(url)
-      if (ScriptDbManager.cosmeticFilters.contains(origin)) {
-        val script =
-            Chrome.getContext().assets.open("cosmetic-filter.js").bufferedReader().use {
-              it.readText()
-            }
-        evaluateJavaScript(
-            "globalThis.ChromeXt_filter=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${script}")
-        Log.d("Cosmetic filters applied to ${origin}")
-      }
-      if (ScriptDbManager.userAgents.contains(origin)) {
-        evaluateJavaScript(
-            "Object.defineProperties(window.navigator,{userAgent:{value:'${ScriptDbManager.userAgents.get(origin)}'}});")
-      }
     }
   }
 }

@@ -18,7 +18,7 @@ object DevTools {
   private var forwarding: Forward? = null
   private var port = 0
     set(value) {
-      UserScriptProxy.evaluateJavaScript(
+      UserScriptProxy.evaluateJavascript(
           "setTimeout(()=>{window.dispatchEvent(new CustomEvent('cdp_port',{detail:${value}}))},100)")
       field = value
     }

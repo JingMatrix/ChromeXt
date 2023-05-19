@@ -1,8 +1,8 @@
 package org.matrix.chromext
 
+import android.app.AndroidAppHelper
 import android.content.Context
 import android.webkit.WebChromeClient
-import android.webkit.WebView
 import android.webkit.WebViewClient
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
@@ -50,8 +50,11 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             initHooks(UserScriptHook, GestureNavHook, MenuHook, IntentHook)
           }
     } else {
-      WebView::class.java.getDeclaredConstructors()[0].hookAfter {
-        Chrome.init(it.args[0] as Context)
+      val ctx = AndroidAppHelper.currentApplication()
+      if (ctx != null) {
+        Chrome.init(ctx)
+      } else {
+        return
       }
 
       WebViewClient::class.java.getDeclaredConstructors()[0].hookAfter {

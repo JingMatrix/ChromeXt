@@ -18,11 +18,13 @@ object UserScriptHook : BaseHook() {
 
     val proxy = UserScriptProxy
 
-    ResourceMerge.enrich(Chrome.getContext())
+    val ctx = Chrome.getContext()
+    ResourceMerge.enrich(ctx)
     val promptInstallUserScript =
-        Chrome.getContext().assets.open("editor.js").bufferedReader().use { it.readText() }
-    val customizeDevTool =
-        Chrome.getContext().assets.open("devtools.js").bufferedReader().use { it.readText() }
+        ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
+    val customizeDevTool = ctx.assets.open("devtools.js").bufferedReader().use { it.readText() }
+    val cosmeticFilter =
+        ctx.assets.open("cosmetic-filter.js").bufferedReader().use { it.readText() }
 
     proxy.tabModelJniBridge.getDeclaredConstructors()[0].hookAfter {
       TabModel.update(it.thisObject)
@@ -36,13 +38,25 @@ object UserScriptHook : BaseHook() {
         .hookAfter {
           TabModel.refresh(proxy.mTab.get(it.thisObject))
           val url = proxy.parseUrl(it.args[0])!!
-          proxy.evaluateJavaScript("globalThis.ChromeXt=console.debug.bind(console);")
+          proxy.evaluateJavascript("globalThis.ChromeXt=console.debug.bind(console);")
           if (url.endsWith(".user.js")) {
-            proxy.evaluateJavaScript(promptInstallUserScript)
+            proxy.evaluateJavascript(promptInstallUserScript)
           } else if (url.startsWith(DEV_FRONT_END)) {
-            proxy.evaluateJavaScript(customizeDevTool)
+            proxy.evaluateJavascript(customizeDevTool)
           } else if (!url.endsWith("/ChromeXt/")) {
-            proxy.didUpdateUrl(url)
+            proxy.invokeScript(url)
+            val origin = proxy.parseOrigin(url)
+            if (origin != null) {
+              if (ScriptDbManager.cosmeticFilters.contains(origin)) {
+                proxy.evaluateJavascript(
+                    "globalThis.ChromeXt_filter=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${cosmeticFilter}")
+                Log.d("Cosmetic filters applied to ${origin}")
+              }
+              if (ScriptDbManager.userAgents.contains(origin)) {
+                proxy.evaluateJavascript(
+                    "Object.defineProperties(window.navigator,{userAgent:{value:'${ScriptDbManager.userAgents.get(origin)}'}});")
+              }
+            }
           }
         }
 
@@ -61,7 +75,7 @@ object UserScriptHook : BaseHook() {
                         val callback = ScriptDbManager.on(action, payload)
                         if (callback != null) {
                           TabModel.refresh(proxy.mTab.get(it.thisObject))
-                          proxy.evaluateJavaScript(callback)
+                          proxy.evaluateJavascript(callback)
                         }
                       }
                       .onFailure { Log.w("Failed with ${action}: ${payload}") }

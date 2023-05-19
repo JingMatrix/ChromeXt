@@ -16,6 +16,8 @@ Due to different design ideas, supports for the following browsers are not perfe
 1. [Egde](https://www.microsoft.com/en-us/edge/download), `DevTools` front end is removed by its authors;
 2. [Vivaldi](https://vivaldi.com/en/android/), `Developer options` menu is removed by its authors.
 
+For WebView based browsers, we have experimental support of UserScript.
+
 ## Usage
 
 Currently, this project requires **Xposed framework** installed, such as
@@ -162,5 +164,6 @@ Here are corresponding files you might want / need to change:
 - [ ] ~~Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine~~
 - [ ] ~~Use `adb forward` to support non-root users~~
 - [ ] ~~Turn Xposed into optional dependency~~
+- [ ] Fully support WebView based browsers
 - [ ] Support [LSPatch for isolated process](https://github.com/LSPosed/LSPatch/issues/190)
 - [ ] Add recommended scripts to the front end manager

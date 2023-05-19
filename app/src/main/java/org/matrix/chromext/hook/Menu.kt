@@ -93,7 +93,7 @@ object MenuHook : BaseHook() {
           } else {
             title.setText("Open eruda console")
             erudaRow.setOnClickListener {
-              UserScriptProxy.evaluateJavaScript(openEruda)
+              UserScriptProxy.evaluateJavascript(openEruda)
               pageInfoController!!.invokeMethod() { name == "destroy" }
             }
           }
@@ -116,11 +116,11 @@ object MenuHook : BaseHook() {
                 ScriptDbManager.on("installScript", it)
               }
             } else {
-              UserScriptProxy.evaluateJavaScript("installScript(true);")
+              UserScriptProxy.evaluateJavascript("installScript(true);")
             }
           }
           "org.matrix.chromext:id/developer_tools_id" -> DevTools.start()
-          "org.matrix.chromext:id/eruda_console_id" -> UserScriptProxy.evaluateJavaScript(openEruda)
+          "org.matrix.chromext:id/eruda_console_id" -> UserScriptProxy.evaluateJavascript(openEruda)
           "${ctx.getPackageName()}:id/reload_menu_id" -> {
             return ScriptDbManager.on("userAgentSpoof", TabModel.getUrl()) != null
           }
