@@ -4,9 +4,9 @@ import android.webkit.ConsoleMessage
 import android.webkit.WebView
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
-import org.matrix.chromext.ResourceMerge
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.ResourceMerge
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 

@@ -16,7 +16,6 @@ import java.util.ArrayList
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DevTools
 import org.matrix.chromext.R
-import org.matrix.chromext.ResourceMerge
 import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.proxy.UserScriptProxy

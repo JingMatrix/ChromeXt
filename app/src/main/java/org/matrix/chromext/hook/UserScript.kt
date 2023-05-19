@@ -3,11 +3,11 @@ package org.matrix.chromext.hook
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DEV_FRONT_END
-import org.matrix.chromext.ResourceMerge
 import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.ResourceMerge
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore

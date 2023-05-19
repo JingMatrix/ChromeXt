@@ -14,6 +14,7 @@ import org.matrix.chromext.hook.MenuHook
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebWiewHook
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.ResourceMerge
 import org.matrix.chromext.utils.hookAfter
 
 val supportedPackages =
