@@ -1,6 +1,9 @@
 package org.matrix.chromext
 
 import android.content.Context
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.callbacks.XC_LoadPackage
@@ -9,6 +12,7 @@ import org.matrix.chromext.hook.GestureNavHook
 import org.matrix.chromext.hook.IntentHook
 import org.matrix.chromext.hook.MenuHook
 import org.matrix.chromext.hook.UserScriptHook
+import org.matrix.chromext.hook.WebWiewHook
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.hookAfter
 
@@ -33,6 +37,9 @@ val supportedPackages =
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
     Log.d(lpparam.processName + " started")
+    if (lpparam.packageName == "org.matrix.chromext") {
+      return
+    }
     if (supportedPackages.contains(lpparam.packageName)) {
       lpparam.classLoader
           .loadClass("org.chromium.ui.base.WindowAndroid")
@@ -41,6 +48,28 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             Chrome.init(it.args[0] as Context)
             initHooks(UserScriptHook, GestureNavHook, MenuHook, IntentHook)
           }
+    } else {
+      WebView::class.java.getDeclaredConstructors()[0].hookAfter {
+        Chrome.init(it.args[0] as Context)
+      }
+
+      WebViewClient::class.java.getDeclaredConstructors()[0].hookAfter {
+        if (it.thisObject::class != WebViewClient::class) {
+          WebWiewHook.ViewClient = it.thisObject::class.java
+          if (WebWiewHook.ChromeClient != null) {
+            initHooks(WebWiewHook)
+          }
+        }
+      }
+
+      WebChromeClient::class.java.getDeclaredConstructors()[0].hookAfter {
+        if (it.thisObject::class != WebViewClient::class) {
+          WebWiewHook.ChromeClient = it.thisObject::class.java
+          if (WebWiewHook.ViewClient != null) {
+            initHooks(WebWiewHook)
+          }
+        }
+      }
     }
   }
 

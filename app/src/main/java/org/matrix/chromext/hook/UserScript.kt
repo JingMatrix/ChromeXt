@@ -3,6 +3,7 @@ package org.matrix.chromext.hook
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DEV_FRONT_END
+import org.matrix.chromext.ResourceMerge
 import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.ScriptDbManager
@@ -17,6 +18,7 @@ object UserScriptHook : BaseHook() {
 
     val proxy = UserScriptProxy
 
+    ResourceMerge.enrich(Chrome.getContext())
     val promptInstallUserScript =
         Chrome.getContext().assets.open("editor.js").bufferedReader().use { it.readText() }
     val customizeDevTool =
@@ -72,13 +74,7 @@ object UserScriptHook : BaseHook() {
                   2 -> "W"
                   3 -> "E"
                   else -> "V"
-                } +
-                    ": [${it.args[3]}" +
-                    when (it.args[2] as Int) {
-                      0 -> ""
-                      else -> "@" + it.toString()
-                    } +
-                    "] ${it.args[1]}")
+                } + ": [${it.args[3]}@${it.args[2]}] ${it.args[1]}")
           }
         }
 
