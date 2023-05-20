@@ -9,6 +9,8 @@ import android.webkit.WebView
 import de.robv.android.xposed.XC_MethodHook.Unhook
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.DEV_FRONT_END
+import org.matrix.chromext.DevTools
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.script.encodeScript
 import org.matrix.chromext.script.openEruda
@@ -37,6 +39,7 @@ object WebViewHook : BaseHook() {
     ResourceMerge.enrich(ctx)
     val promptInstallUserScript =
         ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
+    val customizeDevTool = ctx.assets.open("devtools.js").bufferedReader().use { it.readText() }
     val cosmeticFilter =
         ctx.assets.open("cosmetic-filter.js").bufferedReader().use { it.readText() }
 
@@ -72,6 +75,8 @@ object WebViewHook : BaseHook() {
       evaluateJavascript("globalThis.ChromeXt=console.debug.bind(console);")
       if (url.endsWith(".user.js")) {
         evaluateJavascript(promptInstallUserScript)
+      } else if (url.startsWith(DEV_FRONT_END)) {
+        evaluateJavascript(customizeDevTool)
       } else if (!url.endsWith("/ChromeXt/")) {
         val protocol = url.split("://")
         if (protocol.size > 1 && arrayOf("https", "http", "file").contains(protocol.first())) {
@@ -114,8 +119,9 @@ object WebViewHook : BaseHook() {
         // public ActionMode startActionMode (ActionMode.Callback callback,
         //         int type)
         .hookBefore {
-          if (it.args[1] as Int == ActionMode.TYPE_FLOATING) {
+          if (it.args[1] as Int == ActionMode.TYPE_FLOATING && it.thisObject is WebView) {
             val view = it.thisObject as WebView
+            val isChromeXt = view.getUrl()!!.endsWith("/ChromeXt/")
             contextMenuHook?.unhook()
             contextMenuHook =
                 findMethod(it.args[0]::class.java) { name == "onCreateActionMode" }
@@ -123,12 +129,20 @@ object WebViewHook : BaseHook() {
                     .hookAfter {
                       val mode = it.args[0] as ActionMode
                       val menu = it.args[1] as Menu
-                      val erudaMenu = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, "Eruda")
+                      val erudaMenu = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, "Eruda console")
+                      if (isChromeXt) {
+                        erudaMenu.setTitle("DevTools")
+                      }
                       erudaMenu.setOnMenuItemClickListener(
                           MenuItem.OnMenuItemClickListener {
-                            view.settings.javaScriptEnabled = true
                             webView = view
-                            evaluateJavascript(openEruda)
+                            if (isChromeXt) {
+                              WebView.setWebContentsDebuggingEnabled(true)
+                              DevTools.start()
+                            } else {
+                              view.settings.javaScriptEnabled = true
+                              evaluateJavascript(openEruda)
+                            }
                             mode.finish()
                             true
                           })

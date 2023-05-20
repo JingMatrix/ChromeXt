@@ -8,6 +8,8 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.net.ServerSocket
 import kotlin.concurrent.thread
+import org.matrix.chromext.hook.UserScriptHook
+import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.utils.Log
 
@@ -18,8 +20,13 @@ object DevTools {
   private var forwarding: Forward? = null
   private var port = 0
     set(value) {
-      UserScriptProxy.evaluateJavascript(
-          "setTimeout(()=>{window.dispatchEvent(new CustomEvent('cdp_port',{detail:${value}}))},100)")
+      val code =
+          "setTimeout(()=>{window.dispatchEvent(new CustomEvent('cdp_port',{detail:${value}}))},100)"
+      if (UserScriptHook.isInit) {
+        UserScriptProxy.evaluateJavascript(code)
+      } else if (WebViewHook.isInit) {
+        WebViewHook.evaluateJavascript(code)
+      }
       field = value
     }
 
@@ -62,10 +69,7 @@ private class Forward(forwarder: ServerSocket) : Thread() {
           while (true) {
             val client = LocalSocket()
 
-            runCatching { client.connect(LocalSocketAddress("chrome_devtools_remote")) }
-                .onFailure {
-                  client.connect(LocalSocketAddress("chrome_devtools_remote_" + Process.myPid()))
-                }
+            connectDevTools(client)
 
             if (client.isConnected()) {
               Log.d("New connection to Chrome DevTools")
@@ -163,10 +167,21 @@ private fun InputStream.pipe(
   return bytesCopied
 }
 
+private fun connectDevTools(client: LocalSocket) {
+  val address =
+      if (UserScriptHook.isInit) {
+        "chrome_devtools_remote"
+      } else {
+        "webview_devtools_remote"
+      }
+
+  runCatching { client.connect(LocalSocketAddress(address)) }
+      .onFailure { client.connect(LocalSocketAddress(address + "_" + Process.myPid())) }
+}
+
 private fun refreshDevTool(): String {
   val client = LocalSocket()
-  runCatching { client.connect(LocalSocketAddress("chrome_devtools_remote")) }
-      .onFailure { client.connect(LocalSocketAddress("chrome_devtools_remote_" + Process.myPid())) }
+  connectDevTools(client)
   client.outputStream.write("GET /json HTTP/1.1\r\n\r\n".toByteArray())
   var pages = ""
   client.inputStream.bufferedReader().use {
