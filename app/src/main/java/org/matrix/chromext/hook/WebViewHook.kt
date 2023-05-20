@@ -28,7 +28,9 @@ object WebViewHook : BaseHook() {
   var webView: WebView? = null
 
   fun evaluateJavascript(code: String?) {
-    if (code != null) {
+    if (code != null && webView != null) {
+      webView?.settings?.javaScriptEnabled = true
+      webView?.settings?.domStorageEnabled = true
       webView?.evaluateJavascript(code, null)
     }
   }
@@ -70,16 +72,23 @@ object WebViewHook : BaseHook() {
 
     fun onUpdateUrl(url: String, view: WebView) {
       val enableJS = view.settings.javaScriptEnabled
-      view.settings.javaScriptEnabled = true
+      val enableDOMStorage = view.settings.domStorageEnabled
       webView = view
       evaluateJavascript("globalThis.ChromeXt=console.debug.bind(console);")
       if (url.endsWith(".user.js")) {
         evaluateJavascript(promptInstallUserScript)
       } else if (url.startsWith(DEV_FRONT_END)) {
+        view.settings.userAgentString = null
         evaluateJavascript(customizeDevTool)
       } else if (!url.endsWith("/ChromeXt/")) {
         val protocol = url.split("://")
         if (protocol.size > 1 && arrayOf("https", "http", "file").contains(protocol.first())) {
+
+          val origin = protocol.first() + "://" + protocol[1].split("/").first()
+          if (ScriptDbManager.userAgents.contains(origin)) {
+            view.settings.userAgentString = ScriptDbManager.userAgents.get(origin)
+          }
+
           ScriptDbManager.scripts.forEach loop@{
             val script = it
             script.exclude.forEach {
@@ -99,18 +108,14 @@ object WebViewHook : BaseHook() {
             }
           }
 
-          val origin = protocol.first() + "://" + protocol[1].split("/").first()
           if (ScriptDbManager.cosmeticFilters.contains(origin)) {
             evaluateJavascript(
                 "globalThis.ChromeXt_filter=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${cosmeticFilter}")
             Log.d("Cosmetic filters applied to ${origin}")
           }
-          if (ScriptDbManager.userAgents.contains(origin)) {
-            evaluateJavascript(
-                "Object.defineProperties(window.navigator,{userAgent:{value:'${ScriptDbManager.userAgents.get(origin)}'}});")
-          }
         }
         view.settings.javaScriptEnabled = enableJS
+        view.settings.domStorageEnabled = enableDOMStorage
       }
     }
 
@@ -122,6 +127,7 @@ object WebViewHook : BaseHook() {
           if (it.args[1] as Int == ActionMode.TYPE_FLOATING && it.thisObject is WebView) {
             val view = it.thisObject as WebView
             val isChromeXt = view.getUrl()!!.endsWith("/ChromeXt/")
+            webView = view
             contextMenuHook?.unhook()
             contextMenuHook =
                 findMethod(it.args[0]::class.java) { name == "onCreateActionMode" }
@@ -131,16 +137,14 @@ object WebViewHook : BaseHook() {
                       val menu = it.args[1] as Menu
                       val erudaMenu = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, "Eruda console")
                       if (isChromeXt) {
-                        erudaMenu.setTitle("DevTools")
+                        erudaMenu.setTitle("Developer tools")
                       }
                       erudaMenu.setOnMenuItemClickListener(
                           MenuItem.OnMenuItemClickListener {
-                            webView = view
                             if (isChromeXt) {
                               WebView.setWebContentsDebuggingEnabled(true)
                               DevTools.start()
                             } else {
-                              view.settings.javaScriptEnabled = true
                               evaluateJavascript(openEruda)
                             }
                             mode.finish()
