@@ -31,7 +31,7 @@ object UserScriptProxy {
 
   private val mUrl = loadUrlParams.getDeclaredField("a")
   private val mVerbatimHeaders =
-      loadUrlParams.getDeclaredFields().filter { it.getType() == String::class.java }.elementAt(1)
+      loadUrlParams.getDeclaredFields().filter { it.getType() == String::class.java }[1]
   private val mSpec = gURL.getDeclaredField("a")
 
   private fun loadUrl(url: String) {
@@ -123,7 +123,7 @@ object UserScriptProxy {
   fun parseOrigin(url: String): String? {
     val protocol = url.split("://")
     if (protocol.size > 1 && arrayOf("https", "http", "file").contains(protocol.first())) {
-      return protocol.first() + "://" + protocol.elementAt(1).split("/").first()
+      return protocol.first() + "://" + protocol[1].split("/").first()
     } else {
       return null
     }
