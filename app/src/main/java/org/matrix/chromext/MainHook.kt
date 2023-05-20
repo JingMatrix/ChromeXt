@@ -12,7 +12,7 @@ import org.matrix.chromext.hook.GestureNavHook
 import org.matrix.chromext.hook.IntentHook
 import org.matrix.chromext.hook.MenuHook
 import org.matrix.chromext.hook.UserScriptHook
-import org.matrix.chromext.hook.WebWiewHook
+import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.ResourceMerge
 import org.matrix.chromext.utils.hookAfter
@@ -59,18 +59,18 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
       WebViewClient::class.java.getDeclaredConstructors()[0].hookAfter {
         if (it.thisObject::class != WebViewClient::class) {
-          WebWiewHook.ViewClient = it.thisObject::class.java
-          if (WebWiewHook.ChromeClient != null) {
-            initHooks(WebWiewHook)
+          WebViewHook.ViewClient = it.thisObject::class.java
+          if (WebViewHook.ChromeClient != null) {
+            initHooks(WebViewHook)
           }
         }
       }
 
       WebChromeClient::class.java.getDeclaredConstructors()[0].hookAfter {
         if (it.thisObject::class != WebViewClient::class) {
-          WebWiewHook.ChromeClient = it.thisObject::class.java
-          if (WebWiewHook.ViewClient != null) {
-            initHooks(WebWiewHook)
+          WebViewHook.ChromeClient = it.thisObject::class.java
+          if (WebViewHook.ViewClient != null) {
+            initHooks(WebViewHook)
           }
         }
       }

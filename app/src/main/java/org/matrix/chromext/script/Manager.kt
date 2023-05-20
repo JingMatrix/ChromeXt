@@ -9,6 +9,8 @@ import java.io.File
 import java.io.FileReader
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DevTools
+import org.matrix.chromext.hook.UserScriptHook
+import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.ERUD_URL
 import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.proxy.UserScriptProxy
@@ -160,7 +162,11 @@ object ScriptDbManager {
         } else {
           Log.toast(ctx, "Updating Eruda...")
           Download.start(ERUD_URL, "Download/Eruda.js", true) {
-            UserScriptProxy.evaluateJavascript(on("loadEruda", "")!!)
+            if (UserScriptHook.isInit) {
+              UserScriptProxy.evaluateJavascript(on("loadEruda", "")!!)
+            } else if (WebViewHook.isInit) {
+              WebViewHook.evaluateJavascript(on("loadEruda", "")!!)
+            }
           }
         }
       }

@@ -1,21 +1,35 @@
 package org.matrix.chromext.hook
 
+import android.view.ActionMode
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
 import android.webkit.ConsoleMessage
 import android.webkit.WebView
+import de.robv.android.xposed.XC_MethodHook.Unhook
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.script.encodeScript
+import org.matrix.chromext.script.openEruda
 import org.matrix.chromext.script.urlMatch
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.ResourceMerge
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
+import org.matrix.chromext.utils.hookBefore
 
-object WebWiewHook : BaseHook() {
+object WebViewHook : BaseHook() {
 
   var ViewClient: Class<*>? = null
   var ChromeClient: Class<*>? = null
+  var webView: WebView? = null
+
+  fun evaluateJavascript(code: String?) {
+    if (code != null) {
+      webView?.evaluateJavascript(code, null)
+    }
+  }
 
   override fun init() {
 
@@ -40,7 +54,7 @@ object WebWiewHook : BaseHook() {
                   val data = JSONObject(text)
                   val action = data.getString("action")
                   val payload = data.getString("payload")
-                  runCatching { ScriptDbManager.on(action, payload) }
+                  runCatching { evaluateJavascript(ScriptDbManager.on(action, payload)) }
                       .onFailure { Log.w("Failed with ${action}: ${payload}") }
                 }
                 .onFailure { Log.d("Ignore console.debug: " + text) }
@@ -54,9 +68,10 @@ object WebWiewHook : BaseHook() {
     fun onUpdateUrl(url: String, view: WebView) {
       val enableJS = view.settings.javaScriptEnabled
       view.settings.javaScriptEnabled = true
-      view.evaluateJavascript("globalThis.ChromeXt=console.debug.bind(console);", null)
+      webView = view
+      evaluateJavascript("globalThis.ChromeXt=console.debug.bind(console);")
       if (url.endsWith(".user.js")) {
-        view.evaluateJavascript(promptInstallUserScript, null)
+        evaluateJavascript(promptInstallUserScript)
       } else if (!url.endsWith("/ChromeXt/")) {
         val protocol = url.split("://")
         if (protocol.size > 1 && arrayOf("https", "http", "file").contains(protocol.first())) {
@@ -71,8 +86,7 @@ object WebWiewHook : BaseHook() {
               if (urlMatch(it, url, false)) {
                 val code = encodeScript(script)
                 if (code != null) {
-                  Log.i("${script.id} injected")
-                  view.evaluateJavascript(code, null)
+                  evaluateJavascript(code)
                   Log.d("Run script: ${script.code.replace("\\s+".toRegex(), " ")}")
                 }
                 return@loop
@@ -82,20 +96,45 @@ object WebWiewHook : BaseHook() {
 
           val origin = protocol.first() + "://" + protocol[1].split("/").first()
           if (ScriptDbManager.cosmeticFilters.contains(origin)) {
-            view.evaluateJavascript(
-                "globalThis.ChromeXt_filter=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${cosmeticFilter}",
-                null)
+            evaluateJavascript(
+                "globalThis.ChromeXt_filter=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${cosmeticFilter}")
             Log.d("Cosmetic filters applied to ${origin}")
           }
           if (ScriptDbManager.userAgents.contains(origin)) {
-            view.evaluateJavascript(
-                "Object.defineProperties(window.navigator,{userAgent:{value:'${ScriptDbManager.userAgents.get(origin)}'}});",
-                null)
+            evaluateJavascript(
+                "Object.defineProperties(window.navigator,{userAgent:{value:'${ScriptDbManager.userAgents.get(origin)}'}});")
           }
         }
         view.settings.javaScriptEnabled = enableJS
       }
     }
+
+    var contextMenuHook: Unhook? = null
+    findMethod(View::class.java) { name == "startActionMode" && getParameterTypes().size == 2 }
+        // public ActionMode startActionMode (ActionMode.Callback callback,
+        //         int type)
+        .hookBefore {
+          if (it.args[1] as Int == ActionMode.TYPE_FLOATING) {
+            val view = it.thisObject as WebView
+            contextMenuHook?.unhook()
+            contextMenuHook =
+                findMethod(it.args[0]::class.java) { name == "onCreateActionMode" }
+                    // public abstract boolean onCreateActionMode (ActionMode mode, Menu menu)
+                    .hookAfter {
+                      val mode = it.args[0] as ActionMode
+                      val menu = it.args[1] as Menu
+                      val erudaMenu = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, "Eruda")
+                      erudaMenu.setOnMenuItemClickListener(
+                          MenuItem.OnMenuItemClickListener {
+                            view.settings.javaScriptEnabled = true
+                            webView = view
+                            evaluateJavascript(openEruda)
+                            mode.finish()
+                            true
+                          })
+                    }
+          }
+        }
 
     findMethod(WebView::class.java) { name == "loadUrl" }
         // public void loadUrl (String url)
