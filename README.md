@@ -1,6 +1,6 @@
 # ChromeXt
 
-Add UserScript and DevTools supports to Chrome using Xposed framework
+Add UserScript and DevTools supports to Chromium based and WebView based browsers using Xposed framework.
 
 ##  How does it work?
 
@@ -83,8 +83,16 @@ For WebView based browsers, these menu items are presented in the context menu.
 
 ## Bonus
 
-Since WebView based browsers have no unified UIs, the following
-first two features are not supported for them.
+Since WebView based browsers have no unified designs, the following
+first three features are not supported for them.
+
+### Open in Chrome
+
+The application `ChromeXt` is able to
+1. received shared texts to search them online,
+2. open JavaScript files to install them as UserScripts.
+
+The reversed priority order of opening which Chromium based browsers is given in [AndroidManifest.xml](app/src/main/AndroidManifest.xml).
 
 ### Solution of system gesture conflicts
 
@@ -93,16 +101,16 @@ On other areas, only the system gesture is available.
 One can disable it through the `Developer options` menu.
 (Tap seven times on the Chrome version from the Chrome settings, you will see the `Developer options` menu.)
 
-### Enable Reader Mode manually
+### Enable reader mode manually
 
-ChromeXt adds a book icon in the page menu to enable reader mode manually.
+ChromeXt adds a book icon in the page menu to enable reader (distiller) mode manually.
 
 ### AD Blocker solution
 
 For blocking network requests, I recommend to use `AdAway` or any proxy AD Blocker such as `clash`.
 
 A content cosmetic blocker is embedded into ChromeXt with the help of eruda.
-Open the `Eruda console` from the page menu.
+Open the `Eruda console`.
 In the `Elements` panel, one can use the `pointer` icon to select elements on the page.
 After clicking the `delete` icon for a selected element, a corresponding filter will be saved to the `Resources` panel,
 where one can manage previous added filters.
@@ -118,7 +126,7 @@ A valid User-Agent should contain only ASCII characters.
 Currently, ChromeXt only changes the `User-Agent` HTTP header, which
 works well but is [deprecated](https://wicg.github.io/ua-client-hints/#user-agent).
 
-When the User-Agent spoofing is not working, refresh the page using the reload button in the page menu.
+For Chromium based browsers, when the User-Agent spoofing is not taking effects, refresh the page using the reload button in the page menu.
 (By contrast, a swipe refresh might be insufficient.)
 
 Note that the DevTools can also change User-Agent.
@@ -171,5 +179,5 @@ Here are corresponding files you might want / need to change:
 - [ ] ~~Use `adb forward` to support non-root users~~
 - [ ] ~~Turn Xposed into optional dependency~~
 - [x] Fully support WebView based browsers
-- [ ] Support [LSPatch for isolated process](https://github.com/LSPosed/LSPatch/issues/190)
+- [ ] Fix [LSPatch for isolated process](https://github.com/LSPosed/LSPatch/issues/190) issue
 - [ ] Add recommended scripts to the front end manager
