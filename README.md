@@ -16,7 +16,7 @@ Due to different design ideas, supports for the following browsers are not perfe
 1. [Egde](https://www.microsoft.com/en-us/edge/download), `DevTools` front end is removed by its authors;
 2. [Vivaldi](https://vivaldi.com/en/android/), `Developer options` menu is removed by its authors.
 
-For WebView based browsers, we have experimental support of UserScript.
+Most WebView based browsers are also supported, if not, please report it.
 
 ## Usage
 
@@ -79,7 +79,12 @@ From three dots page menu, ChromeXt offers you
 For `Edge` browser, these menus are moved to the page info menu,
 which locates at the left corner inside the URL input bar.
 
+For WebView based browsers, these menu items are presented in the context menu.
+
 ## Bonus
+
+Since WebView based browsers have no unified UIs, the following
+first two features are not supported for them.
 
 ### Solution of system gesture conflicts
 
@@ -127,6 +132,7 @@ Here are corresponding files you might want / need to change:
 1. Front end: [manager.vue](https://github.com/JingMatrix/viteblog/tree/master/components/ChromeXt/manager.vue)
 2. Tampermonkey API: [LocalScripts.kt](app/src/main/java/org/matrix/chromext/script/LocalScripts.kt)
 3. Eruda configuration: [local_eruda.js](app/src/main/assets/local_eruda.js)
+4. Support more WebView based browsers: [WebViewHook.kt](app/src/main/java/org/matrix/chromext/hook/WebViewHook.kt)
 
 ## Development plans
 
@@ -164,6 +170,6 @@ Here are corresponding files you might want / need to change:
 - [ ] ~~Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine~~
 - [ ] ~~Use `adb forward` to support non-root users~~
 - [ ] ~~Turn Xposed into optional dependency~~
-- [ ] Fully support WebView based browsers
+- [x] Fully support WebView based browsers
 - [ ] Support [LSPatch for isolated process](https://github.com/LSPosed/LSPatch/issues/190)
 - [ ] Add recommended scripts to the front end manager
