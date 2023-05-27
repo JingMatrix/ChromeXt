@@ -40,6 +40,7 @@ android {
         listOf(
             "Internationalization",
             "UnsafeIntentLaunch",
+			"SetJavaScriptEnabled",
             "UnspecifiedRegisterReceiverFlag",
             "Usability:Icons")
   }
