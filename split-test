@@ -1,0 +1,28 @@
+#! /bin/sh
+#
+
+apksigner=$ANDROID_HOME/build-tools/33.0.0/apksigner
+rm -rf /tmp/xposed.apk /tmp/app.apk
+./gradlew format && ./gradlew build
+
+# Normally, this xposed module contains two APKs to install
+# adb install-multiple app/build/outputs/apk/debug/app-debug.apk xposed/build/outputs/apk/debug/xposed-debug.apk
+#
+# We do it on purpose to make the app.apk not a split apk when compiling, causing that the above command fails.
+
+# Insteadly, we use apktool to change it into a split apk.
+
+# sign xposed apk
+cat ~/.ssh/apk.key | $apksigner sign --verbose --ks ~/.ssh/apk-release.keystore --in xposed/build/outputs/apk/release/xposed-release-unsigned.apk --out /tmp/xposed.apk
+
+# modify app.apk to be split
+mkdir -p smali
+apktool d app/build/outputs/apk/release/app-release-unsigned.apk -f -o smali/app
+sed -i '1,3s#<manifest #<manifest split="app" #' smali/app/AndroidManifest.xml
+apktool b smali/app -o /tmp/app.apk
+
+# sign split app.apk
+cat ~/.ssh/apk.key | $apksigner sign --verbose --ks ~/.ssh/apk-release.keystore /tmp/app.apk
+
+# install two apks with adb
+adb install /tmp/xposed.apk /tmp/app.apk

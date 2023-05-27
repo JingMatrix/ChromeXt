@@ -16,26 +16,10 @@ android {
     versionName = "3.1.0"
   }
 
-  buildFeatures { buildConfig = true }
-
-  buildTypes {
-    release {
-      isShrinkResources = true
-      isMinifyEnabled = true
-      proguardFiles("proguard-rules.pro")
-    }
-  }
-
-  androidResources {
-    additionalParameters += listOf("--allow-reserved-package-id", "--package-id", "0x45")
-  }
-
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_19
     targetCompatibility = JavaVersion.VERSION_19
   }
-
-  dynamicFeatures += setOf(":xposed")
 
   lint {
     disable +=
@@ -49,5 +33,3 @@ android {
 
   kotlinOptions { jvmTarget = JavaVersion.VERSION_19.toString() }
 }
-
-dependencies { compileOnly("de.robv.android.xposed:api:82") }
