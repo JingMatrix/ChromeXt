@@ -7,6 +7,7 @@ import android.view.View
 import android.webkit.ConsoleMessage
 import android.webkit.WebView
 import de.robv.android.xposed.XC_MethodHook.Unhook
+import java.lang.ref.WeakReference
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DEV_FRONT_END
@@ -25,13 +26,13 @@ object WebViewHook : BaseHook() {
 
   var ViewClient: Class<*>? = null
   var ChromeClient: Class<*>? = null
-  var webView: WebView? = null
+  var webView: WeakReference<WebView>? = null
 
   fun evaluateJavascript(code: String?) {
     if (code != null && webView != null) {
-      webView?.settings?.javaScriptEnabled = true
-      webView?.settings?.domStorageEnabled = true
-      webView?.evaluateJavascript(code, null)
+      webView?.get()?.settings?.javaScriptEnabled = true
+      webView?.get()?.settings?.domStorageEnabled = true
+      webView?.get()?.evaluateJavascript(code, null)
     }
   }
 
@@ -73,7 +74,7 @@ object WebViewHook : BaseHook() {
     fun onUpdateUrl(url: String, view: WebView) {
       val enableJS = view.settings.javaScriptEnabled
       val enableDOMStorage = view.settings.domStorageEnabled
-      webView = view
+      webView = WeakReference(view)
       evaluateJavascript("globalThis.ChromeXt=console.debug.bind(console);")
       if (url.endsWith(".user.js")) {
         evaluateJavascript(promptInstallUserScript)
@@ -127,7 +128,7 @@ object WebViewHook : BaseHook() {
           if (it.args[1] as Int == ActionMode.TYPE_FLOATING && it.thisObject is WebView) {
             val view = it.thisObject as WebView
             val isChromeXt = view.getUrl()!!.endsWith("/ChromeXt/")
-            webView = view
+            webView = WeakReference(view)
             contextMenuHook?.unhook()
             contextMenuHook =
                 findMethod(it.args[0]::class.java) { name == "onCreateActionMode" }
