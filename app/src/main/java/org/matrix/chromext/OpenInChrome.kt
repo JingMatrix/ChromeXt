@@ -57,6 +57,8 @@ class OpenInChrome : Activity() {
       } else {
         if (!text.contains("://")) {
           text = "https://google.com/search?q=${text.replace("#", "%23")}"
+        } else if (text.contains("\n ")) {
+          text = text.split("\n ")[1]
         }
 
         if (!text.startsWith("http")) {
