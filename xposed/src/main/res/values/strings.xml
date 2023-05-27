@@ -1,0 +1,7 @@
+<resources>
+	<string name="app_name">ChromeXt</string>
+	<string name="xposed_desc">Add Userscript support for chrome through LSPosed</string>
+	<string name="main_menu_install_script">Install UserScript</string>
+	<string name="main_menu_developer_tools">Developer tools</string>
+	<string name="main_menu_eruda_console">Eruda console</string>
+</resources>

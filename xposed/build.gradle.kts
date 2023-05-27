@@ -35,14 +35,11 @@ android {
     targetCompatibility = JavaVersion.VERSION_19
   }
 
-  dynamicFeatures += setOf(":xposed")
-
   lint {
     disable +=
         listOf(
             "Internationalization",
             "UnsafeIntentLaunch",
-			"SetJavaScriptEnabled",
             "UnspecifiedRegisterReceiverFlag",
             "Usability:Icons")
   }

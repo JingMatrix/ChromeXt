@@ -2,12 +2,38 @@ package org.matrix.chromext
 
 import android.app.Activity
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import org.matrix.chromext.utils.Log
+import android.util.Log
+import android.widget.Toast
 
 const val TAG = "ChromeXt"
+
+val supportedPackages =
+    arrayOf(
+        "com.android.chrome",
+        "com.chrome.beta",
+        "com.chrome.dev",
+        "com.chrome.canary",
+        "com.vivaldi.browser",
+        "com.vivaldi.browser.snapshot",
+        "com.microsoft.emmx",
+        "com.microsoft.emmx.beta",
+        "com.microsoft.emmx.dev",
+        "com.microsoft.emmx.canary",
+        "org.bromite.bromite",
+        "org.chromium.thorium",
+        "us.spotco.mulch",
+        "com.brave.browser",
+        "com.brave.browser_beta")
+
+fun toast(context: Context, msg: String) {
+  val duration = Toast.LENGTH_SHORT
+  val toast = Toast.makeText(context, msg, duration)
+  toast.show()
+}
 
 class OpenInChrome : Activity() {
   var defaultPackage = "com.android.chrome"
@@ -29,7 +55,7 @@ class OpenInChrome : Activity() {
     val installedApplications = getPackageManager().getInstalledApplications(0)
     val avaiblePackages = supportedPackages.intersect(installedApplications.map { it.packageName })
     if (avaiblePackages.size == 0) {
-      Log.toast(this, "No supported Chrome installed")
+      toast(this, "No supported Chrome installed")
       finish()
       return
     } else {
@@ -51,7 +77,7 @@ class OpenInChrome : Activity() {
         return
       }
 
-      Log.d("Get share text: ${text}")
+      Log.d(TAG, "Get share text: ${text}")
       if (text.startsWith("file://") || text.startsWith("data:")) {
         invokeChromeTabbed(text)
       } else {
@@ -63,7 +89,7 @@ class OpenInChrome : Activity() {
 
         if (!text.startsWith("http")) {
           // Unable to open custom url
-          Log.toast(this, "Unable to open ${text.split("://").first()} scheme")
+          toast(this, "Unable to open ${text.split("://").first()} scheme")
           finish()
           return
         }

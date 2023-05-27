@@ -16,6 +16,6 @@ dependencyResolutionManagement {
   }
 }
 
-include(":app")
+include(":xposed", ":app")
 
 rootProject.name = "ChromeXt"

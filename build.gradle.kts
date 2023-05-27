@@ -9,5 +9,5 @@ plugins {
 tasks.register<KtfmtFormatTask>("format") {
   source = project.fileTree(rootDir)
   include("*.gradle.kts", "app/*.gradle.kts")
-  dependsOn(":app:ktfmtFormat")
+  dependsOn(":xposed:ktfmtFormat", ":app:ktfmtFormat")
 }
