@@ -20,12 +20,19 @@ Most WebView based browsers are also supported, if not, please report it.
 
 ## Usage
 
-Currently, this project requires **Xposed framework** installed, such as
-[LSPosed](https://github.com/LSPosed/LSPosed) for root users.
-For non-root users, unfortunately
-[LSPatch](https://github.com/LSPosed/LSPatch) is technically not supported yet due to [isolated process issue](https://github.com/LSPosed/LSPatch/issues/190); we are working on it.
+Currently, this project requires **Xposed framework** installed.
 
-Pick up the latest built APK from my repo's [GitHub Action](https://github.com/JingMatrix/ChromeXt/actions/workflows/android.yml) and install it.
+For root users, install [LSPosed](https://github.com/LSPosed/LSPosed) first,
+pick up the latest built APK from my repo's [GitHub Action](https://github.com/JingMatrix/ChromeXt/actions) and install it.
+
+For non-root users,
+I modify a bit [LSPatch](https://github.com/JingMatrix/LSPatch) to support `ChromeXt`; here is how to use it:
+1. Download the latest `lspatch-release` from my [Github Action](https://github.com/JingMatrix/LSPatch/actions).
+2. Download the latest `ChromeXt.apk` from my [Github Action](https://github.com/JingMatrix/ChromeXt/actions).
+3. Extract previously downloaded files to get files `lspatch.jar` (with some suffix) and `ChromeXt-signed.apk`.
+4. Patch your APK (taking `arm64_ChromePublic.apk` as example) using the following command: `java -jar lspatch.jar arm64_ChromePublic.apk -d -v -m ChromeXt-signed.apk --force`. If `java` environment is not available, consider using the provided `manager` APK.
+5. Install the patched APK, which might require you to first uninstall the one on your phone.
+
 The author uploads releases to [Xposed-Modules-Repo](https://github.com/Xposed-Modules-Repo/org.matrix.chromext/releases) when needed, but not that frequently.
 
 You can then install UserScripts from popular sources: URLs that ends with `.user.js`.
@@ -179,5 +186,5 @@ Here are corresponding files you might want / need to change:
 - [ ] ~~Use `adb forward` to support non-root users~~
 - [ ] ~~Turn Xposed into optional dependency~~
 - [x] Fully support WebView based browsers
-- [ ] Fix [LSPatch for isolated process](https://github.com/LSPosed/LSPatch/issues/190) issue
+- [x] Fix [LSPatch for isolated process](https://github.com/LSPosed/LSPatch/issues/190) issue
 - [ ] Add recommended scripts to the front end manager
