@@ -7,7 +7,6 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   let filter = globalThis.ChromeXt_filter;
-  localStorage.setItem("ChromeXt_filter", filter);
   if (filter != null) {
     filter = JSON.parse(filter).join(", ");
     try {

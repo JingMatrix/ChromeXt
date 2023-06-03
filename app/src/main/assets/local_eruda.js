@@ -5,7 +5,7 @@ if (
   class Filter {
     #filter = [];
     constructor() {}
-    updateCosmeticFilter() {
+    #write() {
       let filter = "";
       if (this.#filter.length > 0) {
         filter = "" + JSON.stringify(this.#filter);
@@ -17,16 +17,12 @@ if (
         })
       );
     }
-    refresh() {
-      let filter = localStorage.getItem("ChromeXt_filter");
-      try {
+    parseFilter(filter) {
+      if (typeof filter == "string") {
         filter = JSON.parse(filter);
         if (Array.isArray(filter)) {
           this.#filter = filter;
-          this.updateCosmeticFilter();
         }
-      } catch {
-        localStorage.removeItem("ChromeXt_filter");
       }
     }
     add(rule) {
@@ -47,22 +43,11 @@ if (
     }
     new() {
       this.#filter.push("");
-      this.#write();
     }
-    #write() {
-      if (this.#filter.length > 0) {
-        let filter = JSON.stringify(this.#filter);
-        localStorage.setItem("ChromeXt_filter", filter);
-      } else {
-        localStorage.removeItem("ChromeXt_filter");
-      }
-      this.updateCosmeticFilter();
-    }
-    save() {
+    save(container) {
       this.#filter = [];
-      document
-        .querySelector("#eruda")
-        .shadowRoot.querySelectorAll(".eruda-filter-item")
+      container
+        .querySelectorAll(".eruda-filter-item")
         .forEach((it) => this.#filter.push(it.innerText.trim()));
       this.remove("");
     }
@@ -72,7 +57,7 @@ if (
   class elements extends eruda.Elements {
     constructor() {
       super();
-      eruda._filter.refresh();
+      eruda._filter.parseFilter(globalThis.ChromeXt_filter);
       this._deleteNode = () => {
         const node = this._curNode;
         const selector = generateQuerySelector(node);
@@ -103,12 +88,14 @@ if (
           eruda._filter.remove(rule);
           self.refreshChromeXtFilter();
         })
-        .on("click", ".eruda-add-filter", () => {
+        .on("click", ".eruda-new-filter", () => {
+          eruda._filter.save(this._$ChromeXtFilter[0]);
           eruda._filter.new();
           self.refreshChromeXtFilter();
+          this._$ChromeXtFilter.find(".eruda-filter-item").last()[0].focus();
         })
         .on("click", ".eruda-save-filter", () => {
-          eruda._filter.save();
+          eruda._filter.save(this._$ChromeXtFilter[0]);
           self.refreshChromeXtFilter();
           container.notify("Filter Saved");
         })
@@ -178,7 +165,7 @@ if (
         "btn save-filter"
       )}" style="font-size:12px;"><span>💾</span></div>
 			<div class="${c(
-        "btn add-filter"
+        "btn new-filter"
       )}" style="font-size:12px;"><span>➕</span></div>
 		</h2>
 		<ul>${filterHtml}</ul>
@@ -221,7 +208,6 @@ if (
                 this._$el.find("li.chromext-user-agent > div").text(),
             })
           );
-
         }
       );
 
