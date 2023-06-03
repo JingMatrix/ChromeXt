@@ -39,7 +39,7 @@ object readerMode {
     val mDistillerUrl =
         readerModeManager!!.getDeclaredFields().filter { it.type == UserScriptProxy.gURL }.last()!!
     val activateReaderMode =
-        // This is purely luck, there are other methods with the same signatures
+        // There exist other methods with the same signatures
         findMethod(readerModeManager!!) {
           getParameterTypes().size == 0 && getReturnType() == Void.TYPE
         }
@@ -97,7 +97,7 @@ object MenuHook : BaseHook() {
               pageInfoController!!.invokeMethod() { name == "destroy" }
             }
           }
-          (proxy.mRowWrapper.get(it.thisObject) as LinearLayout).addView(erudaRow)
+          (proxy.mRowWrapper!!.get(it.thisObject) as LinearLayout).addView(erudaRow)
         }
       }
 
@@ -226,14 +226,21 @@ object MenuHook : BaseHook() {
 
       var findReaderHook: Unhook? = null
       findReaderHook =
-          proxy.emptyTabObserver.getDeclaredConstructors()[0].hookAfter {
-            val subType = it.thisObject::class.java
-            if (subType.getInterfaces().size == 1 &&
-                subType.getDeclaredFields().find { it.getType() == proxy.propertyModel } != null) {
-              readerMode.init(subType)
-              findReaderHook!!.unhook()
-            }
-          }
+          findMethod(proxy.tabImpl) {
+                getParameterTypes() contentDeepEquals arrayOf(proxy.emptyTabObserver) &&
+                    getReturnType() == Void.TYPE
+                // There exist other methods with the same signatures
+              }
+              // public void addObserver(TabObserver observer)
+              .hookAfter {
+                val subType = it.args[0]::class.java
+                if (subType.getInterfaces().size == 1 &&
+                    subType.getDeclaredFields().find { it.getType() == proxy.propertyModel } !=
+                        null) {
+                  readerMode.init(subType)
+                  findReaderHook!!.unhook()
+                }
+              }
     }
 
     // var findSwipeRefreshHandler: Unhook? = null

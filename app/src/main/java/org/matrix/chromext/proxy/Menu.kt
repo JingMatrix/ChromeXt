@@ -44,7 +44,7 @@ object MenuProxy {
             .find { it.type.getSuperclass() == FrameLayout::class.java }!!
             .type
       }
-  val mRowWrapper = pageInfoView.getDeclaredFields().find { it.type == LinearLayout::class.java }!!
+  val mRowWrapper = pageInfoView.getDeclaredFields().find { it.type == LinearLayout::class.java }
   val pageInfoControllerRef =
       // A particular WebContentsObserver designed for PageInfoController
       pageInfoController
@@ -59,6 +59,7 @@ object MenuProxy {
   val emptyTabObserver =
       Chrome.load("org.chromium.chrome.browser.login.ChromeHttpAuthHandler").getSuperclass()
           as Class<*>
+  val tabImpl = Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
 
   private val preference = Chrome.load("androidx.preference.Preference")
   private val mClickListener =
