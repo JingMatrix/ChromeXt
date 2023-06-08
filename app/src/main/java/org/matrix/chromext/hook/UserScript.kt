@@ -26,12 +26,12 @@ object UserScriptHook : BaseHook() {
     val cosmeticFilter =
         ctx.assets.open("cosmetic-filter.js").bufferedReader().use { it.readText() }
 
-    proxy.tabModelJniBridge.getDeclaredConstructors()[0].hookAfter {
-      TabModel.update(it.thisObject)
-    }
+    // proxy.tabModelJniBridge.getDeclaredConstructors()[0].hookAfter {
+    //   TabModel.update(it.thisObject)
+    // }
 
-    findMethod(proxy.tabModelJniBridge) { name == "destroy" }
-        .hookBefore { TabModel.dropModel(it.thisObject) }
+    // findMethod(proxy.tabModelJniBridge) { name == "destroy" }
+    //     .hookBefore { TabModel.dropModel(it.thisObject) }
 
     findMethod(proxy.tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
         // public void onUpdateUrl(GURL url)

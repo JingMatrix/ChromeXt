@@ -169,6 +169,7 @@ object MenuHook : BaseHook() {
                       val ctx = mContext.get(it.thisObject) as Context
                       ResourceMerge.enrich(ctx)
                       val menu = it.args[0] as Menu
+                      TabModel.refresh(it.args[1])
 
                       if (menu.size() <= 20 ||
                           !(it.args[2] as Boolean) ||
@@ -238,6 +239,7 @@ object MenuHook : BaseHook() {
                     subType.getDeclaredFields().find { it.getType() == proxy.propertyModel } !=
                         null) {
                   readerMode.init(subType)
+                  TabModel.refresh(it.thisObject)
                   findReaderHook!!.unhook()
                 }
               }
