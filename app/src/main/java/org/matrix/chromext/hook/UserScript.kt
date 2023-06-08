@@ -3,7 +3,6 @@ package org.matrix.chromext.hook
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DEV_FRONT_END
-import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
@@ -26,17 +25,10 @@ object UserScriptHook : BaseHook() {
     val cosmeticFilter =
         ctx.assets.open("cosmetic-filter.js").bufferedReader().use { it.readText() }
 
-    // proxy.tabModelJniBridge.getDeclaredConstructors()[0].hookAfter {
-    //   TabModel.update(it.thisObject)
-    // }
-
-    // findMethod(proxy.tabModelJniBridge) { name == "destroy" }
-    //     .hookBefore { TabModel.dropModel(it.thisObject) }
-
     findMethod(proxy.tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
         // public void onUpdateUrl(GURL url)
         .hookAfter {
-          TabModel.refresh(proxy.mTab.get(it.thisObject))
+          Chrome.refreshTab(proxy.mTab.get(it.thisObject))
           val url = proxy.parseUrl(it.args[0])!!
           proxy.evaluateJavascript("globalThis.ChromeXt=console.debug.bind(console);")
           if (url.endsWith(".user.js")) {
@@ -74,7 +66,7 @@ object UserScriptHook : BaseHook() {
                   runCatching {
                         val callback = ScriptDbManager.on(action, payload)
                         if (callback != null) {
-                          TabModel.refresh(proxy.mTab.get(it.thisObject))
+                          Chrome.refreshTab(proxy.mTab.get(it.thisObject))
                           proxy.evaluateJavascript(callback)
                         }
                       }

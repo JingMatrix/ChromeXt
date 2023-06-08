@@ -12,7 +12,6 @@ import org.matrix.chromext.DevTools
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.ERUD_URL
-import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
@@ -148,7 +147,7 @@ object ScriptDbManager {
       "userAgentSpoof" -> {
         val loadUrlParams = UserScriptProxy.newLoadUrlParams(payload)
         if (UserScriptProxy.userAgentHook(payload, loadUrlParams)) {
-          UserScriptProxy.loadUrl.invoke(TabModel.getTab(), loadUrlParams)
+          UserScriptProxy.loadUrl.invoke(Chrome.getTab(), loadUrlParams)
           callback = "console.log('User-Agent spoofed');"
         }
       }

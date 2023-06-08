@@ -6,6 +6,7 @@ import org.matrix.chromext.utils.Log
 
 object Chrome {
   private var mContext: WeakReference<Context>? = null
+  private var currentTab: WeakReference<Any>? = null
   var isDev = false
   var isEdge = false
   var isVivaldi = false
@@ -30,5 +31,13 @@ object Chrome {
 
   fun load(className: String): Class<*> {
     return getContext().getClassLoader().loadClass(className)
+  }
+
+  fun getTab(): Any? {
+    return currentTab?.get()
+  }
+
+  fun refreshTab(tab: Any?) {
+    if (tab != null) currentTab = WeakReference(tab)
   }
 }

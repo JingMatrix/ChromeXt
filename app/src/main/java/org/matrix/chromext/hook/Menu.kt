@@ -17,7 +17,6 @@ import org.matrix.chromext.Chrome
 import org.matrix.chromext.DevTools
 import org.matrix.chromext.R
 import org.matrix.chromext.proxy.MenuProxy
-import org.matrix.chromext.proxy.TabModel
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.script.openEruda
@@ -45,7 +44,7 @@ object readerMode {
         }
 
     val manager =
-        readerModeManager!!.getDeclaredConstructors()[0].newInstance(TabModel.getTab(), null)
+        readerModeManager!!.getDeclaredConstructors()[0].newInstance(Chrome.getTab(), null)
 
     mDistillerUrl.setAccessible(true)
     mDistillerUrl.set(
@@ -61,6 +60,10 @@ object readerMode {
 
 object MenuHook : BaseHook() {
 
+  private fun getUrl(): String {
+    return UserScriptProxy.parseUrl(Chrome.getTab()?.invokeMethod { name == "getUrl" }) ?: ""
+  }
+
   override fun init() {
 
     val proxy = MenuProxy
@@ -74,7 +77,7 @@ object MenuHook : BaseHook() {
       proxy.pageInfoView.getDeclaredConstructors()[0].hookAfter {
         val ctx = it.args[0] as Context
         ResourceMerge.enrich(ctx)
-        val url = TabModel.getUrl()
+        val url = getUrl()
         if (!url.startsWith("edge://")) {
           val erudaRow =
               proxy.pageInfoRowView.getDeclaredConstructors()[0].newInstance(ctx, null) as ViewGroup
@@ -111,8 +114,8 @@ object MenuHook : BaseHook() {
         }
         when (ctx.resources.getResourceName(id)) {
           "org.matrix.chromext:id/install_script_id" -> {
-            if (TabModel.getUrl().startsWith("https://raw.githubusercontent.com/")) {
-              Download.start(TabModel.getUrl(), "UserScript/script.js") {
+            if (getUrl().startsWith("https://raw.githubusercontent.com/")) {
+              Download.start(getUrl(), "UserScript/script.js") {
                 ScriptDbManager.on("installScript", it)
               }
             } else {
@@ -122,7 +125,7 @@ object MenuHook : BaseHook() {
           "org.matrix.chromext:id/developer_tools_id" -> DevTools.start()
           "org.matrix.chromext:id/eruda_console_id" -> UserScriptProxy.evaluateJavascript(openEruda)
           "${ctx.getPackageName()}:id/reload_menu_id" -> {
-            return ScriptDbManager.on("userAgentSpoof", TabModel.getUrl()) != null
+            return ScriptDbManager.on("userAgentSpoof", getUrl()) != null
           }
         }
         return false
@@ -169,7 +172,7 @@ object MenuHook : BaseHook() {
                       val ctx = mContext.get(it.thisObject) as Context
                       ResourceMerge.enrich(ctx)
                       val menu = it.args[0] as Menu
-                      TabModel.refresh(it.args[1])
+                      Chrome.refreshTab(it.args[1])
 
                       if (menu.size() <= 20 ||
                           !(it.args[2] as Boolean) ||
@@ -198,12 +201,12 @@ object MenuHook : BaseHook() {
                       @Suppress("UNCHECKED_CAST")
                       val items = mItems.get(menu) as ArrayList<MenuItem>
 
-                      if (TabModel.getUrl().endsWith("/ChromeXt/")) {
+                      if (getUrl().endsWith("/ChromeXt/")) {
                         // Drop the Eruda console menu
                         items.removeLast()
                       }
 
-                      if (TabModel.getUrl().endsWith(".user.js")) {
+                      if (getUrl().endsWith(".user.js")) {
                         // Drop the Eruda console and the Dev Tools menus
                         items.removeLast()
                         items.removeLast()
@@ -239,7 +242,7 @@ object MenuHook : BaseHook() {
                     subType.getDeclaredFields().find { it.getType() == proxy.propertyModel } !=
                         null) {
                   readerMode.init(subType)
-                  TabModel.refresh(it.thisObject)
+                  Chrome.refreshTab(it.thisObject)
                   findReaderHook!!.unhook()
                 }
               }
@@ -256,7 +259,7 @@ object MenuHook : BaseHook() {
     //             // public void release(boolean allowRefresh)
     //             .hookBefore {
     //               if (it.args[0] as Boolean) {
-    //                 it.args[0] = ScriptDbManager.on("userAgentSpoof", TabModel.getUrl()) == null
+    //                 it.args[0] = ScriptDbManager.on("userAgentSpoof", getUrl()) == null
     //               }
     //             }
     //       }
