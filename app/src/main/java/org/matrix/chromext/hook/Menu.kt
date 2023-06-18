@@ -154,9 +154,7 @@ object MenuHook : BaseHook() {
                 val appMenuPropertiesDelegateImpl =
                     it.result::class.java.getSuperclass() as Class<*>
                 val mContext =
-                    appMenuPropertiesDelegateImpl.getDeclaredFields().find {
-                      it.type == Context::class.java
-                    }!!
+                    findField(appMenuPropertiesDelegateImpl, true) { type == Context::class.java }
                 mContext.setAccessible(true)
                 findMethod(appMenuPropertiesDelegateImpl, true) {
                       getParameterTypes() contentDeepEquals
@@ -239,8 +237,7 @@ object MenuHook : BaseHook() {
               .hookAfter {
                 val subType = it.args[0]::class.java
                 if (subType.getInterfaces().size == 1 &&
-                    subType.getDeclaredFields().find { it.getType() == proxy.propertyModel } !=
-                        null) {
+                    findFieldOrNull(subType) { type == proxy.propertyModel } != null) {
                   readerMode.init(subType)
                   Chrome.refreshTab(it.thisObject)
                   findReaderHook!!.unhook()
