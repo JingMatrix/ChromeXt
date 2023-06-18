@@ -11,6 +11,8 @@ import kotlin.text.Regex
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.findField
+import org.matrix.chromext.utils.findFieldOrNull
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookBefore
 
@@ -39,21 +41,16 @@ object MenuProxy {
       if (Chrome.isEdge) {
         Chrome.load("org.chromium.components.page_info.PageInfoView")
       } else {
-        pageInfoController
-            .getDeclaredFields()
-            .find { it.type.getSuperclass() == FrameLayout::class.java }!!
-            .type
+        findField(pageInfoController) { type.getSuperclass() == FrameLayout::class.java }.type
       }
-  val mRowWrapper = pageInfoView.getDeclaredFields().find { it.type == LinearLayout::class.java }
+  val mRowWrapper = findFieldOrNull(pageInfoView) { type == LinearLayout::class.java }
   val pageInfoControllerRef =
       // A particular WebContentsObserver designed for PageInfoController
-      pageInfoController
-          .getDeclaredFields()
-          .find {
-            it.type.getDeclaredFields().size == 1 &&
-                (it.type.getDeclaredFields()[0].type == pageInfoController ||
-                    it.type.getDeclaredFields()[0].type == WeakReference::class.java)
-          }!!
+      findField(pageInfoController) {
+            type.getDeclaredFields().size == 1 &&
+                (type.getDeclaredFields()[0].type == pageInfoController ||
+                    type.getDeclaredFields()[0].type == WeakReference::class.java)
+          }
           .type
 
   val emptyTabObserver =
@@ -63,10 +60,10 @@ object MenuProxy {
 
   private val preference = Chrome.load("androidx.preference.Preference")
   private val mClickListener =
-      preference.getDeclaredFields().find {
-        it.getType() == OnClickListener::class.java ||
-            it.getType().getInterfaces().contains(OnClickListener::class.java)
-      }!!
+      findField(preference) {
+        type == OnClickListener::class.java ||
+            type.getInterfaces().contains(OnClickListener::class.java)
+      }
   private val setSummary =
       findMethod(preference) {
         getParameterTypes() contentDeepEquals arrayOf(CharSequence::class.java) &&
