@@ -112,8 +112,6 @@ One can disable it through the `Developer options` menu.
 
 ChromeXt adds a book icon in the page menu to enable reader (distiller) mode manually.
 
-This function is not available in `Brave` browser for unknown reason.
-
 ### AD Blocker solution
 
 For blocking network requests, I recommend to use `AdAway` or any proxy AD Blocker such as `clash`.

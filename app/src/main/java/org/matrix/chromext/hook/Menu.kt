@@ -7,6 +7,7 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -156,6 +157,30 @@ object MenuHook : BaseHook() {
                 val mContext =
                     findField(appMenuPropertiesDelegateImpl, true) { type == Context::class.java }
                 mContext.setAccessible(true)
+
+                if (Chrome.isBrave) {
+                  // Brave browser the first row menu with class AppMenuIconRowFooter,
+                  // and it customize the menu by onFooterViewInflated() function in
+                  // https://github.com/brave/brave-core/blob/master/android/java/
+                  // org/chromium/chrome/browser/appmenu/BraveTabbedAppMenuPropertiesDelegate.java
+                  findMethod(it.result::class.java, true) {
+                        getParameterTypes().size == 2 && getParameterTypes()[1] == View::class.java
+                      }
+                      // public void onFooterViewInflated(AppMenuHandler appMenuHandler, View view)
+                      .hookAfter {
+                        val appMenuIconRowFooter = it.args[1] as LinearLayout
+                        val bookmarkButton =
+                            (appMenuIconRowFooter.getChildAt(1) as LinearLayout).getChildAt(1)
+                                as ImageButton
+                        bookmarkButton.setVisibility(View.VISIBLE)
+                        val ctx = mContext.get(it.thisObject) as Context
+                        ResourceMerge.enrich(ctx)
+                        bookmarkButton.setImageResource(R.drawable.ic_book)
+                        bookmarkButton.setId(readerMode.ID)
+                      }
+                  return@hookAfter
+                }
+
                 findMethod(appMenuPropertiesDelegateImpl, true) {
                       getParameterTypes() contentDeepEquals
                           arrayOf(
@@ -179,9 +204,9 @@ object MenuHook : BaseHook() {
                         return@hookBefore
                       }
 
-                      if (menu.getItem(0).hasSubMenu() && readerMode.isInit()) {
-                        // The first menu item shou be the row_menu
-                        // Brave browser has already replaced this menu
+                      if (menu.getItem(0).hasSubMenu() && readerMode.isInit() && !Chrome.isBrave) {
+                        // The first menu item should be the @id/icon_row_menu_id
+
                         val infoMenu = menu.getItem(0).getSubMenu()!!.getItem(3)
                         infoMenu.setIcon(R.drawable.ic_book)
                         infoMenu.setEnabled(true)

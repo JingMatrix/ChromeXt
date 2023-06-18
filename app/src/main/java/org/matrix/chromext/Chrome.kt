@@ -10,6 +10,7 @@ object Chrome {
   var isDev = false
   var isEdge = false
   var isVivaldi = false
+  var isBrave = false
 
   fun init(ctx: Context) {
     val initialized = mContext != null
@@ -21,6 +22,7 @@ object Chrome {
     val packageInfo = ctx.getPackageManager().getPackageInfo(packageName, 0)
     isEdge = packageName.startsWith("com.microsoft.emmx")
     isVivaldi = packageName == "com.vivaldi.browser"
+    isBrave = packageName.startsWith("com.brave.browser")
     isDev = packageName.endsWith("canary") || packageName.endsWith("dev") || isVivaldi
     Log.i("Package: ${packageName}, v${packageInfo!!.versionName}")
   }
