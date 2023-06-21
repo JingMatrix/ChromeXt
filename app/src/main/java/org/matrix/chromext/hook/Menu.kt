@@ -193,6 +193,7 @@ object MenuHook : BaseHook() {
                     // currentTab, boolean canShowRequestDesktopSite, boolean isChromeScheme)
                     .hookBefore {
                       val ctx = mContext.get(it.thisObject) as Context
+                      Chrome.init(ctx)
                       ResourceMerge.enrich(ctx)
                       val menu = it.args[0] as Menu
                       Chrome.refreshTab(it.args[1])
