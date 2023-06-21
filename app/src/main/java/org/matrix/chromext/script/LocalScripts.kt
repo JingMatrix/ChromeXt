@@ -274,9 +274,11 @@ fun encodeScript(script: Script): String? {
               "const GM_listValues = ()=> [...Array(localStorage.length).keys()].map(x=>localStorage.key(x));" +
                   code
       else ->
-          code =
-              "function ${function}(...args) {console.error('${function} is not implemented in ChromeXt yet, called with', args)}" +
-                  code
+          if (!function.startsWith("GM.")) {
+            code =
+                "function ${function}(...args) {console.error('${function} is not implemented in ChromeXt yet, called with', args)}" +
+                    code
+          }
     }
   }
 
