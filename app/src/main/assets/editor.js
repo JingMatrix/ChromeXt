@@ -28,6 +28,9 @@ function editor() {
   );
   style.textContent = `
 	@import url('https://unpkg.com/@speed-highlight/core/dist/themes/default.css');
+	html {
+		overflow-x: hidden;
+	}
 	body {
 		margin: 0;
 	}
