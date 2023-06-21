@@ -173,7 +173,7 @@ Here are corresponding files you might want / need to change:
 - [x] Support @resource API
 - [x] Make GestureNav Fix optional
 - [x] Add an open source License
-- [ ] ~~Support mocking User-Agent~~
+- [x] Support mocking User-Agent
 - [ ] ~~Support [urlFilter](https://developer.chrome.com/docs/extensions/reference/declarativeNetRequest/#type-RuleCondition) syntax~~
 - [x] Improve `Open in Chrome` function
 - [x] Implement fully `GM_info`
@@ -187,4 +187,5 @@ Here are corresponding files you might want / need to change:
 - [ ] ~~Turn Xposed into optional dependency~~
 - [x] Fully support WebView based browsers
 - [x] Fix [LSPatch for isolated process](https://github.com/LSPosed/LSPatch/issues/190) issue
+- [ ] Implement UserScript storage
 - [ ] Add recommended scripts to the front end manager
