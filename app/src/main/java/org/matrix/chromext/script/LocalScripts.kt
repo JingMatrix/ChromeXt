@@ -55,7 +55,14 @@ function GM_xmlhttpRequest(details) {
 	const xmlhr = new XMLHttpRequest();
 
 	for (const [key, value] of Object.entries(details)) {
-		if (key.startsWith("on")) {
+		if (key == "onload") {
+			xmlhr.addEventListener("load", (e) => {
+				let response = e.target;
+				response.responseHeaders = response.getAllResponseHeaders();
+				response.finalUrl = response.responseURL;
+				value(response);
+			});
+		} else if (key.startsWith("on")) {
 			xmlhr.addEventListener(key.substring(2), value);
 		} else {
 			xmlhr[key] = value;
@@ -109,6 +116,9 @@ const val GM_openInTab =
     """
 function GM_openInTab(url, options) {
 	const gm_window = window.open(url, "_blank");
+	if (typeof options == "boolean") {
+		options = {active: !options};
+	}
 	if ("active" in options && options.active ) {
 		gm_window.focus();
 	}
@@ -141,7 +151,7 @@ function GM_addValueChangeListener(key, listener) {
 const val GM_setValue =
     """
 function GM_setValue(key, value) {
-	if (typeof ChromeXt.ValueChangeListener != undefined) {
+	if (typeof ChromeXt.ValueChangeListener != "undefined") {
 		const old_value = localStorage.getItem(key + '_ChromeXt_Value');
 		if (old_value != null) {
 			ChromeXt.ValueChangeListener.forEach(e => {if (e.key == key) {e.listener(JSON.parse(old_value), value, false)}});
