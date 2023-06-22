@@ -132,6 +132,13 @@ function GM_registerMenuCommand(title, listener, accessKey="Dummy") {
 	if (typeof ChromeXt.MenuCommand == "undefined") {
 		ChromeXt.MenuCommand = [];
 	}
+	const index = ChromeXt.MenuCommand.findIndex(
+		(e) => e.title == title
+	);
+	if (index != -1) {
+		ChromeXt.MenuCommand[index].listener = listener;
+		return index;
+	}
 	ChromeXt.MenuCommand.push({title, listener});
 	return ChromeXt.MenuCommand.length - 1;
 }
@@ -142,6 +149,13 @@ const val GM_addValueChangeListener =
 function GM_addValueChangeListener(key, listener) {
 	if (typeof ChromeXt.ValueChangeListener == "undefined") {
 		ChromeXt.ValueChangeListener = [];
+	}
+	const index = ChromeXt.ValueChangeListener.findIndex(
+		(e) => e.key == key
+	);
+	if (index != -1) {
+		ChromeXt.ValueChangeListener[index].listener = listener;
+		return index;
 	}
 	ChromeXt.ValueChangeListener.push({key, listener});
 	return ChromeXt.ValueChangeListener.length - 1;
