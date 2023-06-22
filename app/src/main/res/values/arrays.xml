@@ -16,5 +16,6 @@
 		<item>us.spotco.mulch</item>
 		<item>com.brave.browser</item>
 		<item>com.brave.browser_beta</item>
+		<item>com.brave.browser_nightly</item>
 	</string-array>
 </resources>

@@ -16,6 +16,7 @@
 		<package android:name="us.spotco.mulch"/>
 		<package android:name="com.brave.browser"/>
 		<package android:name="com.brave.browser_beta"/>
+		<package android:name="com.brave.browser_nightly"/>
 	</queries>
 
     <application

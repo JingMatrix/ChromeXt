@@ -178,7 +178,6 @@ object MenuHook : BaseHook() {
                         bookmarkButton.setImageResource(R.drawable.ic_book)
                         bookmarkButton.setId(readerMode.ID)
                       }
-                  return@hookAfter
                 }
 
                 findMethod(appMenuPropertiesDelegateImpl, true) {

@@ -33,7 +33,8 @@ val supportedPackages =
         "org.chromium.thorium",
         "us.spotco.mulch",
         "com.brave.browser",
-        "com.brave.browser_beta")
+        "com.brave.browser_beta",
+        "com.brave.browser_nightly")
 
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
