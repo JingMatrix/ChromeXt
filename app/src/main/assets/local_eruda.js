@@ -134,8 +134,7 @@ if (
         ).join("");
         this._$ChromeXtMenuCommand.html(`<h2 class="${c(
           "title"
-        )}">UserScript Commands</h2>
-		<div style="display: flex; flex-wrap: wrap; justify-content: space-around;">${commands}</div>
+        )}">UserScript Commands</h2><div style="display: flex; flex-wrap: wrap; justify-content: space-around;">${commands}</div>
       `);
       }
     }
@@ -234,7 +233,7 @@ if (
   eruda._configured = true;
   eruda._font_fix = `
 	[class^='eruda-icon-']:before {
-		font-size: 14px;
+	  font-size: 14px;
 	}
 	.eruda-icon-arrow-left:before {
 	  content: '←';
@@ -328,7 +327,6 @@ if (
 	`;
   eruda._localConfig = () => {
     if (!document.querySelector("#eruda")) {
-      reloadEruda();
       return;
     }
     addErudaStyle(
