@@ -128,10 +128,12 @@ if (
         typeof ChromeXt.MenuCommand != "undefined" &&
         ChromeXt.MenuCommand.length > 0
       ) {
-        const commands = ChromeXt.MenuCommand.map(
-          (command, index) =>
-            `<span data-index=${index} style="padding: 0.3em; margin: 0.3em; border: 0.5px solid violet;" class="script-command">${command.title}</span>`
-        ).join("");
+        const commands = ChromeXt.MenuCommand.filter((m) => m.enabled)
+          .map(
+            (command, index) =>
+              `<span data-index=${index} style="padding: 0.3em; margin: 0.3em; border: 0.5px solid violet;" class="script-command">${command.title}</span>`
+          )
+          .join("");
         this._$ChromeXtMenuCommand.html(`<h2 class="${c(
           "title"
         )}">UserScript Commands</h2><div style="display: flex; flex-wrap: wrap; justify-content: space-around;">${commands}</div>
