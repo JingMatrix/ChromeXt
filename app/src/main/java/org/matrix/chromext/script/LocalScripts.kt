@@ -171,7 +171,26 @@ function GM_setValue(key, value) {
 			ChromeXt.ValueChangeListener.forEach(e => {if (e.key == key) {e.listener(JSON.parse(old_value), value, false)}});
 		}
 	}
-	localStorage.setItem(key + '_ChromeXt_Value', JSON.stringify(value));
+	globalThis.ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, function: 'setValue', key, value}}));
+}
+"""
+
+const val GM_getValue =
+    """
+if (!('scriptStorage' in globalThis.ChromeXt)) {
+	ChromeXt.scriptStorage = window.addEventListener('scriptStorage', (e) => {
+		if (e.detail.id !== GM_info.script.id) {return;}
+		if (e.detail.function == 'setValue') {
+			localStorage.setItem(e.detail.key + '_ChromeXt_Value', JSON.stringify(e.detail.value));
+		}
+		if (e.detail.function == 'deleteValue') {
+			localStorage.removeItem(e.detail.key + '_ChromeXt_Value');
+		}
+	});
+}
+function GM_getValue(key, default_value) {
+	let value = localStorage.getItem(key + '_ChromeXt_Value') || default_value;
+	try { value = JSON.parse(value) } finally { return value }
 }
 """
 
@@ -193,6 +212,7 @@ function GM_bootstrap() {
 	delete meta.include;
 	delete meta.match;
 	delete meta.exclude;
+	meta.id = meta.namespace + ':' + meta.name;
 }
 """
 
@@ -235,13 +255,10 @@ fun encodeScript(script: Script): String? {
       "GM_log" -> code = "const GM_log = console.log.bind(console);" + code
       "GM_deleteValue" ->
           code =
-              "function GM_deleteValue(key) {localStorage.removeItem(key + '_ChromeXt_Value')};" +
+              "function GM_deleteValue(key) {globalThis.ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, function: 'deleteValue', key}}));};" +
                   code
       "GM_setValue" -> code = GM_setValue + code
-      "GM_getValue" ->
-          code =
-              "function GM_getValue(key, default_value) {let value = localStorage.getItem(key + '_ChromeXt_Value') || default_value;try {value = JSON.parse(value)} finally {return value}};" +
-                  code
+      "GM_getValue" -> code = GM_getValue + code
       "GM_addValueChangeListener" -> code = GM_addValueChangeListener + code
       "GM_removeValueChangeListener" ->
           code =
@@ -295,7 +312,7 @@ fun encodeScript(script: Script): String? {
       }
       "GM_listValues" ->
           code =
-              "const GM_listValues = ()=> [...Array(localStorage.length).keys()].map(x=>localStorage.key(x));" +
+              "const GM_listValues = ()=> [...Array(localStorage.length).keys()].reduce((a, i) => {let key=localStorage.key(i); if (key.endsWith('_ChromeXt_Value')){a.push(key.slice(0, -15))}; return a}, []);" +
                   code
       else ->
           if (!function.startsWith("GM.")) {

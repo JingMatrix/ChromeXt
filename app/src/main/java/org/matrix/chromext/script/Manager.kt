@@ -144,6 +144,11 @@ object ScriptDbManager {
           callback = "alert('Fail to install ${payload}');"
         }
       }
+      "scriptStorage" -> {
+        if (UserScriptHook.isInit) {
+          Chrome.broadcast("scriptStorage", "{detail:${payload}}")
+        }
+      }
       "userAgentSpoof" -> {
         val loadUrlParams = UserScriptProxy.newLoadUrlParams(payload)
         if (UserScriptProxy.userAgentHook(payload, loadUrlParams)) {
