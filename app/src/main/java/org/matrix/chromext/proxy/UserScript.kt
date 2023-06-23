@@ -17,6 +17,7 @@ object UserScriptProxy {
 
   val gURL = Chrome.load("org.chromium.url.GURL")
   val loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
+  val tabModelJniBridge = Chrome.load("org.chromium.chrome.browser.tabmodel.TabModelJniBridge")
   val tabWebContentsDelegateAndroidImpl =
       Chrome.load("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
   val navigationControllerImpl =
@@ -33,8 +34,10 @@ object UserScriptProxy {
       loadUrlParams.getDeclaredFields().filter { it.getType() == String::class.java }[1]
   private val mSpec = gURL.getDeclaredField("a")
 
-  private fun loadUrl(url: String) {
-    loadUrl.invoke(Chrome.getTab(), newLoadUrlParams(url))
+  fun loadUrl(url: String, tab: Any? = Chrome.getTab()) {
+    if (tab != null) {
+      loadUrl.invoke(tab, newLoadUrlParams(url))
+    }
   }
 
   fun newLoadUrlParams(url: String): Any {

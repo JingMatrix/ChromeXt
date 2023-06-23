@@ -25,6 +25,13 @@ object UserScriptHook : BaseHook() {
     val cosmeticFilter =
         ctx.assets.open("cosmetic-filter.js").bufferedReader().use { it.readText() }
 
+    proxy.tabModelJniBridge.getDeclaredConstructors()[0].hookAfter {
+      Chrome.addTabModel(it.thisObject)
+    }
+
+    findMethod(proxy.tabModelJniBridge) { name == "destroy" }
+        .hookBefore { Chrome.dropTabModel(it.thisObject) }
+
     findMethod(proxy.tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
         // public void onUpdateUrl(GURL url)
         .hookAfter {
@@ -70,7 +77,10 @@ object UserScriptHook : BaseHook() {
                           proxy.evaluateJavascript(callback)
                         }
                       }
-                      .onFailure { Log.w("Failed with ${action}: ${payload}") }
+                      .onFailure {
+                        Log.w("Failed with ${action}: ${payload}")
+                        Log.ex(it)
+                      }
                 }
                 .onFailure { Log.d("Ignore console.debug: " + text) }
           } else {
