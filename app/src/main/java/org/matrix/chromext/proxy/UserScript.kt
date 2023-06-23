@@ -22,6 +22,7 @@ object UserScriptProxy {
       Chrome.load("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
   val navigationControllerImpl =
       Chrome.load("org.chromium.content.browser.framehost.NavigationControllerImpl")
+  val chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
   val mTab = tabWebContentsDelegateAndroidImpl.getDeclaredField("a")
   val loadUrl =
       findMethod(Chrome.load("org.chromium.chrome.browser.tab.TabImpl")) {

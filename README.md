@@ -187,5 +187,5 @@ Here are corresponding files you might want / need to change:
 - [ ] ~~Turn Xposed into optional dependency~~
 - [x] Fully support WebView based browsers
 - [x] Fix [LSPatch for isolated process](https://github.com/LSPosed/LSPatch/issues/190) issue
-- [ ] Implement UserScript storage
+- [x] Implement UserScript storage
 - [ ] Add recommended scripts to the front end manager

@@ -7,6 +7,7 @@ import android.database.CursorWindow
 import android.os.Build
 import java.io.File
 import java.io.FileReader
+import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DevTools
 import org.matrix.chromext.hook.UserScriptHook
@@ -50,12 +51,21 @@ object ScriptDbManager {
             put("exclude", it.exclude.joinToString(separator = SEP))
             put("require", it.require.joinToString(separator = SEP))
             put("resource", it.resource.joinToString(separator = SEP))
+            put("storage", it.storage)
           }
       if (db.insert("script", null, values).toString() == "-1") {
         Log.e("Insertion failed with: " + it.id)
       }
     }
     dbHelper.close()
+  }
+
+  fun updateScriptStorage() {
+    scripts.forEach {
+      if (it.storage != "") {
+        insert(it)
+      }
+    }
   }
 
   private fun query(
@@ -83,7 +93,9 @@ object ScriptDbManager {
         val exclude = getValueFromColumn("exclude")
         val require = getValueFromColumn("require")
         val resource = getValueFromColumn("resource")
-        val script = Script(id, match, grant, exclude, require, resource, meta, code, runAt)
+        val storage = getString(getColumnIndexOrThrow("storage"))
+        val script =
+            Script(id, match, grant, exclude, require, resource, meta, code, runAt, storage)
         quried_scripts.add(script)
       }
     }
@@ -147,6 +159,16 @@ object ScriptDbManager {
       "scriptStorage" -> {
         if (UserScriptHook.isInit) {
           Chrome.broadcast("scriptStorage", "{detail:${payload}}")
+          runCatching {
+                val detail = JSONObject(payload)
+                val id = detail.getString("id")
+                val data = detail.getString("data")
+                scripts.filter { it.id == id }.first().storage = data
+              }
+              .onFailure {
+                Log.d("Failure with scriptStorage: " + payload)
+                Log.ex(it)
+              }
         }
       }
       "userAgentSpoof" -> {

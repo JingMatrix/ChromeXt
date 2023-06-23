@@ -102,5 +102,11 @@ object UserScriptHook : BaseHook() {
           val url = proxy.parseUrl(it.args[0])!!
           proxy.userAgentHook(url, it.args[0])
         }
+
+    findMethod(proxy.chromeTabbedActivity) { name == "onStop" }
+        .hookBefore {
+          Log.d("Acitivity is stopping, save scriptStorage")
+          ScriptDbManager.updateScriptStorage()
+        }
   }
 }

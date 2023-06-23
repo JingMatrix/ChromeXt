@@ -133,13 +133,13 @@ function GM_registerMenuCommand(title, listener, accessKey="Dummy") {
 		ChromeXt.MenuCommand = [];
 	}
 	const index = ChromeXt.MenuCommand.findIndex(
-		(e) => e.title == title
+		(e) => e.id == GM_info.script.id && e.title == title
 	);
 	if (index != -1) {
 		ChromeXt.MenuCommand[index].listener = listener;
 		return index;
 	}
-	ChromeXt.MenuCommand.push({title, listener});
+	ChromeXt.MenuCommand.push({id: GM_info.script.id, title, listener, enabled: true});
 	return ChromeXt.MenuCommand.length - 1;
 }
 """
@@ -151,13 +151,13 @@ function GM_addValueChangeListener(key, listener) {
 		ChromeXt.ValueChangeListener = [];
 	}
 	const index = ChromeXt.ValueChangeListener.findIndex(
-		(e) => e.key == key
+		(e) => e.id == GM_info.script.id && e.key == key 
 	);
 	if (index != -1) {
 		ChromeXt.ValueChangeListener[index].listener = listener;
 		return index;
 	}
-	ChromeXt.ValueChangeListener.push({key, listener});
+	ChromeXt.ValueChangeListener.push({id: GM_info.script.id, key, listener, enabled: true});
 	return ChromeXt.ValueChangeListener.length - 1;
 }
 """
@@ -165,32 +165,26 @@ function GM_addValueChangeListener(key, listener) {
 const val GM_setValue =
     """
 function GM_setValue(key, value) {
-	if (typeof ChromeXt.ValueChangeListener != "undefined") {
-		const old_value = localStorage.getItem(key + '_ChromeXt_Value');
-		if (old_value != null) {
-			ChromeXt.ValueChangeListener.forEach(e => {if (e.key == key) {e.listener(JSON.parse(old_value), value, false)}});
-		}
+	if (key in ChromeXt.scriptStorage && JSON.stringify(ChromeXt.scriptStorage[key]) == JSON.stringify(value)) return;
+	ChromeXt.scriptStorage[key] = value;
+	globalThis.ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: ChromeXt.scriptStorage}}));
+}
+"""
+
+const val GM_deleteValue =
+    """
+function GM_deleteValue(key, value) {
+	if (key in ChromeXt.scriptStorage) {
+		delete ChromeXt.scriptStorage[key];
+		globalThis.ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: ChromeXt.scriptStorage}}));
 	}
-	globalThis.ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, function: 'setValue', key, value}}));
 }
 """
 
 const val GM_getValue =
     """
-if (!('scriptStorage' in globalThis.ChromeXt)) {
-	ChromeXt.scriptStorage = window.addEventListener('scriptStorage', (e) => {
-		if (e.detail.id !== GM_info.script.id) {return;}
-		if (e.detail.function == 'setValue') {
-			localStorage.setItem(e.detail.key + '_ChromeXt_Value', JSON.stringify(e.detail.value));
-		}
-		if (e.detail.function == 'deleteValue') {
-			localStorage.removeItem(e.detail.key + '_ChromeXt_Value');
-		}
-	});
-}
 function GM_getValue(key, default_value) {
-	let value = localStorage.getItem(key + '_ChromeXt_Value') || default_value;
-	try { value = JSON.parse(value) } finally { return value }
+	return key in ChromeXt.scriptStorage ? ChromeXt.scriptStorage[key] : default_value; 
 }
 """
 
@@ -212,7 +206,6 @@ function GM_bootstrap() {
 	delete meta.include;
 	delete meta.match;
 	delete meta.exclude;
-	meta.id = meta.namespace + ':' + meta.name;
 }
 """
 
@@ -221,6 +214,32 @@ fun encodeScript(script: Script): String? {
 
   if (!script.meta.startsWith("// ==UserScript==")) {
     code = script.meta + code
+  }
+
+  if (script.grant.contains("GM_setValue") ||
+      script.grant.contains("GM_getValue") ||
+      script.grant.contains("GM_listValues")) {
+    code =
+        """
+	window.addEventListener('scriptStorage', (e) => {
+		if (e.detail.id == GM_info.script.id) {
+			for (const [key, value] of Object.entries(e.detail.data)) {
+				if (key in ChromeXt.scriptStorage && JSON.stringify(ChromeXt.scriptStorage[key]) == JSON.stringify(value)) {
+					continue;
+				}
+				ChromeXt.ValueChangeListener.forEach(e => {if (e.id == GM_info.script.id && e.key == key) {
+					e.listener(ChromeXt.scriptStorage[key], value, false)
+				}});
+			}
+			ChromeXt.scriptStorage = e.detail.data;
+		}
+	});
+	""" +
+            code
+    if (script.storage == "") {
+      script.storage = "{}"
+    }
+    code = "ChromeXt.ValueChangeListener = []; ChromeXt.scriptStorage = ${script.storage};" + code
   }
 
   if (script.require.size > 0) {
@@ -238,7 +257,7 @@ fun encodeScript(script: Script): String? {
 
   code =
       GM_bootstrap +
-          "const GM_info = {scriptMetaStr:`${script.meta}`,script:{antifeatures:{},options:{override:{}}}};GM_bootstrap();" +
+          "const GM_info = {scriptMetaStr:`${script.meta}`,script:{antifeatures:{},options:{override:{}}}};GM_bootstrap();GM_info.script.id=`${script.id}`;" +
           code
 
   script.grant.forEach granting@{
@@ -253,21 +272,18 @@ fun encodeScript(script: Script): String? {
           if (!script.grant.contains("GM_download")) code = GM_xmlhttpRequest + code
       "unsafeWindow" -> code = "const unsafeWindow = window;" + code
       "GM_log" -> code = "const GM_log = console.log.bind(console);" + code
-      "GM_deleteValue" ->
-          code =
-              "function GM_deleteValue(key) {globalThis.ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, function: 'deleteValue', key}}));};" +
-                  code
       "GM_setValue" -> code = GM_setValue + code
+      "GM_deleteValue" -> code = GM_deleteValue + code
       "GM_getValue" -> code = GM_getValue + code
       "GM_addValueChangeListener" -> code = GM_addValueChangeListener + code
       "GM_removeValueChangeListener" ->
           code =
-              "function GM_removeValueChangeListener(index) {ChromeXt.ValueChangeListener.splice(index, 1)};" +
+              "function GM_removeValueChangeListener(index) {ChromeXt.ValueChangeListener[index].enabled = false;};" +
                   code
       "GM_registerMenuCommand" -> code = GM_registerMenuCommand + code
       "GM_unregisterMenuCommand" ->
           code =
-              "function GM_unregisterMenuCommand(index) {ChromeXt.MenuCommand.splice(index, 1)};" +
+              "function GM_unregisterMenuCommand(index) {ChromeXt.MenuCommand[index].enabled = false;};" +
                   code
       "GM_getResourceURL" -> {
         var GM_ResourceURL = "GM_ResourceURL={"
@@ -311,9 +327,7 @@ fun encodeScript(script: Script): String? {
                 code
       }
       "GM_listValues" ->
-          code =
-              "const GM_listValues = ()=> [...Array(localStorage.length).keys()].reduce((a, i) => {let key=localStorage.key(i); if (key.endsWith('_ChromeXt_Value')){a.push(key.slice(0, -15))}; return a}, []);" +
-                  code
+          code = "const GM_listValues = ()=> Object.keys(ChromeXt.scriptStorage);" + code
       else ->
           if (!function.startsWith("GM.")) {
             code =
