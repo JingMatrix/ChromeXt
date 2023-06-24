@@ -147,36 +147,33 @@ function GM_registerMenuCommand(title, listener, accessKey="Dummy") {
 const val GM_addValueChangeListener =
     """
 function GM_addValueChangeListener(key, listener) {
-	if (typeof ChromeXt.ValueChangeListener == "undefined") {
-		ChromeXt.ValueChangeListener = [];
-	}
-	const index = ChromeXt.ValueChangeListener.findIndex(
+	const index = valueChangeListener.findIndex(
 		(e) => e.id == GM_info.script.id && e.key == key 
 	);
 	if (index != -1) {
-		ChromeXt.ValueChangeListener[index].listener = listener;
+		valueChangeListener[index].listener = listener;
 		return index;
 	}
-	ChromeXt.ValueChangeListener.push({id: GM_info.script.id, key, listener, enabled: true});
-	return ChromeXt.ValueChangeListener.length - 1;
+	valueChangeListener.push({id: GM_info.script.id, key, listener, enabled: true});
+	return valueChangeListener.length - 1;
 }
 """
 
 const val GM_setValue =
     """
 function GM_setValue(key, value) {
-	if (key in ChromeXt.scriptStorage && JSON.stringify(ChromeXt.scriptStorage[key]) == JSON.stringify(value)) return;
-	ChromeXt.scriptStorage[key] = value;
-	globalThis.ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: ChromeXt.scriptStorage}}));
+	if (key in scriptStorage && JSON.stringify(scriptStorage[key]) == JSON.stringify(value)) return;
+	scriptStorage[key] = value;
+	ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: scriptStorage, uuid}}));
 }
 """
 
 const val GM_deleteValue =
     """
 function GM_deleteValue(key, value) {
-	if (key in ChromeXt.scriptStorage) {
-		delete ChromeXt.scriptStorage[key];
-		globalThis.ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: ChromeXt.scriptStorage}}));
+	if (key in scriptStorage) {
+		delete scriptStorage[key];
+		ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: scriptStorage, uuid}}));
 	}
 }
 """
@@ -184,7 +181,7 @@ function GM_deleteValue(key, value) {
 const val GM_getValue =
     """
 function GM_getValue(key, default_value) {
-	return key in ChromeXt.scriptStorage ? ChromeXt.scriptStorage[key] : default_value; 
+	return key in scriptStorage ? scriptStorage[key] : default_value;
 }
 """
 
@@ -224,22 +221,24 @@ fun encodeScript(script: Script): String? {
 	window.addEventListener('scriptStorage', (e) => {
 		if (e.detail.id == GM_info.script.id) {
 			for (const [key, value] of Object.entries(e.detail.data)) {
-				if (key in ChromeXt.scriptStorage && JSON.stringify(ChromeXt.scriptStorage[key]) == JSON.stringify(value)) {
+				if (key in scriptStorage && JSON.stringify(scriptStorage[key]) == JSON.stringify(value)) {
 					continue;
 				}
-				ChromeXt.ValueChangeListener.forEach(e => {if (e.id == GM_info.script.id && e.key == key) {
-					e.listener(ChromeXt.scriptStorage[key], value, false)
+				valueChangeListener.forEach(e => {if (e.id == GM_info.script.id && e.key == key) {
+					e.listener(scriptStorage[key], value, e.detail.uuid != uuid)
 				}});
 			}
-			ChromeXt.scriptStorage = e.detail.data;
+			scriptStorage = e.detail.data;
 		}
 	});
-	""" +
-            code
+	{ ${code} };
+	"""
     if (script.storage == "") {
       script.storage = "{}"
     }
-    code = "ChromeXt.ValueChangeListener = []; ChromeXt.scriptStorage = ${script.storage};" + code
+    code =
+        "const valueChangeListener = []; let scriptStorage = ${script.storage}; const uuid = Math.random();" +
+            code
   }
 
   if (script.require.size > 0) {
@@ -278,7 +277,7 @@ fun encodeScript(script: Script): String? {
       "GM_addValueChangeListener" -> code = GM_addValueChangeListener + code
       "GM_removeValueChangeListener" ->
           code =
-              "function GM_removeValueChangeListener(index) {ChromeXt.ValueChangeListener[index].enabled = false;};" +
+              "function GM_removeValueChangeListener(index) {valueChangeListener[index].enabled = false;};" +
                   code
       "GM_registerMenuCommand" -> code = GM_registerMenuCommand + code
       "GM_unregisterMenuCommand" ->
@@ -326,21 +325,32 @@ fun encodeScript(script: Script): String? {
                 """const GM_getResourceText = (name) => (name in GM_ResourceText) ? GM_ResourceText[name].replaceAll("ChromeXt_ResourceText_NEWLINE", "\n").replaceAll("ChromeXt_ResourceText_QUOTE", "'") : "ChromeXt failed to get resource";""" +
                 code
       }
-      "GM_listValues" ->
-          code = "const GM_listValues = ()=> Object.keys(ChromeXt.scriptStorage);" + code
+      "GM_listValues" -> code = "const GM_listValues = ()=> Object.keys(scriptStorage);" + code
       else ->
           if (!function.startsWith("GM.")) {
             code =
                 "function ${function}(...args) {console.error('${function} is not implemented in ChromeXt yet, called with', args)}" +
                     code
+          } else {
+            val name = function.substring(3)
+            if (script.grant.contains("GM_${name}")) {
+              code =
+                  "GM.${name} = async (...arguments) => new Promise((resolve, reject) => {resolve(GM_${name}(...arguments))});" +
+                      code
+            }
           }
     }
   }
 
+  code = "const ChromeXt_scriptLoader = () => {const GM = {};${code}};"
   when (script.runAt) {
-    RunAt.START -> code = "(()=>{${code}})();"
-    RunAt.END -> code = "window.addEventListener('DOMContentLoaded',()=>{${code}});"
-    RunAt.IDLE -> code = "window.addEventListener('load',()=>{${code}});"
+    RunAt.START -> code = "(()=>{${code} ChromeXt_scriptLoader()})();"
+    RunAt.END ->
+        code =
+            "(()=>{${code} if (document.readyState != 'loading') {ChromeXt_scriptLoader()} else {window.addEventListener('DOMContentLoaded', ChromeXt_scriptLoader)}})();"
+    RunAt.IDLE ->
+        code =
+            "(()=>{${code} if (document.readyState == 'complete') {ChromeXt_scriptLoader()} else {window.addEventListener('load', ChromeXt_scriptLoader)}})();"
   }
 
   return code
