@@ -188,4 +188,6 @@ Here are corresponding files you might want / need to change:
 - [x] Fully support WebView based browsers
 - [x] Fix [LSPatch for isolated process](https://github.com/LSPosed/LSPatch/issues/190) issue
 - [x] Implement UserScript storage
+- [ ] Re-implement GM_xmlhttpRequest
+- [ ] Convert exported bookmarks to HTML format
 - [ ] Add recommended scripts to the front end manager
