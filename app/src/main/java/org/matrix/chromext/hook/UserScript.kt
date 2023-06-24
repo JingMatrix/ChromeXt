@@ -104,9 +104,6 @@ object UserScriptHook : BaseHook() {
         }
 
     findMethod(proxy.chromeTabbedActivity) { name == "onStop" }
-        .hookBefore {
-          Log.d("Acitivity is stopping, save scriptStorage")
-          ScriptDbManager.updateScriptStorage()
-        }
+        .hookBefore { ScriptDbManager.updateScriptStorage() }
   }
 }

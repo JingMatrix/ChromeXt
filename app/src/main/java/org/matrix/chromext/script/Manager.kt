@@ -54,18 +54,26 @@ object ScriptDbManager {
             put("storage", it.storage)
           }
       if (db.insert("script", null, values).toString() == "-1") {
-        Log.e("Insertion failed with: " + it.id)
+        Log.e("Inserting script failed for: " + it.id)
       }
     }
     dbHelper.close()
   }
 
   fun updateScriptStorage() {
+    val dbHelper = ScriptDbHelper(Chrome.getContext())
+    val db = dbHelper.writableDatabase
     scripts.forEach {
       if (it.storage != "") {
-        insert(it)
+        val values = ContentValues().apply { put("storage", it.storage) }
+        if (db.update("script", values, "id = ?", arrayOf(it.id)).toString() == "-1") {
+          Log.e("Updating scriptStorage failed for: " + it.id)
+        } else {
+          Log.d("ScriptStorage updated for: " + it.id)
+        }
       }
     }
+    dbHelper.close()
   }
 
   private fun query(
