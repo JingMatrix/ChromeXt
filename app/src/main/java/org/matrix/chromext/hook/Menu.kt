@@ -300,7 +300,7 @@ object MenuHook : BaseHook() {
             if (it.thisObject::class.java == proxy.developerSettings) {
               val refThis = it
               val preferences = mutableMapOf<String, Any>()
-              arrayOf("eruda", "exit", "gesture_mod").forEach {
+              arrayOf("eruda", "gesture_mod", "bookmark", "reset", "exit").forEach {
                 preferences[it] = proxy.findPreference.invoke(refThis.thisObject, it)!!
               }
               proxy.setClickListener(preferences.toMap())

@@ -2,12 +2,16 @@ package org.matrix.chromext.proxy
 
 import android.content.Context
 import android.os.Build
+import android.os.Environment
 import android.view.View
 import android.view.View.OnClickListener
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import java.io.File
+import java.io.FileReader
 import java.lang.ref.WeakReference
 import kotlin.text.Regex
+import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
@@ -108,21 +112,27 @@ object MenuProxy {
 
     val listeners =
         mapOf(
-            "exit" to
+            "bookmark" to
                 fun(_: Any) {
-                  if (Chrome.isDev || Chrome.isVivaldi) {
-                    Log.toast(ctx, "This function is not available for your Chrome build")
-                    return
+                  val bookmark = File(ctx.getFilesDir(), "../app_chrome/Default/Bookmarks")
+                  if (bookmark.exists()) {
+                    runCatching {
+                          val data = JSONObject(FileReader(bookmark).use { it.readText() })
+                          File(
+                                  Environment.getExternalStoragePublicDirectory(
+                                      Environment.DIRECTORY_DOWNLOADS),
+                                  "Booksmarks.json")
+                              .writeText(data.getString("roots"))
+                          Log.toast(
+                              ctx,
+                              "Bookmarks exported to " +
+                                  Environment.DIRECTORY_DOWNLOADS +
+                                  "/Booksmarks.json")
+                        }
+                        .onFailure { Log.ex(it) }
+                  } else {
+                    Log.toast(ctx, "Bookmarks data not found")
                   }
-                  with(
-                      ctx.getSharedPreferences(
-                              Chrome.getContext().getPackageName() + "_preferences",
-                              Context.MODE_PRIVATE)
-                          .edit()) {
-                        putBoolean("developer", false)
-                        apply()
-                      }
-                  Log.toast(ctx, "Please restart Chrome to apply the changes")
                 },
             "eruda" to
                 fun(obj: Any) {
@@ -147,6 +157,22 @@ object MenuProxy {
                     }
                   }
                 },
+            "exit" to
+                fun(_: Any) {
+                  if (Chrome.isDev || Chrome.isVivaldi) {
+                    Log.toast(ctx, "This function is not available for your Chrome build")
+                    return
+                  }
+                  with(
+                      ctx.getSharedPreferences(
+                              Chrome.getContext().getPackageName() + "_preferences",
+                              Context.MODE_PRIVATE)
+                          .edit()) {
+                        putBoolean("developer", false)
+                        apply()
+                      }
+                  Log.toast(ctx, "Please restart Chrome to apply the changes")
+                },
             "gesture_mod" to
                 fun(obj: Any) {
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -160,6 +186,17 @@ object MenuProxy {
                     setChecked.invoke(obj, false)
                     Log.toast(ctx, "Feature unavaible for your Chrome or Android versions")
                   }
+                },
+            "reset" to
+                fun(_: Any) {
+                  arrayOf("ChromeXt", "CosmeticFilter", "UserAgent").forEach {
+                    with(ctx.getSharedPreferences(it, Context.MODE_PRIVATE).edit()) {
+                      clear()
+                      apply()
+                    }
+                  }
+                  ctx.deleteDatabase("userscript")
+                  Log.toast(ctx, "ChromeXt data are reset")
                 })
 
     mClickListener.setAccessible(true)

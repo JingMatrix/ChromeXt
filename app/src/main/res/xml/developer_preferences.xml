@@ -19,6 +19,14 @@ found in the LICENSE file.
 		android:summaryOn="Block system gesture in the middle of right edge"
 		android:summaryOff="No support for history forward" />
 	<Preference
+		android:key="bookmark"
+		android:title="Export bookmarks"
+		android:summary="HTML formart, written to the Donwload directory" />
+	<Preference
+		android:key="reset"
+		android:title="Reset ChromeXt data"
+		android:summary="Remove erdua settings and UserScripts" />
+	<Preference
 		android:key="exit"
 		android:title="Disable developer options"
 		android:summary="Click to hide this setting page (not recommended)" />
