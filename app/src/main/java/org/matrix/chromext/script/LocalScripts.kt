@@ -206,6 +206,19 @@ function GM_bootstrap() {
 }
 """
 
+const val GM_globalThis =
+    """
+const globalThis = new Proxy(window, {
+	get(target, prop) {
+		if (prop.startsWith('_')) {
+			return undefined; 
+		} else {
+			let value = target[prop]; return (typeof value === 'function') ? value.bind(target) : value; 
+		}
+	}
+});
+"""
+
 fun encodeScript(script: Script): String? {
   var code = script.code
 
@@ -340,6 +353,10 @@ fun encodeScript(script: Script): String? {
             }
           }
     }
+  }
+
+  if (!script.grant.contains("unsafeWindow")) {
+    code = GM_globalThis + code
   }
 
   code = "const ChromeXt_scriptLoader = () => {const GM = {};${code}};"
