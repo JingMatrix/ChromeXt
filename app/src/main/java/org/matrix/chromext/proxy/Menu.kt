@@ -91,9 +91,7 @@ object MenuProxy {
 
   fun setClickListener(preferences: Map<String, Any>) {
     val ctx = Chrome.getContext()
-    val sharedPref =
-        ctx.getSharedPreferences(
-            Chrome.getContext().getPackageName() + "_preferences", Context.MODE_PRIVATE)
+    val sharedPref = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
 
     var summary = "Click to install Eruda, size around 0.5 MiB"
     val version = sharedPref.getString("eruda_version", "unknown")
@@ -112,14 +110,18 @@ object MenuProxy {
         mapOf(
             "exit" to
                 fun(_: Any) {
-                  if (Chrome.isDev) {
+                  if (Chrome.isDev || Chrome.isVivaldi) {
                     Log.toast(ctx, "This function is not available for your Chrome build")
                     return
                   }
-                  with(sharedPref.edit()) {
-                    putBoolean("developer", false)
-                    apply()
-                  }
+                  with(
+                      ctx.getSharedPreferences(
+                              Chrome.getContext().getPackageName() + "_preferences",
+                              Context.MODE_PRIVATE)
+                          .edit()) {
+                        putBoolean("developer", false)
+                        apply()
+                      }
                   Log.toast(ctx, "Please restart Chrome to apply the changes")
                 },
             "eruda" to

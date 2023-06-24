@@ -27,9 +27,7 @@ object GestureNavHook : BaseHook() {
     findMethod(WindowInsets::class.java) { name == "getSystemGestureInsets" }
         .hookBefore {
           val sharedPref =
-              Chrome.getContext()
-                  .getSharedPreferences(
-                      Chrome.getContext().getPackageName() + "_preferences", Context.MODE_PRIVATE)
+              Chrome.getContext().getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
           if (sharedPref.getBoolean("gesture_mod", true)) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
               it.result = Insets.of(0, 0, 0, 0)

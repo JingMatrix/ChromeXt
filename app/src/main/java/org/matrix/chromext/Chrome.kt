@@ -28,7 +28,7 @@ object Chrome {
     isEdge = packageName.startsWith("com.microsoft.emmx")
     isVivaldi = packageName == "com.vivaldi.browser"
     isBrave = packageName.startsWith("com.brave.browser")
-    isDev = packageName.endsWith("canary") || packageName.endsWith("dev") || isVivaldi
+    isDev = packageName.endsWith("canary") || packageName.endsWith("dev")
     Log.i("Package: ${packageName}, v${packageInfo!!.versionName}")
   }
 
