@@ -46,48 +46,39 @@ function GM_addElement() {
 const val GM_xmlhttpRequest =
     """
 function GM_xmlhttpRequest(details) {
-	details.method = details.method ? details.method.toUpperCase() : "GET";
-
 	if (!details.url) {
 		throw new Error("GM_xmlhttpRequest requires a URL.");
 	}
-
-	const xmlhr = new XMLHttpRequest();
-
-	for (const [key, value] of Object.entries(details)) {
-		if (key == "onload") {
-			xmlhr.addEventListener("load", (e) => {
-				let response = e.target;
-				response.responseHeaders = response.getAllResponseHeaders();
-				response.finalUrl = response.responseURL;
-				value(response);
-			});
-		} else if (key.startsWith("on")) {
-			xmlhr.addEventListener(key.substring(2), value);
-		} else {
-			xmlhr[key] = value;
+	const uuid = Math.random();
+	details.method = details.method ? details.method.toUpperCase() : "GET";
+	ChromeXt(JSON.stringify({action: 'xmlhttpRequest', payload: {id: GM_info.script.id, request: details, uuid}}));
+	window.addEventListener('xmlhttpRequest', (e) => {
+		if (e.detail.id == GM_info.script.id && e.detail.uuid == uuid) {
+			let data = e.detail.data;
+			switch (e.detail.type) {
+				case 'load':
+					data.readyState = 4;
+					data.finalUrl = data.responseHeaders.Location || details.url;
+					if ('overrideMimeType' in details) data.responseHeaders['Content-Type'] = details.overrideMimeType;
+					if ('responseType' in details) {
+						let text = data.responseText;
+						switch (details.responseType) {
+							case 'arraybuffer': data.response = new TextEncoder().encode(text); break;
+							case 'blob': data.response = new Blob([text], {type: data.responseHeaders['Content-Type'] || 'text/plain'});
+							case 'json': data.response = JSON.parse(text); break;
+							defualt: data.response = text;
+						}
+					}
+					details.onload(data); break;
+				case 'error':
+					details.onerror(data); break;
+				case 'abort':
+					details.onabort(data); break;
+				defualt: console.log(e.detail);
+			}
 		}
-	}
-
-	xmlhr.open(details.method, details.url, !details.synchronous || true, details.user || null, details.password || null);
-
-	if ("headers" in details) {
-		for (const header in details.headers) {
-			xmlhr.setRequestHeader(header, details.headers[header]);
-		}
-	}
-	if ("data" in details) {
-		if ("binary" in details) {
-			const blob = new Blob([details.data.toString()], "text/plain");
-			xmlhr.send(blob);
-		} else {
-			xmlhr.send(details.data);
-		}
-	} else {
-		xmlhr.send();
-	}
-
-	return xmlhr;
+	})
+	return {abort: () => {ChromeXt(JSON.stringify({action: 'abortRequest', payload: uuid}));}}
 }
 """
 
@@ -98,12 +89,11 @@ function GM_download(details) {
 		details = {url: arguments[0], name: arguments[1]}
 	}
 	return GM_xmlhttpRequest({
-		url: details.url, responseType: 'blob',
-		onloadend: (event) => {
-			const xhr = event.target;
-			if (xhr.status !== 200) return console.error('Error loading: ', details.url, xhr);
+		...details, responseType: 'blob',
+		onload: (res) => {
+			if (res.status !== 200) return console.error('Error loading: ', details.url, res);
 			const link = document.createElement('a');
-			link.href = URL.createObjectURL(xhr.response);
+			link.href = URL.createObjectURL(res.response);
 			link.download = details.name;
 			link.dispatchEvent(new MouseEvent('click'));
 			setTimeout(URL.revokeObjectURL(link.href), 1000);

@@ -7,6 +7,7 @@ import android.database.CursorWindow
 import android.os.Build
 import java.io.File
 import java.io.FileReader
+import kotlin.concurrent.thread
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DevTools
@@ -16,12 +17,14 @@ import org.matrix.chromext.proxy.ERUD_URL
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.XMLHttpRequest
 
 private const val SEP = ""
 
 object ScriptDbManager {
 
   val scripts = query()
+  val xmlhttpRequests = mutableMapOf<Double, XMLHttpRequest>()
 
   @Suppress("UNCHECKED_CAST")
   val cosmeticFilters =
@@ -177,6 +180,20 @@ object ScriptDbManager {
                 Log.d("Failure with scriptStorage: " + payload)
                 Log.ex(it)
               }
+        }
+      }
+      "abortRequest" -> {
+        val uuid = payload.toDouble()
+        xmlhttpRequests.get(uuid)?.abort()
+      }
+      "xmlhttpRequest" -> {
+        runCatching {
+          val detail = JSONObject(payload)
+          val uuid = detail.getDouble("uuid")
+          val request =
+              XMLHttpRequest(detail.getString("id"), detail.getJSONObject("request"), uuid)
+          xmlhttpRequests.put(uuid, request)
+          thread { request.send() }
         }
       }
       "userAgentSpoof" -> {

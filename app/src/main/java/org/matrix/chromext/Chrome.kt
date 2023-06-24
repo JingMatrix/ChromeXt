@@ -58,7 +58,7 @@ object Chrome {
 
   fun broadcast(event: String, data: String) {
     if (UserScriptHook.isInit) {
-      Log.d("Broadcasting ${event} ${data})")
+      // Log.d("Broadcasting ${event} ${data})")
       tabModels.forEach {
         val count = it.get()!!.invokeMethod() { name == "getCount" } as Int
         for (i in 0.rangeTo(count)) {
