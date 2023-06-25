@@ -116,18 +116,53 @@ object MenuProxy {
                 fun(_: Any) {
                   val bookmark = File(ctx.getFilesDir(), "../app_chrome/Default/Bookmarks")
                   if (bookmark.exists()) {
+                    var html =
+                        "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<!-- This is an automatically generated file. It will be read and overwritten. DO NOT EDIT! -->\n<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=UTF-8\">\n<TITLE>Bookmarks</TITLE>\n<H1>Bookmarks</H1>\n<DL><p>\n"
                     runCatching {
-                          val data = JSONObject(FileReader(bookmark).use { it.readText() })
+                          val data =
+                              JSONObject(FileReader(bookmark).use { it.readText() })
+                                  .getJSONObject("roots")
+
+                          val DIV = 10000000
+                          fun loopChildren(folder: JSONObject, indent: String = "\t") {
+                            if (folder.optString("type") == "folder" && folder.has("children")) {
+                              val children = folder.getJSONArray("children")
+                              val length = children.length()
+                              if (length == 0) return
+                              html +=
+                                  indent +
+                                      "<DT><H3 ADD_DATE=\"${folder.getLong("date_added") / DIV }\" LAST_MODIFIED=\"${folder.getLong("date_modified") / DIV}\" PERSONAL_TOOLBAR_FOLDER=\"true\">${folder.getString("name")}</H3>\n"
+                              html += indent + "<DL><p>\n"
+                              for (i in 0.rangeTo(length - 1)) {
+                                val item = children.getJSONObject(i)
+                                if (item.getString("type") == "url") {
+                                  html +=
+                                      indent +
+                                          "\t<DT><A HREF=\"${item.getString("url")}\" ADD_DATE=\"${item.getLong("date_added") / DIV }\">${item.getString("name")}</A>\n"
+                                } else if (item.getString("type") == "folder") {
+                                  loopChildren(item, indent + "\t")
+                                }
+                              }
+                              html += indent + "</DL><p>\n"
+                            }
+                          }
+
+                          val bookmarks = data.names()!!
+                          for (i in 0.rangeTo(bookmarks.length() - 1)) {
+                            loopChildren(data.getJSONObject(bookmarks.getString(i)))
+                          }
+
+                          html += "</DL><p>"
                           File(
                                   Environment.getExternalStoragePublicDirectory(
                                       Environment.DIRECTORY_DOWNLOADS),
-                                  "Booksmarks.json")
-                              .writeText(data.getString("roots"))
+                                  "Booksmarks.html")
+                              .writeText(html)
                           Log.toast(
                               ctx,
                               "Bookmarks exported to " +
                                   Environment.DIRECTORY_DOWNLOADS +
-                                  "/Booksmarks.json")
+                                  "/Booksmarks.html")
                         }
                         .onFailure { Log.ex(it) }
                   } else {
