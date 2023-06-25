@@ -1,15 +1,16 @@
 package org.matrix.chromext
 
-import android.app.Activity
+import android.app.Application
 import android.content.Context
 import java.lang.ref.WeakReference
 import org.matrix.chromext.hook.UserScriptHook
+import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
 
 object Chrome {
-  private var mContext: WeakReference<Activity>? = null
+  private var mContext: WeakReference<Context>? = null
   private var currentTab: WeakReference<Any>? = null
   private var tabModels = mutableListOf<WeakReference<Any>>()
 
@@ -20,10 +21,9 @@ object Chrome {
 
   fun init(ctx: Context) {
     val initialized = mContext != null
-    if (ctx is Activity) {
-      mContext = WeakReference(ctx)
-    } else {
-      Log.e("Chrome.init called with a non-activity context")
+    mContext = WeakReference(ctx)
+    if (ctx is Application) {
+      Log.d("Started a WebView based browser")
     }
 
     if (initialized) return
@@ -62,16 +62,19 @@ object Chrome {
   }
 
   fun broadcast(event: String, data: String) {
+    val code = "window.dispatchEvent(new CustomEvent('${event}', ${data}));"
     if (UserScriptHook.isInit) {
       // Log.d("Broadcasting ${event} ${data})")
       tabModels.forEach {
         val count = it.get()!!.invokeMethod() { name == "getCount" } as Int
         for (i in 0.rangeTo(count)) {
           val tab = it.get()?.invokeMethod(i) { name == "getTabAt" }
-          UserScriptProxy.loadUrl(
-              "javascript: window.dispatchEvent(new CustomEvent('${event}', ${data}));", tab)
+          UserScriptProxy.loadUrl("javascript: " + code, tab)
         }
       }
+    } else if (WebViewHook.isInit) {
+      WebViewHook.evaluateJavascript(code)
+      Log.i("Broadcasting not implemented yet for event ${event}")
     }
   }
 }

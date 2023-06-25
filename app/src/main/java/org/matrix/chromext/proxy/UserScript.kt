@@ -1,5 +1,6 @@
 package org.matrix.chromext.proxy
 
+import android.app.Activity
 import java.net.URLEncoder
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.Script
@@ -37,7 +38,7 @@ object UserScriptProxy {
 
   fun loadUrl(url: String, tab: Any? = Chrome.getTab()) {
     if (tab != null) {
-      loadUrl.invoke(tab, newLoadUrlParams(url))
+      (Chrome.getContext() as Activity).runOnUiThread { loadUrl.invoke(tab, newLoadUrlParams(url)) }
     }
   }
 

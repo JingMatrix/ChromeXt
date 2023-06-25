@@ -1,5 +1,6 @@
 package org.matrix.chromext.hook
 
+import kotlin.concurrent.thread
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DEV_FRONT_END
@@ -43,7 +44,7 @@ object UserScriptHook : BaseHook() {
           } else if (url.startsWith(DEV_FRONT_END)) {
             proxy.evaluateJavascript(customizeDevTool)
           } else if (!url.endsWith("/ChromeXt/")) {
-            proxy.invokeScript(url)
+            thread { proxy.invokeScript(url) }
             val origin = proxy.parseOrigin(url)
             if (origin != null) {
               if (ScriptDbManager.cosmeticFilters.contains(origin)) {

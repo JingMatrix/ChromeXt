@@ -72,7 +72,7 @@ object ScriptDbManager {
         if (db.update("script", values, "id = ?", arrayOf(it.id)).toString() == "-1") {
           Log.e("Updating scriptStorage failed for: " + it.id)
         } else {
-          Log.d("ScriptStorage updated for: " + it.id)
+          Log.d("ScriptStorage updated for " + it.id)
         }
       }
     }
@@ -168,31 +168,29 @@ object ScriptDbManager {
         }
       }
       "scriptStorage" -> {
-        if (UserScriptHook.isInit) {
-          Chrome.broadcast("scriptStorage", "{detail:${payload}}")
-          runCatching {
-                val detail = JSONObject(payload)
-                val id = detail.getString("id")
-                val data = detail.getJSONObject("data")
-                val key = data.getString("key")
-                scripts
-                    .filter { it.id == id }
-                    .first()
-                    .apply {
-                      val json = if (storage == "") JSONObject() else JSONObject(storage)
-                      if (data.has("value")) {
-                        json.put(key, data.get("value"))
-                      } else {
-                        json.remove(key)
-                      }
-                      storage = json.toString()
+        Chrome.broadcast("scriptStorage", "{detail:${payload}}")
+        runCatching {
+              val detail = JSONObject(payload)
+              val id = detail.getString("id")
+              val data = detail.getJSONObject("data")
+              val key = data.getString("key")
+              scripts
+                  .filter { it.id == id }
+                  .first()
+                  .apply {
+                    val json = if (storage == "") JSONObject() else JSONObject(storage)
+                    if (data.has("value")) {
+                      json.put(key, data.get("value"))
+                    } else {
+                      json.remove(key)
                     }
-              }
-              .onFailure {
-                Log.d("Failure with scriptStorage: " + payload)
-                Log.ex(it)
-              }
-        }
+                    storage = json.toString()
+                  }
+            }
+            .onFailure {
+              Log.d("Failure with scriptStorage: " + payload)
+              Log.ex(it)
+            }
       }
       "abortRequest" -> {
         val uuid = payload.toDouble()
@@ -252,7 +250,7 @@ object ScriptDbManager {
           val script = match.first()
           val newScript = parseScript(result[1] + "\n" + script.code)
           newScript!!.storage = script.storage
-          insert(newScript!!)
+          insert(newScript)
           scripts.remove(script)
           scripts.add(newScript)
         }

@@ -1,13 +1,11 @@
 package org.matrix.chromext.utils
 
-import android.app.Activity
 import android.util.Base64
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
 import org.json.JSONObject
-import org.matrix.chromext.Chrome
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.UserScriptProxy
@@ -89,18 +87,16 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
   }
 
   private fun response(type: String, data: String, disconnect: Boolean = true) {
-    (Chrome.getContext() as Activity).runOnUiThread {
-      val code =
-          "window.dispatchEvent(new CustomEvent('xmlhttpRequest', {detail: {id: '${id}', uuid: ${uuid}, type: '${type}', data: ${data}}}));"
-      if (UserScriptHook.isInit) {
-        UserScriptProxy.loadUrl("javascript: ${code}")
-      } else if (WebViewHook.isInit) {
-        WebViewHook.evaluateJavascript(code)
-      }
-      if (disconnect) {
-        ScriptDbManager.xmlhttpRequests.remove(uuid)
-        connection?.disconnect()
-      }
+    val code =
+        "window.dispatchEvent(new CustomEvent('xmlhttpRequest', {detail: {id: '${id}', uuid: ${uuid}, type: '${type}', data: ${data}}}));"
+    if (UserScriptHook.isInit) {
+      UserScriptProxy.loadUrl("javascript: ${code}")
+    } else if (WebViewHook.isInit) {
+      WebViewHook.evaluateJavascript(code)
+    }
+    if (disconnect) {
+      ScriptDbManager.xmlhttpRequests.remove(uuid)
+      connection?.disconnect()
     }
   }
 }

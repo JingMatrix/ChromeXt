@@ -1,5 +1,6 @@
 package org.matrix.chromext.hook
 
+import android.os.Handler
 import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
@@ -29,10 +30,12 @@ object WebViewHook : BaseHook() {
   var webView: WeakReference<WebView>? = null
 
   fun evaluateJavascript(code: String?) {
-    if (code != null && webView != null) {
-      webView?.get()?.settings?.javaScriptEnabled = true
-      webView?.get()?.settings?.domStorageEnabled = true
-      webView?.get()?.evaluateJavascript(code, null)
+    Handler(Chrome.getContext().getMainLooper()).post {
+      if (code != null && webView != null) {
+        webView?.get()?.settings?.javaScriptEnabled = true
+        webView?.get()?.settings?.domStorageEnabled = true
+        webView?.get()?.evaluateJavascript(code, null)
+      }
     }
   }
 
@@ -162,5 +165,8 @@ object WebViewHook : BaseHook() {
     findMethod(ViewClient!!, true) { name == "onPageStarted" }
         // public void onPageStarted (WebView view, String url, Bitmap favicon)
         .hookAfter { onUpdateUrl(it.args[1] as String, it.args[0] as WebView) }
+
+    findMethod(Chrome.load("android.app.Activity")) { name == "onStop" }
+        .hookBefore { ScriptDbManager.updateScriptStorage() }
   }
 }
