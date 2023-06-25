@@ -10,7 +10,6 @@ import java.io.FileReader
 import kotlin.concurrent.thread
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
-import org.matrix.chromext.DevTools
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.ERUD_URL
@@ -236,38 +235,30 @@ object ScriptDbManager {
         callback =
             "window.dispatchEvent(new CustomEvent('script_id',{detail:[`${result.joinToString(separator = "`,`")}`]}));"
       }
-      "getMetaById" -> {
+      "getMeta" -> {
         val ids = parseArray(payload)
         val result = scripts.filter { ids.contains(it.id) }.map { it.meta }
         callback =
             "window.dispatchEvent(new CustomEvent('script_meta',{detail:[`${result.joinToString(separator = "`,`")}`]}));"
       }
-      "updateMetaForId" -> {
-        val CHROMEXT_SPLIT = "ChromeXt_Split_For_Metadata_Update"
-        val result = payload.split(CHROMEXT_SPLIT)
-        val match = scripts.filter { it.id == result[0] }
-        if (match.size == 1) {
-          val script = match.first()
-          val newScript = parseScript(result[1] + "\n" + script.code)
+      "updateMeta" -> {
+        runCatching {
+          val data = JSONObject(payload)
+          val script = scripts.filter { it.id == data.getString("id") }.first()
+          val newScript = parseScript(data.getString("meta") + "\n" + script.code)
           newScript!!.storage = script.storage
           insert(newScript)
           scripts.remove(script)
           scripts.add(newScript)
         }
       }
-      "deleteScriptById" -> {
+      "deleteScript" -> {
         val ids = parseArray(payload)
         val dbHelper = ScriptDbHelper(Chrome.getContext())
         val db = dbHelper.writableDatabase
         db.delete("script", "id = ?", ids)
         scripts.removeAll(scripts.filter { ids.contains(it.id) })
         dbHelper.close()
-      }
-      "getPages" -> {
-        val pages = DevTools.pages
-        if (pages != "") {
-          callback = "window.dispatchEvent(new CustomEvent('pages',{detail:${pages}}));"
-        }
       }
       "cosmeticFilter" -> {
         callback = syncSharedPreference(payload, "CosmeticFilter", cosmeticFilters)
