@@ -1,10 +1,11 @@
 package org.matrix.chromext.utils
 
 import android.app.Activity
+import android.util.Base64
 import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
-import java.util.Base64
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.hook.UserScriptHook
@@ -28,7 +29,6 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
   val timeout = request.optInt("timeout")
 
   fun abort() {
-    connection?.disconnect()
     response("abort", "{abort: 'Abort on request'}")
   }
 
@@ -46,7 +46,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
       if (request.has("user")) {
         val user = request.optInt("user")
         val password = request.optInt("password")
-        val encoding = Base64.getEncoder().encodeToString(("${user}:${password}").toByteArray())
+        val encoding = Base64.encodeToString(("${user}:${password}").toByteArray(), Base64.DEFAULT)
         setRequestProperty("Authorization", "Basic " + encoding)
       }
       runCatching {
@@ -54,7 +54,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
               val data = request.optString("data")
               outputStream.write(data.toByteArray())
             }
-            val res = inputStream.bufferedReader().use { it.readText() }
+            val res = Base64.encodeToString(inputStream.readBytes(), Base64.DEFAULT)
             val data =
                 JSONObject(
                     mapOf(
@@ -72,17 +72,20 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
           .onFailure {
             if (it is IOException) {
               val error = errorStream?.bufferedReader()?.use { it.readText() } ?: it.message
-              Log.d(error + " when connecting to " + url)
-              response("error", "{error: '${error}'}")
+              Log.d(it.toString() + ". ${error} when connecting to ${url}")
+              if (it is SocketTimeoutException) {
+                response("timeout", "{}")
+              } else {
+                response("error", "{error: '${error}'}")
+              }
             } else {
               Log.ex(it)
             }
           }
-      disconnect()
     }
   }
 
-  private fun response(type: String, data: String) {
+  private fun response(type: String, data: String, disconnect: Boolean = true) {
     (Chrome.getContext() as Activity).runOnUiThread {
       val code =
           "window.dispatchEvent(new CustomEvent('xmlhttpRequest', {detail: {id: '${id}', uuid: ${uuid}, type: '${type}', data: ${data}}}));"
@@ -91,7 +94,10 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
       } else if (WebViewHook.isInit) {
         WebViewHook.evaluateJavascript(code)
       }
-      ScriptDbManager.xmlhttpRequests.remove(uuid)
+      if (disconnect) {
+        ScriptDbManager.xmlhttpRequests.remove(uuid)
+        connection?.disconnect()
+      }
     }
   }
 }
