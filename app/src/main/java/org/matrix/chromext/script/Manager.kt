@@ -173,8 +173,20 @@ object ScriptDbManager {
           runCatching {
                 val detail = JSONObject(payload)
                 val id = detail.getString("id")
-                val data = detail.getString("data")
-                scripts.filter { it.id == id }.first().storage = data
+                val data = detail.getJSONObject("data")
+                val key = data.getString("key")
+                scripts
+                    .filter { it.id == id }
+                    .first()
+                    .apply {
+                      val json = if (storage == "") JSONObject() else JSONObject(storage)
+                      if (data.has("value")) {
+                        json.put(key, data.get("value"))
+                      } else {
+                        json.remove(key)
+                      }
+                      storage = json.toString()
+                    }
               }
               .onFailure {
                 Log.d("Failure with scriptStorage: " + payload)

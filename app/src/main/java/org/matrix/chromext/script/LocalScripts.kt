@@ -175,7 +175,7 @@ const val GM_setValue =
 function GM_setValue(key, value) {
 	if (key in scriptStorage && JSON.stringify(scriptStorage[key]) == JSON.stringify(value)) return;
 	scriptStorage[key] = value;
-	ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: scriptStorage, uuid}}));
+	ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: {key, value}, uuid}}));
 }
 """
 
@@ -184,7 +184,7 @@ const val GM_deleteValue =
 function GM_deleteValue(key, value) {
 	if (key in scriptStorage) {
 		delete scriptStorage[key];
-		ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: scriptStorage, uuid}}));
+		ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: {key}, uuid}}));
 	}
 }
 """
@@ -243,16 +243,18 @@ fun encodeScript(script: Script): String? {
     code =
         """
 	window.addEventListener('scriptStorage', (e) => {
-		if (e.detail.id == GM_info.script.id) {
-			for (const [key, value] of Object.entries(e.detail.data)) {
-				if (key in scriptStorage && JSON.stringify(scriptStorage[key]) == JSON.stringify(value)) {
-					continue;
+		if (e.detail.id == GM_info.script.id && 'key' in e.detail.data) {
+			const data = e.detail.data;
+			if ('value' in data) {
+				if (data.key in scriptStorage && JSON.stringify(scriptStorage[data.key]) != JSON.stringify(data.value)) {
+					valueChangeListener.forEach(e => { if (e.key == data.key) {
+						e.listener(scriptStorage[data.key] || null, data.value, e.detail.uuid != uuid)
+					}});
 				}
-				valueChangeListener.forEach(e => {if (e.id == GM_info.script.id && e.key == key) {
-					e.listener(scriptStorage[key], value, e.detail.uuid != uuid)
-				}});
+				scriptStorage[data.key] = data.value;
+			} else if (data.key in scriptStorage) {
+				delete scriptStorage[data.key];
 			}
-			scriptStorage = e.detail.data;
 		}
 	});
 	{ ${code} };
