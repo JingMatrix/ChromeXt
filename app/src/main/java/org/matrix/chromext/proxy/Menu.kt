@@ -110,6 +110,7 @@ object MenuProxy {
       setChecked.invoke(preferences["gesture_mod"], false)
     }
 
+    var reset_confirming = 1
     val listeners =
         mapOf(
             "bookmark" to
@@ -224,6 +225,13 @@ object MenuProxy {
                 },
             "reset" to
                 fun(_: Any) {
+                  if (reset_confirming < 3) {
+                    Log.toast(
+                        ctx,
+                        "Clik ${3 - reset_confirming} more times if you confirm to reset ChromeXt")
+                    reset_confirming += 1
+                    return
+                  }
                   arrayOf("ChromeXt", "CosmeticFilter", "UserAgent").forEach {
                     with(ctx.getSharedPreferences(it, Context.MODE_PRIVATE).edit()) {
                       clear()
