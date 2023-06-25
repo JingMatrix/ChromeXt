@@ -2,6 +2,7 @@ package org.matrix.chromext.script
 
 import java.io.File
 import java.io.FileReader
+import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.utils.Log
 
@@ -158,33 +159,33 @@ function GM_registerMenuCommand(title, listener, accessKey="Dummy") {
 const val GM_addValueChangeListener =
     """
 function GM_addValueChangeListener(key, listener) {
-	const index = valueChangeListener.findIndex(
-		(e) => e.id == GM_info.script.id && e.key == key 
+	const index = GM_info.valueListener.findIndex(
+		(e) => e.key == key
 	);
 	if (index != -1) {
-		valueChangeListener[index].listener = listener;
+		GM_info.valueListener[index].listener = listener;
 		return index;
 	}
-	valueChangeListener.push({id: GM_info.script.id, key, listener, enabled: true});
-	return valueChangeListener.length - 1;
+	GM_info.valueListener.push({key, listener, enabled: true});
+	return GM_info.valueListener.length - 1;
 }
 """
 
 const val GM_setValue =
     """
 function GM_setValue(key, value) {
-	if (key in scriptStorage && JSON.stringify(scriptStorage[key]) == JSON.stringify(value)) return;
-	scriptStorage[key] = value;
-	ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: {key, value}, uuid}}));
+	if (key in GM_info.storage && JSON.stringify(GM_info.storage[key]) == JSON.stringify(value)) return;
+	GM_info.storage[key] = value;
+	ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: {key, value}, uuid: GM_info.uuid}}));
 }
 """
 
 const val GM_deleteValue =
     """
 function GM_deleteValue(key, value) {
-	if (key in scriptStorage) {
-		delete scriptStorage[key];
-		ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: {key}, uuid}}));
+	if (key in GM_info.storage) {
+		delete GM_info.storage[key];
+		ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: {key}, uuid: GM_info.uuid}}));
 	}
 }
 """
@@ -192,7 +193,7 @@ function GM_deleteValue(key, value) {
 const val GM_getValue =
     """
 function GM_getValue(key, default_value) {
-	return key in scriptStorage ? scriptStorage[key] : default_value;
+	return GM_info.storage[key] || default_value;
 }
 """
 
@@ -240,30 +241,28 @@ fun encodeScript(script: Script): String? {
   if (script.grant.contains("GM_setValue") ||
       script.grant.contains("GM_getValue") ||
       script.grant.contains("GM_listValues")) {
+    if (script.storage == "") {
+      script.storage = "{}"
+    }
     code =
         """
 	window.addEventListener('scriptStorage', (e) => {
 		if (e.detail.id == GM_info.script.id && 'key' in e.detail.data) {
 			const data = e.detail.data;
 			if ('value' in data) {
-				if (data.key in scriptStorage && JSON.stringify(scriptStorage[data.key]) != JSON.stringify(data.value)) {
-					valueChangeListener.forEach(e => { if (e.key == data.key) {
-						e.listener(scriptStorage[data.key] || null, data.value, e.detail.uuid != uuid)
+				if (data.key in GM_info.storage && JSON.stringify(GM_info.storage[data.key]) != JSON.stringify(data.value)) {
+					GM_info.valueListener.forEach(e => { if (e.key == data.key) {
+						e.listener(GM_info.storage[data.key] || null, data.value, e.detail.uuid != GM_info.uuid)
 					}});
 				}
-				scriptStorage[data.key] = data.value;
-			} else if (data.key in scriptStorage) {
-				delete scriptStorage[data.key];
+				GM_info.storage[data.key] = data.value;
+			} else if (data.key in GM_info.storage) {
+				delete GM_info.storage[data.key];
 			}
 		}
 	});
-	{ ${code} };
-	"""
-    if (script.storage == "") {
-      script.storage = "{}"
-    }
-    code =
-        "const valueChangeListener = []; let scriptStorage = ${script.storage}; const uuid = Math.random();" +
+    GM_info.valueListener = []; GM_info.storage = ${script.storage}; GM_info.uuid = Math.random();
+	""" +
             code
   }
 
@@ -280,13 +279,9 @@ fun encodeScript(script: Script): String? {
             "})();"
   }
 
-  code =
-      GM_bootstrap +
-          "const GM_info = {scriptMetaStr:`${script.meta}`,script:{antifeatures:{},options:{override:{}}}};GM_bootstrap();GM_info.script.id=`${script.id}`;" +
-          code
-
   script.grant.forEach granting@{
     val function = it
+    // Log.d("Granting ${function} to ${script.id}")
     when (function) {
       "GM_addStyle" -> code = GM_addStyle + code
       "GM_addElement" -> if (script.require.size == 0) code = GM_addElement + code
@@ -303,61 +298,47 @@ fun encodeScript(script: Script): String? {
       "GM_addValueChangeListener" -> code = GM_addValueChangeListener + code
       "GM_removeValueChangeListener" ->
           code =
-              "function GM_removeValueChangeListener(index) {valueChangeListener[index].enabled = false;};" +
+              "function GM_removeValueChangeListener(index) {GM_info.valueListener[index].enabled = false;};" +
                   code
       "GM_registerMenuCommand" -> code = GM_registerMenuCommand + code
       "GM_unregisterMenuCommand" ->
           code =
               "function GM_unregisterMenuCommand(index) {ChromeXt.MenuCommand[index].enabled = false;};" +
                   code
-      "GM_getResourceURL" -> {
-        var GM_ResourceURL = "GM_ResourceURL={"
-        script.resource.forEach {
-          val content = it.split(" ")
-          if (content.size != 2) return@granting
-          val name = content.first()
-          val url = content.last()
-          GM_ResourceURL += name + ":'" + url + "',"
-        }
-        GM_ResourceURL += "};"
-        code = GM_ResourceURL + "const GM_getResourceURL = (name) => GM_ResourceURL[name];" + code
-      }
+      "GM_getResourceURL" -> return@granting
       "GM_getResourceText" -> {
-        var GM_ResourceText = "GM_ResourceText={"
+        val GM_ResourceText = JSONObject()
         runCatching {
               script.resource.forEach {
-                val name = it.split(" ").first()
-                if (name == "") return@granting
+                val content = it.split(" ")
+                if (content.size != 2) return@granting
+                val name = content.first()
+                val url = content.last()
+                val resource = JSONObject()
+                resource.put("url", url.split("#").first())
                 val file =
                     File(
                         Chrome.getContext().getExternalFilesDir(null),
                         resourcePath(script.id, name))
                 if (file.exists()) {
                   val text = FileReader(file).use { it.readText() }
-                  GM_ResourceText +=
-                      name +
-                          ":'" +
-                          text
-                              .replace("\n", "ChromeXt_ResourceText_NEWLINE")
-                              .replace("'", "ChromeXt_ResourceText_QUOTE") +
-                          "',"
+                  resource.put("text", text)
                 }
+                GM_ResourceText.put(name, resource)
               }
             }
             .onFailure { Log.ex(it) }
-        GM_ResourceText += "};"
         code =
-            GM_ResourceText +
-                """const GM_getResourceText = (name) => (name in GM_ResourceText) ? GM_ResourceText[name].replaceAll("ChromeXt_ResourceText_NEWLINE", "\n").replaceAll("ChromeXt_ResourceText_QUOTE", "'") : "ChromeXt failed to get resource";""" +
+            "GM_info.resource = ${GM_ResourceText}; const GM_getResourceText = (name) => GM_info.resource[name].text || 'ChromeXt failed to find resource \${name}'; const GM_getResourceURL = (name) => GM_info.resource[name].url || 'ChromeXt failed to find resource \${name}';" +
                 code
       }
-      "GM_listValues" -> code = "const GM_listValues = ()=> Object.keys(scriptStorage);" + code
+      "GM_listValues" -> code = "const GM_listValues = ()=> Object.keys(GM_info.storage);" + code
       else ->
-          if (!function.startsWith("GM.")) {
+          if (!function.contains(".")) {
             code =
                 "function ${function}(...args) {console.error('${function} is not implemented in ChromeXt yet, called with', args)}" +
                     code
-          } else {
+          } else if (function.startsWith("GM.")) {
             val name = function.substring(3)
             if (script.grant.contains("GM_${name}")) {
               code =
@@ -367,6 +348,11 @@ fun encodeScript(script: Script): String? {
           }
     }
   }
+
+  code =
+      GM_bootstrap +
+          "const GM_info = {scriptMetaStr:`${script.meta}`,script:{antifeatures:{},options:{override:{}}}};GM_bootstrap();GM_info.script.id=`${script.id}`;" +
+          code
 
   if (!script.grant.contains("unsafeWindow")) {
     code = GM_globalThis + code

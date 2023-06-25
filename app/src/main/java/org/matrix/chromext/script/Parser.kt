@@ -58,6 +58,10 @@ fun parseScript(input: String): Script? {
     }
   }
 
+  if (script.grant.contains("GM_getResourceURL") && !script.grant.contains("GM_getResourceText")) {
+    script.grant.add("GM_getResourceText")
+  }
+
   if (script.match.size == 0) {
     return null
   } else {
@@ -79,7 +83,7 @@ fun parseScript(input: String): Script? {
         val content = it.split(" ")
         val name = content.first()
         val url = content.last()
-        Log.d("Downloading resource for ${name}: ${url}")
+        Log.d("Downloading resource for ${name}: ${url.split("#").first()}")
         if (url.startsWith("http")) {
           Download.start(url, resourcePath(id, name), true)
         }
