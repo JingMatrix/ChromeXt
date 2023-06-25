@@ -1,5 +1,6 @@
 package org.matrix.chromext
 
+import android.app.Activity
 import android.content.Context
 import java.lang.ref.WeakReference
 import org.matrix.chromext.hook.UserScriptHook
@@ -8,7 +9,7 @@ import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
 
 object Chrome {
-  private var mContext: WeakReference<Context>? = null
+  private var mContext: WeakReference<Activity>? = null
   private var currentTab: WeakReference<Any>? = null
   private var tabModels = mutableListOf<WeakReference<Any>>()
 
@@ -19,7 +20,11 @@ object Chrome {
 
   fun init(ctx: Context) {
     val initialized = mContext != null
-    mContext = WeakReference(ctx)
+    if (ctx is Activity) {
+      mContext = WeakReference(ctx)
+    } else {
+      Log.e("Chrome.init called with a non-activity context")
+    }
 
     if (initialized) return
     val packageName = ctx.getPackageName()
