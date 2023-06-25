@@ -251,6 +251,7 @@ object ScriptDbManager {
         if (match.size == 1) {
           val script = match.first()
           val newScript = parseScript(result[1] + "\n" + script.code)
+          newScript!!.storage = script.storage
           insert(newScript!!)
           scripts.remove(script)
           scripts.add(newScript)
