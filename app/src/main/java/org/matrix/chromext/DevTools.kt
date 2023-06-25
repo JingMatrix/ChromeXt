@@ -17,88 +17,82 @@ const val DEV_FRONT_END = "https://chrome-devtools-frontend.appspot.com"
 
 object DevTools {
 
-  private var forwarding: Forward? = null
-  private var port = 0
-    set(value) {
+  fun start() {
+    thread {
+      val pages = refreshDevTool()
+      val forwardSocket = ServerSocket(0)
+      val port = forwardSocket.getLocalPort()
       val code =
-          "setTimeout(()=>{window.dispatchEvent(new CustomEvent('cdp_port',{detail:${value}}))},100)"
+          "window.dispatchEvent(new CustomEvent('cdp_info',{detail:{port: ${port}, pages: ${pages}}}));"
       if (UserScriptHook.isInit) {
         UserScriptProxy.evaluateJavascript(code)
       } else if (WebViewHook.isInit) {
         WebViewHook.evaluateJavascript(code)
       }
-      field = value
-    }
 
-  var pages = ""
+      val sockets = mutableListOf<Closeable>()
+      runCatching {
+            while (true) {
+              val client = LocalSocket()
 
-  fun start() {
-    thread { pages = refreshDevTool() }
-    cleanup()
-    forwarding = Forward(bind())
-    forwarding!!.start()
-  }
+              connectDevTools(client)
 
-  private fun cleanup() {
-    if (forwarding != null) {
-      forwarding!!.discard()
-      forwarding = null
-      port = 0
-    }
-  }
+              if (client.isConnected()) {
+                Log.d("New connection to Chrome DevTools")
+                sockets.add(client)
+              } else {
+                throw Exception("Fail to connect to Chrome DevTools localsocket")
+              }
 
-  private fun bind(): ServerSocket {
-    val forwardServer = ServerSocket(0)
-    port = forwardServer.getLocalPort()
-    Log.d("Forward server starts at port ${port}")
-    return forwardServer
-  }
-}
-
-private class Forward(forwarder: ServerSocket) : Thread() {
-
-  private val forwardSocket: ServerSocket
-
-  init {
-    forwardSocket = forwarder
-  }
-
-  override fun run() {
-    val sockets = mutableListOf<Closeable>()
-    runCatching {
-          while (true) {
-            val client = LocalSocket()
-
-            connectDevTools(client)
-
-            if (client.isConnected()) {
-              Log.d("New connection to Chrome DevTools")
-              sockets.add(client)
-            } else {
-              Log.e("Fail to connect to Chrome DevTools localsocket")
-              return
+              val server = forwardSocket.accept()
+              sockets.add(server)
+              forwardStreamThread(client.inputStream, server.outputStream, "client").start()
+              forwardStreamThread(server.inputStream, client.outputStream, "server").start()
             }
-
-            val server = forwardSocket.accept()
-            sockets.add(server)
-            forwardStreamThread(client.inputStream, server.outputStream, "client").start()
-            forwardStreamThread(server.inputStream, client.outputStream, "server").start()
           }
-        }
-        .onFailure {
-          val msg = it.message
-          if (msg != "Socket closed") {
-            Log.ex(it)
-          } else {
-            Log.d("Forward server closed")
-            sockets.forEach { it.close() }
+          .onFailure {
+            val msg = it.message
+            if (msg != "Socket closed") {
+              Log.ex(it)
+            } else {
+              Log.d("Forward server closed")
+              sockets.forEach { it.close() }
+            }
           }
-        }
+    }
   }
 
-  fun discard() {
-    Log.d("Closing forward server")
-    forwardSocket.close()
+  private fun connectDevTools(client: LocalSocket) {
+    val address =
+        if (UserScriptHook.isInit) {
+          "chrome_devtools_remote"
+        } else {
+          "webview_devtools_remote"
+        }
+
+    runCatching { client.connect(LocalSocketAddress(address)) }
+        .onFailure { client.connect(LocalSocketAddress(address + "_" + Process.myPid())) }
+  }
+
+  private fun refreshDevTool(): String {
+    val client = LocalSocket()
+    connectDevTools(client)
+    client.outputStream.write("GET /json HTTP/1.1\r\n\r\n".toByteArray())
+    var pages = ""
+    client.inputStream.bufferedReader().use {
+      while (true) {
+        val line = it.readLine()
+        if (line.length == 0) {
+          pages = ""
+        }
+        pages += line + "\n"
+        if (line == "} ]") {
+          client.close()
+          break
+        }
+      }
+    }
+    return pages
   }
 }
 
@@ -145,57 +139,24 @@ private class forwardStreamThread(
           }
         }
   }
-}
 
-private fun InputStream.pipe(
-    out: OutputStream,
-    debug: Boolean = false,
-    bufferSize: Int = DEFAULT_BUFFER_SIZE
-): Long {
-  if (!debug) {
-    return this.copyTo(out, bufferSize)
-  }
-  var bytesCopied: Long = 0
-  val buffer = ByteArray(bufferSize)
-  var bytes = read(buffer)
-  Log.d(String(buffer))
-  while (bytes >= 0) {
-    out.write(buffer, 0, bytes)
-    bytesCopied += bytes
-    bytes = read(buffer)
-  }
-  return bytesCopied
-}
-
-private fun connectDevTools(client: LocalSocket) {
-  val address =
-      if (UserScriptHook.isInit) {
-        "chrome_devtools_remote"
-      } else {
-        "webview_devtools_remote"
-      }
-
-  runCatching { client.connect(LocalSocketAddress(address)) }
-      .onFailure { client.connect(LocalSocketAddress(address + "_" + Process.myPid())) }
-}
-
-private fun refreshDevTool(): String {
-  val client = LocalSocket()
-  connectDevTools(client)
-  client.outputStream.write("GET /json HTTP/1.1\r\n\r\n".toByteArray())
-  var pages = ""
-  client.inputStream.bufferedReader().use {
-    while (true) {
-      val line = it.readLine()
-      if (line.length == 0) {
-        pages = ""
-      }
-      pages += line + "\n"
-      if (line == "} ]") {
-        client.close()
-        break
-      }
+  private fun InputStream.pipe(
+      out: OutputStream,
+      debug: Boolean = false,
+      bufferSize: Int = DEFAULT_BUFFER_SIZE
+  ): Long {
+    if (!debug) {
+      return this.copyTo(out, bufferSize)
     }
+    var bytesCopied: Long = 0
+    val buffer = ByteArray(bufferSize)
+    var bytes = read(buffer)
+    Log.d(String(buffer))
+    while (bytes >= 0) {
+      out.write(buffer, 0, bytes)
+      bytesCopied += bytes
+      bytes = read(buffer)
+    }
+    return bytesCopied
   }
-  return pages
 }
