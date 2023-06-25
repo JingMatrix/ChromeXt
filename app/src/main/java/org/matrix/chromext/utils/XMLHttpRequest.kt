@@ -23,8 +23,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
   val method = request.optString("method")
   val headers = request.optJSONObject("headers")
   val followRedirects = request.optString("redirect") != "error"
-  // val binary = request.optBoolean("binary")
-  // Not sure where binary data is received
+  val binary = request.optBoolean("binary")
   val nocache = request.optBoolean("nocache")
   val timeout = request.optInt("timeout")
 
@@ -52,7 +51,11 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
       runCatching {
             if (method == "POST" && request.has("data")) {
               val data = request.optString("data")
-              outputStream.write(data.toByteArray())
+              if (binary) {
+                outputStream.write(Base64.decode(data, Base64.DEFAULT))
+              } else {
+                outputStream.write(data.toByteArray())
+              }
             }
             val res = Base64.encodeToString(inputStream.readBytes(), Base64.DEFAULT)
             val data =
