@@ -7,6 +7,7 @@ import java.io.Closeable
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.ServerSocket
+import java.net.SocketTimeoutException
 import kotlin.concurrent.thread
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
@@ -16,12 +17,12 @@ import org.matrix.chromext.utils.Log
 const val DEV_FRONT_END = "https://chrome-devtools-frontend.appspot.com"
 
 object DevTools {
+  val forwardServer = ServerSocket(0)
 
   fun start() {
     thread {
       val pages = refreshDevTool()
-      val forwardSocket = ServerSocket(0)
-      val port = forwardSocket.getLocalPort()
+      val port = forwardServer.getLocalPort()
       val code =
           "window.dispatchEvent(new CustomEvent('cdp_info',{detail:{port: ${port}, pages: ${pages}}}));"
       if (UserScriptHook.isInit) {
@@ -44,7 +45,7 @@ object DevTools {
                 throw Exception("Fail to connect to Chrome DevTools localsocket")
               }
 
-              val server = forwardSocket.accept()
+              val server = forwardServer.accept()
               sockets.add(server)
               forwardStreamThread(client.inputStream, server.outputStream, "client").start()
               forwardStreamThread(server.inputStream, client.outputStream, "server").start()
@@ -52,11 +53,13 @@ object DevTools {
           }
           .onFailure {
             val msg = it.message
-            if (msg != "Socket closed") {
-              Log.ex(it)
-            } else {
-              Log.d("Forward server closed")
+            if (it is SocketTimeoutException) {
+              Log.d("A socket not accepted due to timeout")
+            } else if (msg == "Socket closed") {
+              Log.d("A forwarding server is closed")
               sockets.forEach { it.close() }
+            } else {
+              Log.ex(it)
             }
           }
     }
@@ -66,8 +69,10 @@ object DevTools {
     val address =
         if (UserScriptHook.isInit) {
           "chrome_devtools_remote"
-        } else {
+        } else if (WebViewHook.isInit) {
           "webview_devtools_remote"
+        } else {
+          throw Exception("DevTools is started unexpectedly")
         }
 
     runCatching { client.connect(LocalSocketAddress(address)) }
