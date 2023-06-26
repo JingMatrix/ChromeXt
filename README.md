@@ -194,4 +194,8 @@ Here are corresponding files you might want / need to change:
 - [x] Implement UserScript storage
 - [x] Re-implement GM_xmlhttpRequest
 - [x] Convert exported bookmarks to HTML format
+- [ ] Show executed scripts on current page
+- [ ] Support importing UserScripts from Tampermonkey exports
+- [ ] Support backup and restore
 - [ ] Add recommended scripts to the front end manager
+- [ ] Add [chrome devtools front-end](https://chromium.googlesource.com/devtools/devtools-frontend/) for Edge, see [devtools_http_handler.cc](https://source.chromium.org/chromium/chromium/src/+/main:content/browser/devtools/devtools_http_handler.cc) as reference.
