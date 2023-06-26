@@ -97,7 +97,7 @@ object MenuProxy {
     val ctx = Chrome.getContext()
     val sharedPref = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
 
-    var summary = "Click to install Eruda, size around 0.5 MiB"
+    var summary = "Click to install eruda, size around 0.5 MiB"
     val version = sharedPref.getString("eruda_version", "unknown")
     if (version != "unknown") {
       summary = "Current version: v" + version
