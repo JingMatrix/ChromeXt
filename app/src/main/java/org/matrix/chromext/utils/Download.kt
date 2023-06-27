@@ -19,6 +19,7 @@ object Download {
       url: String,
       path: String,
       keep: Boolean = false,
+      overwrite: Boolean = true,
       callback: ((content: String) -> Unit)? = null
   ) {
     runCatching {
@@ -26,7 +27,11 @@ object Download {
 
           val file = File(Chrome.getContext().getExternalFilesDir(null), path)
           if (file.exists()) {
-            file.delete()
+            if (overwrite) {
+              file.delete()
+            } else {
+              return
+            }
           }
 
           request.setDestinationUri(Uri.fromFile(file))

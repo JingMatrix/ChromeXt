@@ -11,7 +11,7 @@ private val blocksReg =
         """(?<metablock>[\S\s]*?// ==UserScript==\r?\n([\S\s]*?)\r?\n// ==/UserScript==)(?<code>[\S\s]*)""")
 private val metaReg = Regex("""^//\s+@(?<key>[\w-]+)\s+(?<value>.+)""")
 
-fun parseScript(input: String, storage: String = ""): Script? {
+fun parseScript(input: String, storage: String = "", updateResource: Boolean = false): Script? {
   val blockMatchGroup = blocksReg.matchEntire(input)?.groups as? MatchNamedGroupCollection
   if (blockMatchGroup == null) {
     return null
@@ -86,10 +86,10 @@ fun parseScript(input: String, storage: String = ""): Script? {
       parsed.resource.forEach {
         val content = it.split(" ")
         val name = content.first()
-        val url = content.last()
-        Log.d("Downloading resource for ${name}: ${url.split("#").first()}")
+        val url = content.last().split("#").first()
+        Log.d("Downloading resource for ${name}: ${url}")
         if (url.startsWith("http")) {
-          Download.start(url, resourcePath(id, name), true)
+          Download.start(url, resourcePath(id, name), true, updateResource)
         }
       }
     }

@@ -143,7 +143,7 @@ object ScriptDbManager {
     var callback: String? = null
     when (action) {
       "installScript" -> {
-        val script = parseScript(payload)
+        val script = parseScript(payload, "", true)
         if (script == null) {
           callback = "alert('Invalid UserScript');"
         } else {
