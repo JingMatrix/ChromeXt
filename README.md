@@ -11,16 +11,16 @@ Chromium based browsers,
 [Bromite](https://github.com/bromite/bromite),
 [Thorium](https://github.com/Alex313031/thorium),
 [Mulch](https://gitlab.com/divested-mobile/mulch),
-and [Brave](https://github.com/brave/brave-browser) are also fully supported.
+and [Brave](https://github.com/brave/brave-browser) are fully supported.
 Due to different design ideas, supports for the following browsers are not perfect:
-1. [Egde](https://www.microsoft.com/en-us/edge/download), `DevTools` front end is removed by its authors;
+1. [Egde](https://www.microsoft.com/en-us/edge/download), `DevTools` front end is removed by its authors (I plan to add it back in the future.);
 2. [Vivaldi](https://vivaldi.com/en/android/), `Developer options` menu is removed by its authors.
 
 Most WebView based browsers are also supported, if not, please report it.
 
 ## Usage
 
-Currently, this project requires **Xposed framework** installed.
+Currently, this project requires **Xposed framework**.
 
 For root users, install [LSPosed](https://github.com/LSPosed/LSPosed) first,
 pick up the latest built APK from my repo's [GitHub Action](https://github.com/JingMatrix/ChromeXt/actions) and install it.
@@ -36,12 +36,9 @@ I modify a bit [LSPatch](https://github.com/JingMatrix/LSPatch) to support `Chro
 The author uploads releases to [Xposed-Modules-Repo](https://github.com/Xposed-Modules-Repo/org.matrix.chromext/releases) when needed, but not that frequently.
 
 You can then install UserScripts from popular sources: URLs that ends with `.user.js`.
-However, this fails for scripts from some domains like `raw.githubusercontent.com`.
-For them, one can download those scripts using the download button on the top of Chrome's three dot menu, and
-then open your downloaded scripts in Chrome. The installation prompt should show up again.
-Alternatively, it is possible to use the `Install UserScript` page menu if you simply want to install it
+However, this fails for UserScripts from some domains like `raw.githubusercontent.com`.
+For them, use the `Install UserScript` page menu if you simply want to install them
 without further editing.
-
 
 ### Supported API
 
@@ -164,7 +161,6 @@ Here are corresponding files you might want / need to change:
 - [x] Add more information in the preference screen
 - [x] Support more [Tampermonkey API](https://www.tampermonkey.net/documentation.php)s
 - [x] Find elegant way to support DevTools for Android 11-
-- [x] Improve front end
 - [x] Add cosmetic AdBlocker using eruda
 - [x] Find way to get current interactive tab
 - [x] Remove AndroidX Room dependency to reduce app size
@@ -183,12 +179,9 @@ Here are corresponding files you might want / need to change:
 - [x] Implement fully `GM_info`
 - [x] Eruda fails due to [Injection Sinks](https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API)
 - [x] Hide page_info panel automatically
-- [ ] ~~Fix Edge browser DevTools inspect url~~
-- [ ] ~~Get correct Chromium version~~
 - [x] Fix page menu injection position
 - [ ] ~~Use [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) as UserScript engine~~
 - [ ] ~~Use `adb forward` to support non-root users~~
-- [ ] ~~Turn Xposed into optional dependency~~
 - [x] Fully support WebView based browsers
 - [x] Fix [LSPatch for isolated process](https://github.com/LSPosed/LSPatch/issues/190) issue
 - [x] Implement UserScript storage
@@ -197,5 +190,5 @@ Here are corresponding files you might want / need to change:
 - [ ] Show executed scripts on current page
 - [ ] Support importing UserScripts from Tampermonkey exports
 - [ ] Support backup and restore
-- [ ] Add recommended scripts to the front end manager
+- [ ] Add recommended UserScripts to the front end manager
 - [ ] Add [chrome devtools front-end](https://chromium.googlesource.com/devtools/devtools-frontend/) for Edge, see [devtools_http_handler.cc](https://source.chromium.org/chromium/chromium/src/+/main:content/browser/devtools/devtools_http_handler.cc) as reference.
