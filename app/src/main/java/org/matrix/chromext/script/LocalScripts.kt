@@ -6,9 +6,6 @@ import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.utils.Log
 
-val GM_xmlhttpRequest =
-    Chrome.getContext().assets.open("xmlhttpRequest.js").bufferedReader().use { it.readText() }
-
 const val GM_addStyle =
     """
 function GM_addStyle(css) {
@@ -230,9 +227,13 @@ fun encodeScript(script: Script): String? {
       "GM_addElement" -> if (script.require.size == 0) code = GM_addElement + code
       "GM_openInTab" -> code = GM_openInTab + code
       "GM_info" -> return@granting
-      "GM_download" -> code = GM_xmlhttpRequest + GM_download + code
+      "GM_download" -> code = GM_download + code
       "GM_xmlhttpRequest" ->
-          if (!script.grant.contains("GM_download")) code = GM_xmlhttpRequest + code
+          if (!script.grant.contains("GM_download"))
+              code =
+                  Chrome.getContext().assets.open("xmlhttpRequest.js").bufferedReader().use {
+                    it.readText()
+                  } + code
       "unsafeWindow" -> code = "const unsafeWindow = window;" + code
       "GM_log" -> code = "const GM_log = console.log.bind(console);" + code
       "GM_setValue" -> code = GM_setValue + code

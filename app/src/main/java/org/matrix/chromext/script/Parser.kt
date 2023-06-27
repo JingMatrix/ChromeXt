@@ -58,6 +58,10 @@ fun parseScript(input: String): Script? {
     }
   }
 
+  if (script.grant.contains("GM_download") && !script.grant.contains("GM_xmlhttpRequest")) {
+    script.grant.add("GM_xmlhttpRequest")
+  }
+
   if (script.grant.contains("GM_getResourceURL") && !script.grant.contains("GM_getResourceText")) {
     script.grant.add("GM_getResourceText")
   }

@@ -1,5 +1,6 @@
 package org.matrix.chromext.hook
 
+import android.content.Context
 import kotlin.concurrent.thread
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
@@ -103,6 +104,9 @@ object UserScriptHook : BaseHook() {
           val url = proxy.parseUrl(it.args[0])!!
           proxy.userAgentHook(url, it.args[0])
         }
+
+    findMethod(proxy.chromeTabbedActivity, true) { name == "onResume" }
+        .hookBefore { Chrome.init(it.thisObject as Context) }
 
     findMethod(proxy.chromeTabbedActivity) { name == "onStop" }
         .hookBefore { ScriptDbManager.updateScriptStorage() }
