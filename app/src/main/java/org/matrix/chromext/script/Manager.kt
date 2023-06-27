@@ -8,6 +8,7 @@ import android.os.Build
 import java.io.File
 import java.io.FileReader
 import kotlin.concurrent.thread
+import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.hook.UserScriptHook
@@ -115,10 +116,15 @@ object ScriptDbManager {
   }
 
   private fun parseArray(str: String): Array<String> {
-    return str.removeSurrounding("[\"", "\"]")
-        .split("\",\"")
-        .map { it.replace("\\", "") }
-        .toTypedArray()
+    val result = mutableListOf<String>()
+    runCatching {
+          val array = JSONArray(str)
+          for (i in 0 until array.length()) {
+            result.add(array.getString(i))
+          }
+        }
+        .onFailure { Log.ex(it) }
+    return result.toTypedArray()
   }
 
   private fun syncSharedPreference(
@@ -126,23 +132,26 @@ object ScriptDbManager {
       item: String,
       cache: MutableMap<String, String>
   ): String? {
-    val sharedPref = Chrome.getContext().getSharedPreferences(item, Context.MODE_PRIVATE)
-    val result = payload.split(SEP)
-    Log.d("Config ${item}: ${result}")
-    with(sharedPref.edit()) {
-      if (result.size == 1) {
-        if (cache.containsKey(result.first())) {
-          remove(result.first())
-          cache.remove(result.first())
+    runCatching {
+          val result = JSONObject(payload)
+          val origin = result.getString("origin")
+          val sharedPref = Chrome.getContext().getSharedPreferences(item, Context.MODE_PRIVATE)
+          with(sharedPref.edit()) {
+            if (result.has("data")) {
+              val data = result.getString("data")
+              putString(origin, data)
+              cache.put(origin, data)
+            } else if (cache.containsKey(origin)) {
+              remove(origin)
+              cache.remove(origin)
+            }
+            apply()
+          }
         }
-      } else if (result.size == 2) {
-        putString(result.first(), result.last())
-        cache.put(result.first(), result.last())
-      } else {
-        return "alert('Invalid ${item}');"
-      }
-      apply()
-    }
+        .onFailure {
+          Log.e("Error parsing ${payload}, ")
+          Log.ex(it)
+        }
     return null
   }
 

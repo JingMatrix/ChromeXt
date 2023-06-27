@@ -128,13 +128,11 @@ object MenuProxy {
                           fun loopChildren(folder: JSONObject, indent: String = "\t") {
                             if (folder.optString("type") == "folder" && folder.has("children")) {
                               val children = folder.getJSONArray("children")
-                              val length = children.length()
-                              if (length == 0) return
                               html +=
                                   indent +
                                       "<DT><H3 ADD_DATE=\"${folder.getLong("date_added") / DIV }\" LAST_MODIFIED=\"${folder.getLong("date_modified") / DIV}\" PERSONAL_TOOLBAR_FOLDER=\"true\">${folder.getString("name")}</H3>\n"
                               html += indent + "<DL><p>\n"
-                              for (i in 0.rangeTo(length - 1)) {
+                              for (i in 0 until children.length()) {
                                 val item = children.getJSONObject(i)
                                 if (item.getString("type") == "url") {
                                   html +=
@@ -149,7 +147,7 @@ object MenuProxy {
                           }
 
                           val bookmarks = data.names()!!
-                          for (i in 0.rangeTo(bookmarks.length() - 1)) {
+                          for (i in 0 until bookmarks.length()) {
                             loopChildren(data.getJSONObject(bookmarks.getString(i)))
                           }
 

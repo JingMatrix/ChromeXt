@@ -6,14 +6,14 @@ if (
     #filter = [];
     constructor() {}
     #write() {
-      let filter = "";
+      let payload = { origin: window.location.origin };
       if (this.#filter.length > 0) {
-        filter = "" + JSON.stringify(this.#filter);
+        payload.data = this.#filter;
       }
       globalThis.ChromeXt(
         JSON.stringify({
           action: "cosmeticFilter",
-          payload: window.location.origin + filter,
+          payload,
         })
       );
     }
@@ -203,10 +203,10 @@ if (
           globalThis.ChromeXt(
             JSON.stringify({
               action: "userAgent",
-              payload:
-                window.location.origin +
-                "" +
-                this._$el.find("li.chromext-user-agent > div").text(),
+              payload: {
+                origin: window.location.origin,
+                data: this._$el.find("li.chromext-user-agent > div").text(),
+              },
             })
           );
         }
@@ -220,7 +220,7 @@ if (
           globalThis.ChromeXt(
             JSON.stringify({
               action: "userAgent",
-              payload: window.location.origin,
+              payload: { origin: window.location.origin },
             })
           );
         }
