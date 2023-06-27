@@ -11,7 +11,7 @@ private val blocksReg =
         """(?<metablock>[\S\s]*?// ==UserScript==\r?\n([\S\s]*?)\r?\n// ==/UserScript==)(?<code>[\S\s]*)""")
 private val metaReg = Regex("""^//\s+@(?<key>[\w-]+)\s+(?<value>.+)""")
 
-fun parseScript(input: String): Script? {
+fun parseScript(input: String, storage: String = ""): Script? {
   val blockMatchGroup = blocksReg.matchEntire(input)?.groups as? MatchNamedGroupCollection
   if (blockMatchGroup == null) {
     return null
@@ -29,7 +29,7 @@ fun parseScript(input: String): Script? {
         val meta = (blockMatchGroup.get("metablock")?.value as String).replace("`", "")
         val code = blockMatchGroup.get("code")?.value as String
         var resource = mutableListOf<String>()
-        val storage = ""
+        val storage = storage
       }
   script.meta.split("\n").forEach {
     val metaMatchGroup = metaReg.matchEntire(it)?.groups as? MatchNamedGroupCollection

@@ -45,17 +45,19 @@ object UserScriptHook : BaseHook() {
           } else if (url.startsWith(DEV_FRONT_END)) {
             proxy.evaluateJavascript(customizeDevTool)
           } else if (!url.endsWith("/ChromeXt/")) {
-            thread { proxy.invokeScript(url) }
-            val origin = proxy.parseOrigin(url)
-            if (origin != null) {
-              if (ScriptDbManager.cosmeticFilters.contains(origin)) {
-                proxy.evaluateJavascript(
-                    "globalThis.ChromeXt_filter=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${cosmeticFilter}")
-                Log.d("Cosmetic filters applied to ${origin}")
-              }
-              if (ScriptDbManager.userAgents.contains(origin)) {
-                proxy.evaluateJavascript(
-                    "Object.defineProperties(window.navigator,{userAgent:{value:'${ScriptDbManager.userAgents.get(origin)}'}});")
+            thread {
+              proxy.invokeScript(url)
+              val origin = proxy.parseOrigin(url)
+              if (origin != null) {
+                if (ScriptDbManager.cosmeticFilters.contains(origin)) {
+                  proxy.evaluateJavascript(
+                      "globalThis.ChromeXt_filter=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${cosmeticFilter}")
+                  Log.d("Cosmetic filters applied to ${origin}")
+                }
+                if (ScriptDbManager.userAgents.contains(origin)) {
+                  proxy.evaluateJavascript(
+                      "Object.defineProperties(window.navigator,{userAgent:{value:'${ScriptDbManager.userAgents.get(origin)}'}});")
+                }
               }
             }
           }

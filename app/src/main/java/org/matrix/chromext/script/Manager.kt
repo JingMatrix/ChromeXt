@@ -19,8 +19,6 @@ import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.XMLHttpRequest
 
-private const val SEP = ""
-
 object ScriptDbManager {
 
   val scripts = query()
@@ -48,12 +46,6 @@ object ScriptDbManager {
             put("id", it.id)
             put("code", it.code)
             put("meta", it.meta)
-            put("runAt", it.runAt.name)
-            put("match", it.match.joinToString(separator = SEP))
-            put("grant", it.grant.joinToString(separator = SEP))
-            put("exclude", it.exclude.joinToString(separator = SEP))
-            put("require", it.require.joinToString(separator = SEP))
-            put("resource", it.resource.joinToString(separator = SEP))
             put("storage", it.storage)
           }
       if (db.insert("script", null, values).toString() == "-1") {
@@ -91,23 +83,15 @@ object ScriptDbManager {
     }
     val quried_scripts = mutableListOf<Script>()
     with(cursor) {
-      fun getValueFromColumn(name: String): Array<String> {
-        return getString(getColumnIndexOrThrow(name)).split(SEP).filter { it != "" }.toTypedArray()
-      }
       while (moveToNext()) {
         val id = getString(getColumnIndexOrThrow("id"))
         val meta = getString(getColumnIndexOrThrow("meta"))
         val code = getString(getColumnIndexOrThrow("code"))
-        val runAt = RunAt.valueOf(getString(getColumnIndexOrThrow("runAt")))
-        val match = getValueFromColumn("match")
-        val grant = getValueFromColumn("grant")
-        val exclude = getValueFromColumn("exclude")
-        val require = getValueFromColumn("require")
-        val resource = getValueFromColumn("resource")
         val storage = getString(getColumnIndexOrThrow("storage"))
-        val script =
-            Script(id, match, grant, exclude, require, resource, meta, code, runAt, storage)
-        quried_scripts.add(script)
+        val script = parseScript(meta + code, storage)
+        if (script != null && script.id == id) {
+          quried_scripts.add(script)
+        }
       }
     }
     cursor.close()
@@ -254,8 +238,7 @@ object ScriptDbManager {
         runCatching {
           val data = JSONObject(payload)
           val script = scripts.filter { it.id == data.getString("id") }.first()
-          val newScript = parseScript(data.getString("meta") + "\n" + script.code)
-          newScript!!.storage = script.storage
+          val newScript = parseScript(data.getString("meta") + script.code, script.storage)!!
           insert(newScript)
           scripts.remove(script)
           scripts.add(newScript)
