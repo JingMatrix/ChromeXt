@@ -17,6 +17,7 @@ function GM_addStyle(css) {
 	} catch {
 		setTimeout(() => {document.head.appendChild(style);}, 0);
 	}
+	return style;
 }
 """
 
@@ -41,6 +42,7 @@ function GM_addElement() {
 	} catch {
 		setTimeout(() => {document.head.appendChild(element);}, 0);
 	}
+	return element;
 }
 """
 
@@ -294,23 +296,22 @@ fun encodeScript(script: Script): String? {
   }
 
   code =
-      GM_bootstrap +
-          "const GM_info = {scriptMetaStr:`${script.meta}`,script:{antifeatures:{},options:{override:{}}}};GM_bootstrap();GM_info.script.id=`${script.id}`;" +
-          code
+      "const GM_info = {scriptMetaStr:`${script.meta}`, script:{antifeatures:{}, options:{override:{}}, id:`${script.id}`, code:() => {${GM_bootstrap} GM_bootstrap();const GM = {};${code}}}};"
 
   if (!script.grant.contains("unsafeWindow")) {
     code = GM_globalThis + code
   }
 
-  code = "const ChromeXt_scriptLoader = () => {const GM = {};${code}};"
+  code +=
+      "if (typeof ChromeXt.scripts == 'undefined') {ChromeXt.scripts = []} ChromeXt.scripts.push(GM_info);"
   when (script.runAt) {
-    RunAt.START -> code = "(()=>{${code} ChromeXt_scriptLoader()})();"
+    RunAt.START -> code = "(()=>{${code} GM_info.script.code()})();"
     RunAt.END ->
         code =
-            "(()=>{${code} if (document.readyState != 'loading') {ChromeXt_scriptLoader()} else {window.addEventListener('DOMContentLoaded', ChromeXt_scriptLoader)}})();"
+            "(()=>{${code} if (document.readyState != 'loading') {GM_info.script.code()} else {window.addEventListener('DOMContentLoaded', GM_info.script.code)}})();"
     RunAt.IDLE ->
         code =
-            "(()=>{${code} if (document.readyState == 'complete') {ChromeXt_scriptLoader()} else {window.addEventListener('load', ChromeXt_scriptLoader)}})();"
+            "(()=>{${code} if (document.readyState == 'complete') {GM_info.script.code()} else {window.addEventListener('load', GM_info.script.code)}})();"
   }
 
   return code
