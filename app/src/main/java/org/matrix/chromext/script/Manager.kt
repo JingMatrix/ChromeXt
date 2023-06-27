@@ -41,7 +41,7 @@ object ScriptDbManager {
     script.forEach {
       val lines = db.delete("script", "id = ?", arrayOf(it.id))
       if (lines > 0) {
-        Log.i("Update ${lines.toString()} rows with id ${it.id}")
+        Log.d("Update ${lines.toString()} rows with id ${it.id}")
       }
       val values =
           ContentValues().apply {

@@ -74,7 +74,7 @@ object Chrome {
       }
     } else if (WebViewHook.isInit) {
       WebViewHook.evaluateJavascript(code)
-      Log.i("Broadcasting not implemented yet for event ${event}")
+      Log.w("Broadcasting not implemented yet for event ${event}")
     }
   }
 }

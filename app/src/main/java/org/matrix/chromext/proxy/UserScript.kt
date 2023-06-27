@@ -67,7 +67,7 @@ object UserScriptProxy {
       script.match.forEach {
         if (urlMatch(it, url, false)) {
           evaluateJavascript(script)
-          Log.i("${script.id} injected")
+          Log.d("${script.id} injected")
           return@loop
         }
       }

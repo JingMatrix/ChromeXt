@@ -10,6 +10,7 @@ import org.matrix.chromext.TAG
 object Log {
   fun i(msg: String) {
     Log.i(TAG, msg)
+    XposedBridge.log("ChromeXt logging: " + msg)
   }
 
   fun d(msg: String) {

@@ -88,7 +88,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             if (it.isInit) return@forEach
             it.init()
             it.isInit = true
-            Log.i("Inited hook: ${it.javaClass.simpleName}")
+            Log.d("${it.javaClass.simpleName} hooked")
           }
           .onFailure { Log.ex(it) }
     }
