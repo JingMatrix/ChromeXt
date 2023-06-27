@@ -47,13 +47,13 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
           .loadClass("org.chromium.ui.base.WindowAndroid")
           .getDeclaredConstructors()[1]
           .hookAfter {
-            Chrome.init(it.args[0] as Context)
+            Chrome.init(it.args[0] as Context, lpparam.packageName)
             initHooks(UserScriptHook, GestureNavHook, MenuHook, IntentHook)
           }
     } else {
       val ctx = AndroidAppHelper.currentApplication()
-      if (ctx != null) {
-        Chrome.init(ctx)
+      if (ctx != null && lpparam.packageName != "android") {
+        Chrome.init(ctx, lpparam.packageName)
       } else {
         return
       }

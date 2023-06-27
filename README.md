@@ -17,6 +17,7 @@ Due to different design ideas, supports for the following browsers are not perfe
 2. [Vivaldi](https://vivaldi.com/en/android/), `Developer options` menu is removed by its authors.
 
 Most WebView based browsers are also supported, if not, please report it.
+Note for WebView based browsers users: you _only_ need to enable this module for the browser application you wish to use, _not_ for any possible WebView applications, _neither_ for Android system.
 
 ## Usage
 

@@ -19,22 +19,22 @@ object Chrome {
   var isVivaldi = false
   var isBrave = false
 
-  fun init(ctx: Context) {
+  fun init(ctx: Context, packageName: String? = null) {
     val initialized = mContext != null
     mContext = WeakReference(ctx)
+
+    if (initialized || packageName == null) return
+
     if (ctx is Application) {
       Log.d("Started a WebView based browser")
     }
-
-    if (initialized) return
-    val packageName = ctx.getPackageName()
-    @Suppress("DEPRECATION")
-    val packageInfo = ctx.getPackageManager().getPackageInfo(packageName, 0)
     isEdge = packageName.startsWith("com.microsoft.emmx")
     isVivaldi = packageName == "com.vivaldi.browser"
     isBrave = packageName.startsWith("com.brave.browser")
     isDev = packageName.endsWith("canary") || packageName.endsWith("dev")
-    Log.i("Package: ${packageName}, v${packageInfo!!.versionName}")
+    @Suppress("DEPRECATION")
+    val packageInfo = ctx.getPackageManager()?.getPackageInfo(packageName, 0)
+    Log.i("Package: ${packageName}, v${packageInfo?.versionName}")
   }
 
   fun getContext(): Context {
