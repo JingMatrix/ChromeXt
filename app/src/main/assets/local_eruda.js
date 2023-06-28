@@ -36,7 +36,6 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
     }
     remove(rule) {
       this.#filter = this.#filter.filter((item) => item.trim() !== rule);
-      this.#write();
     }
     new() {
       this.#filter.push("");
@@ -47,6 +46,7 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
         .querySelectorAll(".eruda-filter-item")
         .forEach((it) => this.#filter.push(it.innerText.trim()));
       this.remove("");
+      this.#write();
     }
   }
 
@@ -183,7 +183,9 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
               "title"
             )}">UserScripts<span class="${c(
               "icon-add add"
-            )}"></span></h2><div class="${c("content")}">${ChromeXt.scripts
+            )}"></span><input type="file" multiple id="new_script" accept="text/javascript" style="display:none"/></h2><div class="${c(
+              "content"
+            )}">${ChromeXt.scripts
               .map(
                 (info, index) =>
                   `<span data-index=${index} class="${c("script")}">${
@@ -221,6 +223,30 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
               payload: { origin: window.location.origin },
             })
           );
+        })
+        .on("click", ".eruda-userscripts .eruda-script", (e) => {
+          const sources = this._container.get("sources");
+          if (!sources) return;
+          const index = e.curTarget.dataset.index;
+          sources.set("object", ChromeXt.scripts[index].script);
+          this._container.showTool("sources");
+        })
+        .on("click", ".eruda-userscripts .eruda-add", (_e) => {
+          this._$el.find("#new_script")[0].click();
+        })
+        .on("change", "#new_script", (e) => {
+          Array.from(e.curTarget.files).forEach((f) => {
+            if (f.name.endsWith(".user.js")) {
+              f.text().then((s) => {
+                ChromeXt(
+                  JSON.stringify({ action: "installScript", payload: s })
+                );
+                this._container.notify("Installing " + f.name);
+              });
+            } else {
+              this._container.notify(f.name + " is not a UserScript file.");
+            }
+          });
         });
     }
   }

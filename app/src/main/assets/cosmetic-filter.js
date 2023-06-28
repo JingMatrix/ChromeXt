@@ -8,7 +8,9 @@ window.addEventListener("DOMContentLoaded", () => {
 
   let filter = ChromeXt.filters;
   if (filter != null) {
-    filter = JSON.parse(filter).join(", ");
+    filter = JSON.parse(filter)
+      .filter((item) => item.trim() != "")
+      .join(", ");
     try {
       GM_addStyle(filter + " {display: none !important;}");
     } finally {
