@@ -1,7 +1,4 @@
-if (
-  typeof globalThis.eruda != "undefined" &&
-  typeof eruda._configured == "undefined"
-) {
+if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
   class Filter {
     #filter = [];
     constructor() {}
@@ -10,7 +7,7 @@ if (
       if (this.#filter.length > 0) {
         payload.data = this.#filter;
       }
-      globalThis.ChromeXt(
+      ChromeXt(
         JSON.stringify({
           action: "cosmeticFilter",
           payload,
@@ -57,7 +54,7 @@ if (
   class elements extends eruda.Elements {
     constructor() {
       super();
-      eruda._filter.parseFilter(globalThis.ChromeXt_filter);
+      eruda._filter.parseFilter(ChromeXt.filters);
       this._deleteNode = () => {
         const node = this._curNode;
         const selector = generateQuerySelector(node);
@@ -86,61 +83,52 @@ if (
         .on("click", ".eruda-delete-filter", function (e) {
           const rule = e.curTarget.dataset.key;
           eruda._filter.remove(rule);
-          self.refreshChromeXtFilter();
+          self.refreshFilter();
         })
         .on("click", ".eruda-new-filter", () => {
           eruda._filter.save(this._$ChromeXtFilter[0]);
           eruda._filter.new();
-          self.refreshChromeXtFilter();
+          self.refreshFilter();
           this._$ChromeXtFilter.find(".eruda-filter-item").last()[0].focus();
         })
         .on("click", ".eruda-save-filter", () => {
           eruda._filter.save(this._$ChromeXtFilter[0]);
-          self.refreshChromeXtFilter();
+          self.refreshFilter();
           container.notify("Filter Saved");
         })
-        .on("click", ".script-command", (e) => {
+        .on("click", ".eruda-command", (e) => {
           const index = e.curTarget.dataset.index;
-          ChromeXt.MenuCommand[index].listener(e);
+          ChromeXt.commands[index].listener(e);
           eruda.hide();
         });
     }
     _initTpl() {
       super._initTpl();
-      if (typeof ChromeXt.MenuCommand != "undefined") {
-        this._$el.prepend(
-          "<div class='eruda-section eruda-ChromeXt-MenuCommand'></div>"
-        );
-        this._$ChromeXtMenuCommand = this._$el.find(
-          ".eruda-ChromeXt-MenuCommand"
-        );
-      }
-      this._$el.prepend(
-        "<div class='eruda-section eruda-ChromeXt-filter'></div>"
-      );
-      this._$ChromeXtFilter = this._$el.find(".eruda-ChromeXt-filter");
-    }
-    refresh() {
-      return super.refresh().refreshChromeXtFilter().refreshMenuCommand();
-    }
-    refreshMenuCommand() {
-      if (
-        typeof ChromeXt.MenuCommand != "undefined" &&
-        ChromeXt.MenuCommand.length > 0
-      ) {
-        const commands = ChromeXt.MenuCommand.filter((m) => m.enabled)
+      if (typeof ChromeXt.commands != "undefined") {
+        this._$el.prepend(`<div class="${c("section commands")}">
+<h2 class="${c(
+          "title"
+        )}" style="width: 100%;">UserScript Commands</h2><div class="${c(
+          "commands"
+        )}">${ChromeXt.commands
+          .filter((m) => m.enabled)
           .map(
             (command, index) =>
-              `<span data-index=${index} style="padding: 0.3em; margin: 0.3em; border: 0.5px solid violet;" class="script-command">${command.title}</span>`
+              `<span data-index=${index} class="${c("command")}">${
+                command.title
+              }</span>`
           )
-          .join("");
-        this._$ChromeXtMenuCommand.html(`<h2 class="${c(
-          "title"
-        )}">UserScript Commands</h2><div style="display: flex; flex-wrap: wrap; justify-content: space-around;">${commands}</div>
-      `);
+          .join("")}</div>
+</div>`);
       }
+      this._$el.prepend(`<div class="${c("section filters")}"></div>`);
+      this._$ChromeXtFilter = this._$el.find(".eruda-filters.eruda-section");
     }
-    refreshChromeXtFilter() {
+    refresh() {
+      return super.refresh().refreshFilter();
+    }
+
+    refreshFilter() {
       let filterHtml = "<li></li>";
 
       let filter = eruda._filter.get();
@@ -159,20 +147,16 @@ if (
           .join("");
       }
 
-      this._$ChromeXtFilter.html(`<h2 class="${c(
-        "title"
-      )}">ChromeXt Cosmetic Filters
-			<div class="${c(
-        "btn save-filter"
-      )}" style="font-size:12px;"><span>💾</span></div>
-			<div class="${c(
-        "btn new-filter"
-      )}" style="font-size:12px;"><span>➕</span></div>
+      this._$ChromeXtFilter.html(`<h2 class="${c("title")}">Cosmetic Filters
+			<div class="${c("btn save-filter")}"><span class="${c(
+        "icon icon-save"
+      )}"></span></div>
+			<div class="${c("btn new-filter")}"><span class="${c(
+        "icon icon-add"
+      )}"></span></div>
 		</h2>
 		<ul>${filterHtml}</ul>
       `);
-
-      this.refreshLocalStorage();
       return this;
     }
   }
@@ -186,7 +170,27 @@ if (
     _renderHtml(html) {
       if (html.startsWith("<ul>")) {
         super._renderHtml(
-          `<ul><li class="chromext-user-agent"><h2 class="eruda-title">User Agent<span class="eruda-icon-save"></span><span class="eruda-icon-reset"></span></h2><div class="eruda-content" contenteditable="true">${navigator.userAgent}</div></li>` +
+          `<ul><li class="${c("user-agent")}"><h2 class="${c(
+            "title"
+          )}">User Agent<span class="${c(
+            "icon-save save"
+          )}"></span><span class="${c(
+            "icon-reset reset"
+          )}"></span></h2><div class="${c("content")}" contenteditable="true">${
+            navigator.userAgent
+          }</div></li>` +
+            `<li class="${c("userscripts")}"><h2 class="${c(
+              "title"
+            )}">UserScripts<span class="${c(
+              "icon-add add"
+            )}"></span></h2><div class="${c("content")}">${ChromeXt.scripts
+              .map(
+                (info, index) =>
+                  `<span data-index=${index} class="${c("script")}">${
+                    info.script.name
+                  }</span>`
+              )
+              .join("")}</div></li>` +
             html.substring(4)
         );
       } else {
@@ -194,13 +198,12 @@ if (
       }
     }
     _bindEvent() {
-      this._$el.on(
-        "click",
-        "li.chromext-user-agent > h2 > span.eruda-icon-save",
-        (e) => {
+      super._bindEvent();
+      this._$el
+        .on("click", ".eruda-user-agent .eruda-icon-save", (e) => {
           this._container.notify("User-Agent config saved");
           e.stopPropagation();
-          globalThis.ChromeXt(
+          ChromeXt(
             JSON.stringify({
               action: "userAgent",
               payload: {
@@ -209,23 +212,16 @@ if (
               },
             })
           );
-        }
-      );
-
-      this._$el.on(
-        "click",
-        "li.chromext-user-agent > h2 > span.eruda-icon-reset",
-        (_e) => {
+        })
+        .on("click", ".eruda-user-agent .eruda-icon-reset", (_e) => {
           this._container.notify("User-Agent will be restored after refresh");
-          globalThis.ChromeXt(
+          ChromeXt(
             JSON.stringify({
               action: "userAgent",
               payload: { origin: window.location.origin },
             })
           );
-        }
-      );
-      super._bindEvent();
+        });
     }
   }
 
@@ -233,111 +229,23 @@ if (
   eruda.Resources = resources;
   eruda.Info = info;
   eruda._configured = true;
-  eruda._font_fix = `
-	[class^='eruda-icon-']:before {
-	  font-size: 14px;
-	}
-	.eruda-icon-arrow-left:before {
-	  content: '←';
-	}
-	.eruda-icon-arrow-right:before {
-	  content: '→';
-	}
-	.eruda-icon-clear:before {
-	  content: '✖';
-	  font-size: 17px;
-	}
-	.eruda-icon-compress:before {
-	  content: '🗎';
-	}
-	.eruda-icon-copy:before,
-	.luna-text-viewer-icon-copy:before {
-	  content: '⎘ ';
-	  font-size: 16px;
-	  font-weight: bold;
-	}
-	.eruda-icon-delete:before {
-	  content: '⌫';
-	  font-weight: bold;
-	}
-	.eruda-icon-expand:before {
-	  content: '⌄';
-	}
-	.eruda-icon-eye:before {
-	  content: '🧿';
-	}
-	div.eruda-btn.eruda-search {
-	  margin-top: 4px;
-	}
-	.eruda-icon-filter:before {
-	  content: '⭃';
-      font-size: 19px;
-      font-weight: bold;
-      margin-right: -5px;
-      display: block;
-      transform: rotate(90deg);
-	}
-	.eruda-icon-play:before {
-	  content: '▷';
-	}
-	.eruda-icon-record:before {
-	  content: '●';
-	}
-	.eruda-icon-refresh:before {
-	  content: '↻';
-	  font-size: 18px;
-	  font-weight: bold;
-	}
-	.eruda-icon-reset:before {
-	  content: '↺';
-	  font-size: 18px;
-	  font-weight: bold;
-      display: block;
-	  transform: rotate(270deg) translate(5px, 0);
-	}
-	.eruda-icon-search:before {
-	  content: '🔍';
-	}
-	.eruda-icon-select:before {
-	  content: '➤';
-	  font-size: 14px;
-	  display: block;
-	  transform: rotate(232deg);
-	}
-	.eruda-icon-tool:before {
-	  content: '⚙';
-	  font-size: 30px;
-	}
-	.luna-console-icon-error:before {
-	  content: '✗';
-	}
-	.luna-console-icon-warn:before {
-	  content: '⚠';
-	}
-	[class\$='icon-caret-right']:before,
-	[class\$='icon-arrow-right']:before {
-	  content: '▼';
-	  font-size: 9px;
-	  display: block;
-	  transform: rotate(-0.25turn);
-	}
-	[class\$='icon-caret-down']:before,
-	[class\$='icon-arrow-down']:before {
-	  content: '▼';
-	  font-size: 9px;
-	}
-	`;
+  eruda._font_fix =
+    "[class^='eruda-icon-']:before { font-size: 14px; } .eruda-icon-arrow-left:before { content: '←'; } .eruda-icon-arrow-right:before { content: '→'; } .eruda-icon-clear:before { content: '✖'; font-size: 17px; } .eruda-icon-compress:before { content: '🗎'; } .eruda-icon-copy:before, .luna-text-viewer-icon-copy:before { content: '⎘ '; font-size: 16px; font-weight: bold; } .eruda-icon-delete:before { content: '⌫'; font-weight: bold; } .eruda-icon-expand:before { content: '⌄'; } .eruda-icon-eye:before { content: '🧿'; } div.eruda-btn.eruda-search { margin-top: 4px; } .eruda-icon-filter:before { content: '⭃'; font-size: 19px; font-weight: bold; margin-right: -5px; display: block; transform: rotate(90deg); } .eruda-icon-play:before { content: '▷'; } .eruda-icon-record:before { content: '●'; } .eruda-icon-refresh:before { content: '↻'; font-size: 18px; font-weight: bold; } .eruda-icon-reset:before { content: '↺'; font-size: 18px; font-weight: bold; display: block; transform: rotate(270deg) translate(5px, 0); } .eruda-icon-search:before { content: '🔍'; } .eruda-icon-select:before { content: '➤'; font-size: 14px; display: block; transform: rotate(232deg); } .eruda-icon-tool:before { content: '⚙'; font-size: 30px; } .luna-console-icon-error:before { content: '✗'; } .luna-console-icon-warn:before { content: '⚠'; } [class$='icon-caret-right']:before, [class$='icon-arrow-right']:before { content: '▼'; font-size: 9px; display: block; transform: rotate(-0.25turn); } [class$='icon-caret-down']:before, [class$='icon-arrow-down']:before { content: '▼'; font-size: 9px; }";
   eruda._localConfig = () => {
     if (!document.querySelector("#eruda")) {
       return;
     }
+    addErudaStyle(
+      "chromext_new_icons",
+      ".eruda-icon-add:before { content: '➕'; font-size: 10px; vertical-align: 3px; } .eruda-icon-save:before { content: '💾'; font-size: 10px; vertical-align: 3px; }"
+    );
     addErudaStyle(
       "chromext_eruda_dom_fix",
       "#eruda-elements div.eruda-dom-viewer-container { overflow-x: hidden;} #eruda-elements div.eruda-dom-viewer-container > div.eruda-dom-viewer { overflow-x: scroll;} .luna-dom-viewer { min-width: 80vw;}"
     );
     addErudaStyle(
       "chromext_plugin",
-      "li.chromext-user-agent .eruda-icon-save:before { content: '💾'; font-size: 10px; vertical-align: 3px;} li.chromext-user-agent span {padding: 4px 5px; margin: 0; float: right;} #eruda-info li.chromext-user-agent h2.eruda-title {padding-bottom: 16px;}"
+      "#eruda-info li .eruda-title span {padding: 4px 5px; margin: 0; float: right;} #eruda-info .eruda-user-agent h2 { padding-bottom: 12px;} #eruda-info .eruda-userscripts div.eruda-content, #eruda-resources div.eruda-commands {display: flex; flex-wrap: wrap; justify-content: space-around; > span {padding: 0.3em; margin: 0.3em; border: 0.5px solid violet;}}"
     );
     if (typeof eruda._shouldFixfont == "undefined") {
       eruda._shouldFixfont = false;
@@ -388,7 +296,7 @@ if (
     style.textContent = content;
     erudaroot.append(style);
   }
-} else if (typeof globalThis.eruda == "undefined") {
+} else if (typeof eruda == "undefined") {
   const cspRule = "script-src 'none'";
   const meta = document.head.querySelector(`meta[content="${cspRule}"]`);
   if (meta && meta.getAttribute("http-equiv") == "Content-Security-Policy") {
@@ -401,7 +309,7 @@ if (
     )
   ) {
     localStorage.setItem("CSPBlocker", cspRule);
-    globalThis.ChromeXt(
+    ChromeXt(
       JSON.stringify({
         action: "installDefault",
         payload: "CSP.user.js",

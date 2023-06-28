@@ -51,7 +51,7 @@ object UserScriptHook : BaseHook() {
                 proxy.invokeScript(url)
                 if (ScriptDbManager.cosmeticFilters.contains(origin)) {
                   proxy.evaluateJavascript(
-                      "globalThis.ChromeXt_filter=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${cosmeticFilter}")
+                      "globalThis.ChromeXt.filters=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${cosmeticFilter}")
                   Log.d("Cosmetic filters applied to ${origin}")
                 }
                 if (ScriptDbManager.userAgents.contains(origin)) {

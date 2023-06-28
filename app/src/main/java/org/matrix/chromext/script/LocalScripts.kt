@@ -83,18 +83,18 @@ function GM_openInTab(url, options) {
 const val GM_registerMenuCommand =
     """
 function GM_registerMenuCommand(title, listener, accessKey="Dummy") {
-	if (typeof ChromeXt.MenuCommand == "undefined") {
-		ChromeXt.MenuCommand = [];
+	if (typeof ChromeXt.commands == "undefined") {
+		ChromeXt.commands = [];
 	}
-	const index = ChromeXt.MenuCommand.findIndex(
+	const index = ChromeXt.commands.findIndex(
 		(e) => e.id == GM_info.script.id && e.title == title
 	);
 	if (index != -1) {
-		ChromeXt.MenuCommand[index].listener = listener;
+		ChromeXt.commands[index].listener = listener;
 		return index;
 	}
-	ChromeXt.MenuCommand.push({id: GM_info.script.id, title, listener, enabled: true});
-	return ChromeXt.MenuCommand.length - 1;
+	ChromeXt.commands.push({id: GM_info.script.id, title, listener, enabled: true});
+	return ChromeXt.commands.length - 1;
 }
 """
 
@@ -249,7 +249,7 @@ fun encodeScript(script: Script): String? {
       "GM_registerMenuCommand" -> code = GM_registerMenuCommand + code
       "GM_unregisterMenuCommand" ->
           code =
-              "function GM_unregisterMenuCommand(index) {ChromeXt.MenuCommand[index].enabled = false;};" +
+              "function GM_unregisterMenuCommand(index) {ChromeXt.commands[index].enabled = false;};" +
                   code
       "GM_getResourceURL" -> return@granting
       "GM_getResourceText" -> {

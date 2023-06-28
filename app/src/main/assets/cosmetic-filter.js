@@ -6,7 +6,7 @@ window.addEventListener("DOMContentLoaded", () => {
     document.head.appendChild(style);
   }
 
-  let filter = globalThis.ChromeXt_filter;
+  let filter = ChromeXt.filters;
   if (filter != null) {
     filter = JSON.parse(filter).join(", ");
     try {
