@@ -32,6 +32,10 @@ object ScriptDbManager {
   val userAgents =
       Chrome.getContext().getSharedPreferences("UserAgent", Context.MODE_PRIVATE).getAll()
           as MutableMap<String, String>
+  @Suppress("UNCHECKED_CAST")
+  val cspRules =
+      Chrome.getContext().getSharedPreferences("CSPRule", Context.MODE_PRIVATE).getAll()
+          as MutableMap<String, String>
 
   private fun insert(vararg script: Script) {
     val dbHelper = ScriptDbHelper(Chrome.getContext())
@@ -153,12 +157,6 @@ object ScriptDbManager {
           scripts.add(script)
         }
       }
-      "installDefault" -> {
-        val code = Chrome.getContext().assets.open(payload).bufferedReader().use { it.readText() }
-        if (on("installScript", code) != null) {
-          callback = "alert('Fail to install ${payload}');"
-        }
-      }
       "scriptStorage" -> {
         Chrome.broadcast("scriptStorage", "{detail:${payload}}")
         runCatching {
@@ -257,6 +255,9 @@ object ScriptDbManager {
       }
       "userAgent" -> {
         callback = syncSharedPreference(payload, "UserAgent", userAgents)
+      }
+      "cspRule" -> {
+        callback = syncSharedPreference(payload, "CSPRule", cspRules)
       }
     }
     return callback

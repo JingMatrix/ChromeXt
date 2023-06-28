@@ -7,6 +7,7 @@ import org.matrix.chromext.Chrome
 import org.matrix.chromext.DEV_FRONT_END
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.ScriptDbManager
+import org.matrix.chromext.script.cspRule
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.ResourceMerge
 import org.matrix.chromext.utils.findMethod
@@ -48,11 +49,14 @@ object UserScriptHook : BaseHook() {
             thread {
               val origin = proxy.parseOrigin(url)
               if (origin != null) {
+                if (ScriptDbManager.cspRules.contains(origin)) {
+                  proxy.evaluateJavascript(
+                      "ChromeXt.cspRules=`${ScriptDbManager.cspRules.get(origin)}`;${cspRule}")
+                }
                 proxy.invokeScript(url)
                 if (ScriptDbManager.cosmeticFilters.contains(origin)) {
                   proxy.evaluateJavascript(
-                      "globalThis.ChromeXt.filters=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${cosmeticFilter}")
-                  Log.d("Cosmetic filters applied to ${origin}")
+                      "ChromeXt.filters=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${cosmeticFilter}")
                 }
                 if (ScriptDbManager.userAgents.contains(origin)) {
                   proxy.evaluateJavascript(

@@ -178,22 +178,26 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
             "icon-reset reset"
           )}"></span></h2><div class="${c("content")}" contenteditable="true">${
             navigator.userAgent
-          }</div></li>` +
-            `<li class="${c("userscripts")}"><h2 class="${c(
-              "title"
-            )}">UserScripts<span class="${c(
-              "icon-add add"
-            )}"></span><input type="file" multiple id="new_script" accept="text/javascript" style="display:none"/></h2><div class="${c(
-              "content"
-            )}">${ChromeXt.scripts
-              .map(
-                (info, index) =>
-                  `<span data-index=${index} class="${c("script")}">${
-                    info.script.name
-                  }</span>`
-              )
-              .join("")}</div></li>` +
-            html.substring(4)
+          }</div></li><li class="${c("csp-rules")}"><h2 class="${c(
+            "title"
+          )}">User CSP Rules<span class="${c(
+            "icon-save save"
+          )}"></span></h2><div class="${c("content")}" contenteditable="true">${
+            ChromeXt.cspRules
+          }</div></li><li class="${c("userscripts")}"><h2 class="${c(
+            "title"
+          )}">UserScripts<span class="${c(
+            "icon-add add"
+          )}"></span><input type="file" multiple id="new_script" accept="text/javascript" style="display:none"/></h2><div class="${c(
+            "content"
+          )}">${(ChromeXt.scripts || [])
+            .map(
+              (info, index) =>
+                `<span data-index=${index} class="${c("script")}">${
+                  info.script.name
+                }</span>`
+            )
+            .join("")}</div></li>` + html.substring(4)
         );
       } else {
         super._renderHtml(html);
@@ -201,6 +205,9 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
     }
     _bindEvent() {
       super._bindEvent();
+      if (typeof ChromeXt.cspRules == "undefined") {
+        this._$el.find("li.eruda-csp-rules")[0].style = "display:none;";
+      }
       this._$el
         .on("click", ".eruda-user-agent .eruda-icon-save", (e) => {
           this._container.notify("User-Agent config saved");
@@ -210,7 +217,7 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
               action: "userAgent",
               payload: {
                 origin: window.location.origin,
-                data: this._$el.find("li.chromext-user-agent > div").text(),
+                data: this._$el.find("li.eruda-user-agent > div").text(),
               },
             })
           );
@@ -221,6 +228,19 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
             JSON.stringify({
               action: "userAgent",
               payload: { origin: window.location.origin },
+            })
+          );
+        })
+        .on("click", ".eruda-csp-rules .eruda-icon-save", (e) => {
+          this._container.notify("CSP Rules config saved");
+          e.stopPropagation();
+          ChromeXt(
+            JSON.stringify({
+              action: "cspRule",
+              payload: {
+                origin: window.location.origin,
+                data: this._$el.find("li.eruda-csp-rules > div").text(),
+              },
             })
           );
         })
@@ -271,7 +291,7 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
     );
     addErudaStyle(
       "chromext_plugin",
-      "#eruda-info li .eruda-title span {padding: 4px 5px; margin: 0; float: right;} #eruda-info .eruda-user-agent h2 { padding-bottom: 12px;} #eruda-info .eruda-userscripts div.eruda-content, #eruda-resources div.eruda-commands {display: flex; flex-wrap: wrap; justify-content: space-around; > span {padding: 0.3em; margin: 0.3em; border: 0.5px solid violet;}}"
+      "#eruda-info li .eruda-title span {padding: 4px 5px; margin: 0; float: right;} #eruda-info .eruda-user-agent h2, #eruda-info .eruda-csp-rules h2 { padding-bottom: 12px;} #eruda-info .eruda-userscripts div.eruda-content, #eruda-resources div.eruda-commands {display: flex; flex-wrap: wrap; justify-content: space-around; > span {padding: 0.3em; margin: 0.3em; border: 0.5px solid violet;}}"
     );
     if (typeof eruda._shouldFixfont == "undefined") {
       eruda._shouldFixfont = false;
@@ -323,22 +343,21 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
     erudaroot.append(style);
   }
 } else if (typeof eruda == "undefined") {
-  const cspRule = "script-src 'none'";
-  const meta = document.head.querySelector(`meta[content="${cspRule}"]`);
+  const cspRules = "script-src 'none'";
+  const meta = document.head.querySelector(`meta[content="${cspRules}"]`);
   if (meta && meta.getAttribute("http-equiv") == "Content-Security-Policy") {
     alert(
       "Content-Security-Policy is set, but you need to fully restart the browser to clean cached third-party JavaScripts."
     );
   } else if (
     confirm(
-      "Eruda is blocked, it is advisable to use the official 'Content-Security-Policy Blocker' UserScript to block JavaScripts on this website.\n\nDo you want to proceed in this way (current page will be reloaded)?"
+      "Eruda is blocked, it is advisable to use Content-Security-Policy to block JavaScripts on this website.\n\nDo you want to proceed in this way (current page will be reloaded)?\n\nNote: To remove the Content-Security-Policy rule, set it to be empty in the eruda Info panel."
     )
   ) {
-    localStorage.setItem("CSPBlocker", cspRule);
     ChromeXt(
       JSON.stringify({
-        action: "installDefault",
-        payload: "CSP.user.js",
+        action: "cspRule",
+        payload: { origin: window.location.origin, data: cspRules },
       })
     );
     window.location.reload();

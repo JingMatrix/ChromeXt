@@ -230,7 +230,7 @@ object MenuProxy {
                     reset_confirming += 1
                     return
                   }
-                  arrayOf("ChromeXt", "CosmeticFilter", "UserAgent").forEach {
+                  arrayOf("ChromeXt", "CosmeticFilter", "UserAgent", "CSPRule").forEach {
                     with(ctx.getSharedPreferences(it, Context.MODE_PRIVATE).edit()) {
                       clear()
                       apply()
