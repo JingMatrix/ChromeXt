@@ -46,9 +46,9 @@ object UserScriptHook : BaseHook() {
             proxy.evaluateJavascript(customizeDevTool)
           } else if (!url.endsWith("/ChromeXt/")) {
             thread {
-              proxy.invokeScript(url)
               val origin = proxy.parseOrigin(url)
               if (origin != null) {
+                proxy.invokeScript(url)
                 if (ScriptDbManager.cosmeticFilters.contains(origin)) {
                   proxy.evaluateJavascript(
                       "globalThis.ChromeXt_filter=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${cosmeticFilter}")

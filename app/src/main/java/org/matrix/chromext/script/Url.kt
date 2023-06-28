@@ -20,10 +20,12 @@ fun urlMatch(match: String, url: String, strict: Boolean): Boolean {
     pattern = pattern.replace("*", "\\S*")
     pattern = pattern.replace("\\S*\\.", "(\\S*\\.)?")
 
-    val result = Regex(pattern).matches(url)
-    Log.d("Matching ${pattern} against ${url}: ${result}")
-    return result
-  } else {
-    return false
+    runCatching {
+          val result = Regex(pattern).matches(url)
+          Log.d("Matching ${pattern} against ${url}: ${result}")
+          return result
+        }
+        .onFailure { Log.i("Invaid matching rule: ${match}, error: " + it.message) }
   }
+  return false
 }
