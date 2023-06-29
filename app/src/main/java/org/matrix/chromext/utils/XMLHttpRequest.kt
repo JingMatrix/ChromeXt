@@ -90,7 +90,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
     val code =
         "window.dispatchEvent(new CustomEvent('xmlhttpRequest', {detail: {id: '${id}', uuid: ${uuid}, type: '${type}', data: ${data}}}));"
     if (UserScriptHook.isInit) {
-      UserScriptProxy.loadUrl("javascript: ${code}")
+      UserScriptProxy.evaluateJavascript(code)
     } else if (WebViewHook.isInit) {
       WebViewHook.evaluateJavascript(code)
     }

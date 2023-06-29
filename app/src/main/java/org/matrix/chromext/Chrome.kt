@@ -69,7 +69,7 @@ object Chrome {
         val count = it.get()!!.invokeMethod() { name == "getCount" } as Int
         for (i in 0.rangeTo(count)) {
           val tab = it.get()?.invokeMethod(i) { name == "getTabAt" }
-          UserScriptProxy.loadUrl("javascript: " + code, tab)
+          UserScriptProxy.evaluateJavascript(code, false, tab)
         }
       }
     } else if (WebViewHook.isInit) {

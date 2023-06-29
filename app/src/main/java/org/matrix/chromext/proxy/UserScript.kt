@@ -1,7 +1,7 @@
 package org.matrix.chromext.proxy
 
+import android.net.Uri
 import android.os.Handler
-import java.net.URLEncoder
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDbManager
@@ -36,7 +36,7 @@ object UserScriptProxy {
       loadUrlParams.getDeclaredFields().filter { it.getType() == String::class.java }[1]
   private val mSpec = gURL.getDeclaredField("a")
 
-  fun loadUrl(url: String, tab: Any? = Chrome.getTab()) {
+  private fun loadUrl(url: String, tab: Any? = Chrome.getTab()) {
     if (tab != null) {
       Handler(Chrome.getContext().getMainLooper()).post {
         loadUrl.invoke(tab, newLoadUrlParams(url))
@@ -82,23 +82,23 @@ object UserScriptProxy {
     }
   }
 
-  fun evaluateJavascript(script: String, forceWrap: Boolean = false) {
+  fun evaluateJavascript(script: String, forceWrap: Boolean = false, tab: Any? = Chrome.getTab()) {
     if (script == "") return
-    var code = URLEncoder.encode(script, "UTF-8").replace("+", "%20")
+    var code = Uri.encode(script, "`$")
     if (code.length > kMaxURLChars - 20 || forceWrap) {
       val alphabet: List<Char> = ('a'..'z') + ('A'..'Z')
       val randomString = List(16) { alphabet.random() }.joinToString("")
       val backtrick = List(16) { alphabet.random() }.joinToString("")
       val dollarsign = List(16) { alphabet.random() }.joinToString("")
       loadUrl("javascript: void(globalThis.${randomString} = '');")
-      URLEncoder.encode(script.replace("`", backtrick).replace("$", dollarsign), "UTF-8")
-          .replace("+", "%20")
-          .chunked(kMaxURLChars - 100)
-          .forEach { loadUrl("javascript: void(globalThis.${randomString} += String.raw`${it}`);") }
+      code.replace("`", backtrick).replace("$", dollarsign).chunked(kMaxURLChars - 100).forEach {
+        loadUrl("javascript: void(globalThis.${randomString} += String.raw`${it}`);")
+      }
       loadUrl(
-          "javascript: globalThis.${randomString}=globalThis.${randomString}.replaceAll('${backtrick}', '`').replaceAll('${dollarsign}', '\$');try{Function(${randomString})()}catch(e){let script=document.createElement('script');script.textContent=${randomString};document.head.append(script)};")
+          "javascript: ${randomString} = ${randomString}.replaceAll('${backtrick}', '`').replaceAll('${dollarsign}', '\$'); try { Function(${randomString})() } catch(e) { let script = document.createElement('script'); script.textContent = ${randomString}; document.head.append(script) };",
+          tab)
     } else {
-      loadUrl("javascript: ${code}")
+      loadUrl("javascript: ${code}", tab)
     }
   }
 
