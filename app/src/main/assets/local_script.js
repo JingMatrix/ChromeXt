@@ -29,8 +29,9 @@ function GM_bootstrap() {
   delete meta.grant;
 
   if (meta.requires.length > 0) {
+    meta.sync_code = meta.code;
     meta.code = async () => {
-      await meta.requires.forEach(async (url) => {
+      for (const url of meta.requires) {
         try {
           await import(url);
         } catch {
@@ -45,12 +46,13 @@ function GM_bootstrap() {
             }),
           });
         }
-      });
-      meta.code();
+      }
+      meta.sync_code();
     };
   }
 
   if (!meta.grants.includes("unsafeWindow")) {
+    delete globalThis;
     const globalThis = new Proxy(window, {
       get(target, prop) {
         if (prop.startsWith("_")) {
