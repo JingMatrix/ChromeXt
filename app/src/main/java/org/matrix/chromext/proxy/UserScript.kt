@@ -3,9 +3,9 @@ package org.matrix.chromext.proxy
 import android.net.Uri
 import android.os.Handler
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.script.GM
 import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDbManager
-import org.matrix.chromext.script.encodeScript
 import org.matrix.chromext.script.kMaxURLChars
 import org.matrix.chromext.script.urlMatch
 import org.matrix.chromext.utils.Log
@@ -75,7 +75,7 @@ object UserScriptProxy {
   }
 
   private fun evaluateJavascript(script: Script) {
-    val code = encodeScript(script)
+    val code = GM.bootstrap(script)
     if (code != null) {
       evaluateJavascript(code)
       Log.d("Run script: ${script.code.replace("\\s+".toRegex(), " ")}")

@@ -21,7 +21,6 @@ fun parseScript(input: String, storage: String = "", updateResource: Boolean = f
       object {
         var name = "sample"
         var namespace = "ChromeXt"
-        var runAt = RunAt.IDLE
         var match = mutableListOf<String>()
         var grant = mutableListOf<String>()
         var exclude = mutableListOf<String>()
@@ -48,12 +47,6 @@ fun parseScript(input: String, storage: String = "", updateResource: Boolean = f
         "exclude" -> script.exclude.add(value)
         "require" -> script.require.add(value)
         "resource" -> script.resource.add(value.trim().replace("\\s+".toRegex(), " "))
-        "run-at" ->
-            when (value) {
-              "document-start" -> script.runAt = RunAt.START
-              "document-end" -> script.runAt = RunAt.END
-              "document-idle" -> script.runAt = RunAt.IDLE
-            }
       }
     }
   }
@@ -84,11 +77,9 @@ fun parseScript(input: String, storage: String = "", updateResource: Boolean = f
             script.match.toTypedArray(),
             script.grant.toTypedArray(),
             script.exclude.toTypedArray(),
-            script.require.toTypedArray(),
             script.resource.toTypedArray(),
             script.meta,
             script.code,
-            script.runAt,
             script.storage)
     val id = parsed.id
     if (parsed.grant.contains("GM_getResourceText")) {

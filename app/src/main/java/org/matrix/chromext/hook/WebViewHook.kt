@@ -13,8 +13,8 @@ import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.DEV_FRONT_END
 import org.matrix.chromext.DevTools
+import org.matrix.chromext.script.GM
 import org.matrix.chromext.script.ScriptDbManager
-import org.matrix.chromext.script.encodeScript
 import org.matrix.chromext.script.openEruda
 import org.matrix.chromext.script.urlMatch
 import org.matrix.chromext.utils.Log
@@ -102,7 +102,7 @@ object WebViewHook : BaseHook() {
             }
             script.match.forEach {
               if (urlMatch(it, url, false)) {
-                val code = encodeScript(script)
+                val code = GM.bootstrap(script)
                 if (code != null) {
                   evaluateJavascript(code)
                   Log.d("Run script: ${script.code.replace("\\s+".toRegex(), " ")}")

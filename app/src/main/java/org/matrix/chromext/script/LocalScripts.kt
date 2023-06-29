@@ -7,316 +7,107 @@ import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.utils.Log
 
-const val GM_addStyle =
-    """
-function GM_addStyle(css) {
-	const style = document.createElement("style");
-	style.setAttribute("type", "text/css");
-	style.textContent = css;
-	try {
-		(document.head || document.documentElement).appendChild(style);
-	} catch {
-		setTimeout(() => {document.head.appendChild(style);}, 0);
-	}
-	return style;
-}
-"""
+object GM {
 
-const val GM_addElement =
-    """
-function GM_addElement() {
-	// parent_node, tag_name, attributes
-	if (arguments.length == 2) {
-		arguments = [document.head, arguments[0], arguments[1]];
-	};
-	if (arguments.length != 3) { return };
-	const element = document.createElement(arguments[1]);
-	for (const [key, value] of Object.entries(arguments[2])) {
-		if (key != "textContent") {
-			element.setAttribute(key, value);
-		} else {
-			element.textContent = value;
-		}
-	}
-	try {
-		arguments[0].appendChild(element);
-	} catch {
-		setTimeout(() => {document.head.appendChild(element);}, 0);
-	}
-	return element;
-}
-"""
+  val localScript =
+      Chrome.getContext()
+          .assets
+          .open("local_script.js")
+          .bufferedReader()
+          .use { it.readText() }
+          .split("// Kotlin separator\n\n")
+          .associateBy({ it.lines()[0].split("(")[0].split(" ")[1] }, { it })
 
-const val GM_download =
-    """
-function GM_download(details) {
-	if (arguments.length == 2) {
-		details = {url: arguments[0], name: arguments[1]}
-	}
-	return GM_xmlhttpRequest({
-		...details, responseType: 'blob',
-		onload: (res) => {
-			if (res.status !== 200) return console.error('Error loading: ', details.url, res);
-			const link = document.createElement('a');
-			link.href = URL.createObjectURL(res.response);
-			link.download = details.name || details.url.split('#').shift().split('?').shift().split('/').pop();
-			link.dispatchEvent(new MouseEvent('click'));
-			setTimeout(URL.revokeObjectURL(link.href), 1000);
-		}
-	});
-}
-"""
+  fun bootstrap(script: Script): String? {
+    var code = script.code
+    var grants = localScript.get("GM_bootstrap")!!
 
-const val GM_openInTab =
-    """
-function GM_openInTab(url, options) {
-	const gm_window = window.open(url, "_blank");
-	if (typeof options == "boolean") {
-		options = {active: !options};
-	}
-	if ("active" in options && options.active ) {
-		gm_window.focus();
-	}
-	return gm_window;
-}
-"""
+    if (!script.meta.startsWith("// ==UserScript==")) {
+      code = script.meta + code
+    }
 
-const val GM_registerMenuCommand =
-    """
-function GM_registerMenuCommand(title, listener, accessKey="Dummy") {
-	if (typeof ChromeXt.commands == "undefined") {
-		ChromeXt.commands = [];
-	}
-	const index = ChromeXt.commands.findIndex(
-		(e) => e.id == GM_info.script.id && e.title == title
-	);
-	if (index != -1) {
-		ChromeXt.commands[index].listener = listener;
-		return index;
-	}
-	ChromeXt.commands.push({id: GM_info.script.id, title, listener, enabled: true});
-	return ChromeXt.commands.length - 1;
-}
-"""
-
-const val GM_addValueChangeListener =
-    """
-function GM_addValueChangeListener(key, listener) {
-	const index = GM_info.valueListener.findIndex(
-		(e) => e.key == key
-	);
-	if (index != -1) {
-		GM_info.valueListener[index].listener = listener;
-		return index;
-	}
-	GM_info.valueListener.push({key, listener, enabled: true});
-	return GM_info.valueListener.length - 1;
-}
-"""
-
-const val GM_setValue =
-    """
-function GM_setValue(key, value) {
-	if (key in GM_info.storage && JSON.stringify(GM_info.storage[key]) == JSON.stringify(value)) return;
-	GM_info.storage[key] = value;
-	ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: {key, value}, uuid: GM_info.uuid}}));
-}
-"""
-
-const val GM_deleteValue =
-    """
-function GM_deleteValue(key, value) {
-	if (key in GM_info.storage) {
-		delete GM_info.storage[key];
-		ChromeXt(JSON.stringify({action: 'scriptStorage', payload: {id: GM_info.script.id, data: {key}, uuid: GM_info.uuid}}));
-	}
-}
-"""
-
-const val GM_getValue =
-    """
-function GM_getValue(key, default_value) {
-	return GM_info.storage[key] || default_value;
-}
-"""
-
-const val GM_bootstrap =
-    """
-function GM_bootstrap() {
-	const row = /\/\/\s+@(\S+)\s+(.+)/g;
-	const meta = GM_info.script;
-	let match;
-	while ((match = row.exec(GM_info.scriptMetaStr)) !== null) {
-		if (meta[match[1]]) {
-			if (typeof meta[match[1]] == "string") meta[match[1]] = [meta[match[1]]];
-			meta[match[1]].push(match[2]);
-		} else meta[match[1]] = match[2];
-	}
-	meta.includes = meta.include || [];
-	meta.matches = meta.match || [];
-	meta.excludes = meta.exclude || [];
-	meta.requires = typeof meta.require == "string" ? [meta.require] : meta.require || [];
-	delete meta.include;
-	delete meta.match;
-	delete meta.exclude;
-	delete meta.require;
-	delete meta.resource;
-}
-"""
-
-const val GM_globalThis =
-    """
-const globalThis = new Proxy(window, {
-	get(target, prop) {
-		if (prop.startsWith('_')) {
-			return undefined; 
-		} else {
-			let value = target[prop]; return (typeof value === 'function') ? value.bind(target) : value; 
-		}
-	}
-});
-"""
-
-fun encodeScript(script: Script): String? {
-  var code = script.code
-
-  if (!script.meta.startsWith("// ==UserScript==")) {
-    code = script.meta + code
-  }
-
-  if (script.grant.contains("GM_setValue") ||
-      script.grant.contains("GM_getValue") ||
-      script.grant.contains("GM_listValues")) {
     if (script.storage == "") {
       script.storage = "{}"
     }
-    code =
-        """
-	window.addEventListener('scriptStorage', (e) => {
-		if (e.detail.id == GM_info.script.id && 'key' in e.detail.data) {
-			const data = e.detail.data;
-			if ('value' in data) {
-				if (data.key in GM_info.storage && JSON.stringify(GM_info.storage[data.key]) != JSON.stringify(data.value)) {
-					GM_info.valueListener.forEach(e => { if (e.key == data.key) {
-						e.listener(GM_info.storage[data.key] || null, data.value, e.detail.uuid != GM_info.uuid)
-					}});
-				}
-				GM_info.storage[data.key] = data.value;
-			} else if (data.key in GM_info.storage) {
-				delete GM_info.storage[data.key];
-			}
-		}
-	});
-    GM_info.valueListener = []; GM_info.storage = ${script.storage}; GM_info.uuid = Math.random();
-	""" +
-            code
-  }
 
-  if (script.require.size > 0) {
-    code =
-        "(async ()=> { GM_info.script.requires.forEach((url) => try { await import(url) } catch { GM_addElement('script', {textContent: await new Promise((resolve, reject) => {GM_xmlhttpRequest({url, onload: (res) => resolve(res.responseText), onerror: (e) => reject(e), ontimeout: (e) => reject(e)})})}) }); ${code}})();"
-  }
-
-  script.grant.forEach granting@{
-    val function = it
-    // Log.d("Granting ${function} to ${script.id}")
-    when (function) {
-      "GM_addStyle" -> code = GM_addStyle + code
-      "GM_addElement" -> code = GM_addElement + code
-      "GM_openInTab" -> code = GM_openInTab + code
-      "GM_info" -> return@granting
-      "GM_download" -> code = GM_download + code
-      "GM_xmlhttpRequest" ->
-          code =
-              Chrome.getContext().assets.open("xmlhttpRequest.js").bufferedReader().use {
-                it.readText()
-              } + code
-      "unsafeWindow" -> code = "const unsafeWindow = window;" + code
-      "GM_log" -> code = "const GM_log = console.log.bind(console);" + code
-      "GM_setValue" -> code = GM_setValue + code
-      "GM_deleteValue" -> code = GM_deleteValue + code
-      "GM_getValue" -> code = GM_getValue + code
-      "GM_addValueChangeListener" -> code = GM_addValueChangeListener + code
-      "GM_removeValueChangeListener" ->
-          code =
-              "function GM_removeValueChangeListener(index) {GM_info.valueListener[index].enabled = false;};" +
-                  code
-      "GM_registerMenuCommand" -> code = GM_registerMenuCommand + code
-      "GM_unregisterMenuCommand" ->
-          code =
-              "function GM_unregisterMenuCommand(index) {ChromeXt.commands[index].enabled = false;};" +
-                  code
-      "GM_getResourceURL" -> return@granting
-      "GM_getResourceText" -> {
-        val Resources = JSONArray()
-        runCatching {
-              script.resource.forEach {
-                val content = it.split(" ")
-                if (content.size != 2) return@granting
-                val name = content.first()
-                val url = content.last()
-                val resource = JSONObject()
-                resource.put("name", name)
-                resource.put("url", url.split("#").first())
-                val file =
-                    File(
-                        Chrome.getContext().getExternalFilesDir(null),
-                        resourcePath(script.id, name))
-                if (file.exists()) {
-                  val text = FileReader(file).use { it.readText() }
-                  resource.put("content", text)
-                }
-                Resources.put(resource)
+    script.grant.forEach granting@{
+      when (it) {
+        "GM_info" -> return@granting
+        "unsafeWindow" -> grants += "const unsafeWindow = window;"
+        "GM_log" -> grants += "const GM_log = console.log.bind(console);"
+        else ->
+            if (localScript.containsKey(it)) {
+              grants += localScript.get(it)
+            } else if (!it.contains(".")) {
+              grants +=
+                  "function ${it}(...args) { console.error('${it} is not implemented in ChromeXt yet, called with', args) }\n"
+            } else if (it.startsWith("GM.")) {
+              val name = it.substring(3)
+              if (script.grant.contains("GM_${name}")) {
+                grants +=
+                    "${it} = async (...arguments) => new Promise((resolve, reject) => {resolve(GM_${name}(...arguments))});"
               }
             }
-            .onFailure { Log.ex(it) }
-        code =
-            "GM_info.script.resources = ${Resources}; const GM_getResourceText = (name) => GM_info.script.resources.find(it => it.name == name).content || 'ChromeXt failed to find resource \${name}'; const GM_getResourceURL = (name) => GM_info.script.resources.find(it => it.name == name).url || 'ChromeXt failed to find resource \${name}';" +
-                code
       }
-      "GM_listValues" -> code = "const GM_listValues = () => Object.keys(GM_info.storage);" + code
-      else ->
-          if (!function.contains(".")) {
-            code =
-                "function ${function}(...args) {console.error('${function} is not implemented in ChromeXt yet, called with', args)}" +
-                    code
-          } else if (function.startsWith("GM.")) {
-            val name = function.substring(3)
-            if (name == "xmlHttpRequest" && script.grant.contains("GM_xmlhttpRequest")) {
-              code = "GM.xmlHttpRequest = GM_xmlhttpRequest;" + code
-            } else if (script.grant.contains("GM_${name}")) {
-              code =
-                  "${function} = async (...arguments) => new Promise((resolve, reject) => {resolve(GM_${name}(...arguments))});" +
-                      code
+    }
+
+    if (script.resource.size > 0) {
+      val Resources = JSONArray()
+      runCatching {
+            script.resource.forEach {
+              val content = it.split(" ")
+              if (content.size != 2) throw Exception("Invalid resource ${it}")
+              val name = content.first()
+              val url = content.last()
+              val resource = JSONObject()
+              resource.put("name", name)
+              resource.put("url", url.split("#").first())
+              val file =
+                  File(Chrome.getContext().getExternalFilesDir(null), resourcePath(script.id, name))
+              if (file.exists()) {
+                val text = FileReader(file).use { it.readText() }
+                resource.put("content", text)
+              }
+              Resources.put(resource)
             }
           }
+          .onFailure { Log.i("Fail to process resources for ${script.id}: " + it.message) }
+      grants += "GM_info.script.resources = ${Resources};"
     }
+
+    code =
+        "(() => { const GM = {}; const GM_info = { scriptMetaStr: `${script.meta}`, storage: ${script.storage}, script: { id: `${script.id}`, code: () => {${code}} } };\n${grants}GM_bootstrap();})();"
+
+    return code
   }
-
-  code =
-      "const GM_info = {scriptMetaStr: `${script.meta}`, script: {antifeatures: {}, options: {override: {}}, id: `${script.id}`, code: () => {${GM_bootstrap} GM_bootstrap(); const GM = {};${code}}}};"
-
-  if (!script.grant.contains("unsafeWindow")) {
-    code = GM_globalThis + code
-  }
-
-  code +=
-      "if (typeof ChromeXt.scripts == 'undefined') {ChromeXt.scripts = []}; ChromeXt.scripts.push(GM_info);"
-  when (script.runAt) {
-    RunAt.START -> code = "(() => {${code} GM_info.script.code()})();"
-    RunAt.END ->
-        code =
-            "(() => {${code} if (document.readyState != 'loading') {GM_info.script.code()} else {window.addEventListener('DOMContentLoaded', GM_info.script.code)}})();"
-    RunAt.IDLE ->
-        code =
-            "(() => {${code} if (document.readyState == 'complete') {GM_info.script.code()} else {window.addEventListener('load', GM_info.script.code)}})();"
-  }
-
-  return code
 }
 
 const val openEruda =
-    "try { if (eruda._isInit) {eruda.hide(); eruda.destroy();} else {eruda.init(); eruda._localConfig(); eruda.show();} } catch (e) { globalThis.ChromeXt(JSON.stringify({ action: 'loadEruda', payload: ''})) }"
+    """
+try {
+  if (eruda._isInit) {
+    eruda.hide();
+    eruda.destroy();
+  } else {
+    eruda.init();
+    eruda._localConfig();
+    eruda.show();
+  }
+} catch (e) {
+  globalThis.ChromeXt(JSON.stringify({ action: 'loadEruda', payload: '' }));
+}"""
 
 const val cspRule =
-    "if (ChromeXt.cspRules) {const meta = document.createElement('meta'); meta.setAttribute('http-equiv', 'Content-Security-Policy'); meta.setAttribute('content', ChromeXt.cspRules); try { document.head.append(meta); } catch { setTimeout(() => {document.head.append(meta); }, 0); }}"
+    """
+if (ChromeXt.cspRules) {
+  const meta = document.createElement('meta');
+  meta.setAttribute('http-equiv', 'Content-Security-Policy');
+  meta.setAttribute('content', ChromeXt.cspRules);
+  try {
+    document.head.append(meta);
+  } catch {
+    setTimeout(() => {
+      document.head.append(meta);
+    }, 0);
+  }
+}"""

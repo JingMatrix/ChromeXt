@@ -4,22 +4,14 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-enum class RunAt(val state: String) {
-  START("document-start"),
-  END("document-end"),
-  IDLE("document-idle")
-}
-
 data class Script(
     val id: String,
     val match: Array<String>,
     val grant: Array<String>,
     val exclude: Array<String>,
-    val require: Array<String>,
     val resource: Array<String>,
     var meta: String,
     val code: String,
-    val runAt: RunAt,
     var storage: String
 )
 

@@ -52,7 +52,9 @@ Currently, ChromeXt supports almost all [Tampermonkey APIs](https://www.tampermo
 5. @grant GM_addStyle, GM_addElement, GM_xmlhttpRequest, GM_openInTab, GM_registerMenuCommand (`Resources` panel of eruda), GM_unregisterMenuCommand, GM_download, unsafeWindow (= window)
 6. @require, @resource (Without [Subresource Integrity](https://www.tampermonkey.net/documentation.php#api:Subresource_Integrity))
 
-These APIs are implemented differently from the official ones, see the source file [LocalScripts.kt](app/src/main/java/org/matrix/chromext/script/LocalScripts.kt) if you have doubts or questions.
+These APIs are implemented differently from the official ones, see the source file
+[LocalScripts.kt](app/src/main/java/org/matrix/chromext/script/LocalScripts.kt) and
+[local_script.js](app/src/main/assets/local_script.js) if you have doubts or questions.
 
 ### UserScripts manager front end
 
@@ -147,6 +149,7 @@ Before you submit your pull-requests, please ensure that the command
 Here are corresponding files you might want / need to change:
 1. Front end: [manager.vue](https://github.com/JingMatrix/viteblog/tree/master/components/ChromeXt/manager.vue)
 2. Tampermonkey API: [LocalScripts.kt](app/src/main/java/org/matrix/chromext/script/LocalScripts.kt)
+and [local_script.js](app/src/main/assets/local_script.js)
 3. Eruda configuration: [local_eruda.js](app/src/main/assets/local_eruda.js)
 4. Support more WebView based browsers: [WebViewHook.kt](app/src/main/java/org/matrix/chromext/hook/WebViewHook.kt)
 
