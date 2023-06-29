@@ -222,15 +222,15 @@ object ScriptDbManager {
         }
       }
       "getIds" -> {
-        val result = scripts.map { it.id }
-        callback =
-            "window.dispatchEvent(new CustomEvent('script_id',{detail:[`${result.joinToString(separator = "`,`")}`]}));"
+        val result = JSONArray()
+        scripts.forEach { result.put(it.id) }
+        callback = "window.dispatchEvent(new CustomEvent('script_id', {detail: ${result}}));"
       }
       "getMeta" -> {
         val ids = parseArray(payload)
-        val result = scripts.filter { ids.contains(it.id) }.map { it.meta }
-        callback =
-            "window.dispatchEvent(new CustomEvent('script_meta',{detail:[`${result.joinToString(separator = "`,`")}`]}));"
+        val result = JSONArray()
+        scripts.filter { ids.contains(it.id) }.forEach { result.put(it.meta) }
+        callback = "window.dispatchEvent(new CustomEvent('script_meta', {detail: ${result}}));"
       }
       "updateMeta" -> {
         runCatching {
