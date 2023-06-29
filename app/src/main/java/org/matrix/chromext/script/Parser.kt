@@ -66,6 +66,15 @@ fun parseScript(input: String, storage: String = "", updateResource: Boolean = f
     script.grant.add("GM_getResourceText")
   }
 
+  if (script.require.size > 0) {
+    if (!script.grant.contains("GM_xmlhttpRequest")) {
+      script.grant.add("GM_xmlhttpRequest")
+    }
+    if (!script.grant.contains("GM_addElement")) {
+      script.grant.add("GM_addElement")
+    }
+  }
+
   if (script.match.size == 0) {
     return null
   } else {

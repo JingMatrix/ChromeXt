@@ -2,6 +2,7 @@ package org.matrix.chromext.script
 
 import java.io.File
 import java.io.FileReader
+import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.utils.Log
@@ -151,12 +152,15 @@ function GM_bootstrap() {
 			meta[match[1]].push(match[2]);
 		} else meta[match[1]] = match[2];
 	}
-	meta.includes = meta.include;
-	meta.matches = meta.match;
-	meta.excludes = meta.exclude;
+	meta.includes = meta.include || [];
+	meta.matches = meta.match || [];
+	meta.excludes = meta.exclude || [];
+	meta.requires = typeof meta.require == "string" ? [meta.require] : meta.require || [];
 	delete meta.include;
 	delete meta.match;
 	delete meta.exclude;
+	delete meta.require;
+	delete meta.resource;
 }
 """
 
@@ -210,15 +214,7 @@ fun encodeScript(script: Script): String? {
 
   if (script.require.size > 0) {
     code =
-        GM_addElement +
-            "(async ()=> {" +
-            script.require
-                .map {
-                  "try{await import('${it}')}catch{GM_addElement('script',{textContent: await (await fetch('${it}')).text()})};"
-                }
-                .joinToString("") +
-            code +
-            "})();"
+        "(async ()=> { GM_info.script.requires.forEach((url) => try { await import(url) } catch { GM_addElement('script', {textContent: await new Promise((resolve, reject) => {GM_xmlhttpRequest({url, onload: (res) => resolve(res.responseText), onerror: (e) => reject(e), ontimeout: (e) => reject(e)})})}) }); ${code}})();"
   }
 
   script.grant.forEach granting@{
@@ -226,16 +222,15 @@ fun encodeScript(script: Script): String? {
     // Log.d("Granting ${function} to ${script.id}")
     when (function) {
       "GM_addStyle" -> code = GM_addStyle + code
-      "GM_addElement" -> if (script.require.size == 0) code = GM_addElement + code
+      "GM_addElement" -> code = GM_addElement + code
       "GM_openInTab" -> code = GM_openInTab + code
       "GM_info" -> return@granting
       "GM_download" -> code = GM_download + code
       "GM_xmlhttpRequest" ->
-          if (!script.grant.contains("GM_download"))
-              code =
-                  Chrome.getContext().assets.open("xmlhttpRequest.js").bufferedReader().use {
-                    it.readText()
-                  } + code
+          code =
+              Chrome.getContext().assets.open("xmlhttpRequest.js").bufferedReader().use {
+                it.readText()
+              } + code
       "unsafeWindow" -> code = "const unsafeWindow = window;" + code
       "GM_log" -> code = "const GM_log = console.log.bind(console);" + code
       "GM_setValue" -> code = GM_setValue + code
@@ -253,7 +248,7 @@ fun encodeScript(script: Script): String? {
                   code
       "GM_getResourceURL" -> return@granting
       "GM_getResourceText" -> {
-        val GM_ResourceText = JSONObject()
+        val Resources = JSONArray()
         runCatching {
               script.resource.forEach {
                 val content = it.split(" ")
@@ -261,6 +256,7 @@ fun encodeScript(script: Script): String? {
                 val name = content.first()
                 val url = content.last()
                 val resource = JSONObject()
+                resource.put("name", name)
                 resource.put("url", url.split("#").first())
                 val file =
                     File(
@@ -268,17 +264,17 @@ fun encodeScript(script: Script): String? {
                         resourcePath(script.id, name))
                 if (file.exists()) {
                   val text = FileReader(file).use { it.readText() }
-                  resource.put("text", text)
+                  resource.put("content", text)
                 }
-                GM_ResourceText.put(name, resource)
+                Resources.put(resource)
               }
             }
             .onFailure { Log.ex(it) }
         code =
-            "GM_info.resource = ${GM_ResourceText}; const GM_getResourceText = (name) => GM_info.resource[name].text || 'ChromeXt failed to find resource \${name}'; const GM_getResourceURL = (name) => GM_info.resource[name].url || 'ChromeXt failed to find resource \${name}';" +
+            "GM_info.script.resources = ${Resources}; const GM_getResourceText = (name) => GM_info.script.resources.find(it => it.name == name).content || 'ChromeXt failed to find resource \${name}'; const GM_getResourceURL = (name) => GM_info.script.resources.find(it => it.name == name).url || 'ChromeXt failed to find resource \${name}';" +
                 code
       }
-      "GM_listValues" -> code = "const GM_listValues = ()=> Object.keys(GM_info.storage);" + code
+      "GM_listValues" -> code = "const GM_listValues = () => Object.keys(GM_info.storage);" + code
       else ->
           if (!function.contains(".")) {
             code =
@@ -286,9 +282,11 @@ fun encodeScript(script: Script): String? {
                     code
           } else if (function.startsWith("GM.")) {
             val name = function.substring(3)
-            if (script.grant.contains("GM_${name}")) {
+            if (name == "xmlHttpRequest" && script.grant.contains("GM_xmlhttpRequest")) {
+              code = "GM.xmlHttpRequest = GM_xmlhttpRequest;" + code
+            } else if (script.grant.contains("GM_${name}")) {
               code =
-                  "GM.${name} = async (...arguments) => new Promise((resolve, reject) => {resolve(GM_${name}(...arguments))});" +
+                  "${function} = async (...arguments) => new Promise((resolve, reject) => {resolve(GM_${name}(...arguments))});" +
                       code
             }
           }
@@ -296,29 +294,29 @@ fun encodeScript(script: Script): String? {
   }
 
   code =
-      "const GM_info = {scriptMetaStr:`${script.meta}`, script:{antifeatures:{}, options:{override:{}}, id:`${script.id}`, code:() => {${GM_bootstrap} GM_bootstrap();const GM = {};${code}}}};"
+      "const GM_info = {scriptMetaStr: `${script.meta}`, script: {antifeatures: {}, options: {override: {}}, id: `${script.id}`, code: () => {${GM_bootstrap} GM_bootstrap(); const GM = {};${code}}}};"
 
   if (!script.grant.contains("unsafeWindow")) {
     code = GM_globalThis + code
   }
 
   code +=
-      "if (typeof ChromeXt.scripts == 'undefined') {ChromeXt.scripts = []} ChromeXt.scripts.push(GM_info);"
+      "if (typeof ChromeXt.scripts == 'undefined') {ChromeXt.scripts = []}; ChromeXt.scripts.push(GM_info);"
   when (script.runAt) {
-    RunAt.START -> code = "(()=>{${code} GM_info.script.code()})();"
+    RunAt.START -> code = "(() => {${code} GM_info.script.code()})();"
     RunAt.END ->
         code =
-            "(()=>{${code} if (document.readyState != 'loading') {GM_info.script.code()} else {window.addEventListener('DOMContentLoaded', GM_info.script.code)}})();"
+            "(() => {${code} if (document.readyState != 'loading') {GM_info.script.code()} else {window.addEventListener('DOMContentLoaded', GM_info.script.code)}})();"
     RunAt.IDLE ->
         code =
-            "(()=>{${code} if (document.readyState == 'complete') {GM_info.script.code()} else {window.addEventListener('load', GM_info.script.code)}})();"
+            "(() => {${code} if (document.readyState == 'complete') {GM_info.script.code()} else {window.addEventListener('load', GM_info.script.code)}})();"
   }
 
   return code
 }
 
 const val openEruda =
-    "try{ if (eruda._isInit) { eruda.hide(); eruda.destroy(); } else { eruda.init(); eruda._localConfig(); eruda.show(); } } catch (e) { globalThis.ChromeXt(JSON.stringify({ action: 'loadEruda', payload: ''})) }"
+    "try { if (eruda._isInit) {eruda.hide(); eruda.destroy();} else {eruda.init(); eruda._localConfig(); eruda.show();} } catch (e) { globalThis.ChromeXt(JSON.stringify({ action: 'loadEruda', payload: ''})) }"
 
 const val cspRule =
-    "if (ChromeXt.cspRules) { const meta = document.createElement('meta'); meta.setAttribute('http-equiv', 'Content-Security-Policy'); meta.setAttribute('content', ChromeXt.cspRules); try { document.head.append(meta); } catch { setTimeout(() => { document.head.append(meta); }, 0); } }"
+    "if (ChromeXt.cspRules) {const meta = document.createElement('meta'); meta.setAttribute('http-equiv', 'Content-Security-Policy'); meta.setAttribute('content', ChromeXt.cspRules); try { document.head.append(meta); } catch { setTimeout(() => {document.head.append(meta); }, 0); }}"
