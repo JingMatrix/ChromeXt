@@ -51,20 +51,6 @@ function GM_bootstrap() {
     };
   }
 
-  if (!meta.grants.includes("unsafeWindow")) {
-    delete globalThis;
-    const globalThis = new Proxy(window, {
-      get(target, prop) {
-        if (prop.startsWith("_")) {
-          return undefined;
-        } else {
-          let value = target[prop];
-          return typeof value === "function" ? value.bind(target) : value;
-        }
-      },
-    });
-  }
-
   if (
     meta.grants.includes("GM.xmlHttpRequest") &&
     meta.grants.includes("GM_xmlhttpRequest")
@@ -104,6 +90,8 @@ function GM_bootstrap() {
     });
     GM_info.valueListener = [];
     GM_info.uuid = Math.random();
+  } else {
+
   }
 
   switch (meta["run-at"]) {
@@ -130,6 +118,20 @@ function GM_bootstrap() {
   }
   ChromeXt.scripts.push(GM_info);
 }
+
+const globalThis =
+  typeof unsafeWindow != "undefined"
+    ? unsafeWindow
+    : new Proxy(window, {
+        get(target, prop) {
+          if (prop.startsWith("_")) {
+            return undefined;
+          } else {
+            let value = target[prop];
+            return typeof value === "function" ? value.bind(target) : value;
+          }
+        },
+      });
 // Kotlin separator
 
 function GM_addStyle(css) {
