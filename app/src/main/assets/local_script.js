@@ -317,6 +317,26 @@ function GM_xmlhttpRequest(details) {
   }
   const uuid = Math.random();
   details.method = details.method ? details.method.toUpperCase() : "GET";
+
+  if ("data" in details && typeof details.data != "string") {
+    details.binary = true;
+  }
+
+  if ("binary" in details && "data" in details && details.binary) {
+    switch (details.data.constructor) {
+      case File:
+      case Blob:
+        details.data = details.data.arrayBuffer();
+      case ArrayBuffer:
+        details.data = new Uint8Array(details.data);
+      case Uint8Array:
+        data = bytesToBase64(data);
+        break;
+      default:
+        details.binary = false;
+    }
+  }
+
   ChromeXt(
     JSON.stringify({
       action: "xmlhttpRequest",
@@ -341,25 +361,6 @@ function GM_xmlhttpRequest(details) {
       ""
     );
     return btoa(binString);
-  }
-
-  if ("data" in details && typeof details.data != "string") {
-    details.binary = true;
-  }
-
-  if ("binary" in details && "data" in details && details.binary) {
-    switch (details.data.constructor) {
-      case File:
-      case Blob:
-        details.data = details.data.arrayBuffer();
-      case ArrayBuffer:
-        details.data = new Uint8Array(details.data);
-      case Uint8Array:
-        data = bytesToBase64(data);
-        break;
-      default:
-        details.binary = false;
-    }
   }
 
   let buffered = [];
@@ -406,7 +407,7 @@ function GM_xmlhttpRequest(details) {
           ]);
           delete data.response;
         default:
-          if (details["on" + e.detail.type]) {
+          if (typeof details["on" + e.detail.type] == "function") {
             details["on" + e.detail.type](data);
           }
       }
