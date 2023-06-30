@@ -44,8 +44,12 @@ object GM {
             } else if (it.startsWith("GM.")) {
               val name = it.substring(3)
               if (script.grant.contains("GM_${name}")) {
-                grants +=
-                    "${it} = async (...arguments) => new Promise((resolve, reject) => {resolve(GM_${name}(...arguments))});"
+                if (name.contains("get") || name.contains("Value")) {
+                  grants +=
+                      "${it} = async (...arguments) => new Promise((resolve, reject) => {resolve(GM_${name}(...arguments))});"
+                } else {
+                  grants += "${it} = GM_${name};"
+                }
               }
             }
       }

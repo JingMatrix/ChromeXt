@@ -90,6 +90,8 @@ function GM_bootstrap() {
     });
     GM_info.valueListener = [];
     GM_info.uuid = Math.random();
+    GM_info.scriptHandler = "ChromeXt";
+    GM_info.version = "3.4.0";
   }
 
   switch (meta["run-at"]) {
