@@ -90,8 +90,6 @@ function GM_bootstrap() {
     });
     GM_info.valueListener = [];
     GM_info.uuid = Math.random();
-  } else {
-
   }
 
   switch (meta["run-at"]) {
@@ -325,16 +323,15 @@ function GM_xmlhttpRequest(details) {
   );
 
   function base64ToBytes(base64) {
-    const binString = atob(base64);
-    return Uint8Array.from(binString, (m) => m.codePointAt(0));
+    return Uint8Array.from(atob(base64), (m) => m.codePointAt(0));
   }
 
-  function base64ToBlob(base64, type) {
-    return new Blob([base64ToBytes(base64).buffer], { type });
+  function bytesToBlob(bytes, type) {
+    return new Blob([bytes.buffer], { type });
   }
 
-  function base64ToUTF8(base64) {
-    return new TextDecoder().decode(base64ToBytes(base64));
+  function bytesToUTF8(bytes) {
+    return new TextDecoder().decode(bytes);
   }
 
   function bytesToBase64(bytes) {
@@ -342,6 +339,10 @@ function GM_xmlhttpRequest(details) {
       ""
     );
     return btoa(binString);
+  }
+
+  if ("data" in details && typeof details.data != "string") {
+    details.binary = true;
   }
 
   if ("binary" in details && "data" in details && details.binary) {
@@ -359,51 +360,53 @@ function GM_xmlhttpRequest(details) {
     }
   }
 
+  let buffered = [];
   window.addEventListener("xmlhttpRequest", (e) => {
     if (e.detail.id == GM_info.script.id && e.detail.uuid == uuid) {
       let data = e.detail.data;
+      data.context = details.context;
+      if (data.responseHeaders) {
+        data.finalUrl = data.responseHeaders.Location || details.url;
+        data.total = data.responseHeaders["Content-Length"];
+      }
       switch (e.detail.type) {
         case "load":
           data.readyState = 4;
-          data.finalUrl = data.responseHeaders.Location || details.url;
           if ("overrideMimeType" in details)
             data.responseHeaders["Content-Type"] = details.overrideMimeType;
+          data.responseText = bytesToUTF8(buffered);
+          data.response = data.responseText;
           if ("responseType" in details) {
-            const base64 = data.responseText;
             const type = data.responseHeaders["Content-Type"] || "";
             switch (details.responseType) {
               case "arraybuffer":
-                data.response = base64ToBytes(base64).buffer;
+                data.response = buffered.buffer;
                 break;
               case "blob":
-                data.response = base64ToBlob(base64, type);
+                data.response = bytesToBlob(buffered, type);
                 break;
               case "stream":
-                data.response = base64ToBlob(base64, type).stream();
+                data.response = bytesToBlob(buffered, type).stream();
                 break;
               case "json":
-                data.response = JSON.parse(base64ToUTF8(base64));
+                data.response = JSON.parse(bytesToUTF8(buffered));
                 break;
               default:
-                data.response = atob(base64);
+                data.response = buffered;
             }
-          } else {
-            data.responseText = base64ToUTF8(data.responseText);
-            data.response = data.responseText;
           }
           details.onload(data);
           break;
-        case "error":
-          details.onerror(data);
-          break;
-        case "abort":
-          details.onabort(data);
-          break;
-        case "timeout":
-          details.ontimeout(data);
-          break;
+        case "progress":
+          buffered = Int8Array.from([
+            ...buffered,
+            ...base64ToBytes(data.response),
+          ]);
+          delete data.response;
         default:
-          console.log(e.detail);
+          if (details["on" + e.detail.type]) {
+            details["on" + e.detail.type](data);
+          }
       }
     }
   });
