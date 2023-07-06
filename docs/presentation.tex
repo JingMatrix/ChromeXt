@@ -1,0 +1,144 @@
+% ! TEX program = lualatex
+\documentclass[aspectratio=169]{beamer}
+
+\usepackage{emoji}
+
+\usefonttheme[onlymath]{serif}
+\beamertemplatenavigationsymbolsempty
+\setbeamertemplate{footline}[frame number]{}
+\setbeamertemplate{caption}{\raggedright\insertcaption\par}
+\newcommand{\diff}{\operatorname{d}}
+\newcommand{\info}[1]{\texttt{{\color{teal}(#1)}}}
+
+\title{
+Introduction to ChromeXt\\
+{\color{teal}\normalsize UserScript and DevTools supports for mobile browsers }\\
+}
+\author{\texttt{JingMatrix}}
+\date{\small \color{gray} \today}
+
+\begin{document}
+{
+\setbeamertemplate{footline}{}
+\begin{frame}[noframenumbering]
+	\titlepage
+\end{frame}
+}
+
+\section{Background}
+
+\setbeamercovered{transparent}
+\begin{frame}
+	\frametitle{What is ChromeXt?}
+	\begin{definition}
+		ChromeXt is {\color<2-5>{brown} a tiny Xposed module}
+		\info{Android} that adds {\color<6-9>{brown} UserScript}, {\color<10-12>{brown} DevTools} and
+		some other functions to {\color<13-15>{brown} Chromium based and WebView based mobile browsers}.
+	\end{definition}
+
+	\vspace{0.5cm}
+	\uncover<2->{
+		\begin{block}{{\only<2-5>{What is Xposed}\only<6-9>{What are UserScripts}\only<10-12>{What are DevTools}\only<13-15>{Which browsers are supported}}? }
+			\only<2-15>{
+				\begin{itemize}
+					\only<2-5>{
+					\item<2-> Xposed is a framework helping developers to modify Android applications.
+					\item<3-> The most popular Xposed framework for Android $8.1 \sim 14$ is LSPosed.
+					\item<4-> ChromeXt is an Xposed module with size less than $0.1$\,MB.
+					\item<5-> Both ChromeXt and LSPosed are open source projects powered
+						by \only<5>{\emoji{heart}}.
+						}
+
+						\only<6-9>{
+					\item<6-> UserScripts enable users to modify websites in their browsers.
+					\item<7-> UserScripts are supported by most desktop browsers but only few mobile browsers.
+					\item<8-> Popular UserScript managers include Tampermonkey and Violentmonkey;
+						and people usually share their UserScripts on GreasyFork or GitHub.
+					\item<9-> ChromeXt works as a UserScript manager for mobile browsers.
+						}
+						\only<10-12>{
+					\item<10-> DevTools help developers to inspect, modify and debug websites in browsers.
+					\item<11-> They are the primary tools for hacking or finding vulnerabilities of websites.
+					\item<12-> Usually one needs desktop browsers to inspect websites in mobile phones.
+						}
+						\only<13-15>{
+					\item<13-> Chromium based browsers include Chrome, Edge, Bromite, Brave,
+						Vivalid $\ldots$
+					\item<14-> WebView based browsers include Via, Soul, FOSS Browser $\ldots$
+					\item<15-> Not supported: Firefox, Samsung Internet Browser, Opera.
+						}
+				\end{itemize}
+			}
+		\end{block}
+	}
+\end{frame}
+
+\section{Installation and Usage}
+\begin{frame}
+	\frametitle{How to install ChromeXt}
+	\begin{block}{Root users}
+		Install LSPosed \info{Magisk module}
+		and then install ChromeXt.
+	\end{block}
+	\vspace{1cm}
+	\uncover<2->{
+		\begin{block}{Non-root users}
+			\begin{enumerate}
+				\item<2-> Download LSPatch \info{modified by JingMatrix} and ChromeXt.
+				\item<3-> If Java is available, then use lspatch.jar, otherwise install manager.apk.
+				\item<4-> Patch the target browser to embed ChromeXt.apk.
+			\end{enumerate}
+		\end{block}
+	}
+\end{frame}
+
+\begin{frame}
+	\frametitle{How to use ChromeXt?}
+	ChromeXt is fully integrated into the target browser, almost all interactions are
+	done within the browser.
+
+	\uncover<2->{
+		\begin{block}{Different ways to install UserScripts}
+			Open .user.js URLs, open local UserScripts with ChromeXt, import via
+			Eruda console.
+		\end{block}
+	}
+
+	\uncover<3->{
+		\begin{block}{Functions offered by ChromeXt}
+			\begin{itemize}
+				\item<3-> Via front end: manage and modify installed UserScripts
+				\item<4-> Via page menu: reader mode, Eruda console and Developer Tools
+				\item<5-> Via Developer options setting: set gesture navigation, export bookmarks
+				\item<6-> Via Eruda console: cosmetic filters, user-agent spoofing, UserScript commands
+			\end{itemize}
+		\end{block}
+	}
+\end{frame}
+
+\section{Tutorial to hack YouTube services}
+
+\begin{frame}
+	\frametitle{Tutorial: write a UserScript to remove YouTube advertisements}
+	\begin{block}{Analysis}
+		\begin{enumerate}
+			\item<1-> Different videos contains different advertisements to be played at
+				different time, but the YouTube page does not reload when we switch videos.
+			\item<2-> Therefore, advertisement data are fetched from remote for each new video.
+			\item<3-> Find the code that fetching remote advertisement data.
+			\item<4-> Change the fetched data to clear all advertisement data.
+		\end{enumerate}
+	\end{block}
+
+	\uncover<5->{
+		\begin{block}{Start writing a UserScript}
+			\begin{enumerate}
+				\item Only partial code will be shown for instructive purpose.
+				\item The previously described method is novel, no source code available online.
+				\item YouTube Music has the same vulnerability.
+			\end{enumerate}
+		\end{block}
+	}
+\end{frame}
+
+\end{document}

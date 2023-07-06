@@ -193,6 +193,7 @@ and [local_script.js](app/src/main/assets/local_script.js)
 - [x] Re-implement GM_xmlhttpRequest
 - [x] Convert exported bookmarks to HTML format
 - [x] Show executed scripts on current page
+- [ ] Make a YouTube presentation video
 - [ ] Support importing UserScripts from Tampermonkey exports
 - [ ] Support backup and restore
 - [ ] Add recommended UserScripts to the front end manager
