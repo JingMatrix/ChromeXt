@@ -9,6 +9,8 @@ import java.io.OutputStream
 import java.net.ServerSocket
 import java.net.SocketTimeoutException
 import kotlin.concurrent.thread
+import org.json.JSONArray
+import org.json.JSONObject
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.UserScriptProxy
@@ -18,13 +20,12 @@ const val DEV_FRONT_END = "https://chrome-devtools-frontend.appspot.com"
 
 object DevTools {
   val forwardServer = ServerSocket(0)
+  val detail = JSONObject(mapOf("port" to forwardServer.getLocalPort()))
 
   fun start() {
     thread {
-      val pages = refreshDevTool()
-      val port = forwardServer.getLocalPort()
-      val code =
-          "window.dispatchEvent(new CustomEvent('cdp_info',{detail:{port: ${port}, pages: ${pages}}}));"
+      detail.put("pages", JSONArray(refreshDevTool()))
+      val code = "window.dispatchEvent(new CustomEvent('cdp_info',{detail: ${detail}}));"
       if (UserScriptHook.isInit) {
         UserScriptProxy.evaluateJavascript(code)
       } else if (WebViewHook.isInit) {
