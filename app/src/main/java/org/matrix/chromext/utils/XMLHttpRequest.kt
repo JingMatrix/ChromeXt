@@ -96,7 +96,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
               if (it is SocketTimeoutException) {
                 response("timeout", "{}")
               } else {
-                response("error", "{error: '${error}'}")
+                response("error", JSONObject(mapOf("error" to error)).toString())
               }
             } else {
               Log.ex(it)
