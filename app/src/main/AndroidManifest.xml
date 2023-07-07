@@ -12,6 +12,7 @@
 		<package android:name="com.microsoft.emmx.dev"/>
 		<package android:name="com.microsoft.emmx.canary"/>
 		<package android:name="org.bromite.bromite"/>
+		<package android:name="org.bromite.bromite.dev"/>
 		<package android:name="org.chromium.thorium"/>
 		<package android:name="us.spotco.mulch"/>
 		<package android:name="com.brave.browser"/>
