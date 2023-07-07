@@ -30,6 +30,7 @@ val supportedPackages =
         "com.microsoft.emmx.dev",
         "com.microsoft.emmx.canary",
         "org.bromite.bromite",
+        "org.bromite.bromite.dev",
         "org.chromium.thorium",
         "us.spotco.mulch",
         "com.brave.browser",
