@@ -26,13 +26,10 @@ class ScriptDbHelper(context: Context) :
   }
 
   override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-    if (newVersion < 7) {
+    if (oldVersion < 7) {
       db.execSQL("DROP TABLE script;")
       onCreate(db)
-    }
-
-    if (oldVersion == 6 && newVersion == 7) {
-      db.execSQL("ALTER TABLE script ADD storage TEXT NOT NULL DEFAULT '';")
+      return
     }
 
     if (oldVersion == 7 && newVersion == 8) {
