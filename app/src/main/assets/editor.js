@@ -4,7 +4,10 @@ async function installScript(force = false) {
   }
   if (force) {
     let script;
-    if (document.characterSet != "UTF-8") {
+    if (
+      document.characterSet != "UTF-8" &&
+      window.location.href.startsWith("http")
+    ) {
       const response = await fetch(window.location.href);
       script = await response.text();
     } else {
