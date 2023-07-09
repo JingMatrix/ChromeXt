@@ -337,7 +337,12 @@ function GM_xmlhttpRequest(details) {
     }
   }
 
-  if (!("headers" in details && "User-Agent" in details.headers)) {
+  if (
+    !(
+      "headers" in details &&
+      ("User-Agent" in details.headers || "user-agent" in details.headers)
+    )
+  ) {
     details.headers = details.headers || {};
     details.headers["User-Agent"] = window.navigator.userAgent;
   }
@@ -368,7 +373,7 @@ function GM_xmlhttpRequest(details) {
     return btoa(binString);
   }
 
-  let buffered = [];
+  let buffered = new Uint8Array();
   window.addEventListener("xmlhttpRequest", (e) => {
     if (e.detail.id == GM_info.script.id && e.detail.uuid == uuid) {
       let data = e.detail.data;
@@ -382,9 +387,13 @@ function GM_xmlhttpRequest(details) {
           data.readyState = 4;
           if ("overrideMimeType" in details)
             data.responseHeaders["Content-Type"] = details.overrideMimeType;
-          data.responseText = bytesToUTF8(buffered);
+          if ([101, 204, 205, 304].includes(data.status)) {
+            data.responseText = null;
+          } else {
+            data.responseText = bytesToUTF8(buffered);
+          }
           data.response = data.responseText;
-          if ("responseType" in details) {
+          if ("responseType" in details && data.response != null) {
             const type = data.responseHeaders["Content-Type"] || "";
             switch (details.responseType) {
               case "arraybuffer":
