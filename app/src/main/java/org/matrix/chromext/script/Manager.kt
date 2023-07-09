@@ -52,9 +52,11 @@ object ScriptDbManager {
             put("meta", it.meta)
             put("storage", it.storage)
           }
-      if (db.insert("script", null, values).toString() == "-1") {
-        Log.e("Inserting script failed for: " + it.id)
-      }
+      runCatching { db.insertOrThrow("script", null, values) }
+          .onFailure {
+            Log.e("Fail to store script ${values.getAsString("id")} into SQL database.")
+            Log.ex(it)
+          }
     }
     dbHelper.close()
   }
@@ -83,7 +85,7 @@ object ScriptDbManager {
     val db = dbHelper.readableDatabase
     val cursor = db.query("script", null, selection, selectionArgs, null, null, null)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-      (cursor as AbstractWindowedCursor).setWindow(CursorWindow("max", 1024 * 1024 * 10))
+      (cursor as AbstractWindowedCursor).setWindow(CursorWindow("max", 1024 * 1024 * 10.toLong()))
     }
     val quried_scripts = mutableListOf<Script>()
     with(cursor) {

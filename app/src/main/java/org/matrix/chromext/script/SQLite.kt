@@ -16,7 +16,7 @@ data class Script(
 )
 
 private const val SQL_CREATE_ENTRIES =
-    "CREATE TABLE script (id TEXT PRIMARY KEY NOT NULL, mata TEXT NOT NULL, code TEXT NOT NULL, storage TEXT NOT NULL);"
+    "CREATE TABLE script (id TEXT PRIMARY KEY NOT NULL, meta TEXT NOT NULL, code TEXT NOT NULL, storage TEXT NOT NULL);"
 
 class ScriptDbHelper(context: Context) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
