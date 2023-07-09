@@ -67,7 +67,7 @@ object Chrome {
       // Log.d("Broadcasting ${event} ${data})")
       tabModels.forEach {
         val count = it.get()!!.invokeMethod() { name == "getCount" } as Int
-        for (i in 0.rangeTo(count)) {
+        for (i in 0 until count) {
           val tab = it.get()?.invokeMethod(i) { name == "getTabAt" }
           UserScriptProxy.evaluateJavascript(code, false, tab)
         }
