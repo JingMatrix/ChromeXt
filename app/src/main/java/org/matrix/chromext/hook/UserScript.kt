@@ -4,7 +4,7 @@ import android.content.Context
 import kotlin.concurrent.thread
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
-import org.matrix.chromext.DEV_FRONT_END
+import org.matrix.chromext.devtools.DEV_FRONT_END
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.script.cspRule

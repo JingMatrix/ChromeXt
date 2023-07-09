@@ -1,8 +1,6 @@
-package org.matrix.chromext
+package org.matrix.chromext.devtools
 
 import android.net.LocalSocket
-import android.net.LocalSocketAddress
-import android.os.Process
 import java.io.Closeable
 import java.io.InputStream
 import java.io.OutputStream
@@ -11,6 +9,7 @@ import java.net.SocketTimeoutException
 import kotlin.concurrent.thread
 import org.json.JSONArray
 import org.json.JSONObject
+import org.matrix.chromext.BuildConfig
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.UserScriptProxy
@@ -18,13 +17,13 @@ import org.matrix.chromext.utils.Log
 
 const val DEV_FRONT_END = "https://chrome-devtools-frontend.appspot.com"
 
-object DevTools {
+object Forwarder {
   val forwardServer = ServerSocket(0)
   val detail = JSONObject(mapOf("port" to forwardServer.getLocalPort()))
 
   fun start() {
     thread {
-      detail.put("pages", JSONArray(refreshDevTool()))
+      detail.put("pages", JSONArray(getInspectPages()))
       val code = "window.dispatchEvent(new CustomEvent('cdp_info',{detail: ${detail}}));"
       if (UserScriptHook.isInit) {
         UserScriptProxy.evaluateJavascript(code)
@@ -66,21 +65,7 @@ object DevTools {
     }
   }
 
-  private fun connectDevTools(client: LocalSocket) {
-    val address =
-        if (UserScriptHook.isInit) {
-          "chrome_devtools_remote"
-        } else if (WebViewHook.isInit) {
-          "webview_devtools_remote"
-        } else {
-          throw Exception("DevTools is started unexpectedly")
-        }
-
-    runCatching { client.connect(LocalSocketAddress(address)) }
-        .onFailure { client.connect(LocalSocketAddress(address + "_" + Process.myPid())) }
-  }
-
-  private fun refreshDevTool(): String {
+  private fun getInspectPages(): String {
     val client = LocalSocket()
     connectDevTools(client)
     client.outputStream.write("GET /json HTTP/1.1\r\n\r\n".toByteArray())
@@ -89,15 +74,18 @@ object DevTools {
       while (true) {
         val line = it.readLine()
         if (line.length == 0) {
-          pages = ""
-        }
-        pages += line + "\n"
-        if (line == "} ]") {
-          client.close()
+          val bufferSize =
+              pages.split("\n").find { it.startsWith("Content-Length") }!!.substring(15).toInt()
+          val buffer = CharArray(bufferSize)
+          it.read(buffer)
+          pages = buffer.joinToString("")
           break
         }
+        pages += line + "\n"
       }
     }
+
+    client.close()
     return pages
   }
 }
@@ -125,12 +113,15 @@ private class forwardStreamThread(
             output.write(
                 String(buffer)
                     .split("\r\n")
-                    .filter { it != "Origin: ${DEV_FRONT_END}" }
+                    .filter {
+                      if (BuildConfig.DEBUG) Log.d(it)
+                      it != "Origin: ${DEV_FRONT_END}"
+                    }
                     .joinToString("\r\n")
                     .toByteArray())
           }
 
-          input.pipe(output)
+          input.pipe(output, BuildConfig.DEBUG)
 
           Log.d("An inspecting seesion from ${tag} ends")
           input.close()

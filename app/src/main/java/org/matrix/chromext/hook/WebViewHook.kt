@@ -11,8 +11,8 @@ import de.robv.android.xposed.XC_MethodHook.Unhook
 import java.lang.ref.WeakReference
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
-import org.matrix.chromext.DEV_FRONT_END
-import org.matrix.chromext.DevTools
+import org.matrix.chromext.devtools.DEV_FRONT_END
+import org.matrix.chromext.devtools.Forwarder
 import org.matrix.chromext.script.GM
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.script.openEruda
@@ -147,7 +147,7 @@ object WebViewHook : BaseHook() {
                           MenuItem.OnMenuItemClickListener {
                             if (isChromeXt) {
                               WebView.setWebContentsDebuggingEnabled(true)
-                              DevTools.start()
+                              Forwarder.start()
                             } else {
                               evaluateJavascript(openEruda)
                             }
