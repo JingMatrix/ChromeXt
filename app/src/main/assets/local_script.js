@@ -337,6 +337,11 @@ function GM_xmlhttpRequest(details) {
     }
   }
 
+  if (!("headers" in details && "User-Agent" in details.headers)) {
+    details.headers = details.headers || {};
+    details.headers["User-Agent"] = window.navigator.userAgent;
+  }
+
   ChromeXt(
     JSON.stringify({
       action: "xmlhttpRequest",
