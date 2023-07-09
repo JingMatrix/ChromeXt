@@ -160,10 +160,10 @@ object ScriptDbManager {
         }
       }
       "scriptStorage" -> {
-        Chrome.broadcast("scriptStorage", "{detail:${payload}}")
         runCatching {
               val detail = JSONObject(payload)
               val id = detail.getString("id")
+              Chrome.broadcast("scriptStorage", "{detail: ${detail}}")
               val data = detail.getJSONObject("data")
               val key = data.getString("key")
               scripts
