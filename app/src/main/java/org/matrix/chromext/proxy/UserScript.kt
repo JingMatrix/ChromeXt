@@ -37,10 +37,8 @@ object UserScriptProxy {
   private val mSpec = gURL.getDeclaredField("a")
 
   private fun loadUrl(url: String, tab: Any? = Chrome.getTab()) {
-    if (tab != null) {
-      Handler(Chrome.getContext().getMainLooper()).post {
-        loadUrl.invoke(tab, newLoadUrlParams(url))
-      }
+    Handler(Chrome.getContext().getMainLooper()).post {
+      runCatching { loadUrl.invoke(tab, newLoadUrlParams(url)) }.onFailure { Log.ex(it) }
     }
   }
 
@@ -110,7 +108,7 @@ object UserScriptProxy {
     } else if (packed::class.java == gURL) {
       return mSpec.get(packed) as String
     }
-    Log.e("parseUrl: ${packed::class.qualifiedName} is not ${loadUrlParams.name} nor ${gURL.name}")
+    Log.e("parseUrl: ${packed::class.java} is not ${loadUrlParams.name} nor ${gURL.name}")
     return null
   }
 
