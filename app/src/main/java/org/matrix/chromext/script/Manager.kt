@@ -11,6 +11,8 @@ import kotlin.concurrent.thread
 import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.devtools.DevToolClient
+import org.matrix.chromext.devtools.hitDevTools
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.ERUD_URL
@@ -23,6 +25,7 @@ object ScriptDbManager {
 
   val scripts = query()
   val xmlhttpRequests = mutableMapOf<Double, XMLHttpRequest>()
+  val devToolClients = mutableMapOf<Int, DevToolClient>()
 
   @Suppress("UNCHECKED_CAST")
   val cosmeticFilters =
@@ -190,13 +193,48 @@ object ScriptDbManager {
       }
       "xmlhttpRequest" -> {
         runCatching {
-          val detail = JSONObject(payload)
-          val uuid = detail.getDouble("uuid")
-          val request =
-              XMLHttpRequest(detail.getString("id"), detail.getJSONObject("request"), uuid)
-          xmlhttpRequests.put(uuid, request)
-          thread { request.send() }
-        }
+              val detail = JSONObject(payload)
+              val uuid = detail.getDouble("uuid")
+              val request =
+                  XMLHttpRequest(detail.getString("id"), detail.getJSONObject("request"), uuid)
+              xmlhttpRequests.put(uuid, request)
+              thread { request.send() }
+            }
+            .onFailure { Log.ex(it) }
+      }
+      "websocket" -> {
+        runCatching {
+              val detail = JSONObject(payload)
+              val tabId = detail.getInt("tabId")
+              val targetTabId = detail.getInt("targetTabId")
+
+              if (detail.has("message")) {
+                val message = JSONObject(detail.getString("message"))
+                devToolClients
+                    .get(targetTabId)
+                    ?.command(message.getString("method"), message.getJSONObject("params"))
+              } else if (detail.has("close")) {
+                devToolClients.get(tabId)?.close()
+                devToolClients.remove(tabId)
+              } else {
+                thread {
+                  devToolClients.get(tabId)?.close()
+                  devToolClients.get(targetTabId)?.close()
+                  hitDevTools().close()
+                  devToolClients.put(targetTabId, DevToolClient(targetTabId))
+                  devToolClients.put(tabId, DevToolClient(tabId))
+                  val response = JSONObject(mapOf("detail" to JSONObject(mapOf("open" to true))))
+                  callback = "window.dispatchEvent(new CustomEvent('websocket', ${response}))"
+                  devToolClients.get(tabId)?.evaluateJavascript(callback)
+                  devToolClients.get(targetTabId)?.listen {
+                    response.put("detail", JSONObject(mapOf("message" to it)))
+                    callback = "window.dispatchEvent(new CustomEvent('websocket', ${response}))"
+                    devToolClients.get(tabId)?.evaluateJavascript(callback)
+                  }
+                }
+              }
+            }
+            .onFailure { Log.ex(it) }
       }
       "userAgentSpoof" -> {
         val loadUrlParams = UserScriptProxy.newLoadUrlParams(payload)
