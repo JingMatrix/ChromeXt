@@ -11,12 +11,21 @@ window.addEventListener("load", () => {
 class WebSocket {
   constructor() {
     this.url = arguments[0];
-    this.targetTabId = Number(this.url.split("/").pop());
+    this.targetTabId = this.url.split("/").pop();
     this.detail = {
       action: "websocket",
-      payload: { tabId: ChromeXt.tabId, targetTabId: this.targetTabId },
+      payload: { targetTabId: this.targetTabId },
     };
-    ChromeXt(JSON.stringify(this.detail));
+    const detail = this.detail;
+    ChromeXt(JSON.stringify(detail));
+
+    window.addEventListener("inspect_pages", (e) => {
+      detail.payload.tabId = e.detail.find(
+        (info) => info.url == window.location.href
+      ).id;
+      detail.payload.uuid = Math.random();
+      ChromeXt(JSON.stringify(detail));
+    });
 
     window.addEventListener("websocket", (e) => {
       const type = Object.keys(e.detail)[0];
@@ -26,12 +35,6 @@ class WebSocket {
 
   send() {
     this.detail.payload.message = arguments[0];
-    ChromeXt(JSON.stringify(this.detail));
-  }
-
-  close() {
-    delete this.detail.payload.message;
-    this.detail.payload.close = true;
     ChromeXt(JSON.stringify(this.detail));
   }
 }

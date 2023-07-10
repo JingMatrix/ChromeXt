@@ -12,7 +12,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.devtools.DevToolClient
-import org.matrix.chromext.devtools.hitDevTools
+import org.matrix.chromext.devtools.getInspectPages
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.ERUD_URL
@@ -25,7 +25,7 @@ object ScriptDbManager {
 
   val scripts = query()
   val xmlhttpRequests = mutableMapOf<Double, XMLHttpRequest>()
-  val devToolClients = mutableMapOf<Int, DevToolClient>()
+  val devToolClients = mutableMapOf<Double, Pair<DevToolClient, DevToolClient>>()
 
   @Suppress("UNCHECKED_CAST")
   val cosmeticFilters =
@@ -205,31 +205,45 @@ object ScriptDbManager {
       "websocket" -> {
         runCatching {
               val detail = JSONObject(payload)
-              val tabId = detail.getInt("tabId")
-              val targetTabId = detail.getInt("targetTabId")
+              if (!detail.has("uuid")) {
+                thread { runCatching { getInspectPages() } }
+                return callback
+              }
+              // Log.i(payload)
+              val uuid = detail.getDouble("uuid")
+              val tabId = detail.optString("tabId")
+              val targetTabId = detail.getString("targetTabId")
 
               if (detail.has("message")) {
                 val message = JSONObject(detail.getString("message"))
                 devToolClients
-                    .get(targetTabId)
-                    ?.command(message.getString("method"), message.getJSONObject("params"))
-              } else if (detail.has("close")) {
-                devToolClients.get(tabId)?.close()
-                devToolClients.remove(tabId)
+                    .get(uuid)
+                    ?.first
+                    ?.command(
+                        message.getInt("id"),
+                        message.getString("method"),
+                        message.getJSONObject("params"))
               } else {
                 thread {
-                  devToolClients.get(tabId)?.close()
-                  devToolClients.get(targetTabId)?.close()
-                  hitDevTools().close()
-                  devToolClients.put(targetTabId, DevToolClient(targetTabId))
-                  devToolClients.put(tabId, DevToolClient(tabId))
-                  val response = JSONObject(mapOf("detail" to JSONObject(mapOf("open" to true))))
-                  callback = "window.dispatchEvent(new CustomEvent('websocket', ${response}))"
-                  devToolClients.get(tabId)?.evaluateJavascript(callback)
-                  devToolClients.get(targetTabId)?.listen {
-                    response.put("detail", JSONObject(mapOf("message" to it)))
-                    callback = "window.dispatchEvent(new CustomEvent('websocket', ${response}))"
-                    devToolClients.get(tabId)?.evaluateJavascript(callback)
+                  devToolClients.put(uuid, Pair(DevToolClient(targetTabId), DevToolClient(tabId)))
+
+                  fun response(res: JSONObject): Boolean? {
+                    val response = JSONObject(mapOf("detail" to res))
+                    return devToolClients
+                        .get(uuid)
+                        ?.second
+                        ?.evaluateJavascript(
+                            "window.dispatchEvent(new CustomEvent('websocket', ${response}))")
+                  }
+
+                  response(JSONObject(mapOf("open" to true)))
+                  devToolClients.get(uuid)?.first?.listen {
+                    if (response(JSONObject(mapOf("message" to it))) == false) {
+                      Log.i("Close inspecting sockets for uuid ${uuid}")
+                      devToolClients.get(uuid)?.first?.close()
+                      devToolClients.get(uuid)?.second?.close()
+                      devToolClients.remove(uuid)
+                    }
                   }
                 }
               }

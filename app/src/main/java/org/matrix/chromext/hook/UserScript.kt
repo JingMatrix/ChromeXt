@@ -13,7 +13,6 @@ import org.matrix.chromext.utils.ResourceMerge
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
-import org.matrix.chromext.utils.invokeMethod
 
 object UserScriptHook : BaseHook() {
 
@@ -43,8 +42,8 @@ object UserScriptHook : BaseHook() {
           Chrome.refreshTab(tab)
           val url = proxy.parseUrl(it.args[0])!!
           proxy.evaluateJavascript("globalThis.ChromeXt=console.debug.bind(console);")
-          proxy.evaluateJavascript(
-              "ChromeXt.tabId=${tab.invokeMethod(){ name == "getId" } as Int};")
+          // proxy.evaluateJavascript(
+          //     "ChromeXt.tabId=${tab.invokeMethod(){ name == "getId" } as Int};")
           if (url.endsWith(".user.js")) {
             proxy.evaluateJavascript(promptInstallUserScript)
           } else if (url.startsWith(DEV_FRONT_END)) {

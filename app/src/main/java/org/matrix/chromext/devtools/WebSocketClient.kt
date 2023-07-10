@@ -12,10 +12,10 @@ import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.utils.Log
 
-class DevToolClient(tabId: Int) : LocalSocket() {
+class DevToolClient(tabId: String) : LocalSocket() {
 
   val tabId = tabId
-  var id = 0
+  var id = 1
 
   init {
     connectDevTools(this)
@@ -35,23 +35,24 @@ class DevToolClient(tabId: Int) : LocalSocket() {
     // Log.d(String(buffer))
   }
 
-  fun command(method: String, params: JSONObject) {
-    id = id + 1
-    runCatching {
-          WebSocketFrame(
-                  JSONObject(mapOf("id" to id, "method" to method, "params" to params)).toString())
-              .write(outputStream)
-        }
-        .onFailure {
-          Log.ex(it)
-          close()
-        }
+  fun command(id: Int, method: String, params: JSONObject) {
+    WebSocketFrame(JSONObject(mapOf("id" to id, "method" to method, "params" to params)).toString())
+        .write(outputStream)
   }
 
-  fun evaluateJavascript(script: String?) {
+  fun evaluateJavascript(script: String?): Boolean {
     if (script != null) {
-      command("Runtime.evaluate", JSONObject(mapOf("expression" to script)))
+      runCatching {
+            command(this.id, "Runtime.evaluate", JSONObject(mapOf("expression" to script)))
+            this.id += 1
+          }
+          .onFailure {
+            Log.ex(it)
+            close()
+            return false
+          }
     }
+    return true
   }
 
   fun listen(callback: (JSONObject) -> Unit = { msg -> Log.d(msg.toString()) }) {
