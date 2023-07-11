@@ -64,6 +64,27 @@ object ScriptDbManager {
     dbHelper.close()
   }
 
+  fun invokeScript(url: String) {
+    Chrome.evaluateJavascript(
+        scripts
+            .filter {
+              val script = it
+              script.exclude.forEach {
+                if (urlMatch(it, url, true)) {
+                  return@filter false
+                }
+              }
+              script.match.forEach {
+                if (urlMatch(it, url, false)) {
+                  Log.d("${script.id} injected")
+                  return@filter true
+                }
+              }
+              false
+            }
+            .map { GM.bootstrap(it) })
+  }
+
   fun updateScriptStorage() {
     val dbHelper = ScriptDbHelper(Chrome.getContext())
     val db = dbHelper.writableDatabase

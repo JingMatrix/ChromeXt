@@ -18,7 +18,7 @@ object GM {
           .split("// Kotlin separator\n\n")
           .associateBy({ it.lines()[0].split("(")[0].split(" ")[1] }, { it })
 
-  fun bootstrap(script: Script): String? {
+  fun bootstrap(script: Script): String {
     var code = script.code
     var grants = localScript.get("GM_bootstrap")!!
 

@@ -42,8 +42,6 @@ object UserScriptHook : BaseHook() {
           Chrome.refreshTab(tab)
           val url = proxy.parseUrl(it.args[0])!!
           proxy.evaluateJavascript("globalThis.ChromeXt=console.debug.bind(console);")
-          // proxy.evaluateJavascript(
-          //     "ChromeXt.tabId=${tab.invokeMethod(){ name == "getId" } as Int};")
           if (url.endsWith(".user.js")) {
             proxy.evaluateJavascript(promptInstallUserScript)
           } else if (url.startsWith(DEV_FRONT_END)) {
@@ -56,7 +54,7 @@ object UserScriptHook : BaseHook() {
                   proxy.evaluateJavascript(
                       "ChromeXt.cspRules=`${ScriptDbManager.cspRules.get(origin)}`;${cspRule}")
                 }
-                proxy.invokeScript(url)
+                ScriptDbManager.invokeScript(url)
                 if (ScriptDbManager.cosmeticFilters.contains(origin)) {
                   proxy.evaluateJavascript(
                       "ChromeXt.filters=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${cosmeticFilter}")

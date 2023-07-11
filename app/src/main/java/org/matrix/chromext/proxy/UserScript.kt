@@ -3,11 +3,8 @@ package org.matrix.chromext.proxy
 import android.net.Uri
 import android.os.Handler
 import org.matrix.chromext.Chrome
-import org.matrix.chromext.script.GM
-import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.script.kMaxURLChars
-import org.matrix.chromext.script.urlMatch
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
 
@@ -51,32 +48,6 @@ object UserScriptProxy {
       return constructor.newInstance(url, 0)
     } else {
       return constructor.newInstance(url)
-    }
-  }
-
-  fun invokeScript(url: String) {
-    ScriptDbManager.scripts.forEach loop@{
-      val script = it
-      script.exclude.forEach {
-        if (urlMatch(it, url, true)) {
-          return@loop
-        }
-      }
-      script.match.forEach {
-        if (urlMatch(it, url, false)) {
-          evaluateJavascript(script)
-          Log.d("${script.id} injected")
-          return@loop
-        }
-      }
-    }
-  }
-
-  private fun evaluateJavascript(script: Script) {
-    val code = GM.bootstrap(script)
-    if (code != null) {
-      evaluateJavascript(code)
-      Log.d("Run script: ${script.code.replace("\\s+".toRegex(), " ")}")
     }
   }
 

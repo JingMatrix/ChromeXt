@@ -2,7 +2,12 @@ package org.matrix.chromext
 
 import android.app.Application
 import android.content.Context
+import android.os.Handler
 import java.lang.ref.WeakReference
+import kotlin.concurrent.thread
+import org.json.JSONArray
+import org.matrix.chromext.devtools.DevToolClient
+import org.matrix.chromext.devtools.getInspectPages
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.UserScriptProxy
@@ -13,6 +18,7 @@ object Chrome {
   private var mContext: WeakReference<Context>? = null
   private var currentTab: WeakReference<Any>? = null
   private var tabModels = mutableListOf<WeakReference<Any>>()
+  private var pages: JSONArray? = getInspectPages()
 
   var isDev = false
   var isEdge = false
@@ -59,6 +65,31 @@ object Chrome {
 
   fun dropTabModel(model: Any) {
     tabModels.removeAll { it.get()!! == model }
+  }
+
+  fun evaluateJavascript(codes: List<String>) {
+    if (codes.size == 0) {
+      return
+    }
+    if (pages == null) {
+      Handler(getContext().getMainLooper()).post {
+        if (UserScriptHook.isInit) {
+          codes.forEach { UserScriptProxy.evaluateJavascript(it) }
+        } else if (WebViewHook.isInit) {
+          codes.forEach { WebViewHook.evaluateJavascript(it) }
+        }
+        thread { pages = getInspectPages(false) }
+      }
+    } else {
+      Log.d("evaluateJavascript using devtools")
+      thread {
+        if (UserScriptHook.isInit) {
+          val client = DevToolClient(getTab()!!.invokeMethod() { name == "getId" }.toString())
+          codes.forEach { client.evaluateJavascript(it) }
+          client.close()
+        } else if (WebViewHook.isInit) {}
+      }
+    }
   }
 
   fun broadcast(event: String, data: String) {
