@@ -56,29 +56,32 @@ class DevToolClient(tabId: String) : LocalSocket() {
   }
 
   fun listen(callback: (JSONObject) -> Unit = { msg -> Log.d(msg.toString()) }) {
-    while (true) {
-      val type = inputStream.read()
-      if (type == 0x80 or 0x1) {
-        var len = inputStream.read()
-        if (len == 0x7e) {
-          len = inputStream.read() shl 8
-          len += inputStream.read()
-        } else if (len == 0x7f) {
-          len = 0
-          for (i in 0 until 8) {
-            len = len or (inputStream.read() shl (8 * (7 - i)))
+    runCatching {
+          while (true) {
+            val type = inputStream.read()
+            if (type == 0x80 or 0x1) {
+              var len = inputStream.read()
+              if (len == 0x7e) {
+                len = inputStream.read() shl 8
+                len += inputStream.read()
+              } else if (len == 0x7f) {
+                len = 0
+                for (i in 0 until 8) {
+                  len = len or (inputStream.read() shl (8 * (7 - i)))
+                }
+              } else if (len > 0x7d) {
+                throw Exception("Payload from server has invalid length byte ${len}")
+              }
+              callback(JSONObject(String(inputStream.readNBytes(len))))
+            } else {
+              throw Exception("Invalid frame type ${type} received from devtools server")
+            }
           }
-        } else if (len > 0x7d) {
-          Log.e("Payload from server has invalid length byte ${len}")
-          break
         }
-        runCatching { callback(JSONObject(String(inputStream.readNBytes(len)))) }
-            .onFailure { Log.e("Fail to fetch data of type ${type} and length ${len}") }
-      } else {
-        Log.e("Invalid frame type ${type} received from devtools server")
-        break
-      }
-    }
+        .onFailure {
+          Log.e("Fails when listening at tab ${tabId}: ${it.message}")
+          close()
+        }
   }
 }
 
