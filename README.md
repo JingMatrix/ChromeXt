@@ -21,6 +21,8 @@ Note for WebView based browsers users: you _only_ need to enable this module for
 
 ## Usage
 
+<p align="center"><a href="https://www.youtube.com/watch?v=1Qm4dU-XnJM"><img src="https://img.youtube.com/vi/1Qm4dU-XnJM/0.jpg" /></a></p>
+
 ChromeXt requires **Xposed framework**.
 
 For root users, install [LSPosed](https://github.com/LSPosed/LSPosed) first,
@@ -193,7 +195,7 @@ and [local_script.js](app/src/main/assets/local_script.js)
 - [x] Re-implement GM_xmlhttpRequest
 - [x] Convert exported bookmarks to HTML format
 - [x] Show executed scripts on current page
-- [ ] Make a YouTube presentation video
+- [x] Make a YouTube presentation video
 - [ ] Support importing UserScripts from Tampermonkey exports
 - [ ] Support backup and restore
 - [ ] Add recommended UserScripts to the front end manager
