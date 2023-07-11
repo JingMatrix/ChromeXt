@@ -6,6 +6,7 @@ import android.os.Handler
 import java.lang.ref.WeakReference
 import kotlin.concurrent.thread
 import org.json.JSONArray
+import org.json.JSONObject
 import org.matrix.chromext.devtools.DevToolClient
 import org.matrix.chromext.devtools.getInspectPages
 import org.matrix.chromext.hook.UserScriptHook
@@ -67,7 +68,7 @@ object Chrome {
     tabModels.removeAll { it.get()!! == model }
   }
 
-  fun evaluateJavascript(codes: List<String>) {
+  fun evaluateJavascript(codes: List<String>, byPassCSP: Boolean = false) {
     if (codes.size == 0) {
       return
     }
@@ -83,8 +84,13 @@ object Chrome {
     } else {
       thread {
         if (UserScriptHook.isInit) {
-          val client = DevToolClient(getTab()!!.invokeMethod() { name == "getId" }.toString())
-          // client.command(null, "Page.setBypassCSP", JSONObject().put("enabled", true))
+          val tabId = getTab()!!.invokeMethod() { name == "getId" }.toString()
+          var client = DevToolClient(tabId)
+          if (client.isClosed()) {
+            pages = getInspectPages(false)
+            client = DevToolClient(tabId)
+          }
+          client.command(null, "Page.setBypassCSP", JSONObject().put("enabled", byPassCSP))
           codes.forEach { client.evaluateJavascript(it) }
           client.close()
         } else if (WebViewHook.isInit) {}

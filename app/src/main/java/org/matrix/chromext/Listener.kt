@@ -189,7 +189,7 @@ object Listener {
           callback = FileReader(eruda).use { it.readText() } + "\n"
           callback += ctx.assets.open("local_eruda.js").bufferedReader().use { it.readText() }
           callback += "eruda.init(); eruda._localConfig(); eruda.show();"
-          Chrome.evaluateJavascript(listOf(callback))
+          Chrome.evaluateJavascript(listOf(callback), true)
           callback = null
         } else {
           Log.toast(ctx, "Updating Eruda...")

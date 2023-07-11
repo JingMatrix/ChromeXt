@@ -84,7 +84,7 @@ object ScriptDbManager {
         }
       }
     }
-    Chrome.evaluateJavascript(codes)
+    Chrome.evaluateJavascript(codes, true)
   }
 
   fun updateScriptStorage() {

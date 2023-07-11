@@ -1,3 +1,16 @@
+function retryEruda(message) {
+  if (retryingEruda) {
+    return;
+  }
+  retryingEruda = true;
+  message += ", a reload might unblock it.\n\nDo you want to try it?";
+  if (confirm(message)) {
+    location.reload();
+  }
+}
+
+let retryingEruda = false;
+
 if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
   class Filter {
     #filter = [];
@@ -275,8 +288,6 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
   eruda.Resources = resources;
   eruda.Info = info;
   eruda._configured = true;
-  eruda._font_fix =
-    "[class^='eruda-icon-']:before { font-size: 14px; } .eruda-icon-arrow-left:before { content: '←'; } .eruda-icon-arrow-right:before { content: '→'; } .eruda-icon-clear:before { content: '✖'; font-size: 17px; } .eruda-icon-compress:before { content: '🗎'; } .eruda-icon-copy:before, .luna-text-viewer-icon-copy:before { content: '⎘ '; font-size: 16px; font-weight: bold; } .eruda-icon-delete:before { content: '⌫'; font-weight: bold; } .eruda-icon-expand:before { content: '⌄'; } .eruda-icon-eye:before { content: '🧿'; } div.eruda-btn.eruda-search { margin-top: 4px; } .eruda-icon-filter:before { content: '⭃'; font-size: 19px; font-weight: bold; margin-right: -5px; display: block; transform: rotate(90deg); } .eruda-icon-play:before { content: '▷'; } .eruda-icon-record:before { content: '●'; } .eruda-icon-refresh:before { content: '↻'; font-size: 18px; font-weight: bold; } .eruda-icon-reset:before { content: '↺'; font-size: 18px; font-weight: bold; display: block; transform: rotate(270deg) translate(5px, 0); } .eruda-icon-search:before { content: '🔍'; } .eruda-icon-select:before { content: '➤'; font-size: 14px; display: block; transform: rotate(232deg); } .eruda-icon-tool:before { content: '⚙'; font-size: 30px; } .luna-console-icon-error:before { content: '✗'; } .luna-console-icon-warn:before { content: '⚠'; } [class$='icon-caret-right']:before, [class$='icon-arrow-right']:before { content: '▼'; font-size: 9px; display: block; transform: rotate(-0.25turn); } [class$='icon-caret-down']:before, [class$='icon-arrow-down']:before { content: '▼'; font-size: 9px; }";
   eruda._localConfig = () => {
     if (!document.querySelector("#eruda")) {
       return;
@@ -293,23 +304,16 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
       "chromext_plugin",
       "#eruda-info li .eruda-title span {padding: 4px 5px; margin: 0; float: right;} #eruda-info .eruda-user-agent h2, #eruda-info .eruda-csp-rules h2 { padding-bottom: 12px;} #eruda-info .eruda-userscripts div.eruda-content, #eruda-resources div.eruda-commands {display: flex; flex-wrap: wrap; justify-content: space-around; > span {padding: 0.3em; margin: 0.3em; border: 0.5px solid violet;}}"
     );
-    if (typeof eruda._shouldFixfont == "undefined") {
-      eruda._shouldFixfont = false;
-      document.addEventListener("securitypolicyviolation", (e) => {
-        if (e.blockedURI == "data" && e.violatedDirective == "font-src") {
-          eruda._shouldFixfont = true;
-          addErudaStyle("chromext_eruda_font_fix", eruda._font_fix);
-        } else if (
-          e.blockedURI == "inline" &&
-          e.target == document.querySelector("#eruda")
-        ) {
-          e.target.remove();
-          alert("Impossible to load Eruda, please consider using DevTools.");
-        }
-      });
-    } else if (eruda._shouldFixfont) {
-      addErudaStyle("chromext_eruda_font_fix", eruda._font_fix);
-    }
+    document.addEventListener("securitypolicyviolation", (e) => {
+      if (e.blockedURI == "data" && e.violatedDirective == "font-src") {
+        retryEruda("Eruda icons are blocked in this page for known reason");
+      } else if (
+        e.blockedURI == "inline" &&
+        e.target == document.querySelector("#eruda")
+      ) {
+        retryEruda("Eruda is blocked in this page for known reason");
+      }
+    });
   };
 
   function generateQuerySelector(el) {
@@ -343,23 +347,5 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
     erudaroot.append(style);
   }
 } else if (typeof eruda == "undefined") {
-  const cspRules = "script-src 'none'";
-  const meta = document.head.querySelector(`meta[content="${cspRules}"]`);
-  if (meta && meta.getAttribute("http-equiv") == "Content-Security-Policy") {
-    alert(
-      "Content-Security-Policy is set, but you need to fully restart the browser to clean cached third-party JavaScripts."
-    );
-  } else if (
-    confirm(
-      "Eruda is blocked, it is advisable to use Content-Security-Policy to block JavaScripts on this website.\n\nDo you want to proceed in this way (current page will be reloaded)?\n\nNote: To remove the Content-Security-Policy rule, set it to be empty in the eruda Info panel."
-    )
-  ) {
-    ChromeXt(
-      JSON.stringify({
-        action: "cspRule",
-        payload: { origin: window.location.origin, data: cspRules },
-      })
-    );
-    window.location.reload();
-  }
+  retryEruda("Eruda is blocked in this page for unknown reason");
 }
