@@ -4,8 +4,6 @@ import kotlin.text.Regex
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
 
-const val kMaxURLChars = 2097152
-
 private val blocksReg =
     Regex(
         """(?<metablock>[\S\s]*?// ==UserScript==\r?\n([\S\s]*?)\r?\n// ==/UserScript==)(?<code>[\S\s]*)""")

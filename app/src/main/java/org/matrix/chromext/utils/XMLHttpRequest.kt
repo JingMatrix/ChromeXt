@@ -6,10 +6,8 @@ import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
 import org.json.JSONObject
-import org.matrix.chromext.hook.UserScriptHook
-import org.matrix.chromext.hook.WebViewHook
-import org.matrix.chromext.proxy.UserScriptProxy
-import org.matrix.chromext.script.ScriptDbManager
+import org.matrix.chromext.Chrome
+import org.matrix.chromext.Listener
 
 class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
   val id = id
@@ -109,13 +107,9 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
   private fun response(type: String, data: String, disconnect: Boolean = true) {
     val code =
         "window.dispatchEvent(new CustomEvent('xmlhttpRequest', {detail: {id: '${id}', uuid: ${uuid}, type: '${type}', data: ${data}}}));"
-    if (UserScriptHook.isInit) {
-      UserScriptProxy.evaluateJavascript(code)
-    } else if (WebViewHook.isInit) {
-      WebViewHook.evaluateJavascript(code)
-    }
+    Chrome.evaluateJavascript(listOf(code))
     if (disconnect) {
-      ScriptDbManager.xmlhttpRequests.remove(uuid)
+      Listener.xmlhttpRequests.remove(uuid)
       connection?.disconnect()
     }
   }

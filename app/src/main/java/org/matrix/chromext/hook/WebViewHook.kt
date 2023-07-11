@@ -12,12 +12,11 @@ import java.lang.ref.WeakReference
 import kotlin.concurrent.thread
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.Listener
 import org.matrix.chromext.devtools.DEV_FRONT_END
 import org.matrix.chromext.devtools.getInspectPages
-import org.matrix.chromext.script.GM
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.script.openEruda
-import org.matrix.chromext.script.urlMatch
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.ResourceMerge
 import org.matrix.chromext.utils.findMethod
@@ -47,8 +46,6 @@ object WebViewHook : BaseHook() {
     val promptInstallUserScript =
         ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
     val customizeDevTool = ctx.assets.open("devtools.js").bufferedReader().use { it.readText() }
-    val cosmeticFilter =
-        ctx.assets.open("cosmetic-filter.js").bufferedReader().use { it.readText() }
 
     findMethod(ChromeClient!!, true) {
           name == "onConsoleMessage" &&
@@ -64,7 +61,7 @@ object WebViewHook : BaseHook() {
                   val data = JSONObject(text)
                   val action = data.getString("action")
                   val payload = data.getString("payload")
-                  runCatching { evaluateJavascript(ScriptDbManager.on(action, payload)) }
+                  runCatching { evaluateJavascript(Listener.on(action, payload)) }
                       .onFailure { Log.w("Failed with ${action}: ${payload}") }
                 }
                 .onFailure { Log.d("Ignore console.debug: " + text) }
@@ -88,36 +85,11 @@ object WebViewHook : BaseHook() {
       } else if (!url.endsWith("/ChromeXt/")) {
         val protocol = url.split("://")
         if (protocol.size > 1 && arrayOf("https", "http", "file").contains(protocol.first())) {
-
           val origin = protocol.first() + "://" + protocol[1].split("/").first()
           if (ScriptDbManager.userAgents.contains(origin)) {
             view.settings.userAgentString = ScriptDbManager.userAgents.get(origin)
           }
-
-          ScriptDbManager.scripts.forEach loop@{
-            val script = it
-            script.exclude.forEach {
-              if (urlMatch(it, url, true)) {
-                return@loop
-              }
-            }
-            script.match.forEach {
-              if (urlMatch(it, url, false)) {
-                val code = GM.bootstrap(script)
-                if (code != null) {
-                  evaluateJavascript(code)
-                  Log.d("Run script: ${script.code.replace("\\s+".toRegex(), " ")}")
-                }
-                return@loop
-              }
-            }
-          }
-
-          if (ScriptDbManager.cosmeticFilters.contains(origin)) {
-            evaluateJavascript(
-                "globalThis.ChromeXt_filter=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${cosmeticFilter}")
-            Log.d("Cosmetic filters applied to ${origin}")
-          }
+          ScriptDbManager.invokeScript(url, origin)
         }
         view.settings.javaScriptEnabled = enableJS
         view.settings.domStorageEnabled = enableDOMStorage

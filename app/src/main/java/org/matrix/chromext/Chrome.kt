@@ -81,10 +81,10 @@ object Chrome {
         thread { pages = getInspectPages(false) }
       }
     } else {
-      Log.d("evaluateJavascript using devtools")
       thread {
         if (UserScriptHook.isInit) {
           val client = DevToolClient(getTab()!!.invokeMethod() { name == "getId" }.toString())
+          // client.command(null, "Page.setBypassCSP", JSONObject().put("enabled", true))
           codes.forEach { client.evaluateJavascript(it) }
           client.close()
         } else if (WebViewHook.isInit) {}
@@ -100,7 +100,7 @@ object Chrome {
         val count = it.get()!!.invokeMethod() { name == "getCount" } as Int
         for (i in 0 until count) {
           val tab = it.get()?.invokeMethod(i) { name == "getTabAt" }
-          UserScriptProxy.evaluateJavascript(code, false, tab)
+          UserScriptProxy.evaluateJavascript(code, tab)
         }
       }
     } else if (WebViewHook.isInit) {

@@ -30,9 +30,9 @@ object GM {
       script.storage = "{}"
     }
 
-    script.grant.forEach granting@{
+    script.grant.forEach {
       when (it) {
-        "GM_info" -> return@granting
+        "GM_info" -> return@forEach
         "unsafeWindow" -> grants += "const unsafeWindow = window;"
         "GM_log" -> grants += "const GM_log = console.log.bind(console);"
         else ->

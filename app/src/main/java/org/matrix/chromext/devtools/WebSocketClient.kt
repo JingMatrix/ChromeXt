@@ -48,12 +48,20 @@ class DevToolClient(tabId: String) : LocalSocket() {
     return mClosed
   }
 
-  fun command(id: Int, method: String, params: JSONObject) {
+  fun command(id: Int?, method: String, params: JSONObject) {
     if (isClosed()) {
       return
     }
-    WebSocketFrame(JSONObject(mapOf("id" to id, "method" to method, "params" to params)).toString())
-        .write(outputStream)
+    val msg = JSONObject(mapOf("method" to method, "params" to params))
+
+    if (id == null) {
+      msg.put("id", this.id)
+      this.id += 1
+    } else {
+      msg.put("id", id)
+    }
+
+    WebSocketFrame(msg.toString()).write(outputStream)
   }
 
   fun evaluateJavascript(script: String) {

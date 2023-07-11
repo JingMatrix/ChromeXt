@@ -4,10 +4,10 @@ import android.content.Context
 import kotlin.concurrent.thread
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.Listener
 import org.matrix.chromext.devtools.DEV_FRONT_END
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.ScriptDbManager
-import org.matrix.chromext.script.cspRule
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.ResourceMerge
 import org.matrix.chromext.utils.findMethod
@@ -25,8 +25,6 @@ object UserScriptHook : BaseHook() {
     val promptInstallUserScript =
         ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
     val customizeDevTool = ctx.assets.open("devtools.js").bufferedReader().use { it.readText() }
-    val cosmeticFilter =
-        ctx.assets.open("cosmetic-filter.js").bufferedReader().use { it.readText() }
 
     proxy.tabModelJniBridge.getDeclaredConstructors()[0].hookAfter {
       Chrome.addTabModel(it.thisObject)
@@ -50,19 +48,7 @@ object UserScriptHook : BaseHook() {
             thread {
               val origin = proxy.parseOrigin(url)
               if (origin != null) {
-                if (ScriptDbManager.cspRules.contains(origin)) {
-                  proxy.evaluateJavascript(
-                      "ChromeXt.cspRules=`${ScriptDbManager.cspRules.get(origin)}`;${cspRule}")
-                }
-                ScriptDbManager.invokeScript(url)
-                if (ScriptDbManager.cosmeticFilters.contains(origin)) {
-                  proxy.evaluateJavascript(
-                      "ChromeXt.filters=`${ScriptDbManager.cosmeticFilters.get(origin)}`;${cosmeticFilter}")
-                }
-                if (ScriptDbManager.userAgents.contains(origin)) {
-                  proxy.evaluateJavascript(
-                      "Object.defineProperties(window.navigator,{userAgent:{value:'${ScriptDbManager.userAgents.get(origin)}'}});")
-                }
+                ScriptDbManager.invokeScript(url, origin)
               }
             }
           }
@@ -80,7 +66,7 @@ object UserScriptHook : BaseHook() {
                   val action = data.getString("action")
                   val payload = data.getString("payload")
                   runCatching {
-                        val callback = ScriptDbManager.on(action, payload)
+                        val callback = Listener.on(action, payload)
                         if (callback != null) {
                           Chrome.refreshTab(proxy.mTab.get(it.thisObject))
                           proxy.evaluateJavascript(callback)

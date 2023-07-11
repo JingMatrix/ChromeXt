@@ -16,11 +16,11 @@ import java.lang.reflect.Modifier
 import java.util.ArrayList
 import kotlin.concurrent.thread
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.Listener
 import org.matrix.chromext.R
 import org.matrix.chromext.devtools.getInspectPages
 import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.proxy.UserScriptProxy
-import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.script.openEruda
 import org.matrix.chromext.utils.*
 
@@ -117,9 +117,7 @@ object MenuHook : BaseHook() {
         when (ctx.resources.getResourceName(id)) {
           "org.matrix.chromext:id/install_script_id" -> {
             if (getUrl().startsWith("https://raw.githubusercontent.com/")) {
-              Download.start(getUrl(), "UserScript/script.js") {
-                ScriptDbManager.on("installScript", it)
-              }
+              Download.start(getUrl(), "UserScript/script.js") { Listener.on("installScript", it) }
             } else {
               UserScriptProxy.evaluateJavascript("installScript(true);")
             }
@@ -127,7 +125,7 @@ object MenuHook : BaseHook() {
           "org.matrix.chromext:id/developer_tools_id" -> thread { getInspectPages() }
           "org.matrix.chromext:id/eruda_console_id" -> UserScriptProxy.evaluateJavascript(openEruda)
           "${ctx.getPackageName()}:id/reload_menu_id" -> {
-            return ScriptDbManager.on("userAgentSpoof", getUrl()) != null
+            return Listener.on("userAgentSpoof", getUrl()) != null
           }
         }
         return false

@@ -4,7 +4,6 @@ import android.net.Uri
 import android.os.Handler
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.ScriptDbManager
-import org.matrix.chromext.script.kMaxURLChars
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
 
@@ -51,24 +50,10 @@ object UserScriptProxy {
     }
   }
 
-  fun evaluateJavascript(script: String, forceWrap: Boolean = false, tab: Any? = Chrome.getTab()) {
+  fun evaluateJavascript(script: String, tab: Any? = Chrome.getTab()) {
     if (script == "") return
-    var code = Uri.encode(script, "`$")
-    if (code.length > kMaxURLChars - 20 || forceWrap) {
-      val alphabet: List<Char> = ('a'..'z') + ('A'..'Z')
-      val randomString = List(16) { alphabet.random() }.joinToString("")
-      val backtrick = List(16) { alphabet.random() }.joinToString("")
-      val dollarsign = List(16) { alphabet.random() }.joinToString("")
-      loadUrl("javascript: void(globalThis.${randomString} = '');")
-      code.replace("`", backtrick).replace("$", dollarsign).chunked(kMaxURLChars - 100).forEach {
-        loadUrl("javascript: void(globalThis.${randomString} += String.raw`${it}`);")
-      }
-      loadUrl(
-          "javascript: ${randomString} = ${randomString}.replaceAll('${backtrick}', '`').replaceAll('${dollarsign}', '\$'); try { Function(${randomString})() } catch(e) { let script = document.createElement('script'); script.textContent = ${randomString}; document.head.append(script) };",
-          tab)
-    } else {
-      loadUrl("javascript: ${code}", tab)
-    }
+    val code = Uri.encode(script)
+    loadUrl("javascript: ${code}", tab)
   }
 
   fun parseUrl(packed: Any?): String? {
