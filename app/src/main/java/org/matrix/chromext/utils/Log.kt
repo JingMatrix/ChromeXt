@@ -13,9 +13,9 @@ object Log {
     XposedBridge.log("ChromeXt logging: " + msg)
   }
 
-  fun d(msg: String) {
+  fun d(msg: String, full: Boolean = false) {
     if (BuildConfig.DEBUG) {
-      if (msg.length > 300) {
+      if (!full && msg.length > 300) {
         Log.d(TAG, msg.take(300) + " ...")
       } else {
         Log.d(TAG, msg)
@@ -29,12 +29,12 @@ object Log {
 
   fun e(msg: String) {
     Log.e(TAG, msg)
-    XposedBridge.log(msg)
+    XposedBridge.log("ChromeXt error: " + msg)
   }
 
   fun ex(thr: Throwable) {
     Log.e(TAG, "", thr)
-    XposedBridge.log(thr.toString())
+    XposedBridge.log("ChromeXt backtrace: " + thr.toString())
   }
 
   fun toast(context: Context, msg: String) {
