@@ -29,13 +29,13 @@ class DevToolClient(tabId: String) : LocalSocket() {
             "Upgrade: websocket",
             "Sec-WebSocket-Version: 13",
             "Sec-WebSocket-Key: ${Base64.encodeToString(randomString.toByteArray(), Base64.DEFAULT).trim()}")
-    Log.d("Connecting to " + request[0])
+    Log.d("Start inspecting tab ${tabId}")
     outputStream.write((request.joinToString("\r\n") + "\r\n\r\n").toByteArray())
     val buffer = ByteArray(DEFAULT_BUFFER_SIZE / 8)
     inputStream.read(buffer)
     if (String(buffer).split("\r\n")[0] != "HTTP/1.1 101 WebSocket Protocol Handshake") {
       close()
-      Log.d("Get response: " + String(buffer))
+      Log.d("Fail to inspect tab ${tabId}: " + String(buffer))
     }
   }
 
@@ -78,15 +78,19 @@ class DevToolClient(tabId: String) : LocalSocket() {
                   len = len or (inputStream.read() shl (8 * (7 - i)))
                 }
               } else if (len > 0x7d) {
-                throw Exception("Payload from server has invalid length byte ${len}")
+                throw Exception("Invalid frame length ${len}")
               }
               callback(JSONObject(String(inputStream.readNBytes(len))))
             } else {
-              throw Exception("Invalid frame type ${type} received from devtools server")
+              throw Exception("Invalid frame type ${type}")
             }
           }
         }
-        .onFailure { Log.e("Fails when listening at tab ${tabId}: ${it.message}") }
+        .onFailure {
+          if (!isClosed()) {
+            Log.e("Fail to listen at tab ${tabId}: ${it.message}")
+          }
+        }
     close()
   }
 }

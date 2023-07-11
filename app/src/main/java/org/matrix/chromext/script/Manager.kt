@@ -25,7 +25,7 @@ object ScriptDbManager {
 
   val scripts = query()
   val xmlhttpRequests = mutableMapOf<Double, XMLHttpRequest>()
-  val devToolClients = mutableMapOf<Double, Pair<DevToolClient, DevToolClient>>()
+  val devToolClients = mutableMapOf<Pair<String, String>, Pair<DevToolClient, DevToolClient>>()
 
   @Suppress("UNCHECKED_CAST")
   val cosmeticFilters =
@@ -205,19 +205,19 @@ object ScriptDbManager {
       "websocket" -> {
         runCatching {
               val detail = JSONObject(payload)
-              if (!detail.has("uuid")) {
+              if (!detail.has("tabId")) {
                 thread { runCatching { getInspectPages() } }
                 return callback
               }
-              // Log.i(payload)
-              val uuid = detail.getDouble("uuid")
+
               val tabId = detail.optString("tabId")
               val targetTabId = detail.getString("targetTabId")
+              val key = Pair(targetTabId, tabId)
 
               if (detail.has("message")) {
                 val message = JSONObject(detail.getString("message"))
                 devToolClients
-                    .get(uuid)
+                    .get(key)
                     ?.first
                     ?.command(
                         message.getInt("id"),
@@ -225,10 +225,9 @@ object ScriptDbManager {
                         message.getJSONObject("params"))
               } else {
                 thread {
-                  devToolClients.put(uuid, Pair(DevToolClient(targetTabId), DevToolClient(tabId)))
                   fun response(res: JSONObject): Boolean? {
                     val response = JSONObject(mapOf("detail" to res))
-                    val mTab = devToolClients.get(uuid)?.second
+                    val mTab = devToolClients.get(key)?.second
                     if (mTab?.isClosed() == false) {
                       mTab.evaluateJavascript(
                           "window.dispatchEvent(new CustomEvent('websocket', ${response}))")
@@ -237,13 +236,22 @@ object ScriptDbManager {
                     return false
                   }
 
+                  fun closeSockets() {
+                    devToolClients.get(key)?.first?.close()
+                    devToolClients.get(key)?.second?.close()
+                    devToolClients.remove(key)
+                  }
+
+                  if (devToolClients.containsKey(key)) {
+                    closeSockets()
+                  }
+
+                  devToolClients.put(key, Pair(DevToolClient(targetTabId), DevToolClient(tabId)))
+
                   response(JSONObject(mapOf("open" to true)))
-                  devToolClients.get(uuid)?.first?.listen {
+                  devToolClients.get(key)?.first?.listen {
                     if (response(JSONObject(mapOf("message" to it))) == false) {
-                      Log.i("Close inspecting sockets for uuid ${uuid}")
-                      devToolClients.get(uuid)?.first?.close()
-                      devToolClients.get(uuid)?.second?.close()
-                      devToolClients.remove(uuid)
+                      closeSockets()
                     }
                   }
                 }

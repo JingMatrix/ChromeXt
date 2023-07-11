@@ -26,7 +26,6 @@ class WebSocket {
       detail.payload.tabId = e.detail.find(
         (info) => info.url == window.location.href
       ).id;
-      detail.payload.uuid = Math.random();
       ChromeXt(JSON.stringify(detail));
     });
 
