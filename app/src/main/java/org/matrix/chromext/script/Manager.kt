@@ -226,14 +226,15 @@ object ScriptDbManager {
               } else {
                 thread {
                   devToolClients.put(uuid, Pair(DevToolClient(targetTabId), DevToolClient(tabId)))
-
                   fun response(res: JSONObject): Boolean? {
                     val response = JSONObject(mapOf("detail" to res))
-                    return devToolClients
-                        .get(uuid)
-                        ?.second
-                        ?.evaluateJavascript(
-                            "window.dispatchEvent(new CustomEvent('websocket', ${response}))")
+                    val mTab = devToolClients.get(uuid)?.second
+                    if (mTab?.isClosed() == false) {
+                      mTab.evaluateJavascript(
+                          "window.dispatchEvent(new CustomEvent('websocket', ${response}))")
+                      return true
+                    }
+                    return false
                   }
 
                   response(JSONObject(mapOf("open" to true)))

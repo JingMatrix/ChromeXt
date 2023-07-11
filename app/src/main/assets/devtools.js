@@ -30,6 +30,7 @@ class WebSocket {
     window.addEventListener("websocket", (e) => {
       const type = Object.keys(e.detail)[0];
       this["on" + type]({ data: e.detail[type] });
+      console.log(e.detail[type]);
     });
   }
 

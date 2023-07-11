@@ -14,8 +14,9 @@ import org.matrix.chromext.utils.Log
 
 class DevToolClient(tabId: String) : LocalSocket() {
 
-  val tabId = tabId
-  var id = 1
+  private val tabId = tabId
+  private var id = 1
+  private var mClosed = false
 
   init {
     connectDevTools(this)
@@ -32,34 +33,41 @@ class DevToolClient(tabId: String) : LocalSocket() {
     outputStream.write((request.joinToString("\r\n") + "\r\n\r\n").toByteArray())
     val buffer = ByteArray(DEFAULT_BUFFER_SIZE / 8)
     inputStream.read(buffer)
-    // Log.d(String(buffer))
+    if (String(buffer).split("\r\n")[0] != "HTTP/1.1 101 WebSocket Protocol Handshake") {
+      close()
+      Log.d("Get response: " + String(buffer))
+    }
+  }
+
+  override fun close() {
+    super.close()
+    mClosed = true
+  }
+
+  override fun isClosed(): Boolean {
+    return mClosed
   }
 
   fun command(id: Int, method: String, params: JSONObject) {
+    if (isClosed()) {
+      return
+    }
     WebSocketFrame(JSONObject(mapOf("id" to id, "method" to method, "params" to params)).toString())
         .write(outputStream)
   }
 
-  fun evaluateJavascript(script: String?): Boolean {
-    if (script != null) {
-      runCatching {
-            command(this.id, "Runtime.evaluate", JSONObject(mapOf("expression" to script)))
-            this.id += 1
-          }
-          .onFailure {
-            Log.ex(it)
-            close()
-            return false
-          }
-    }
-    return true
+  fun evaluateJavascript(script: String) {
+    command(this.id, "Runtime.evaluate", JSONObject(mapOf("expression" to script)))
+    this.id += 1
   }
 
   fun listen(callback: (JSONObject) -> Unit = { msg -> Log.d(msg.toString()) }) {
     runCatching {
-          while (true) {
+          while (!isClosed()) {
             val type = inputStream.read()
-            if (type == 0x80 or 0x1) {
+            if (type == -1) {
+              break
+            } else if (type == 0x80 or 0x1) {
               var len = inputStream.read()
               if (len == 0x7e) {
                 len = inputStream.read() shl 8
@@ -78,10 +86,8 @@ class DevToolClient(tabId: String) : LocalSocket() {
             }
           }
         }
-        .onFailure {
-          Log.e("Fails when listening at tab ${tabId}: ${it.message}")
-          close()
-        }
+        .onFailure { Log.e("Fails when listening at tab ${tabId}: ${it.message}") }
+    close()
   }
 }
 
