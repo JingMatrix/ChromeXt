@@ -8,6 +8,7 @@ import kotlin.concurrent.thread
 import org.json.JSONArray
 import org.matrix.chromext.devtools.DevToolClient
 import org.matrix.chromext.devtools.getInspectPages
+import org.matrix.chromext.devtools.hitDevTools
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.UserScriptProxy
@@ -17,8 +18,7 @@ import org.matrix.chromext.utils.invokeMethod
 object Chrome {
   private var mContext: WeakReference<Context>? = null
   private var currentTab: WeakReference<Any>? = null
-  private var tabModels = mutableListOf<WeakReference<Any>>()
-  private var pages: JSONArray? = getInspectPages()
+  private var pages: JSONArray? = null
 
   var isDev = false
   var isEdge = false
@@ -59,53 +59,54 @@ object Chrome {
     if (tab != null) currentTab = WeakReference(tab)
   }
 
-  fun addTabModel(model: Any) {
-    tabModels += WeakReference(model)
+  private fun evaluateJavascript(codes: List<String>, tabId: String) {
+    var client = DevToolClient(tabId)
+    if (client.isClosed()) {
+      hitDevTools().close()
+      client = DevToolClient(tabId)
+    }
+    // client.command(null, "Page.setBypassCSP", JSONObject().put("enabled", true))
+    codes.forEach { client.evaluateJavascript(it) }
+    client.close()
   }
 
-  fun dropTabModel(model: Any) {
-    tabModels.removeAll { it.get()!! == model }
-  }
-
-  fun evaluateJavascript(codes: List<String>) {
-    if (codes.size == 0) {
+  fun evaluateJavascript(codes: List<String>, broadcast: Boolean = false) {
+    if (codes.size == 0 || (!UserScriptHook.isInit && !WebViewHook.isInit)) {
+      return
+    }
+    if (broadcast) {
+      thread {
+        pages = getInspectPages(false)
+        if (pages != null) {
+          for (i in 0 until pages!!.length()) {
+            val tab = pages!!.getJSONObject(i)
+            if (tab.getString("type") == "page") {
+              evaluateJavascript(codes, tab.getString("id"))
+            }
+          }
+        }
+      }
+      return
+    }
+    if (WebViewHook.isInit) {
+      Handler(getContext().getMainLooper()).post {
+        codes.forEach { WebViewHook.evaluateJavascript(it) }
+      }
       return
     }
     if (pages == null) {
       Handler(getContext().getMainLooper()).post {
-        if (UserScriptHook.isInit) {
-          codes.forEach { UserScriptProxy.evaluateJavascript(it) }
-        } else if (WebViewHook.isInit) {
-          codes.forEach { WebViewHook.evaluateJavascript(it) }
-        }
-        thread { pages = getInspectPages(false) }
+        codes.forEach { UserScriptProxy.evaluateJavascript(it) }
       }
+      thread { pages = getInspectPages(false) }
     } else {
-      thread {
-        if (UserScriptHook.isInit) {
-          val client = DevToolClient(getTab()!!.invokeMethod() { name == "getId" }.toString())
-          // client.command(null, "Page.setBypassCSP", JSONObject().put("enabled", true))
-          codes.forEach { client.evaluateJavascript(it) }
-          client.close()
-        } else if (WebViewHook.isInit) {}
-      }
+      thread { evaluateJavascript(codes, getTab()!!.invokeMethod() { name == "getId" }.toString()) }
     }
   }
 
   fun broadcast(event: String, data: String) {
     val code = "window.dispatchEvent(new CustomEvent('${event}', ${data}));"
-    if (UserScriptHook.isInit) {
-      // Log.d("Broadcasting ${event} ${data})")
-      tabModels.forEach {
-        val count = it.get()!!.invokeMethod() { name == "getCount" } as Int
-        for (i in 0 until count) {
-          val tab = it.get()?.invokeMethod(i) { name == "getTabAt" }
-          UserScriptProxy.evaluateJavascript(code, tab)
-        }
-      }
-    } else if (WebViewHook.isInit) {
-      WebViewHook.evaluateJavascript(code)
-      Log.w("Broadcasting not implemented yet for event ${event}")
-    }
+    Log.d("broadcasting ${event}")
+    evaluateJavascript(listOf(code), true)
   }
 }

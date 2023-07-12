@@ -47,6 +47,8 @@ object WebViewHook : BaseHook() {
         ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
     val customizeDevTool = ctx.assets.open("devtools.js").bufferedReader().use { it.readText() }
 
+    WebView.setWebContentsDebuggingEnabled(true)
+
     findMethod(ChromeClient!!, true) {
           name == "onConsoleMessage" &&
               getParameterTypes() contentDeepEquals arrayOf(ConsoleMessage::class.java)
@@ -119,7 +121,6 @@ object WebViewHook : BaseHook() {
                       erudaMenu.setOnMenuItemClickListener(
                           MenuItem.OnMenuItemClickListener {
                             if (isChromeXt) {
-                              WebView.setWebContentsDebuggingEnabled(true)
                               thread { getInspectPages() }
                             } else {
                               evaluateJavascript(openEruda)

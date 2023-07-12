@@ -26,12 +26,12 @@ object UserScriptHook : BaseHook() {
         ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
     val customizeDevTool = ctx.assets.open("devtools.js").bufferedReader().use { it.readText() }
 
-    proxy.tabModelJniBridge.getDeclaredConstructors()[0].hookAfter {
-      Chrome.addTabModel(it.thisObject)
-    }
+    // proxy.tabModelJniBridge.getDeclaredConstructors()[0].hookAfter {
+    //   Chrome.addTabModel(it.thisObject)
+    // }
 
-    findMethod(proxy.tabModelJniBridge) { name == "destroy" }
-        .hookBefore { Chrome.dropTabModel(it.thisObject) }
+    // findMethod(proxy.tabModelJniBridge) { name == "destroy" }
+    //     .hookBefore { Chrome.dropTabModel(it.thisObject) }
 
     findMethod(proxy.tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
         // public void onUpdateUrl(GURL url)

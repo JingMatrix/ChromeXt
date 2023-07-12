@@ -23,6 +23,9 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
   val nocache = request.optBoolean("nocache")
   val timeout = request.optInt("timeout")
 
+  var type = "stub"
+  var codes = mutableListOf<String>()
+
   fun abort() {
     response("abort", "{abort: 'Abort on request'}")
   }
@@ -105,9 +108,14 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
   }
 
   private fun response(type: String, data: String, disconnect: Boolean = true) {
-    val code =
-        "window.dispatchEvent(new CustomEvent('xmlhttpRequest', {detail: {id: '${id}', uuid: ${uuid}, type: '${type}', data: ${data}}}));"
-    Chrome.evaluateJavascript(listOf(code))
+    if (this.type == type) {
+      codes.add(
+          "window.dispatchEvent(new CustomEvent('xmlhttpRequest', {detail: {id: '${id}', uuid: ${uuid}, type: '${type}', data: ${data}}}));")
+    } else {
+      Chrome.evaluateJavascript(codes)
+      codes.clear()
+      this.type = type
+    }
     if (disconnect) {
       Listener.xmlhttpRequests.remove(uuid)
       connection?.disconnect()

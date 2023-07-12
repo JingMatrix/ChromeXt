@@ -14,7 +14,7 @@ object UserScriptProxy {
 
   val gURL = Chrome.load("org.chromium.url.GURL")
   val loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
-  val tabModelJniBridge = Chrome.load("org.chromium.chrome.browser.tabmodel.TabModelJniBridge")
+  // val tabModelJniBridge = Chrome.load("org.chromium.chrome.browser.tabmodel.TabModelJniBridge")
   val tabWebContentsDelegateAndroidImpl =
       Chrome.load("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
   val navigationControllerImpl =
