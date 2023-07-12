@@ -23,7 +23,6 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
   val nocache = request.optBoolean("nocache")
   val timeout = request.optInt("timeout")
 
-  var type = "stub"
   var codes = mutableListOf<String>()
 
   fun abort() {
@@ -48,7 +47,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
         setRequestProperty("Authorization", "Basic " + encoding)
       }
       runCatching {
-            response("loadstart", "{}", false)
+            response("loadstart", "{}", false, false)
             if (method == "POST" && request.has("data")) {
               val data = request.optString("data")
               if (binary) {
@@ -67,7 +66,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
                         .filter { it.key != null }
                         .mapValues { it.value.joinToString(" ") }))
 
-            val bufferSize = 64 * 1024
+            val bufferSize = DEFAULT_BUFFER_SIZE * 10
             var bytesRead: Long = 0
             val buffer = ByteArray(bufferSize)
             var bytes = inputStream.read(buffer)
@@ -83,7 +82,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
               bytesRead += bytes
               data.put("loaded", bytesRead)
               data.put("response", res)
-              response("progress", data.toString(), false)
+              response("progress", data.toString(), false, true)
               bytes = inputStream.read(buffer)
             }
 
@@ -107,14 +106,17 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
     }
   }
 
-  private fun response(type: String, data: String, disconnect: Boolean = true) {
-    if (this.type == type) {
-      codes.add(
-          "window.dispatchEvent(new CustomEvent('xmlhttpRequest', {detail: {id: '${id}', uuid: ${uuid}, type: '${type}', data: ${data}}}));")
-    } else {
-      Chrome.evaluateJavascript(codes)
+  private fun response(
+      type: String,
+      data: String,
+      disconnect: Boolean = true,
+      caching: Boolean = true
+  ) {
+    codes.add(
+        "window.dispatchEvent(new CustomEvent('xmlhttpRequest', {detail: {id: '${id}', uuid: ${uuid}, type: '${type}', data: ${data}}}));")
+    if (disconnect || !caching) {
+      Chrome.evaluateJavascript(codes.toList())
       codes.clear()
-      this.type = type
     }
     if (disconnect) {
       Listener.xmlhttpRequests.remove(uuid)

@@ -253,11 +253,6 @@ function GM_addValueChangeListener(key, listener) {
 // Kotlin separator
 
 function GM_setValue(key, value) {
-  if (
-    key in GM_info.storage &&
-    JSON.stringify(GM_info.storage[key]) == JSON.stringify(value)
-  )
-    return;
   GM_info.storage[key] = value;
   ChromeXt(
     JSON.stringify({
@@ -318,7 +313,11 @@ function GM_xmlhttpRequest(details) {
   const uuid = Math.random();
   details.method = details.method ? details.method.toUpperCase() : "GET";
 
-  if ("data" in details && typeof details.data != "string") {
+  if (
+    "data" in details &&
+    details.data != null &&
+    typeof details.data != "string"
+  ) {
     details.binary = true;
   }
 
