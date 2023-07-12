@@ -35,7 +35,7 @@ class DevToolClient(tabId: String) : LocalSocket() {
     inputStream.read(buffer)
     if (String(buffer).split("\r\n")[0] != "HTTP/1.1 101 WebSocket Protocol Handshake") {
       close()
-      Log.d("Fail to inspect tab ${tabId}: " + String(buffer))
+      Log.d("Fail to inspect tab ${tabId} with response\n" + String(buffer), true)
     }
   }
 
