@@ -71,9 +71,7 @@ object Chrome {
   }
 
   fun evaluateJavascript(codes: List<String>, broadcast: Boolean = false) {
-    if (codes.size == 0 || (!UserScriptHook.isInit && !WebViewHook.isInit)) {
-      return
-    }
+    if (codes.size == 0) return
     if (broadcast) {
       thread {
         pages = getInspectPages(false)
@@ -86,21 +84,21 @@ object Chrome {
           }
         }
       }
-      return
-    }
-    if (WebViewHook.isInit) {
+    } else if (WebViewHook.isInit) {
       Handler(getContext().getMainLooper()).post {
         codes.forEach { WebViewHook.evaluateJavascript(it) }
       }
-      return
-    }
-    if (pages == null) {
-      Handler(getContext().getMainLooper()).post {
-        codes.forEach { UserScriptProxy.evaluateJavascript(it) }
+    } else if (UserScriptHook.isInit) {
+      if (pages == null) {
+        Handler(getContext().getMainLooper()).post {
+          codes.forEach { UserScriptProxy.evaluateJavascript(it) }
+        }
+        thread { pages = getInspectPages(false) }
+      } else {
+        thread {
+          evaluateJavascript(codes, getTab()!!.invokeMethod() { name == "getId" }.toString())
+        }
       }
-      thread { pages = getInspectPages(false) }
-    } else {
-      thread { evaluateJavascript(codes, getTab()!!.invokeMethod() { name == "getId" }.toString()) }
     }
   }
 
