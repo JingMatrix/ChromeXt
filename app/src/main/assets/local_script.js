@@ -28,29 +28,6 @@ function GM_bootstrap() {
   delete meta.resource;
   delete meta.grant;
 
-  if (meta.requires.length > 0) {
-    meta.sync_code = meta.code;
-    meta.code = async () => {
-      for (const url of meta.requires) {
-        try {
-          await import(url);
-        } catch {
-          GM_addElement("script", {
-            textContent: await new Promise((resolve, reject) => {
-              GM_xmlhttpRequest({
-                url,
-                onload: (res) => resolve(res.responseText),
-                onerror: (e) => reject(e),
-                ontimeout: (e) => reject(e),
-              });
-            }),
-          });
-        }
-      }
-      meta.sync_code();
-    };
-  }
-
   if (
     meta.grants.includes("GM.xmlHttpRequest") &&
     meta.grants.includes("GM_xmlhttpRequest")
@@ -64,8 +41,15 @@ function GM_bootstrap() {
     meta.grants.includes("GM_listValues")
   ) {
     window.addEventListener("scriptStorage", (e) => {
-      if (e.detail.id == GM_info.script.id && "key" in e.detail.data) {
-        const data = e.detail.data;
+      if (e.detail.id != GM_info.script.id) {
+        return;
+      }
+      const data = e.detail.data;
+      if ("init" in data) {
+        GM_info.storage = data.init;
+        runScript(meta);
+      }
+      if ("key" in data) {
         if ("value" in data) {
           if (
             data.key in GM_info.storage &&
@@ -92,6 +76,33 @@ function GM_bootstrap() {
     GM_info.uuid = Math.random();
     GM_info.scriptHandler = "ChromeXt";
     GM_info.version = "3.4.0";
+  } else {
+    runScript(meta);
+  }
+}
+
+function runScript(meta) {
+  if (meta.requires.length > 0) {
+    meta.sync_code = meta.code;
+    meta.code = async () => {
+      for (const url of meta.requires) {
+        try {
+          await import(url);
+        } catch {
+          GM_addElement("script", {
+            textContent: await new Promise((resolve, reject) => {
+              GM_xmlhttpRequest({
+                url,
+                onload: (res) => resolve(res.responseText),
+                onerror: (e) => reject(e),
+                ontimeout: (e) => reject(e),
+              });
+            }),
+          });
+        }
+      }
+      meta.sync_code();
+    };
   }
 
   switch (meta["run-at"]) {

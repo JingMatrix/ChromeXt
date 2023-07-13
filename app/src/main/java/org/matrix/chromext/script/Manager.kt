@@ -80,7 +80,7 @@ object ScriptDbManager {
       script.match.forEach {
         if (urlMatch(it, url, false)) {
           Log.d("${script.id} injected")
-          codes.add(GM.bootstrap(script))
+          codes.addAll(GM.bootstrap(script))
         }
       }
     }

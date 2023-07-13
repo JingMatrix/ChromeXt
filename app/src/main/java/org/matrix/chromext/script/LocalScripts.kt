@@ -18,7 +18,7 @@ object GM {
           .split("// Kotlin separator\n\n")
           .associateBy({ it.lines()[0].split("(")[0].split(" ")[1] }, { it })
 
-  fun bootstrap(script: Script): String {
+  fun bootstrap(script: Script): List<String> {
     var code = script.code
     var grants = localScript.get("GM_bootstrap")!!
 
@@ -79,10 +79,9 @@ object GM {
       grants += "GM_info.script.resources = ${Resources};"
     }
 
-    code =
-        "(() => { const GM = {}; const GM_info = { scriptMetaStr: `${script.meta}`, storage: ${script.storage}, script: { id: `${script.id}`, code: () => {${code}} } };\n${grants}GM_bootstrap();})();"
-
-    return code
+    return listOf(
+        "(() => { const GM = {}; const GM_info = { scriptMetaStr: `${script.meta}`, script: { id: `${script.id}`, code: () => {${code}} } };\n${grants}GM_bootstrap();})();",
+        "window.dispatchEvent(new CustomEvent('scriptStorage', {detail: { id: `${script.id}`, data: { init: ${script.storage} } } }));")
   }
 }
 
