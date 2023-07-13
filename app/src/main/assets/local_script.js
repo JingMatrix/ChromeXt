@@ -32,7 +32,21 @@ function GM_bootstrap() {
     meta.grants.includes("GM.xmlHttpRequest") &&
     meta.grants.includes("GM_xmlhttpRequest")
   ) {
-    GM.xmlHttpRequest = GM_xmlhttpRequest;
+    GM.xmlHttpRequest = async (details) => {
+      return await new Promise((resolve, error) => {
+        const onload = details.onload;
+        const onerror = details.onerror;
+        details.onload = (d) => {
+          if (typeof onload == "function") onload(d);
+          resolve(d);
+        };
+        details.onerror = (e) => {
+          if (typeof onerror == "function") onerror(e);
+          error(e);
+        };
+        GM_xmlhttpRequest(details);
+      });
+    };
   }
 
   if (
@@ -391,18 +405,6 @@ function GM_xmlhttpRequest(details) {
     })
   );
 
-  function base64ToBytes(base64) {
-    return Uint8Array.from(atob(base64), (m) => m.codePointAt(0));
-  }
-
-  function bytesToBlob(bytes, type) {
-    return new Blob([bytes.buffer], { type });
-  }
-
-  function bytesToUTF8(bytes) {
-    return new TextDecoder().decode(bytes);
-  }
-
   function bytesToBase64(bytes) {
     const binString = Array.from(bytes, (x) => String.fromCodePoint(x)).join(
       ""
@@ -410,8 +412,7 @@ function GM_xmlhttpRequest(details) {
     return btoa(binString);
   }
 
-  let buffered = new Uint8Array();
-  window.addEventListener("xmlhttpRequest", (e) => {
+  const tmpListner = (e) => {
     if (e.detail.id == GM_info.script.id && e.detail.uuid == uuid) {
       e.stopImmediatePropagation();
       let data = e.detail.data;
@@ -426,45 +427,47 @@ function GM_xmlhttpRequest(details) {
           if ("overrideMimeType" in details)
             data.responseHeaders["Content-Type"] = details.overrideMimeType;
           if ([101, 204, 205, 304].includes(data.status)) {
-            data.responseText = null;
-          } else {
-            data.responseText = bytesToUTF8(buffered);
+            data.response = null;
           }
-          data.response = data.responseText;
-          if ("responseType" in details && data.response != null) {
+
+          data.responseText = data.response;
+          if (
+            data.response != null &&
+            "responseType" in details &&
+            !["", "text", "document", "json"].includes(details.responseType)
+          ) {
+            const arraybuffer = Uint8Array.from(atob(data.response), (m) =>
+              m.codePointAt(0)
+            ).buffer;
             const type = data.responseHeaders["Content-Type"] || "";
+            const blob = new Blob([arraybuffer], { type });
             switch (details.responseType) {
               case "arraybuffer":
-                data.response = buffered.buffer;
+                data.response = arraybuffer;
                 break;
               case "blob":
-                data.response = bytesToBlob(buffered, type);
+                data.response = blob;
                 break;
               case "stream":
-                data.response = bytesToBlob(buffered, type).stream();
-                break;
-              case "json":
-                data.response = JSON.parse(bytesToUTF8(buffered));
+                data.response = blob.stream();
                 break;
               default:
-                data.response = buffered;
             }
           }
           details.onload(data);
-          break;
-        case "progress":
-          buffered = Int8Array.from([
-            ...buffered,
-            ...base64ToBytes(data.response),
-          ]);
-          delete data.response;
+          e.detail.type = "loadend";
         default:
           if (typeof details["on" + e.detail.type] == "function") {
             details["on" + e.detail.type](data);
           }
+          if (["loadend", "error"].includes(e.detail.type)) {
+            window.removeEventListener("xmlhttpRequest", tmpListner);
+          }
       }
     }
-  });
+  };
+  window.addEventListener("xmlhttpRequest", tmpListner);
+
   return {
     abort: () => {
       ChromeXt(JSON.stringify({ action: "abortRequest", payload: uuid }));

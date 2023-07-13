@@ -22,8 +22,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
   val binary = request.optBoolean("binary")
   val nocache = request.optBoolean("nocache")
   val timeout = request.optInt("timeout")
-
-  var codes = mutableListOf<String>()
+  val responseType = request.optString("responseType")
 
   fun abort() {
     response("abort", "{abort: 'Abort on request'}")
@@ -47,7 +46,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
         setRequestProperty("Authorization", "Basic " + encoding)
       }
       runCatching {
-            response("loadstart", "{}", false, false)
+            response("loadstart", "{}", false)
             if (method == "POST" && request.has("data")) {
               val data = request.optString("data")
               if (binary) {
@@ -66,28 +65,18 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
                         .filter { it.key != null }
                         .mapValues { it.value.joinToString(" ") }))
 
-            val bufferSize = DEFAULT_BUFFER_SIZE * 10
-            var bytesRead: Long = 0
-            val buffer = ByteArray(bufferSize)
-            var bytes = inputStream.read(buffer)
+            val res =
+                if (responseType !in listOf("", "text", "document", "json")) {
+                  Base64.encodeToString(inputStream.readAllBytes(), Base64.DEFAULT)
+                } else {
+                  inputStream.bufferedReader().use { it.readText() }
+                }
 
-            while (bytes >= 0) {
-              val readByte =
-                  if (bytes == bufferSize) {
-                    buffer
-                  } else {
-                    buffer.dropLast(bufferSize - bytes).toByteArray()
-                  }
-              val res = Base64.encodeToString(readByte, Base64.DEFAULT)
-              bytesRead += bytes
-              data.put("loaded", bytesRead)
-              data.put("response", res)
-              response("progress", data.toString(), false, true)
-              bytes = inputStream.read(buffer)
-            }
+            data.put("response", res)
 
-            data.remove("response")
-            response("load", data.toString())
+            response("load", data.toString(), false)
+            // data.remove("response")
+            // response("loadend", "{}")
           }
           .onFailure {
             if (it is IOException) {
@@ -102,7 +91,6 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
               Log.ex(it)
             }
           }
-      response("loadend", "{}")
     }
   }
 
@@ -110,14 +98,10 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
       type: String,
       data: String,
       disconnect: Boolean = true,
-      caching: Boolean = true
   ) {
-    codes.add(
-        "window.dispatchEvent(new CustomEvent('xmlhttpRequest', {detail: {id: '${id}', uuid: ${uuid}, type: '${type}', data: ${data}}}));")
-    if (disconnect || !caching) {
-      Chrome.evaluateJavascript(codes.toList())
-      codes.clear()
-    }
+    val code =
+        "window.dispatchEvent(new CustomEvent('xmlhttpRequest', {detail: {id: '${id}', uuid: ${uuid}, type: '${type}', data: ${data}}}));"
+    Chrome.evaluateJavascript(listOf(code))
     if (disconnect) {
       Listener.xmlhttpRequests.remove(uuid)
       connection?.disconnect()
