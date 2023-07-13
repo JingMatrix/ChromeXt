@@ -38,8 +38,10 @@ function GM_bootstrap() {
   if (
     meta.grants.includes("GM_setValue") ||
     meta.grants.includes("GM_getValue") ||
+    meta.grants.includes("GM.getValue") ||
     meta.grants.includes("GM_listValues")
   ) {
+    GM_info.storage = {};
     window.addEventListener("scriptStorage", (e) => {
       if (e.detail.id != GM_info.script.id) {
         return;
@@ -49,37 +51,72 @@ function GM_bootstrap() {
       if ("init" in data) {
         GM_info.storage = data.init;
         runScript(meta);
+        return;
       }
-      if ("key" in data) {
-        if ("value" in data) {
-          if (
-            data.key in GM_info.storage &&
-            JSON.stringify(GM_info.storage[data.key]) !=
-              JSON.stringify(data.value)
-          ) {
-            GM_info.valueListener.forEach((e) => {
-              if (e.key == data.key) {
-                e.listener(
-                  GM_info.storage[data.key] || null,
-                  data.value,
-                  e.detail.uuid != GM_info.uuid
-                );
-              }
-            });
+      if ("key" in data && data.key in GM_info.storage) {
+        GM_info.valueListener.forEach((e) => {
+          if (e.enabled == true && e.key == data.key) {
+            e.listener(
+              GM_info.storage[data.key] || null,
+              data.value,
+              e.detail.uuid != GM_info.uuid
+            );
           }
-          GM_info.storage[data.key] = data.value;
-        } else if (data.key in GM_info.storage) {
-          delete GM_info.storage[data.key];
-        }
+        });
       }
+      GM_info.storage[data.key] = data.value;
     });
     GM_info.valueListener = [];
-    GM_info.uuid = Math.random();
-    GM_info.scriptHandler = "ChromeXt";
-    GM_info.version = "3.4.0";
+
+    const valueAsked = [];
+    GM.getValue = async function (key) {
+      const id = Math.random();
+      if (!valueAsked.includes(key)) {
+        valueAsked.push(key);
+        return GM_info.storage[key];
+      }
+      scriptStorage({ key, id, broadcast: false });
+      return await new Promise((resolve) => {
+        const tmpListner = (e) => {
+          if (
+            e.detail.id != GM_info.script.id &&
+            e.detail.uuid == GM_info.uuid
+          ) {
+            return;
+          }
+          const data = e.detail.data;
+          if (data.id == id && data.key == key) {
+            e.stopImmediatePropagation();
+            GM_info.storage[key] = data.value;
+            window.removeEventListener("scriptSyncValue", tmpListner);
+            resolve(data.value);
+          }
+        };
+        window.addEventListener("scriptSyncValue", tmpListner);
+      });
+    };
   } else {
     runScript(meta);
   }
+}
+
+function scriptStorage(data) {
+  let broadcast = GM_info.script.grants.includes("GM_addValueChangeListener");
+  if ("broadcast" in data && !data.broadcast) {
+    broadcast = false;
+    delete data.broadcast;
+  }
+  ChromeXt(
+    JSON.stringify({
+      action: "scriptStorage",
+      payload: {
+        id: GM_info.script.id,
+        data,
+        uuid: GM_info.uuid,
+        broadcast,
+      },
+    })
+  );
 }
 
 function runScript(meta) {
@@ -125,6 +162,9 @@ function runScript(meta) {
       }
   }
 
+  GM_info.uuid = Math.random();
+  GM_info.scriptHandler = "ChromeXt";
+  GM_info.version = "3.4.0";
   if (typeof ChromeXt.scripts == "undefined") {
     ChromeXt.scripts = [];
   }
@@ -266,28 +306,14 @@ function GM_addValueChangeListener(key, listener) {
 
 function GM_setValue(key, value) {
   GM_info.storage[key] = value;
-  ChromeXt(
-    JSON.stringify({
-      action: "scriptStorage",
-      payload: {
-        id: GM_info.script.id,
-        data: { key, value },
-        uuid: GM_info.uuid,
-      },
-    })
-  );
+  scriptStorage({ key, value });
 }
 // Kotlin separator
 
 function GM_deleteValue(key) {
   if (key in GM_info.storage) {
     delete GM_info.storage[key];
-    ChromeXt(
-      JSON.stringify({
-        action: "scriptStorage",
-        payload: { id: GM_info.script.id, data: { key }, uuid: GM_info.uuid },
-      })
-    );
+    scriptStorage({ key, delete: true });
   }
 }
 // Kotlin separator

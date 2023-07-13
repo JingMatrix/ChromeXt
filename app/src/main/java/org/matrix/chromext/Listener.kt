@@ -84,22 +84,28 @@ object Listener {
               val detail = JSONObject(payload)
               val id = detail.getString("id")
               val script = ScriptDbManager.scripts.find { it.id == id }
-              if (script != null) {
+              if (script == null) return callback
+              if (detail.optBoolean("broadcast")) {
                 thread {
                   Chrome.broadcast("scriptStorage", "{detail: ${detail}}") { matching(script, it) }
                 }
-                val data = detail.getJSONObject("data")
-                val key = data.getString("key")
-                script.apply {
-                  val json = if (storage == "") JSONObject() else JSONObject(storage)
-                  if (data.has("value")) {
-                    json.put(key, data.get("value"))
-                  } else {
-                    json.remove(key)
-                  }
-                  storage = json.toString()
-                }
               }
+              val data = detail.getJSONObject("data")
+              val key = data.getString("key")
+              val json = if (script.storage == "") JSONObject() else JSONObject(script.storage)
+              if (data.has("value")) {
+                json.put(key, data.get("value"))
+              } else if (data.has("id")) {
+                if (json.has(key)) {
+                  data.put("value", json.get(key))
+                }
+                detail.put("data", data)
+                callback =
+                    "window.dispatchEvent(new CustomEvent('scriptSyncValue', {detail: ${detail}}));"
+              } else {
+                json.remove(key)
+              }
+              script.storage = json.toString()
             }
             .onFailure {
               Log.d("Failure with scriptStorage: " + payload)
@@ -192,7 +198,7 @@ object Listener {
           callback = FileReader(eruda).use { it.readText() } + "\n"
           callback += ctx.assets.open("local_eruda.js").bufferedReader().use { it.readText() }
           callback += "eruda.init(); eruda._localConfig(); eruda.show();"
-          Chrome.evaluateJavascript(listOf(callback))
+          Chrome.evaluateJavascript(listOf(callback!!))
           callback = null
         } else {
           Log.toast(ctx, "Updating Eruda...")
