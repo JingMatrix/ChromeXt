@@ -85,7 +85,9 @@ object Listener {
               val id = detail.getString("id")
               val script = ScriptDbManager.scripts.find { it.id == id }
               if (script != null) {
-                Chrome.broadcast("scriptStorage", "{detail: ${detail}}") { matching(script, it) }
+                thread {
+                  Chrome.broadcast("scriptStorage", "{detail: ${detail}}") { matching(script, it) }
+                }
                 val data = detail.getJSONObject("data")
                 val key = data.getString("key")
                 script.apply {

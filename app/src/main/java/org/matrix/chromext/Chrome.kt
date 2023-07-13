@@ -5,7 +5,6 @@ import android.content.Context
 import android.os.Handler
 import java.lang.ref.WeakReference
 import kotlin.concurrent.thread
-import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.devtools.DevToolClient
 import org.matrix.chromext.devtools.getInspectPages
@@ -19,7 +18,7 @@ import org.matrix.chromext.utils.invokeMethod
 object Chrome {
   private var mContext: WeakReference<Context>? = null
   private var currentTab: WeakReference<Any>? = null
-  private var pages: JSONArray? = null
+  private var devToolsReady = false
 
   var isDev = false
   var isEdge = false
@@ -44,6 +43,20 @@ object Chrome {
     Log.i("Package: ${packageName}, v${packageInfo?.versionName}")
   }
 
+  fun wakeUpDevTools(limit: Int = 10) {
+    var waited = 0
+    while (!devToolsReady && waited < limit) {
+      runCatching {
+            hitDevTools().close()
+            devToolsReady = true
+            Log.i("DevTools woke up")
+          }
+          .onFailure { Log.d("Waking up DevTools") }
+      if (!devToolsReady) Thread.sleep(500)
+      waited += 1
+    }
+  }
+
   fun getContext(): Context {
     return mContext!!.get()!!
   }
@@ -61,6 +74,7 @@ object Chrome {
   }
 
   private fun evaluateJavascript(codes: List<String>, tabId: String) {
+    wakeUpDevTools()
     var client = DevToolClient(tabId)
     if (client.isClosed()) {
       hitDevTools().close()
@@ -74,28 +88,15 @@ object Chrome {
   fun evaluateJavascript(codes: List<String>) {
     if (codes.size == 0) return
 
-    if (WebViewHook.isInit) {
-      Handler(getContext().getMainLooper()).post {
+    Handler(getContext().getMainLooper()).post {
+      if (WebViewHook.isInit) {
         codes.forEach { WebViewHook.evaluateJavascript(it) }
-      }
-    } else if (UserScriptHook.isInit) {
-      if (pages == null) {
-        Handler(getContext().getMainLooper()).post {
-          val failed = codes.filter { !UserScriptProxy.evaluateJavascript(it) }
+      } else if (UserScriptHook.isInit) {
+        val failed = codes.filter { !UserScriptProxy.evaluateJavascript(it) }
+        if (failed.size > 0) {
           thread {
-            var waited = 0
-            while (pages == null && waited < 5) {
-              Thread.sleep(500)
-              waited += 1
-              Log.d("Waking up devtools")
-              pages = getInspectPages(false)
-            }
-            evaluateJavascript(failed)
+            evaluateJavascript(failed, getTab()!!.invokeMethod() { name == "getId" }.toString())
           }
-        }
-      } else {
-        thread {
-          evaluateJavascript(codes, getTab()!!.invokeMethod() { name == "getId" }.toString())
         }
       }
     }
@@ -104,17 +105,14 @@ object Chrome {
   fun broadcast(event: String, data: String, matching: (String) -> Boolean) {
     val code = "window.dispatchEvent(new CustomEvent('${event}', ${data}));"
     Log.d("broadcasting ${event}")
-    thread {
-      pages = getInspectPages(false)
-      if (pages != null) {
-        for (i in 0 until pages!!.length()) {
-          val tab = pages!!.getJSONObject(i)
-          if (tab.optString("type") == "page" && matching(tab.optString("url"))) {
-            if (tab.optString("description") == "" ||
-                !JSONObject(tab.getString("description")).optBoolean("never_attached")) {
-              evaluateJavascript(listOf(code), tab.getString("id"))
-            }
-          }
+    wakeUpDevTools()
+    val pages = getInspectPages(false)!!
+    for (i in 0 until pages.length()) {
+      val tab = pages.getJSONObject(i)
+      if (tab.optString("type") == "page" && matching(tab.optString("url"))) {
+        if (tab.optString("description") == "" ||
+            !JSONObject(tab.getString("description")).optBoolean("never_attached")) {
+          evaluateJavascript(listOf(code), tab.getString("id"))
         }
       }
     }

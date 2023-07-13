@@ -70,6 +70,10 @@ object ScriptDbManager {
       codes.add(
           "Object.defineProperties(window.navigator,{userAgent:{value:'${userAgents.get(origin)}'}});")
     }
+    if (codes.size > 0) {
+      Chrome.evaluateJavascript(listOf(codes.joinToString("\n")))
+      codes.clear()
+    }
     scripts.filter { matching(it, url) }.forEach { codes.addAll(GM.bootstrap(it)) }
     Chrome.evaluateJavascript(codes)
   }
