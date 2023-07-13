@@ -6,6 +6,7 @@ import android.os.Handler
 import java.lang.ref.WeakReference
 import kotlin.concurrent.thread
 import org.json.JSONArray
+import org.json.JSONObject
 import org.matrix.chromext.devtools.DevToolClient
 import org.matrix.chromext.devtools.getInspectPages
 import org.matrix.chromext.devtools.hitDevTools
@@ -109,7 +110,10 @@ object Chrome {
         for (i in 0 until pages!!.length()) {
           val tab = pages!!.getJSONObject(i)
           if (tab.optString("type") == "page" && matching(tab.optString("url"))) {
-            evaluateJavascript(listOf(code), tab.getString("id"))
+            if (tab.optString("description") == "" ||
+                !JSONObject(tab.getString("description")).optBoolean("never_attached")) {
+              evaluateJavascript(listOf(code), tab.getString("id"))
+            }
           }
         }
       }
