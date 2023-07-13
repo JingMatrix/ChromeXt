@@ -70,21 +70,10 @@ object Chrome {
     client.close()
   }
 
-  fun evaluateJavascript(codes: List<String>, broadcast: Boolean = false) {
+  fun evaluateJavascript(codes: List<String>) {
     if (codes.size == 0) return
-    if (broadcast) {
-      thread {
-        pages = getInspectPages(false)
-        if (pages != null) {
-          for (i in 0 until pages!!.length()) {
-            val tab = pages!!.getJSONObject(i)
-            if (tab.getString("type") == "page") {
-              evaluateJavascript(codes, tab.getString("id"))
-            }
-          }
-        }
-      }
-    } else if (WebViewHook.isInit) {
+
+    if (WebViewHook.isInit) {
       Handler(getContext().getMainLooper()).post {
         codes.forEach { WebViewHook.evaluateJavascript(it) }
       }
@@ -102,9 +91,19 @@ object Chrome {
     }
   }
 
-  fun broadcast(event: String, data: String) {
+  fun broadcast(event: String, data: String, matching: (String) -> Boolean) {
     val code = "window.dispatchEvent(new CustomEvent('${event}', ${data}));"
     Log.d("broadcasting ${event}")
-    evaluateJavascript(listOf(code), true)
+    thread {
+      pages = getInspectPages(false)
+      if (pages != null) {
+        for (i in 0 until pages!!.length()) {
+          val tab = pages!!.getJSONObject(i)
+          if (tab.optString("type") == "page" && matching(tab.optString("url"))) {
+            evaluateJavascript(listOf(code), tab.getString("id"))
+          }
+        }
+      }
+    }
   }
 }

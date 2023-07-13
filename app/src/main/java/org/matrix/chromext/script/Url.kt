@@ -1,9 +1,10 @@
 package org.matrix.chromext.script
 
 import kotlin.text.Regex
+import org.matrix.chromext.devtools.DEV_FRONT_END
 import org.matrix.chromext.utils.Log
 
-fun urlMatch(match: String, url: String, strict: Boolean): Boolean {
+private fun urlMatch(match: String, url: String, strict: Boolean): Boolean {
   var pattern = match
 
   if ("*" !in pattern) {
@@ -22,10 +23,33 @@ fun urlMatch(match: String, url: String, strict: Boolean): Boolean {
 
     runCatching {
           val result = Regex(pattern).matches(url)
-          Log.d("Matching ${pattern} against ${url}: ${result}")
+          // Log.d("Matching ${pattern} against ${url}: ${result}")
           return result
         }
         .onFailure { Log.i("Invaid matching rule: ${match}, error: " + it.message) }
+  }
+  return false
+}
+
+fun matching(script: Script, url: String): Boolean {
+  if (url.endsWith("/ChromeXt/") || url.endsWith(".user.js") || url.startsWith(DEV_FRONT_END)) {
+    return false
+  }
+
+  if (!url.startsWith("http")) {
+    return false
+  }
+
+  script.exclude.forEach {
+    if (urlMatch(it, url, true)) {
+      return false
+    }
+  }
+  script.match.forEach {
+    if (urlMatch(it, url, false)) {
+      // Log.d("${script.id} injected")
+      return true
+    }
   }
   return false
 }

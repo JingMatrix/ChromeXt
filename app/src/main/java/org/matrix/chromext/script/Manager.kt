@@ -70,20 +70,7 @@ object ScriptDbManager {
       codes.add(
           "Object.defineProperties(window.navigator,{userAgent:{value:'${userAgents.get(origin)}'}});")
     }
-    scripts.forEach loop@{
-      val script = it
-      script.exclude.forEach {
-        if (urlMatch(it, url, true)) {
-          return@loop
-        }
-      }
-      script.match.forEach {
-        if (urlMatch(it, url, false)) {
-          Log.d("${script.id} injected")
-          codes.addAll(GM.bootstrap(script))
-        }
-      }
-    }
+    scripts.filter { matching(it, url) }.forEach { codes.addAll(GM.bootstrap(it)) }
     Chrome.evaluateJavascript(codes)
   }
 

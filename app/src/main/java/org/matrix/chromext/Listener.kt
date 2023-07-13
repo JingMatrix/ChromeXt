@@ -12,6 +12,7 @@ import org.matrix.chromext.proxy.ERUD_URL
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.ScriptDbHelper
 import org.matrix.chromext.script.ScriptDbManager
+import org.matrix.chromext.script.matching
 import org.matrix.chromext.script.parseScript
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
@@ -82,21 +83,21 @@ object Listener {
         runCatching {
               val detail = JSONObject(payload)
               val id = detail.getString("id")
-              Chrome.broadcast("scriptStorage", "{detail: ${detail}}")
-              val data = detail.getJSONObject("data")
-              val key = data.getString("key")
-              ScriptDbManager.scripts
-                  .filter { it.id == id }
-                  .first()
-                  .apply {
-                    val json = if (storage == "") JSONObject() else JSONObject(storage)
-                    if (data.has("value")) {
-                      json.put(key, data.get("value"))
-                    } else {
-                      json.remove(key)
-                    }
-                    storage = json.toString()
+              val script = ScriptDbManager.scripts.find { it.id == id }
+              if (script != null) {
+                Chrome.broadcast("scriptStorage", "{detail: ${detail}}") { matching(script, it) }
+                val data = detail.getJSONObject("data")
+                val key = data.getString("key")
+                script.apply {
+                  val json = if (storage == "") JSONObject() else JSONObject(storage)
+                  if (data.has("value")) {
+                    json.put(key, data.get("value"))
+                  } else {
+                    json.remove(key)
                   }
+                  storage = json.toString()
+                }
+              }
             }
             .onFailure {
               Log.d("Failure with scriptStorage: " + payload)
