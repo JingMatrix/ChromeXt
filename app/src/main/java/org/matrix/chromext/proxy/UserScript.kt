@@ -27,6 +27,8 @@ object UserScriptProxy {
             getReturnType() == Int::class.java
       }
 
+  val kMaxURLChars = 2097152
+
   private val mUrl = loadUrlParams.getDeclaredField("a")
   private val mVerbatimHeaders =
       loadUrlParams.getDeclaredFields().filter { it.getType() == String::class.java }[1]
@@ -50,10 +52,16 @@ object UserScriptProxy {
     }
   }
 
-  fun evaluateJavascript(script: String, tab: Any? = Chrome.getTab()) {
-    if (script == "") return
+  fun evaluateJavascript(script: String, tab: Any? = Chrome.getTab()): Boolean {
+    if (script == "") return true
     val code = Uri.encode(script)
-    loadUrl("javascript: ${code}", tab)
+    if (code.length < kMaxURLChars - 200) {
+      loadUrl("javascript: ${code}", tab)
+      return true
+    } else {
+      Log.d("evaluateJavascript fails with loadUrl")
+      return false
+    }
   }
 
   fun parseUrl(packed: Any?): String? {

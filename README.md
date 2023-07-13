@@ -5,7 +5,7 @@ Add UserScript and DevTools supports to Chromium based and WebView based browser
 ##  How does it work?
 
 We hook the `onUpdateUrl` function in [UserScript.kt](app/src/main/java/org/matrix/chromext/hook/UserScript.kt),
-add URL comparison there and evaluate JavaScript using the `javascript:` scheme.
+add URL comparison there and evaluate JavaScript using the `javascript:` scheme (or DevTools Protocol when possible).
 
 Chromium based browsers,
 [Bromite](https://github.com/bromite/bromite),
@@ -68,18 +68,6 @@ To manage scripts installed by `ChromeXt`, here are a simple front end hosted on
 
 If you cancel the prompt of installing a new UserScript, then you can edit it directly in Chrome.
 Use the `Install UserScript` page menu to install your modified UserScript.
-
-### Limitations
-
-A valid UserScript fails if the following two conditions hold _at the same time_:
-
-1. The matched website has disabled `script-src 'unsafe-eval';` by [Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP);
-2. The script size is nearly 2M.
-
-To deal with this extremely rare case, one should
-```
-use multiple scripts of normal sizes instead of a giant script
-```
 
 ### DevTools for developers
 

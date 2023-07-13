@@ -80,9 +80,18 @@ object Chrome {
     } else if (UserScriptHook.isInit) {
       if (pages == null) {
         Handler(getContext().getMainLooper()).post {
-          codes.forEach { UserScriptProxy.evaluateJavascript(it) }
+          val failed = codes.filter { !UserScriptProxy.evaluateJavascript(it) }
+          thread {
+            var waited = 0
+            while (pages == null && waited < 5) {
+              Thread.sleep(500)
+              waited += 1
+              Log.d("Waking up devtools")
+              pages = getInspectPages(false)
+            }
+            evaluateJavascript(failed)
+          }
         }
-        thread { pages = getInspectPages(false) }
       } else {
         thread {
           evaluateJavascript(codes, getTab()!!.invokeMethod() { name == "getId" }.toString())
