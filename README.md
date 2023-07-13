@@ -8,13 +8,9 @@ We hook the `onUpdateUrl` function in [UserScript.kt](app/src/main/java/org/matr
 add URL comparison there and evaluate JavaScript using the `javascript:` scheme (or DevTools Protocol when possible).
 
 Chromium based browsers,
+such as [Egde](https://www.microsoft.com/en-us/edge/download),
 [Bromite](https://github.com/bromite/bromite),
-[Thorium](https://github.com/Alex313031/thorium),
-[Mulch](https://gitlab.com/divested-mobile/mulch),
-and [Brave](https://github.com/brave/brave-browser) are fully supported.
-Due to different design ideas, supports for the following browsers are not perfect:
-1. [Egde](https://www.microsoft.com/en-us/edge/download), `DevTools` front end is removed by its authors (I plan to add it back in the future.);
-2. [Vivaldi](https://vivaldi.com/en/android/), `Developer options` menu is removed by its authors.
+and [Brave](https://github.com/brave/brave-browser), are fully supported.
 
 Most WebView based browsers are also supported, if not, please report it.
 Note for WebView based browsers users: you _only_ need to enable this module for the browser application you wish to use, _not_ for any possible WebView applications, _neither_ for Android system.
@@ -99,6 +95,7 @@ The history forward gesture of Chrome is now available near the vertical center 
 On other areas, only the system gesture is available.
 One can disable it through the `Developer options` menu.
 (Tap seven times on the Chrome version from the Chrome settings, you will see the `Developer options` menu.)
+(In [Vivaldi](https://vivaldi.com/en/android/) browsers, `Developer options` menu is removed by its authors.)
 
 ### Enable reader mode manually
 
@@ -187,4 +184,4 @@ and [local_script.js](app/src/main/assets/local_script.js)
 - [ ] Support importing UserScripts from Tampermonkey exports
 - [ ] Support backup and restore
 - [ ] Add recommended UserScripts to the front end manager
-- [ ] Add [chrome devtools front-end](https://chromium.googlesource.com/devtools/devtools-frontend/) for Edge, see [devtools_http_handler.cc](https://source.chromium.org/chromium/chromium/src/+/main:content/browser/devtools/devtools_http_handler.cc) as reference.
+- [x] Add [chrome devtools front-end](https://chromium.googlesource.com/devtools/devtools-frontend/) for Edge, see [devtools_http_handler.cc](https://source.chromium.org/chromium/chromium/src/+/main:content/browser/devtools/devtools_http_handler.cc) as reference.

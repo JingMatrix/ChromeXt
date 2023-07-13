@@ -34,7 +34,7 @@ fun getInspectPages(inspect: Boolean = true): JSONArray? {
       }
   val pages = JSONArray(response)
   if (inspect) {
-    val code = "window.dispatchEvent(new CustomEvent('inspect_pages',{detail: ${pages}));"
+    val code = "window.dispatchEvent(new CustomEvent('inspect_pages', { detail: ${pages} }));"
     Chrome.evaluateJavascript(listOf(code))
   }
   return JSONArray(response)
