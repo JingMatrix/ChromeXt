@@ -44,6 +44,7 @@ function GM_bootstrap() {
       if (e.detail.id != GM_info.script.id) {
         return;
       }
+      e.stopImmediatePropagation();
       const data = e.detail.data;
       if ("init" in data) {
         GM_info.storage = data.init;
@@ -386,6 +387,7 @@ function GM_xmlhttpRequest(details) {
   let buffered = new Uint8Array();
   window.addEventListener("xmlhttpRequest", (e) => {
     if (e.detail.id == GM_info.script.id && e.detail.uuid == uuid) {
+      e.stopImmediatePropagation();
       let data = e.detail.data;
       data.context = details.context;
       if (data.responseHeaders) {
