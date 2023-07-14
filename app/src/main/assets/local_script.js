@@ -90,24 +90,16 @@ function GM_bootstrap() {
         return GM_info.storage[key];
       }
       scriptStorage({ key, id, broadcast: false });
-      return await new Promise((resolve) => {
-        const tmpListner = (e) => {
-          if (
-            e.detail.id != GM_info.script.id &&
-            e.detail.uuid == GM_info.uuid
-          ) {
-            return;
-          }
-          const data = e.detail.data;
-          if (data.id == id && data.key == key) {
-            e.stopImmediatePropagation();
-            GM_info.storage[key] = data.value;
-            window.removeEventListener("scriptSyncValue", tmpListner);
-            resolve(data.value);
-          }
-        };
-        window.addEventListener("scriptSyncValue", tmpListner);
-      });
+      return await promiseListenerFactory(
+        "scriptSyncValue",
+        GM_info.uuid,
+        GM_info.script.id,
+        (data, resolve, _reject) => {
+          GM_info.storage[key] = data.value;
+          resolve(data.value);
+        },
+        (data) => data.id == id && data.key == key
+      );
     };
   } else {
     runScript(meta);
@@ -133,6 +125,28 @@ function scriptStorage(data) {
   );
 }
 
+function promiseListenerFactory(
+  event,
+  uuid,
+  id = GM_info.script.id,
+  listener = (_data, resolve, _reject) => resolve(true),
+  closeCondition = () => true
+) {
+  return new Promise((resolve, reject) => {
+    const tmpListener = (e) => {
+      if (e.detail.id == id && e.detail.uuid == uuid) {
+        e.stopImmediatePropagation();
+        const data = e.detail.data || null;
+        if (closeCondition(data)) {
+          window.removeEventListener(event, tmpListener);
+          listener(data, resolve, reject);
+        }
+      }
+    };
+    window.addEventListener(event, tmpListener);
+  });
+}
+
 function runScript(meta) {
   if (meta.requires.length > 0) {
     meta.sync_code = meta.code;
@@ -141,19 +155,29 @@ function runScript(meta) {
         try {
           await import(url);
         } catch {
-          GM_addElement("script", {
-            textContent: await new Promise((resolve, reject) => {
-              GM_xmlhttpRequest({
-                url,
-                onload: (res) => resolve(res.responseText),
-                onerror: (e) => reject(e),
-                ontimeout: (e) => reject(e),
-              });
-            }),
+          let script = await new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+              url,
+              onload: (res) => resolve(res.responseText),
+              onerror: (e) => reject(e),
+              ontimeout: (e) => reject(e),
+            });
           });
+          const uuid = Math.random();
+          const detail = JSON.stringify({
+            detail: { uuid, id: GM_info.script.id },
+          });
+          script += `\nwindow.dispatchEvent(new CustomEvent('unsafe-eval', ${detail}));`;
+          ChromeXt(
+            JSON.stringify({
+              action: "unsafe-eval",
+              payload: script,
+            })
+          );
+          await promiseListenerFactory("unsafe-eval", uuid);
         }
+        meta.sync_code();
       }
-      meta.sync_code();
     };
   }
 
@@ -412,7 +436,7 @@ function GM_xmlhttpRequest(details) {
     return btoa(binString);
   }
 
-  const tmpListner = (e) => {
+  const tmpListener = (e) => {
     if (e.detail.id == GM_info.script.id && e.detail.uuid == uuid) {
       e.stopImmediatePropagation();
       let data = e.detail.data;
@@ -461,12 +485,12 @@ function GM_xmlhttpRequest(details) {
             details["on" + e.detail.type](data);
           }
           if (["loadend", "error"].includes(e.detail.type)) {
-            window.removeEventListener("xmlhttpRequest", tmpListner);
+            window.removeEventListener("xmlhttpRequest", tmpListener);
           }
       }
     }
   };
-  window.addEventListener("xmlhttpRequest", tmpListner);
+  window.addEventListener("xmlhttpRequest", tmpListener);
 
   return {
     abort: () => {

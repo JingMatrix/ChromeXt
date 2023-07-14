@@ -79,6 +79,9 @@ object Listener {
           }
         }
       }
+      "unsafe-eval" -> {
+        Chrome.evaluateJavascript(listOf(payload))
+      }
       "scriptStorage" -> {
         runCatching {
               val detail = JSONObject(payload)
