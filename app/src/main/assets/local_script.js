@@ -55,7 +55,6 @@ function GM_bootstrap() {
     meta.grants.includes("GM.getValue") ||
     meta.grants.includes("GM_listValues")
   ) {
-    GM_info.storage = {};
     window.addEventListener("scriptStorage", (e) => {
       if (e.detail.id != GM_info.script.id) {
         return;
@@ -292,7 +291,7 @@ function GM_download(details) {
         details.name ||
         details.url.split("#").shift().split("?").shift().split("/").pop();
       link.dispatchEvent(new MouseEvent("click"));
-      setTimeout(URL.revokeObjectURL(link.href), 1000);
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     },
   });
 }
@@ -351,7 +350,7 @@ function GM_setValue(key, value) {
 function GM_deleteValue(key) {
   if (key in GM_info.storage) {
     delete GM_info.storage[key];
-    scriptStorage({ key, delete: true });
+    scriptStorage({ key });
   }
 }
 // Kotlin separator
@@ -429,13 +428,6 @@ function GM_xmlhttpRequest(details) {
     })
   );
 
-  function bytesToBase64(bytes) {
-    const binString = Array.from(bytes, (x) => String.fromCodePoint(x)).join(
-      ""
-    );
-    return btoa(binString);
-  }
-
   const tmpListener = (e) => {
     if (e.detail.id == GM_info.script.id && e.detail.uuid == uuid) {
       e.stopImmediatePropagation();
@@ -497,4 +489,9 @@ function GM_xmlhttpRequest(details) {
       ChromeXt(JSON.stringify({ action: "abortRequest", payload: uuid }));
     },
   };
+}
+
+function bytesToBase64(bytes) {
+  const binString = Array.from(bytes, (x) => String.fromCodePoint(x)).join("");
+  return btoa(binString);
 }
