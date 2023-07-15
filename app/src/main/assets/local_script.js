@@ -116,15 +116,19 @@ function scriptStorage(data) {
     broadcast = false;
     delete data.broadcast;
   }
+  let payload = {
+    id: GM_info.script.id,
+    data,
+    uuid: GM_info.uuid,
+    broadcast,
+  };
+  if (broadcast) {
+    window.dispatchEvent(new CustomEvent("scriptStorage", { detail: payload }));
+  }
   ChromeXt(
     JSON.stringify({
       action: "scriptStorage",
-      payload: {
-        id: GM_info.script.id,
-        data,
-        uuid: GM_info.uuid,
-        broadcast,
-      },
+      payload,
     })
   );
 }

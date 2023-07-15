@@ -102,19 +102,28 @@ object Chrome {
     }
   }
 
-  fun broadcast(event: String, data: String, matching: (String) -> Boolean) {
+  fun broadcast(
+      event: String,
+      data: String,
+      excludeSelf: Boolean = true,
+      matching: (String) -> Boolean
+  ) {
     val code = "window.dispatchEvent(new CustomEvent('${event}', ${data}));"
     Log.d("broadcasting ${event}")
     wakeUpDevTools()
     val pages = getInspectPages(false)!!
+    val tabs = mutableListOf<String>()
     for (i in 0 until pages.length()) {
       val tab = pages.getJSONObject(i)
       if (tab.optString("type") == "page" && matching(tab.optString("url"))) {
         if (tab.optString("description") == "" ||
             !JSONObject(tab.getString("description")).optBoolean("never_attached")) {
-          evaluateJavascript(listOf(code), tab.getString("id"))
+          tabs.add(tab.getString("id"))
         }
       }
+    }
+    if (tabs.size > 1 || !excludeSelf) {
+      tabs.forEach { evaluateJavascript(listOf(code), it) }
     }
   }
 }
