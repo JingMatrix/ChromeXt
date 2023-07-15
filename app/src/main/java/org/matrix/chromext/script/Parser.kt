@@ -6,7 +6,7 @@ import org.matrix.chromext.utils.Log
 
 private val blocksReg =
     Regex(
-        """(?<metablock>[\S\s]*?// ==UserScript==\r?\n([\S\s]*?)\r?\n// ==/UserScript==)(?<code>[\S\s]*)""")
+        """(?<metablock>[\S\s]*?// ==UserScript==\r?\n([\S\s]*?)\r?\n// ==/UserScript==\s+)(?<code>[\S\s]*)""")
 private val metaReg = Regex("""^//\s+@(?<key>[\w-]+)\s+(?<value>.+)""")
 
 fun parseScript(input: String, storage: String = "", updateResource: Boolean = false): Script? {
@@ -23,7 +23,7 @@ fun parseScript(input: String, storage: String = "", updateResource: Boolean = f
         var grant = mutableListOf<String>()
         var exclude = mutableListOf<String>()
         var require = mutableListOf<String>()
-        val meta = (blockMatchGroup.get("metablock")?.value as String).replace("`", "")
+        val meta = (blockMatchGroup.get("metablock")?.value as String)
         val code = blockMatchGroup.get("code")?.value as String
         var resource = mutableListOf<String>()
         val storage = storage

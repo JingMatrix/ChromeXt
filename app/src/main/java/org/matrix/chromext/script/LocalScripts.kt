@@ -16,11 +16,11 @@ object GM {
           .bufferedReader()
           .use { it.readText() }
           .split("// Kotlin separator\n\n")
-          .associateBy({ it.lines()[0].split("(")[0].split(" ")[1] }, { it })
+          .associateBy({ it.lines()[0].split("(")[0].split(" ").last() }, { it })
 
   fun bootstrap(script: Script): List<String> {
     var code = script.code
-    var grants = localScript.get("GM_bootstrap")!!
+    var grants = ""
 
     if (!script.meta.startsWith("// ==UserScript==")) {
       code = script.meta + code
@@ -44,12 +44,8 @@ object GM {
             } else if (it.startsWith("GM.")) {
               val name = it.substring(3)
               if (script.grant.contains("GM_${name}")) {
-                if (name.contains("get") || name.contains("Value")) {
-                  grants +=
-                      "${it} = async (...arguments) => new Promise((resolve, reject) => {resolve(GM_${name}(...arguments))});"
-                } else {
-                  grants += "${it} = GM_${name};"
-                }
+                grants +=
+                    "${it} = async (...arguments) => new Promise((resolve, reject) => {resolve(GM_${name}(...arguments))});"
               }
             }
       }
@@ -79,9 +75,16 @@ object GM {
       grants += "GM_info.script.resources = ${Resources};"
     }
 
+    grants += localScript.get("GM_bootstrap")!!
+
+    val GM_info =
+        JSONObject(
+            mapOf("scriptMetaStr" to script.meta, "script" to JSONObject().put("id", script.id)))
+    val storage_info =
+        JSONObject(mapOf("id" to script.id, "data" to JSONObject().put("init", script.storage)))
     return listOf(
-        "(() => { const GM = {}; const GM_info = { scriptMetaStr: `${script.meta}`, script: { id: `${script.id}`, code: () => {${code}} } };\n${grants}GM_bootstrap();})();",
-        "window.dispatchEvent(new CustomEvent('scriptStorage', {detail: { id: `${script.id}`, data: { init: ${script.storage} } } }));")
+        "(() => { const GM = {}; const GM_info = ${GM_info}; GM_info.script.code = () => {${code}};\n${grants}GM_bootstrap();})();",
+        "window.dispatchEvent(new CustomEvent('scriptStorage', {detail: ${storage_info}}));")
   }
 }
 

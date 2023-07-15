@@ -221,6 +221,7 @@ const globalThis =
           }
         },
       });
+
 // Kotlin separator
 
 function GM_addStyle(css) {
