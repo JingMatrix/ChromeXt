@@ -184,8 +184,8 @@ function runScript(meta) {
           );
           await promiseListenerFactory("unsafe-eval", uuid);
         }
-        meta.sync_code();
       }
+      meta.sync_code();
     };
   }
 
