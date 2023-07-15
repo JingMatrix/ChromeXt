@@ -1,6 +1,7 @@
 package org.matrix.chromext.script
 
 import kotlin.text.Regex
+import org.json.JSONObject
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
 
@@ -9,7 +10,7 @@ private val blocksReg =
         """(?<metablock>[\S\s]*?// ==UserScript==\r?\n([\S\s]*?)\r?\n// ==/UserScript==\s+)(?<code>[\S\s]*)""")
 private val metaReg = Regex("""^//\s+@(?<key>[\w-]+)\s+(?<value>.+)""")
 
-fun parseScript(input: String, storage: String = "", updateResource: Boolean = false): Script? {
+fun parseScript(input: String, storage: String?, updateResource: Boolean = false): Script? {
   val blockMatchGroup = blocksReg.matchEntire(input)?.groups as? MatchNamedGroupCollection
   if (blockMatchGroup == null) {
     return null
@@ -26,7 +27,7 @@ fun parseScript(input: String, storage: String = "", updateResource: Boolean = f
         val meta = (blockMatchGroup.get("metablock")?.value as String)
         val code = blockMatchGroup.get("code")?.value as String
         var resource = mutableListOf<String>()
-        val storage = storage
+        var storage: JSONObject? = null
       }
   script.meta.split("\n").forEach {
     val metaMatchGroup = metaReg.matchEntire(it)?.groups as? MatchNamedGroupCollection
@@ -57,6 +58,11 @@ fun parseScript(input: String, storage: String = "", updateResource: Boolean = f
     if (script.require.size > 0 || script.grant.contains("GM_download")) {
       script.grant.add("GM_xmlhttpRequest")
     }
+  }
+
+  if (script.grant.contains("GM.getValue") || script.grant.contains("GM_getValue")) {
+    runCatching { script.storage = JSONObject(storage!!) }
+        .onFailure { script.storage = JSONObject() }
   }
 
   if (script.match.size == 0) {

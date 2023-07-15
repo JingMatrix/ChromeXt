@@ -51,9 +51,14 @@ function GM_bootstrap() {
 
   if (
     meta.grants.includes("GM_setValue") ||
-    meta.grants.includes("GM_getValue") ||
-    meta.grants.includes("GM.getValue") ||
     meta.grants.includes("GM_listValues")
+  ) {
+    GM_info.storage = {};
+  }
+
+  if (
+    meta.grants.includes("GM_getValue") ||
+    meta.grants.includes("GM.getValue")
   ) {
     window.addEventListener("scriptStorage", (e) => {
       if (e.detail.id != GM_info.script.id) {
@@ -201,7 +206,7 @@ function runScript(meta) {
 
   GM_info.uuid = Math.random();
   GM_info.scriptHandler = "ChromeXt";
-  GM_info.version = "3.4.0";
+  GM_info.version = "3.5.0";
   if (typeof ChromeXt.scripts == "undefined") {
     ChromeXt.scripts = [];
   }

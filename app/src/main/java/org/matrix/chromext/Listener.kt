@@ -87,7 +87,7 @@ object Listener {
               val detail = JSONObject(payload)
               val id = detail.getString("id")
               val script = ScriptDbManager.scripts.find { it.id == id }
-              if (script == null) return callback
+              if (script?.storage == null) return callback
               if (detail.optBoolean("broadcast")) {
                 thread {
                   Chrome.broadcast("scriptStorage", "{detail: ${detail}}") { matching(script, it) }
@@ -95,20 +95,18 @@ object Listener {
               }
               val data = detail.getJSONObject("data")
               val key = data.getString("key")
-              val json = if (script.storage == "") JSONObject() else JSONObject(script.storage)
               if (data.has("value")) {
-                json.put(key, data.get("value"))
+                script.storage!!.put(key, data.get("value"))
               } else if (data.has("id")) {
-                if (json.has(key)) {
-                  data.put("value", json.get(key))
+                if (script.storage!!.has(key)) {
+                  data.put("value", script.storage!!.get(key))
                 }
                 detail.put("data", data)
                 callback =
                     "window.dispatchEvent(new CustomEvent('scriptSyncValue', {detail: ${detail}}));"
               } else {
-                json.remove(key)
+                script.storage!!.remove(key)
               }
-              script.storage = json.toString()
             }
             .onFailure {
               Log.d("Failure with scriptStorage: " + payload)
@@ -223,7 +221,8 @@ object Listener {
         runCatching {
           val data = JSONObject(payload)
           val script = ScriptDbManager.scripts.filter { it.id == data.getString("id") }.first()
-          val newScript = parseScript(data.getString("meta") + script.code, script.storage)!!
+          val newScript =
+              parseScript(data.getString("meta") + script.code, script.storage?.toString())!!
           ScriptDbManager.insert(newScript)
           ScriptDbManager.scripts.remove(script)
           ScriptDbManager.scripts.add(newScript)

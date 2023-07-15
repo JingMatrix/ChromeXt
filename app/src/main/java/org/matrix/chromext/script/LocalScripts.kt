@@ -26,10 +26,6 @@ object GM {
       code = script.meta + code
     }
 
-    if (script.storage == "") {
-      script.storage = "{}"
-    }
-
     script.grant.forEach {
       when (it) {
         "GM_info" -> return@forEach
@@ -80,11 +76,17 @@ object GM {
     val GM_info =
         JSONObject(
             mapOf("scriptMetaStr" to script.meta, "script" to JSONObject().put("id", script.id)))
-    val storage_info =
-        JSONObject(mapOf("id" to script.id, "data" to JSONObject().put("init", script.storage)))
-    return listOf(
-        "(() => { const GM = {}; const GM_info = ${GM_info}; GM_info.script.code = () => {${code}};\n${grants}GM_bootstrap();})();",
-        "window.dispatchEvent(new CustomEvent('scriptStorage', {detail: ${storage_info}}));")
+    val codes =
+        mutableListOf(
+            "(() => { const GM = {}; const GM_info = ${GM_info}; GM_info.script.code = () => {${code}};\n${grants}GM_bootstrap();})();")
+    if (script.storage != null) {
+      val storage_info =
+          JSONObject(mapOf("id" to script.id, "data" to JSONObject().put("init", script.storage!!)))
+      codes.add(
+          "window.dispatchEvent(new CustomEvent('scriptStorage', {detail: ${storage_info}}));")
+    }
+
+    return codes
   }
 }
 

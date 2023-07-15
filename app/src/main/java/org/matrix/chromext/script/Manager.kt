@@ -47,7 +47,9 @@ object ScriptDbManager {
             put("id", it.id)
             put("code", it.code)
             put("meta", it.meta)
-            put("storage", it.storage)
+            if (it.storage != null) {
+              put("storage", it.storage!!.toString())
+            }
           }
       runCatching { db.insertOrThrow("script", null, values) }
           .onFailure {
@@ -82,8 +84,8 @@ object ScriptDbManager {
     val dbHelper = ScriptDbHelper(Chrome.getContext())
     val db = dbHelper.writableDatabase
     scripts.forEach {
-      if (it.grant.contains("GM_setValue")) {
-        val values = ContentValues().apply { put("storage", it.storage) }
+      if (it.storage != null) {
+        val values = ContentValues().apply { put("storage", it.storage.toString()) }
         if (db.update("script", values, "id = ?", arrayOf(it.id)).toString() == "-1") {
           Log.e("Updating scriptStorage failed for: " + it.id)
         } else {
