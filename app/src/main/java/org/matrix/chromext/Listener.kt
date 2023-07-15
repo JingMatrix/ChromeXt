@@ -90,6 +90,7 @@ object Listener {
               if (script?.storage == null) return callback
               if (detail.optBoolean("broadcast")) {
                 thread {
+                  detail.remove("broadcast")
                   Chrome.broadcast("scriptStorage", "{detail: ${detail}}") { matching(script, it) }
                 }
               }

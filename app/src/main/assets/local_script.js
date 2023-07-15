@@ -72,9 +72,10 @@ function GM_bootstrap() {
         return;
       }
       if ("key" in data && data.key in GM_info.storage) {
-        GM_info.valueListener.forEach((e) => {
-          if (e.enabled == true && e.key == data.key) {
-            e.listener(
+        if (e.detail.uuid == GM_info.uuid && e.detail.broadcast != true) return;
+        GM_info.valueListener.forEach((v) => {
+          if (v.enabled == true && v.key == data.key) {
+            v.listener(
               GM_info.storage[data.key] || null,
               data.value,
               e.detail.uuid != GM_info.uuid
