@@ -33,7 +33,7 @@ function GM_bootstrap() {
     meta.grants.includes("GM_xmlhttpRequest")
   ) {
     GM.xmlHttpRequest = async (details) => {
-      return await new Promise((resolve, error) => {
+      return await new Promise((resolve, reject) => {
         const onload = details.onload;
         const onerror = details.onerror;
         details.onload = (d) => {
@@ -42,7 +42,7 @@ function GM_bootstrap() {
         };
         details.onerror = (e) => {
           if (typeof onerror == "function") onerror(e);
-          error(e);
+          reject(e);
         };
         GM_xmlhttpRequest(details);
       });
@@ -452,15 +452,11 @@ function GM_xmlhttpRequest(details) {
           data.readyState = 4;
           if ("overrideMimeType" in details)
             data.responseHeaders["Content-Type"] = details.overrideMimeType;
+          details.responseType = details.responseType || "";
           if ([101, 204, 205, 304].includes(data.status)) {
             data.response = null;
-          }
-
-          data.responseText = data.response;
-          if (
-            data.response != null &&
-            "responseType" in details &&
-            !["", "text", "document", "json"].includes(details.responseType)
+          } else if (
+            ["arraybuffer", "blob", "stream"].includes(details.responseType)
           ) {
             const arraybuffer = Uint8Array.from(atob(data.response), (m) =>
               m.codePointAt(0)
@@ -477,7 +473,20 @@ function GM_xmlhttpRequest(details) {
               case "stream":
                 data.response = blob.stream();
                 break;
-              default:
+            }
+          } else {
+            data.responseText = data.response;
+            switch (details.responseType) {
+              case "json":
+                data.response = JSON.parse(data.responseText);
+                break;
+              case "document":
+                const parser = new DOMParser();
+                data.response = parser.parseFromString(
+                  data.responseText,
+                  data.responseHeaders["Content-Type"] || "text/html"
+                );
+                break;
             }
           }
           details.onload(data);
