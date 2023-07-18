@@ -63,7 +63,7 @@ object Listener {
     return null
   }
 
-  fun on(action: String, payload: String): String? {
+  fun on(action: String, payload: String = "", currentTab: Any? = null): String? {
     var callback: String? = null
     when (action) {
       "installScript" -> {
@@ -129,11 +129,21 @@ object Listener {
             }
             .onFailure { Log.ex(it) }
       }
+      "inspectPages" -> {
+        thread {
+          runCatching {
+            val code =
+                "window.dispatchEvent(new CustomEvent('inspect_pages', { detail: ${getInspectPages()} }));"
+            if (currentTab != null) Chrome.refreshTab(currentTab)
+            Chrome.evaluateJavascript(listOf(code))
+          }
+        }
+      }
       "websocket" -> {
         runCatching {
               val detail = JSONObject(payload)
               if (!detail.has("tabId")) {
-                thread { runCatching { getInspectPages() } }
+                on("inspectPages")
                 return callback
               }
 

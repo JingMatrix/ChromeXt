@@ -111,7 +111,7 @@ object Chrome {
     val code = "window.dispatchEvent(new CustomEvent('${event}', ${data}));"
     Log.d("broadcasting ${event}")
     wakeUpDevTools()
-    val pages = getInspectPages(false)!!
+    val pages = getInspectPages()!!
     val tabs = mutableListOf<String>()
     for (i in 0 until pages.length()) {
       val tab = pages.getJSONObject(i)

@@ -65,17 +65,11 @@ object UserScriptHook : BaseHook() {
                   val data = JSONObject(text)
                   val action = data.getString("action")
                   val payload = data.getString("payload")
-                  runCatching {
-                        val callback = Listener.on(action, payload)
-                        if (callback != null) {
-                          Chrome.refreshTab(proxy.mTab.get(it.thisObject))
-                          proxy.evaluateJavascript(callback)
-                        }
-                      }
-                      .onFailure {
-                        Log.w("Failed with ${action}: ${payload}")
-                        Log.ex(it)
-                      }
+                  val tab = proxy.mTab.get(it.thisObject)
+                  val callback = Listener.on(action, payload, tab)
+                  if (callback != null) {
+                    proxy.evaluateJavascript(callback, tab)
+                  }
                 }
                 .onFailure { Log.d("Ignore console.debug: " + text) }
           } else {

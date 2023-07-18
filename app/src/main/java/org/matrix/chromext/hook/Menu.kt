@@ -14,11 +14,9 @@ import android.widget.TextView
 import de.robv.android.xposed.XC_MethodHook.Unhook
 import java.lang.reflect.Modifier
 import java.util.ArrayList
-import kotlin.concurrent.thread
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 import org.matrix.chromext.R
-import org.matrix.chromext.devtools.getInspectPages
 import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.openEruda
@@ -92,7 +90,7 @@ object MenuHook : BaseHook() {
           if (url.endsWith("/ChromeXt/")) {
             title.setText("Open developer tools")
             erudaRow.setOnClickListener {
-              thread { getInspectPages() }
+              Listener.on("inspectPages")
               pageInfoController!!.invokeMethod() { name == "destroy" }
             }
           } else {
@@ -122,7 +120,7 @@ object MenuHook : BaseHook() {
               UserScriptProxy.evaluateJavascript("installScript(true);")
             }
           }
-          "org.matrix.chromext:id/developer_tools_id" -> thread { getInspectPages() }
+          "org.matrix.chromext:id/developer_tools_id" -> Listener.on("inspectPages")
           "org.matrix.chromext:id/eruda_console_id" -> UserScriptProxy.evaluateJavascript(openEruda)
           "${ctx.getPackageName()}:id/reload_menu_id" -> {
             return Listener.on("userAgentSpoof", getUrl()) != null

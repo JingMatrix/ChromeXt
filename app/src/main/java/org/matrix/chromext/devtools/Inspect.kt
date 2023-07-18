@@ -2,11 +2,10 @@ package org.matrix.chromext.devtools
 
 import android.net.LocalSocket
 import org.json.JSONArray
-import org.matrix.chromext.Chrome
 
 const val DEV_FRONT_END = "https://chrome-devtools-frontend.appspot.com"
 
-fun getInspectPages(inspect: Boolean = true): JSONArray? {
+fun getInspectPages(): JSONArray? {
   var response = ""
   runCatching {
         hitDevTools().inputStream.bufferedReader().use {
@@ -32,11 +31,6 @@ fun getInspectPages(inspect: Boolean = true): JSONArray? {
       .onFailure {
         return null
       }
-  val pages = JSONArray(response)
-  if (inspect) {
-    val code = "window.dispatchEvent(new CustomEvent('inspect_pages', { detail: ${pages} }));"
-    Chrome.evaluateJavascript(listOf(code))
-  }
   return JSONArray(response)
 }
 
