@@ -15,6 +15,7 @@
 		<package android:name="org.bromite.bromite.dev"/>
 		<package android:name="org.chromium.thorium"/>
 		<package android:name="us.spotco.mulch"/>
+		<package android:name="org.triple.banana"/>
 		<package android:name="com.brave.browser"/>
 		<package android:name="com.brave.browser_beta"/>
 		<package android:name="com.brave.browser_nightly"/>

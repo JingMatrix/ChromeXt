@@ -33,6 +33,7 @@ val supportedPackages =
         "org.bromite.bromite.dev",
         "org.chromium.thorium",
         "us.spotco.mulch",
+        "org.triple.banana",
         "com.brave.browser",
         "com.brave.browser_beta",
         "com.brave.browser_nightly")
