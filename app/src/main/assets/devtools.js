@@ -8,10 +8,8 @@ window.addEventListener("load", () => {
   document.body.prepend(style);
 });
 
-const _websocket = window.WebSocket;
 class WebSocket {
   constructor() {
-    globalThis.WebSocket = _websocket;
     this.url = arguments[0];
     this.targetTabId = this.url.split("/").pop();
     this.detail = {
@@ -32,33 +30,25 @@ class WebSocket {
     window.addEventListener("websocket", (e) => {
       const type = Object.keys(e.detail)[0];
       const data = e.detail[type];
-      if (type == "message" && "id" in data && !("sessionId" in data)) {
-        this.fixSession(data);
+      if (
+        type == "message" &&
+        !("id" in data) &&
+        "method" in data &&
+        "params" in data
+      ) {
+        const targetInfo = data.params.targetInfo;
+        if (typeof targetInfo != "undefined" && targetInfo.type != "page") {
+          console.info("Ignore inspecting", targetInfo.type, targetInfo.url);
+          // To inspect them, we may need to change the targetTabId
+          return;
+        }
       }
       this["on" + type](new MessageEvent(type, { data }));
     });
   }
 
-  fixSession(res) {
-    for (let [key, value] of this.sessions.entries()) {
-      const request = value.find((d) => d.id == res.id);
-      if (request != undefined && key != "") {
-        console.warn("SessionId workaround applied to message: ", request, res);
-        res.sessionId = key;
-        return key;
-      }
-    }
-  }
-
   send() {
     this.detail.payload.message = arguments[0];
-    const data = JSON.parse(arguments[0]);
-    const sessionId = data.sessionId || "";
-    if (this.sessions.has(sessionId)) {
-      this.sessions.get(sessionId).push(data);
-    } else {
-      this.sessions.set(sessionId, [data]);
-    }
     ChromeXt(JSON.stringify(this.detail));
   }
 }
