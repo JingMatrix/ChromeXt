@@ -161,10 +161,11 @@ function runScript(meta) {
     meta.sync_code = meta.code;
     meta.code = async () => {
       for (const url of meta.requires) {
+        let script;
         try {
-          await import(url);
+          script = await (await fetch(url)).text();
         } catch {
-          let script = await new Promise((resolve, reject) => {
+          script = await new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
               url,
               onload: (res) => resolve(res.responseText),
@@ -172,6 +173,10 @@ function runScript(meta) {
               ontimeout: (e) => reject(e),
             });
           });
+        }
+        try {
+          new Function(script)();
+        } catch {
           const uuid = Math.random();
           const detail = JSON.stringify({
             detail: { uuid, id: GM_info.script.id },
