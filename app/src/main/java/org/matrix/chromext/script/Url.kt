@@ -6,28 +6,31 @@ import org.matrix.chromext.utils.Log
 
 private fun urlMatch(match: String, url: String, strict: Boolean): Boolean {
   var pattern = match
+  val regexPattern = pattern.startsWith("/") && pattern.endsWith("/")
 
-  if ("*" !in pattern) {
+  if (regexPattern) {
+    pattern = pattern.removeSurrounding("/", "/")
+  } else if ("*" !in pattern) {
     if (strict) {
       return pattern == url
     } else {
       return pattern in url
     }
-  }
-
-  if ("://" in pattern) {
+  } else if ("://" in pattern) {
     pattern = pattern.replace("?", "\\?")
     pattern = pattern.replace(".", "\\.")
-    pattern = pattern.replace("*", "\\S*")
-    pattern = pattern.replace("\\S*\\.", "(\\S*\\.)?")
-
-    runCatching {
-          val result = Regex(pattern).matches(url)
-          // Log.d("Matching ${pattern} against ${url}: ${result}")
-          return result
-        }
-        .onFailure { Log.i("Invaid matching rule: ${match}, error: " + it.message) }
+    pattern = pattern.replace("*", "\\S[^:]*")
+    pattern = pattern.replace("\\S[^:]*\\.", "(\\S[^:]*\\.)?")
+  } else {
+    return false
   }
+
+  runCatching {
+        val result = Regex(pattern).matches(url)
+        // Log.d("Matching ${pattern} against ${url}: ${result}")
+        return result
+      }
+      .onFailure { Log.i("Invaid matching rule: ${match}, error: " + it.message) }
   return false
 }
 
