@@ -2,22 +2,23 @@
 <resources>
 	<string-array name="xposedscope">
 		<item>com.android.chrome</item>
-		<item>com.chrome.beta</item>
-		<item>com.chrome.dev</item>
-		<item>com.chrome.canary</item>
-		<item>com.vivaldi.browser</item>
-		<item>com.vivaldi.browser.snapshot</item>
-		<item>com.microsoft.emmx</item>
-		<item>com.microsoft.emmx.beta</item>
-		<item>com.microsoft.emmx.dev</item>
-		<item>com.microsoft.emmx.canary</item>
-		<item>org.bromite.bromite</item>
-		<item>org.bromite.bromite.dev</item>
-		<item>org.chromium.thorium</item>
-		<item>us.spotco.mulch</item>
-		<item>org.triple.banana</item>
 		<item>com.brave.browser</item>
 		<item>com.brave.browser_beta</item>
 		<item>com.brave.browser_nightly</item>
+		<item>com.chrome.beta</item>
+		<item>com.chrome.canary</item>
+		<item>com.chrome.dev</item>
+		<item>com.microsoft.emmx</item>
+		<item>com.microsoft.emmx.beta</item>
+		<item>com.microsoft.emmx.canary</item>
+		<item>com.microsoft.emmx.dev</item>
+		<item>com.vivaldi.browser</item>
+		<item>com.vivaldi.browser.snapshot</item>
+		<item>org.bromite.bromite</item>
+		<item>org.bromite.bromite.dev</item>
+		<item>org.chromium.thorium</item>
+		<item>org.greatfire.freebrowser</item>
+		<item>org.triple.banana</item>
+		<item>us.spotco.mulch</item>
 	</string-array>
 </resources>

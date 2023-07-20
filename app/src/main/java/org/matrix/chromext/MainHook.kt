@@ -20,23 +20,24 @@ import org.matrix.chromext.utils.hookAfter
 val supportedPackages =
     arrayOf(
         "com.android.chrome",
+        "com.brave.browser",
+        "com.brave.browser_beta",
+        "com.brave.browser_nightly",
         "com.chrome.beta",
-        "com.chrome.dev",
         "com.chrome.canary",
-        "com.vivaldi.browser",
-        "com.vivaldi.browser.snapshot",
+        "com.chrome.dev",
         "com.microsoft.emmx",
         "com.microsoft.emmx.beta",
-        "com.microsoft.emmx.dev",
         "com.microsoft.emmx.canary",
+        "com.microsoft.emmx.dev",
+        "com.vivaldi.browser",
+        "com.vivaldi.browser.snapshot",
         "org.bromite.bromite",
         "org.bromite.bromite.dev",
         "org.chromium.thorium",
-        "us.spotco.mulch",
+        "org.greatfire.freebrowser",
         "org.triple.banana",
-        "com.brave.browser",
-        "com.brave.browser_beta",
-        "com.brave.browser_nightly")
+        "us.spotco.mulch")
 
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
