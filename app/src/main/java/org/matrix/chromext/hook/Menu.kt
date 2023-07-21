@@ -113,6 +113,9 @@ object MenuHook : BaseHook() {
           return true
         }
         when (ctx.resources.getResourceName(id)) {
+          "org.matrix.chromext:id/extension_id" -> {
+            Log.toast(ctx, "WIP support for extensions")
+          }
           "org.matrix.chromext:id/install_script_id" -> {
             if (getUrl().startsWith("https://raw.githubusercontent.com/")) {
               Download.start(getUrl(), "UserScript/script.js") { Listener.on("installScript", it) }
@@ -156,7 +159,7 @@ object MenuHook : BaseHook() {
                 mContext.setAccessible(true)
 
                 if (Chrome.isBrave) {
-                  // Brave browser the first row menu with class AppMenuIconRowFooter,
+                  // Brave browser replaces the first row menu with class AppMenuIconRowFooter,
                   // and it customize the menu by onFooterViewInflated() function in
                   // https://github.com/brave/brave-core/blob/master/android/java/
                   // org/chromium/chrome/browser/appmenu/BraveTabbedAppMenuPropertiesDelegate.java
@@ -193,13 +196,15 @@ object MenuHook : BaseHook() {
                       ResourceMerge.enrich(ctx)
                       val menu = it.args[0] as Menu
                       Chrome.refreshTab(it.args[1])
+                      val url = getUrl()
+                      val skip =
+                          url != "chrome-native://newtab/" &&
+                              (menu.size() <= 20 ||
+                                  !(it.args[2] as Boolean) ||
+                                  (it.args[3] as Boolean))
+                      // Infalte only for the main_menu, which has more than 20 items at least
 
-                      if (menu.size() <= 20 ||
-                          !(it.args[2] as Boolean) ||
-                          (it.args[3] as Boolean)) {
-                        // Infalte only for the main_menu, which has more than 20 items at least
-                        return@hookBefore
-                      }
+                      if (skip) return@hookBefore
 
                       if (menu.getItem(0).hasSubMenu() && readerMode.isInit() && !Chrome.isBrave) {
                         // The first menu item should be the @id/icon_row_menu_id
@@ -221,19 +226,19 @@ object MenuHook : BaseHook() {
                       @Suppress("UNCHECKED_CAST")
                       val items = mItems.get(menu) as ArrayList<MenuItem>
 
-                      if (getUrl().endsWith("/ChromeXt/")) {
-                        // Drop the Eruda console menu
-                        items.removeLast()
+					  // Show items with indices in main_menu.xml
+                      val toShow = mutableListOf<Int>(1)
+
+                      if (url.endsWith(".user.js")) {
+                        toShow.clear()
+                        toShow.add(2)
                       }
 
-                      if (getUrl().endsWith(".user.js")) {
-                        // Drop the Eruda console and the Dev Tools menus
-                        items.removeLast()
-                        items.removeLast()
+                      if (url.endsWith("/ChromeXt/")) {
+                        toShow.clear()
+                        toShow.addAll(listOf(3, 4))
                       }
 
-                      val magicMenuItem: MenuItem = items.removeLast()
-                      magicMenuItem.setVisible(true)
                       val position =
                           items
                               .withIndex()
@@ -243,7 +248,13 @@ object MenuHook : BaseHook() {
                                     .endsWith("id/divider_line_id")
                               }
                               .map { it.index }[1]
-                      items.add(position + 1, magicMenuItem)
+
+                      toShow.forEach {
+                        val newMenuItem: MenuItem = items[items.size - it]
+                        newMenuItem.setVisible(true)
+                        items.add(position + 1, newMenuItem)
+                      }
+                      for (i in 0..4) items.removeLast()
                       mItems.setAccessible(false)
                     }
               }

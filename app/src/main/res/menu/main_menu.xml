@@ -2,15 +2,20 @@
 
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 	<item
-		android:id="@+id/install_script_id"
-		android:visible="false"
-		android:title="@string/main_menu_install_script"
-		android:icon="@drawable/ic_install_script" />
-	<item
 		android:id="@+id/developer_tools_id"
 		android:visible="false"
 		android:title="@string/main_menu_developer_tools"
 		android:icon="@drawable/ic_devtools" />
+	<item
+		android:id="@+id/extension_id"
+		android:visible="false"
+		android:title="@string/main_menu_extension"
+		android:icon="@drawable/ic_extension" />
+	<item
+		android:id="@+id/install_script_id"
+		android:visible="false"
+		android:title="@string/main_menu_install_script"
+		android:icon="@drawable/ic_install_script" />
 	<item
 		android:id="@+id/eruda_console_id"
 		android:visible="false"
