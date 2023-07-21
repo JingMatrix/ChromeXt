@@ -16,7 +16,7 @@ private fun urlMatch(match: String, url: String, strict: Boolean): Boolean {
     } else {
       return pattern in url
     }
-  } else if ("://" in pattern) {
+  } else if ("://" in pattern || strict) {
     pattern = pattern.replace("?", "\\?")
     pattern = pattern.replace(".", "\\.")
     pattern = pattern.replace("*", "\\S[^:]*")
