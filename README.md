@@ -182,6 +182,7 @@ and [local_script.js](app/src/main/assets/local_script.js)
 - [x] Convert exported bookmarks to HTML format
 - [x] Show executed scripts on current page
 - [x] Make a YouTube presentation video
+- [ ] Use `iframe` and `file://` scheme to run general [WebExtensions](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions)
 - [ ] Support importing UserScripts from Tampermonkey exports
 - [ ] Support backup and restore
 - [ ] Add recommended UserScripts to the front end manager
