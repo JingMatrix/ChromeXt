@@ -2,7 +2,6 @@ package org.matrix.chromext.hook
 
 import android.content.Context
 import kotlin.concurrent.thread
-import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 import org.matrix.chromext.devtools.DEV_FRONT_END
@@ -60,18 +59,7 @@ object UserScriptHook : BaseHook() {
         .hookAfter {
           // This should be the way to communicate with the front-end of ChromeXt
           if (it.args[0] as Int == 0) {
-            val text = it.args[1] as String
-            runCatching {
-                  val data = JSONObject(text)
-                  val action = data.getString("action")
-                  val payload = data.getString("payload")
-                  val tab = proxy.mTab.get(it.thisObject)
-                  val callback = Listener.on(action, payload, tab)
-                  if (callback != null) {
-                    proxy.evaluateJavascript(callback, tab)
-                  }
-                }
-                .onFailure { Log.d("Ignore console.debug: " + text) }
+            Listener.startAction(it.args[1] as String, proxy.mTab.get(it.thisObject))
           } else {
             Log.d(
                 when (it.args[0] as Int) {

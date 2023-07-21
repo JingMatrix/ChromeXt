@@ -69,6 +69,17 @@ object Chrome {
     return currentTab?.get()
   }
 
+  fun getUrl(currentTab: Any? = null): String? {
+    if (UserScriptHook.isInit) {
+      return UserScriptProxy.parseUrl(
+          (currentTab ?: Chrome.getTab())?.invokeMethod { name == "getUrl" })
+    } else if (WebViewHook.isInit) {
+      return WebViewHook.webView?.get()?.getUrl()
+    } else {
+      return null
+    }
+  }
+
   fun refreshTab(tab: Any?) {
     if (tab != null) currentTab = WeakReference(tab)
   }

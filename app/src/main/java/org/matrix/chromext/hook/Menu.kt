@@ -61,7 +61,7 @@ object readerMode {
 object MenuHook : BaseHook() {
 
   private fun getUrl(): String {
-    return UserScriptProxy.parseUrl(Chrome.getTab()?.invokeMethod { name == "getUrl" }) ?: ""
+    return Chrome.getUrl()!!
   }
 
   override fun init() {
@@ -226,7 +226,7 @@ object MenuHook : BaseHook() {
                       @Suppress("UNCHECKED_CAST")
                       val items = mItems.get(menu) as ArrayList<MenuItem>
 
-					  // Show items with indices in main_menu.xml
+                      // Show items with indices in main_menu.xml
                       val toShow = mutableListOf<Int>(1)
 
                       if (url.endsWith(".user.js")) {

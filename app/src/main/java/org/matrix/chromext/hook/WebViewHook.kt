@@ -9,7 +9,6 @@ import android.webkit.ConsoleMessage
 import android.webkit.WebView
 import de.robv.android.xposed.XC_MethodHook.Unhook
 import java.lang.ref.WeakReference
-import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 import org.matrix.chromext.devtools.DEV_FRONT_END
@@ -56,15 +55,7 @@ object WebViewHook : BaseHook() {
           // This should be the way to communicate with the front-end of ChromeXt
           val consoleMessage = it.args[0] as ConsoleMessage
           if (consoleMessage.messageLevel() == ConsoleMessage.MessageLevel.TIP) {
-            val text = consoleMessage.message()
-            runCatching {
-                  val data = JSONObject(text)
-                  val action = data.getString("action")
-                  val payload = data.getString("payload")
-                  runCatching { evaluateJavascript(Listener.on(action, payload)) }
-                      .onFailure { Log.w("Failed with ${action}: ${payload}") }
-                }
-                .onFailure { Log.d("Ignore console.debug: " + text) }
+            Listener.startAction(consoleMessage.message())
           } else {
             Log.d(
                 consoleMessage.messageLevel().toString() +
