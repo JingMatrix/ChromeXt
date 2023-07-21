@@ -1,7 +1,6 @@
 package org.matrix.chromext.proxy
 
 import android.net.Uri
-import android.os.Handler
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
@@ -35,9 +34,7 @@ object UserScriptProxy {
   private val mSpec = gURL.getDeclaredField("a")
 
   private fun loadUrl(url: String, tab: Any? = Chrome.getTab()) {
-    Handler(Chrome.getContext().getMainLooper()).post {
-      runCatching { loadUrl.invoke(tab, newLoadUrlParams(url)) }.onFailure { Log.ex(it) }
-    }
+    runCatching { loadUrl.invoke(tab, newLoadUrlParams(url)) }.onFailure { Log.ex(it) }
   }
 
   fun newLoadUrlParams(url: String): Any {
@@ -56,7 +53,7 @@ object UserScriptProxy {
     if (script == "") return true
     val code = Uri.encode(script)
     if (code.length < kMaxURLChars - 200) {
-      loadUrl("javascript: ${code}", tab)
+      loadUrl("javascript: ${code}", tab ?: Chrome.getTab())
       return true
     } else {
       Log.d("evaluateJavascript fails with loadUrl")

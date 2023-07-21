@@ -123,7 +123,8 @@ object Listener {
               val detail = JSONObject(payload)
               val uuid = detail.getDouble("uuid")
               val request =
-                  XMLHttpRequest(detail.getString("id"), detail.getJSONObject("request"), uuid)
+                  XMLHttpRequest(
+                      detail.getString("id"), detail.getJSONObject("request"), uuid, currentTab)
               xmlhttpRequests.put(uuid, request)
               thread { request.send() }
             }
@@ -134,8 +135,7 @@ object Listener {
           runCatching {
             val code =
                 "window.dispatchEvent(new CustomEvent('inspect_pages', { detail: ${getInspectPages()} }));"
-            if (currentTab != null) Chrome.refreshTab(currentTab)
-            Chrome.evaluateJavascript(listOf(code))
+            Chrome.evaluateJavascript(listOf(code), currentTab)
           }
         }
       }

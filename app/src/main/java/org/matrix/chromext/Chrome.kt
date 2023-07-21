@@ -85,17 +85,18 @@ object Chrome {
     client.close()
   }
 
-  fun evaluateJavascript(codes: List<String>) {
+  fun evaluateJavascript(codes: List<String>, currentTab: Any? = null) {
     if (codes.size == 0) return
 
     Handler(getContext().getMainLooper()).post {
       if (WebViewHook.isInit) {
         codes.forEach { WebViewHook.evaluateJavascript(it) }
       } else if (UserScriptHook.isInit) {
-        val failed = codes.filter { !UserScriptProxy.evaluateJavascript(it) }
+        val failed = codes.filter { !UserScriptProxy.evaluateJavascript(it, currentTab) }
         if (failed.size > 0) {
           thread {
-            evaluateJavascript(failed, getTab()!!.invokeMethod() { name == "getId" }.toString())
+            evaluateJavascript(
+                failed, (currentTab ?: getTab())!!.invokeMethod() { name == "getId" }.toString())
           }
         }
       }

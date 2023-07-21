@@ -9,10 +9,11 @@ import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 
-class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
+class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: Any?) {
   val id = id
   val uuid = uuid
   val request = request
+  val currentTab = currentTab
   var connection: HttpURLConnection? = null
 
   val url = URL(request.optString("url"))
@@ -101,7 +102,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double) {
   ) {
     val code =
         "window.dispatchEvent(new CustomEvent('xmlhttpRequest', {detail: {id: '${id}', uuid: ${uuid}, type: '${type}', data: ${data}}}));"
-    Chrome.evaluateJavascript(listOf(code))
+    Chrome.evaluateJavascript(listOf(code), currentTab)
     if (disconnect) {
       Listener.xmlhttpRequests.remove(uuid)
       connection?.disconnect()
