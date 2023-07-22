@@ -67,7 +67,7 @@ object Listener {
           val payload = data.optString("payload")
           if (checkPermisson(action, currentTab)) {
             val callback = on(action, payload, currentTab)
-            if (callback != null) Chrome.evaluateJavascript(listOf(callback))
+            if (callback != null) Chrome.evaluateJavascript(listOf(callback), currentTab)
           }
         }
         .onFailure { Log.d("Ignore console.debug: " + text) }
