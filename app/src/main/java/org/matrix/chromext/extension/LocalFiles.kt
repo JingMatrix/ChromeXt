@@ -32,16 +32,36 @@ object LocalFiles {
     }
   }
 
-  private fun serveFiles(path: String, connection: Socket) {
+  private fun serveFiles(id: String, connection: Socket) {
+    val path = directory.toString() + "/" + id
+    val background = extensions.get(id)?.optJSONObject("background")?.optString("page")
     runCatching {
           connection.inputStream.bufferedReader().use {
             val requestLine = it.readLine()
+            if (requestLine == null) {
+              connection.close()
+              return
+            }
             val request = requestLine.split(" ")
             if (request[0] == "GET" && request[2] == "HTTP/1.1") {
               val name = request[1]
               val file = File(path + name)
-              if (file.exists()) {
-                val data = file.readBytes()
+              if (!file.exists() && name != "/ChromeXt.js") {
+                connection.outputStream.write("HTTP/1.1 404 Not Found\r\n\r\n".toByteArray())
+              } else if (file.isDirectory() || name.contains("..")) {
+                connection.outputStream.write("HTTP/1.1 403 Forbidden\r\n\r\n".toByteArray())
+              } else {
+                val data =
+                    if (name == "/" + background) {
+                      val html = FileReader(file).use { it.readText() }
+                      html
+                          .replaceFirst("<head>", "<head>\n<script src='/ChromeXt.js'></script>")
+                          .toByteArray()
+                    } else if (name == "/ChromeXt.js") {
+                      ("const extension = ${extensions.get(id)!!};\n" + script).toByteArray()
+                    } else {
+                      file.readBytes()
+                    }
                 val type = URLConnection.guessContentTypeFromName(name) ?: "text/plain"
                 val response =
                     arrayOf(
@@ -52,8 +72,6 @@ object LocalFiles {
                 connection.outputStream.write(
                     (response.joinToString("\r\n") + "\r\n\r\n").toByteArray())
                 connection.outputStream.write(data)
-              } else {
-                connection.outputStream.write("HTTP/1.1 404 Not Found\r\n\r\n".toByteArray())
               }
               connection.close()
             }
@@ -62,28 +80,28 @@ object LocalFiles {
         .onFailure { Log.ex(it) }
   }
 
-  private fun startServer(name: String) {
-    if (extensions.containsKey(name) && !extensions.get(name)!!.has("port")) {
+  private fun startServer(id: String) {
+    if (extensions.containsKey(id) && !extensions.get(id)!!.has("port")) {
       val server = ServerSocket()
       server.bind(null)
       val port = server.getLocalPort()
-      Log.d("Listening at port ${port}")
+      Log.d("Listening at port ${port} for ${id}")
       thread {
         runCatching {
               while (true) {
                 val socket = server.accept()
-                thread { serveFiles(directory.toString() + "/" + name, socket) }
+                thread { serveFiles(id, socket) }
               }
             }
             .onFailure {
               Log.ex(it)
               server.close()
-              if (extensions.get(name)?.optInt("port") == port) {
-                extensions.get(name)!!.remove("port")
+              if (extensions.get(id)?.optInt("port") == port) {
+                extensions.get(id)!!.remove("port")
               }
             }
       }
-      extensions.get(name)!!.put("port", server.getLocalPort())
+      extensions.get(id)!!.put("port", server.getLocalPort())
     }
   }
 

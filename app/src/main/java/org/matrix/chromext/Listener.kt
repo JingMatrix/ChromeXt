@@ -205,10 +205,8 @@ object Listener {
         }
       }
       "extension" -> {
-        if (payload == "") {
-          callback =
-              LocalFiles.script +
-                  "window.dispatchEvent(new CustomEvent('extension', ${LocalFiles.start()}));"
+        if (payload == "" && BuildConfig.DEBUG) {
+          callback = "window.dispatchEvent(new CustomEvent('extension', ${LocalFiles.start()}));"
         }
       }
       "websocket" -> {
