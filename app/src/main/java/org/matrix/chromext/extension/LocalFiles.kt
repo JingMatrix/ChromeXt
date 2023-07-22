@@ -34,30 +34,29 @@ object LocalFiles {
 
   private fun serveFiles(path: String, connection: Socket) {
     runCatching {
-          Log.d(path + "is requested")
-          val request =
-              String(connection.inputStream.readNBytes(DEFAULT_BUFFER_SIZE / 16))
-                  .split("\r\n")[0]
-                  .split(" ")
-          if (request[0] == "GET" && request[2] == "HTTP/1.1") {
-            val name = request[1]
-            val file = File(path + name)
-            if (file.exists()) {
-              val data = file.readBytes()
-              val type = URLConnection.guessContentTypeFromName(name) ?: "text/plain"
-              val response =
-                  arrayOf(
-                      "HTTP/1.1 200",
-                      "Content-Length: ${data.size}",
-                      "Content-Type: ${type}",
-                      "Access-Control-Allow-Origin: *")
-              connection.outputStream.write(
-                  (response.joinToString("\r\n") + "\r\n\r\n").toByteArray())
-              connection.outputStream.write(data)
-            } else {
-              connection.outputStream.write("HTTP/1.1 404 Not Found\r\n\r\n".toByteArray())
+          connection.inputStream.bufferedReader().use {
+            val requestLine = it.readLine()
+            val request = requestLine.split(" ")
+            if (request[0] == "GET" && request[2] == "HTTP/1.1") {
+              val name = request[1]
+              val file = File(path + name)
+              if (file.exists()) {
+                val data = file.readBytes()
+                val type = URLConnection.guessContentTypeFromName(name) ?: "text/plain"
+                val response =
+                    arrayOf(
+                        "HTTP/1.1 200",
+                        "Content-Length: ${data.size}",
+                        "Content-Type: ${type}",
+                        "Access-Control-Allow-Origin: *")
+                connection.outputStream.write(
+                    (response.joinToString("\r\n") + "\r\n\r\n").toByteArray())
+                connection.outputStream.write(data)
+              } else {
+                connection.outputStream.write("HTTP/1.1 404 Not Found\r\n\r\n".toByteArray())
+              }
+              connection.close()
             }
-            connection.close()
           }
         }
         .onFailure { Log.ex(it) }
@@ -67,17 +66,19 @@ object LocalFiles {
     if (extensions.containsKey(name) && !extensions.get(name)!!.has("port")) {
       val server = ServerSocket()
       server.bind(null)
+      val port = server.getLocalPort()
+      Log.d("Listening at port ${port}")
       thread {
         runCatching {
               while (true) {
                 val socket = server.accept()
-                serveFiles(directory.toString() + "/" + name, socket)
+                thread { serveFiles(directory.toString() + "/" + name, socket) }
               }
             }
             .onFailure {
               Log.ex(it)
               server.close()
-              if (extensions.get(name)?.optInt("port") == server.getLocalPort()) {
+              if (extensions.get(name)?.optInt("port") == port) {
                 extensions.get(name)!!.remove("port")
               }
             }
@@ -93,12 +94,7 @@ object LocalFiles {
           Log.d("No extensions found")
           JSONArray()
         } else {
-          JSONArray(
-              extensions.map {
-                it.value.put("src", "http://localhost:" + it.value.get("port"))
-                it.value.remove("port")
-                it.value.put("id", it.key)
-              })
+          JSONArray(extensions.map { it.value.put("id", it.key) })
         }
     return JSONObject().put("detail", JSONObject(mapOf("type" to "init", "manifests" to info)))
   }
