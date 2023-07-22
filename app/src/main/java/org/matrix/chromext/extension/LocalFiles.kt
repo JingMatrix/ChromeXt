@@ -6,6 +6,7 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.net.URLConnection
 import kotlin.concurrent.thread
+import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.utils.Log
@@ -87,7 +88,18 @@ object LocalFiles {
 
   fun start(): JSONObject {
     extensions.keys.forEach { startServer(it) }
-    val info = JSONObject(extensions as Map<String, JSONObject>)
-    return JSONObject().put("detail", JSONObject(mapOf("type" to "init", "manifest" to info)))
+    val info =
+        if (extensions.keys.size == 0) {
+          Log.d("No extensions found")
+          JSONArray()
+        } else {
+          JSONArray(
+              extensions.map {
+                it.value.put("src", "http://localhost:" + it.value.get("port"))
+                it.value.remove("port")
+                it.value.put("id", it.key)
+              })
+        }
+    return JSONObject().put("detail", JSONObject(mapOf("type" to "init", "manifests" to info)))
   }
 }

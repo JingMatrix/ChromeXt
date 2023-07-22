@@ -115,7 +115,7 @@ object MenuHook : BaseHook() {
         when (ctx.resources.getResourceName(id)) {
           "org.matrix.chromext:id/extension_id" -> {
             Log.toast(ctx, "WIP support for extensions")
-            Listener.on("extension")
+            Listener.startAction("{action: 'extension'}")
           }
           "org.matrix.chromext:id/install_script_id" -> {
             if (getUrl().startsWith("https://raw.githubusercontent.com/")) {

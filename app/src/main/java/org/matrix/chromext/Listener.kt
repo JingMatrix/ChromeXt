@@ -26,19 +26,8 @@ object Listener {
   val devToolClients = mutableMapOf<Pair<String, String>, Pair<DevToolClient, DevToolClient>>()
   val allowedActions =
       mapOf(
-          "front-end" to
-              listOf(
-                  "inspectPages", "getIds", "getMeta", "updateMeta", "deleteScript", "extension"),
+          "front-end" to listOf("inspect_pages", "userscript", "extension"),
           "devtools" to listOf("websocket"))
-
-  private fun parseArray(str: String): Array<String> {
-    val result = mutableListOf<String>()
-    val array = JSONArray(str)
-    for (i in 0 until array.length()) {
-      result.add(array.getString(i))
-    }
-    return result.toTypedArray()
-  }
 
   private fun syncSharedPreference(
       payload: String,
@@ -100,8 +89,8 @@ object Listener {
           }
         }
       }
-      "unsafe-eval" -> {
-        Chrome.evaluateJavascript(listOf(payload))
+      "unsafeEval" -> {
+        callback = payload
       }
       "scriptStorage" -> {
         val detail = JSONObject(payload)
@@ -129,18 +118,18 @@ object Listener {
           script.storage!!.remove(key)
         }
       }
-      "abortRequest" -> {
-        val uuid = payload.toDouble()
-        xmlhttpRequests.get(uuid)?.abort()
-      }
       "xmlhttpRequest" -> {
         val detail = JSONObject(payload)
         val uuid = detail.getDouble("uuid")
-        val request =
-            XMLHttpRequest(
-                detail.getString("id"), detail.getJSONObject("request"), uuid, currentTab)
-        xmlhttpRequests.put(uuid, request)
-        thread { request.send() }
+        if (detail.optBoolean("abort")) {
+          xmlhttpRequests.get(uuid)?.abort()
+        } else {
+          val request =
+              XMLHttpRequest(
+                  detail.getString("id"), detail.getJSONObject("request"), uuid, currentTab)
+          xmlhttpRequests.put(uuid, request)
+          thread { request.send() }
+        }
       }
       "userAgentSpoof" -> {
         val loadUrlParams = UserScriptProxy.newLoadUrlParams(payload)
@@ -179,40 +168,47 @@ object Listener {
           Chrome.evaluateJavascript(listOf(code), currentTab)
         }
       }
-      "getIds" -> {
-        val result = JSONArray()
-        ScriptDbManager.scripts.forEach { result.put(it.id) }
-        callback = "window.dispatchEvent(new CustomEvent('script_id', {detail: ${result}}));"
-      }
-      "getMeta" -> {
-        val ids = parseArray(payload)
-        val result = JSONArray()
-        ScriptDbManager.scripts.filter { ids.contains(it.id) }.forEach { result.put(it.meta) }
-        callback = "window.dispatchEvent(new CustomEvent('script_meta', {detail: ${result}}));"
-      }
-      "updateMeta" -> {
-        val data = JSONObject(payload)
-        val script = ScriptDbManager.scripts.filter { it.id == data.getString("id") }.first()
-        val newScript =
-            parseScript(data.getString("meta") + script.code, script.storage?.toString())!!
-        ScriptDbManager.insert(newScript)
-        ScriptDbManager.scripts.remove(script)
-        ScriptDbManager.scripts.add(newScript)
-      }
-      "deleteScript" -> {
-        val ids = parseArray(payload)
-        val dbHelper = ScriptDbHelper(Chrome.getContext())
-        val db = dbHelper.writableDatabase
-        db.delete("script", "id = ?", ids)
-        ScriptDbManager.scripts.removeAll(ScriptDbManager.scripts.filter { ids.contains(it.id) })
-        dbHelper.close()
+      "userscript" -> {
+        if (payload == "") {
+          val detail = JSONObject(mapOf("type" to "init"))
+          detail.put("ids", JSONArray(ScriptDbManager.scripts.map { it.id }))
+          callback = "window.dispatchEvent(new CustomEvent('userscript', {detail: ${detail}}));"
+        } else {
+          val data = JSONObject(payload)
+          if (data.has("meta")) {
+            val script = ScriptDbManager.scripts.filter { it.id == data.getString("id") }.first()
+            val newScript =
+                parseScript(data.getString("meta") + script.code, script.storage?.toString())
+            if (newScript != null) {
+              ScriptDbManager.insert(newScript)
+              ScriptDbManager.scripts.remove(script)
+              ScriptDbManager.scripts.add(newScript)
+            } else {
+              callback = "alert('Fail to update script metadata');"
+            }
+          } else if (data.has("ids")) {
+            val jsonArray = data.getJSONArray("ids")
+            val ids = Array(jsonArray.length()) { jsonArray.getString(it) }
+            val scripts = ScriptDbManager.scripts.filter { ids.contains(it.id) }
+            if (data.optBoolean("delete")) {
+              val dbHelper = ScriptDbHelper(Chrome.getContext())
+              val db = dbHelper.writableDatabase
+              db.delete("script", "id = ?", ids)
+              ScriptDbManager.scripts.removeAll(scripts)
+              dbHelper.close()
+            } else {
+              val result = JSONArray(scripts.map { it.meta })
+              callback =
+                  "window.dispatchEvent(new CustomEvent('script_meta', {detail: ${result}}));"
+            }
+          }
+        }
       }
       "extension" -> {
         if (payload == "") {
-          val code =
+          callback =
               LocalFiles.script +
                   "window.dispatchEvent(new CustomEvent('extension', ${LocalFiles.start()}));"
-          Chrome.evaluateJavascript(listOf(code))
         }
       }
       "websocket" -> {

@@ -5,7 +5,7 @@ function GM_bootstrap() {
     return;
   }
   let match;
-  while ((match = row.exec(GM_info.scriptMetaStr)) !== null) {
+  while ((match = row.exec(GM_info.scriptMetaStr.trim())) !== null) {
     if (meta[match[1]]) {
       if (typeof meta[match[1]] == "string") meta[match[1]] = [meta[match[1]]];
       meta[match[1]].push(match[2]);
@@ -181,14 +181,14 @@ function runScript(meta) {
           const detail = JSON.stringify({
             detail: { uuid, id: GM_info.script.id },
           });
-          script += `\nwindow.dispatchEvent(new CustomEvent('unsafe-eval', ${detail}));`;
+          script += `\nwindow.dispatchEvent(new CustomEvent('unsafe_eval', ${detail}));`;
           ChromeXt(
             JSON.stringify({
-              action: "unsafe-eval",
+              action: "unsafeEval",
               payload: script,
             })
           );
-          await promiseListenerFactory("unsafe-eval", uuid);
+          await promiseListenerFactory("unsafe_eval", uuid);
         }
       }
       meta.sync_code();
@@ -511,7 +511,12 @@ function GM_xmlhttpRequest(details) {
 
   return {
     abort: () => {
-      ChromeXt(JSON.stringify({ action: "abortRequest", payload: uuid }));
+      ChromeXt(
+        JSON.stringify({
+          action: "xmlhttpRequest",
+          payload: { uuid, abort: true },
+        })
+      );
     },
   };
 }
