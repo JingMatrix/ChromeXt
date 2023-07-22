@@ -9,6 +9,7 @@ import org.json.JSONObject
 import org.matrix.chromext.devtools.DEV_FRONT_END
 import org.matrix.chromext.devtools.DevToolClient
 import org.matrix.chromext.devtools.getInspectPages
+import org.matrix.chromext.extension.LocalFiles
 import org.matrix.chromext.proxy.ERUD_URL
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.ScriptDbHelper
@@ -25,7 +26,9 @@ object Listener {
   val devToolClients = mutableMapOf<Pair<String, String>, Pair<DevToolClient, DevToolClient>>()
   val allowedActions =
       mapOf(
-          "front-end" to listOf("inspectPages", "getIds", "getMeta", "updateMeta", "deleteScript"),
+          "front-end" to
+              listOf(
+                  "inspectPages", "getIds", "getMeta", "updateMeta", "deleteScript", "extension"),
           "devtools" to listOf("websocket"))
 
   private fun parseArray(str: String): Array<String> {
@@ -72,7 +75,7 @@ object Listener {
     runCatching {
           val data = JSONObject(text)
           val action = data.getString("action")
-          val payload = data.getString("payload")
+          val payload = data.optString("payload")
           if (checkPermisson(action, currentTab)) {
             val callback = on(action, payload, currentTab)
             if (callback != null) Chrome.evaluateJavascript(listOf(callback))
@@ -203,6 +206,14 @@ object Listener {
         db.delete("script", "id = ?", ids)
         ScriptDbManager.scripts.removeAll(ScriptDbManager.scripts.filter { ids.contains(it.id) })
         dbHelper.close()
+      }
+      "extension" -> {
+        if (payload == "") {
+          val code =
+              LocalFiles.script +
+                  "window.dispatchEvent(new CustomEvent('extension', ${LocalFiles.start()}));"
+          Chrome.evaluateJavascript(listOf(code))
+        }
       }
       "websocket" -> {
         val detail = JSONObject(payload)
