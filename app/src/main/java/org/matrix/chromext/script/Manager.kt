@@ -31,7 +31,7 @@ object ScriptDbManager {
         ctx.getSharedPreferences("CSPRule", Context.MODE_PRIVATE).getAll()
             as MutableMap<String, String>
 
-    cosmeticFilter = ctx.assets.open("cosmetic-filter.js").bufferedReader().use { it.readText() }
+    cosmeticFilter = ctx.assets.open("cosmetic_filter.js").bufferedReader().use { it.readText() }
   }
 
   fun insert(vararg script: Script) {

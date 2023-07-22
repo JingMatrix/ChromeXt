@@ -15,15 +15,19 @@ import org.matrix.chromext.utils.hookBefore
 
 object UserScriptHook : BaseHook() {
 
+  val promptInstallUserScript: String
+  val customizeDevTool: String
+
+  init {
+    val ctx = Chrome.getContext()
+    ResourceMerge.enrich(ctx)
+    promptInstallUserScript = ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
+    customizeDevTool = ctx.assets.open("devtools.js").bufferedReader().use { it.readText() }
+  }
+
   override fun init() {
 
     val proxy = UserScriptProxy
-
-    val ctx = Chrome.getContext()
-    ResourceMerge.enrich(ctx)
-    val promptInstallUserScript =
-        ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
-    val customizeDevTool = ctx.assets.open("devtools.js").bufferedReader().use { it.readText() }
 
     // proxy.tabModelJniBridge.getDeclaredConstructors()[0].hookAfter {
     //   Chrome.addTabModel(it.thisObject)
