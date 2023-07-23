@@ -33,8 +33,8 @@ val supportedPackages =
         "com.vivaldi.browser",
         "com.vivaldi.browser.snapshot",
         "org.bromite.bromite",
-        "org.bromite.bromite.dev",
         "org.chromium.thorium",
+        "org.cromite.cromite",
         "org.greatfire.freebrowser",
         "org.triple.banana",
         "us.spotco.mulch")

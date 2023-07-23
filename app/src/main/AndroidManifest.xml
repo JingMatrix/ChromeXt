@@ -15,8 +15,8 @@
 		<package android:name="com.vivaldi.browser"/>
 		<package android:name="com.vivaldi.browser.snapshot"/>
 		<package android:name="org.bromite.bromite"/>
-		<package android:name="org.bromite.bromite.dev"/>
 		<package android:name="org.chromium.thorium"/>
+		<package android:name="org.cromite.cromite"/>
 		<package android:name="org.greatfire.freebrowser"/>
 		<package android:name="org.triple.banana"/>
 		<package android:name="us.spotco.mulch"/>
