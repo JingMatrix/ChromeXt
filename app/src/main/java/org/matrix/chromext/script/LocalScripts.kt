@@ -6,17 +6,23 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.ResourceMerge
 
 object GM {
 
-  val localScript =
-      Chrome.getContext()
-          .assets
-          .open("local_script.js")
-          .bufferedReader()
-          .use { it.readText() }
-          .split("// Kotlin separator\n\n")
-          .associateBy({ it.lines()[0].split("(")[0].split(" ").last() }, { it })
+  val localScript: Map<String, String>
+
+  init {
+    val ctx = Chrome.getContext()
+    ResourceMerge.enrich(ctx)
+    localScript =
+        ctx.assets
+            .open("local_script.js")
+            .bufferedReader()
+            .use { it.readText() }
+            .split("// Kotlin separator\n\n")
+            .associateBy({ it.lines()[0].split("(")[0].split(" ").last() }, { it })
+  }
 
   fun bootstrap(script: Script): List<String> {
     var code = script.code
