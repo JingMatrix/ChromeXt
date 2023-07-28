@@ -42,6 +42,9 @@ object UserScriptHook : BaseHook() {
           val tab = proxy.mTab.get(it.thisObject)!!
           Chrome.refreshTab(tab)
           val url = proxy.parseUrl(it.args[0])!!
+          if (url.startsWith("chrome")) {
+            return@hookAfter
+          }
           proxy.evaluateJavascript("globalThis.ChromeXt=console.debug.bind(console);")
           if (url.endsWith(".user.js")) {
             proxy.evaluateJavascript(promptInstallUserScript)
