@@ -38,7 +38,7 @@ object Listener {
     val origin = result.getString("origin")
     val sharedPref = Chrome.getContext().getSharedPreferences(item, Context.MODE_PRIVATE)
     with(sharedPref.edit()) {
-      if (result.has("data")) {
+      if (result.has("data") && result.optString("data").length > 0) {
         val data = result.getString("data")
         putString(origin, data)
         cache.put(origin, data)

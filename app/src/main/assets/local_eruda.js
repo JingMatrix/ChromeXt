@@ -234,15 +234,17 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
         .on("click", ".eruda-csp-rules .eruda-icon-save", (e) => {
           this._container.notify("CSP Rules config saved");
           e.stopPropagation();
-          ChromeXt(
-            JSON.stringify({
-              action: "cspRule",
-              payload: {
-                origin: window.location.origin,
-                data: this._$el.find("li.eruda-csp-rules > div").text(),
-              },
-            })
-          );
+          const data = {
+            action: "cspRule",
+            payload: {
+              origin: window.location.origin,
+            },
+          };
+          const rule = this._$el.find("li.eruda-csp-rules > div").text() || "";
+          if (rule.length > 0) {
+            data.payload.data = rule;
+          }
+          ChromeXt(JSON.stringify(data));
         })
         .on("click", ".eruda-userscripts .eruda-script", (e) => {
           const sources = this._container.get("sources");
