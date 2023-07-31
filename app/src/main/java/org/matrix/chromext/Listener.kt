@@ -113,8 +113,7 @@ object Listener {
             data.put("value", script.storage!!.get(key))
           }
           detail.put("data", data)
-          callback =
-              "window.dispatchEvent(new CustomEvent('scriptSyncValue', {detail: ${detail}}));"
+          callback = "ChromeXt.post('scriptSyncValue', ${detail});"
         } else {
           script.storage!!.remove(key)
         }
@@ -164,8 +163,7 @@ object Listener {
       }
       "inspectPages" -> {
         thread {
-          val code =
-              "window.dispatchEvent(new CustomEvent('inspect_pages', { detail: ${getInspectPages()} }));"
+          val code = "ChromeXt.post('inspect_pages', ${getInspectPages()});"
           Chrome.evaluateJavascript(listOf(code), currentTab)
         }
       }
@@ -173,7 +171,7 @@ object Listener {
         if (payload == "") {
           val detail = JSONObject(mapOf("type" to "init"))
           detail.put("ids", JSONArray(ScriptDbManager.scripts.map { it.id }))
-          callback = "window.dispatchEvent(new CustomEvent('userscript', {detail: ${detail}}));"
+          callback = "ChromeXt.post('userscript', ${detail});"
         } else {
           val data = JSONObject(payload)
           if (data.has("meta")) {
@@ -199,15 +197,14 @@ object Listener {
               dbHelper.close()
             } else {
               val result = JSONArray(scripts.map { it.meta })
-              callback =
-                  "window.dispatchEvent(new CustomEvent('script_meta', {detail: ${result}}));"
+              callback = "ChromeXt.post('script_meta', ${result});"
             }
           }
         }
       }
       "extension" -> {
         if (payload == "" && BuildConfig.DEBUG) {
-          callback = "window.dispatchEvent(new CustomEvent('extension', ${LocalFiles.start()}));"
+          callback = "ChromeXt.post('extension', ${LocalFiles.start()});"
         }
       }
       "websocket" -> {
@@ -233,11 +230,9 @@ object Listener {
         } else {
           thread {
             fun response(res: JSONObject): Boolean? {
-              val response = JSONObject(mapOf("detail" to res))
               val mTab = devToolClients.get(key)?.second
               if (mTab?.isClosed() == false) {
-                mTab.evaluateJavascript(
-                    "window.dispatchEvent(new CustomEvent('websocket', ${response}))")
+                mTab.evaluateJavascript("ChromeXt.post('websocket', ${res})")
                 return true
               }
               return false

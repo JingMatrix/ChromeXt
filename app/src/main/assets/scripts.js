@@ -1,5 +1,5 @@
 if (typeof ChromeXt == "undefined") {
-  const ChromeXt = {};
+  const ChromeXt = new EventTarget();
   const hidden = Symbol("debug");
   Object.defineProperty(ChromeXt, hidden, {
     value: console.debug.bind(console),
@@ -7,6 +7,11 @@ if (typeof ChromeXt == "undefined") {
   Object.defineProperties(ChromeXt, {
     scripts: { value: [] },
     commands: { value: [] },
+    post: {
+      value: function (event, detail) {
+        ChromeXt.dispatchEvent(new CustomEvent(event, { detail }));
+      },
+    },
     dispatch: {
       value: function (action, payload) {
         this[hidden](JSON.stringify({ action, payload }));

@@ -15,14 +15,14 @@ class WebSocket {
     ChromeXt.dispatch("websocket", this.payload);
     this.sessions = new Map();
 
-    window.addEventListener("inspect_pages", (e) => {
+    ChromeXt.addEventListener("inspect_pages", (e) => {
       this.payload.tabId = e.detail.find(
         (info) => info.url == window.location.href
       ).id;
       ChromeXt.dispatch("websocket", this.payload);
     });
 
-    window.addEventListener("websocket", (e) => {
+    ChromeXt.addEventListener("websocket", (e) => {
       const type = Object.keys(e.detail)[0];
       const data = e.detail[type];
       if (

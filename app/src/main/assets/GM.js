@@ -60,7 +60,7 @@ function GM_bootstrap() {
     meta.grants.includes("GM_getValue") ||
     meta.grants.includes("GM.getValue")
   ) {
-    window.addEventListener("scriptStorage", (e) => {
+    ChromeXt.addEventListener("scriptStorage", (e) => {
       if (e.detail.id != GM_info.script.id) {
         return;
       }
@@ -124,7 +124,7 @@ function scriptStorage(data) {
     broadcast,
   };
   if (broadcast) {
-    window.dispatchEvent(new CustomEvent("scriptStorage", { detail: payload }));
+    ChromeXt.post("scriptStorage", payload);
   }
   ChromeXt.dispatch("scriptStorage", payload);
 }
@@ -142,12 +142,12 @@ function promiseListenerFactory(
         e.stopImmediatePropagation();
         const data = e.detail.data || null;
         if (closeCondition(data)) {
-          window.removeEventListener(event, tmpListener);
+          ChromeXt.removeEventListener(event, tmpListener);
           listener(data, resolve, reject);
         }
       }
     };
-    window.addEventListener(event, tmpListener);
+    ChromeXt.addEventListener(event, tmpListener);
   });
 }
 
@@ -174,9 +174,10 @@ function runScript(meta) {
         } catch {
           const uuid = Math.random();
           const detail = JSON.stringify({
-            detail: { uuid, id: GM_info.script.id },
+            uuid,
+            id: GM_info.script.id,
           });
-          script += `\nwindow.dispatchEvent(new CustomEvent('unsafe_eval', ${detail}));`;
+          script += `\nChromeXt.post('unsafe_eval', ${detail});`;
           ChromeXt.dispatch("unsafeEval", script);
           await promiseListenerFactory("unsafe_eval", uuid);
         }
@@ -421,7 +422,11 @@ function GM_xmlhttpRequest(details) {
     details.headers["User-Agent"] = window.navigator.userAgent;
   }
 
-  ChromeXt.dispatch("xmlhttpRequest", { id: GM_info.script.id, request: details, uuid });
+  ChromeXt.dispatch("xmlhttpRequest", {
+    id: GM_info.script.id,
+    request: details,
+    uuid,
+  });
 
   const tmpListener = (e) => {
     if (e.detail.id == GM_info.script.id && e.detail.uuid == uuid) {
@@ -481,12 +486,12 @@ function GM_xmlhttpRequest(details) {
             details["on" + e.detail.type](data);
           }
           if (["loadend", "error"].includes(e.detail.type)) {
-            window.removeEventListener("xmlhttpRequest", tmpListener);
+            ChromeXt.removeEventListener("xmlhttpRequest", tmpListener);
           }
       }
     }
   };
-  window.addEventListener("xmlhttpRequest", tmpListener);
+  ChromeXt.addEventListener("xmlhttpRequest", tmpListener);
 
   return {
     abort: () => {

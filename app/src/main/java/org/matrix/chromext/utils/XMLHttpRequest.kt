@@ -10,8 +10,7 @@ import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 
 class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: Any?) {
-  val id = id
-  val uuid = uuid
+  val response = JSONObject(mapOf("id" to id, "uuid" to uuid))
   val request = request
   val currentTab = currentTab
   var connection: HttpURLConnection? = null
@@ -26,7 +25,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
   val responseType = request.optString("responseType")
 
   fun abort() {
-    response("abort", "{abort: 'Abort on request'}")
+    response("abort", JSONObject().put("abort", "Abort on request"))
   }
 
   fun send() {
@@ -47,7 +46,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
         setRequestProperty("Authorization", "Basic " + encoding)
       }
       runCatching {
-            response("loadstart", "{}", false)
+            response("loadstart", disconnect = false)
             if (method == "POST" && request.has("data")) {
               val data = request.optString("data")
               if (binary) {
@@ -75,7 +74,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
 
             data.put("response", res)
 
-            response("load", data.toString(), false)
+            response("load", data, false)
             // data.remove("response")
             // response("loadend", "{}")
           }
@@ -84,9 +83,9 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
               val error = errorStream?.bufferedReader()?.use { it.readText() } ?: it.message
               Log.d(it.toString() + ". ${error} when connecting to ${url}")
               if (it is SocketTimeoutException) {
-                response("timeout", "{}")
+                response("timeout")
               } else {
-                response("error", JSONObject(mapOf("error" to error)).toString())
+                response("error", JSONObject(mapOf("error" to error)))
               }
             } else {
               Log.ex(it)
@@ -97,14 +96,15 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
 
   private fun response(
       type: String,
-      data: String,
+      data: JSONObject = JSONObject(),
       disconnect: Boolean = true,
   ) {
-    val code =
-        "window.dispatchEvent(new CustomEvent('xmlhttpRequest', {detail: {id: '${id}', uuid: ${uuid}, type: '${type}', data: ${data}}}));"
+    response.put("type", type)
+    response.put("data", data)
+    val code = "ChromeXt.post('xmlhttpRequest', ${response});"
     Chrome.evaluateJavascript(listOf(code), currentTab)
     if (disconnect) {
-      Listener.xmlhttpRequests.remove(uuid)
+      Listener.xmlhttpRequests.remove(response.getDouble("uuid"))
       connection?.disconnect()
     }
   }

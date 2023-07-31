@@ -120,7 +120,7 @@ object Chrome {
       excludeSelf: Boolean = true,
       matching: (String) -> Boolean
   ) {
-    val code = "window.dispatchEvent(new CustomEvent('${event}', ${data}));"
+    val code = "ChromeXt.post('${event}', ${data});"
     Log.d("broadcasting ${event}")
     wakeUpDevTools()
     val pages = getInspectPages()!!

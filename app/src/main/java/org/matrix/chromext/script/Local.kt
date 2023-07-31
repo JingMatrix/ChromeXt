@@ -87,8 +87,7 @@ object GM {
     if (script.storage != null) {
       val storage_info =
           JSONObject(mapOf("id" to script.id, "data" to JSONObject().put("init", script.storage!!)))
-      codes.add(
-          "window.dispatchEvent(new CustomEvent('scriptStorage', {detail: ${storage_info}}));")
+      codes.add("ChromeXt.post('scriptStorage', ${storage_info});")
     }
 
     return codes

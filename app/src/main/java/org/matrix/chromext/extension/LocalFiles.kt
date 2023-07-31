@@ -113,6 +113,6 @@ object LocalFiles {
         } else {
           JSONArray(extensions.map { it.value.put("id", it.key) })
         }
-    return JSONObject().put("detail", JSONObject(mapOf("type" to "init", "manifests" to info)))
+    return JSONObject(mapOf("type" to "init", "manifests" to info))
   }
 }
