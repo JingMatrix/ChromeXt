@@ -12,6 +12,7 @@ import org.matrix.chromext.devtools.getInspectPages
 import org.matrix.chromext.extension.LocalFiles
 import org.matrix.chromext.proxy.ERUD_URL
 import org.matrix.chromext.proxy.UserScriptProxy
+import org.matrix.chromext.script.Local
 import org.matrix.chromext.script.ScriptDbHelper
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.script.matching
@@ -143,7 +144,7 @@ object Listener {
         val eruda = File(ctx.getExternalFilesDir(null), "Download/Eruda.js")
         if (eruda.exists()) {
           callback = FileReader(eruda).use { it.readText() } + "\n"
-          callback += ctx.assets.open("local_eruda.js").bufferedReader().use { it.readText() }
+          callback += Local.eruda
           callback += "eruda.init(); eruda._localConfig(); eruda.show();"
           Chrome.evaluateJavascript(listOf(callback))
           callback = null

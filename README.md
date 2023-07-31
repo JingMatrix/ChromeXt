@@ -54,8 +54,8 @@ Currently, ChromeXt supports almost all [Tampermonkey APIs](https://www.tampermo
 7. @require, @resource (Without [Subresource Integrity](https://www.tampermonkey.net/documentation.php#api:Subresource_Integrity))
 
 These APIs are implemented differently from the official ones, see the source file
-[LocalScripts.kt](app/src/main/java/org/matrix/chromext/script/LocalScripts.kt) and
-[local_script.js](app/src/main/assets/local_script.js) if you have doubts or questions.
+[Local.kt](app/src/main/java/org/matrix/chromext/script/Local.kt) and
+[GM.js](app/src/main/assets/GM.js) if you have doubts or questions.
 
 ### UserScripts manager front end
 
@@ -138,9 +138,9 @@ Before you submit your pull-requests, please ensure that the command
 
 Here are corresponding files you might want / need to change:
 1. Front end: [manager.vue](https://github.com/JingMatrix/viteblog/tree/master/components/ChromeXt/manager.vue)
-2. Tampermonkey API: [LocalScripts.kt](app/src/main/java/org/matrix/chromext/script/LocalScripts.kt)
-and [local_script.js](app/src/main/assets/local_script.js)
-3. Eruda configuration: [local_eruda.js](app/src/main/assets/local_eruda.js)
+2. Tampermonkey API: [Local.kt](app/src/main/java/org/matrix/chromext/script/Local.kt)
+and [GM.js](app/src/main/assets/GM.js)
+3. Eruda configuration: [eruda.js](app/src/main/assets/eruda.js)
 4. Support more WebView based browsers: [WebViewHook.kt](app/src/main/java/org/matrix/chromext/hook/WebViewHook.kt)
 
 ## Development plans

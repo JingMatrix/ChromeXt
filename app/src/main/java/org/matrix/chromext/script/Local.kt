@@ -99,6 +99,7 @@ object Local {
 
   val promptInstallUserScript: String
   val customizeDevTool: String
+  val eruda: String
   val initChromeXt: String
   val openEruda: String
   val cspRule: String
@@ -108,6 +109,7 @@ object Local {
     ResourceMerge.enrich(ctx)
     promptInstallUserScript = ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
     customizeDevTool = ctx.assets.open("devtools.js").bufferedReader().use { it.readText() }
+    eruda = ctx.assets.open("eruda.js").bufferedReader().use { it.readText() }
     val localScript =
         ctx.assets
             .open("scripts.js")
