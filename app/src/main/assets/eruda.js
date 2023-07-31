@@ -202,9 +202,11 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
     }
     _bindEvent() {
       super._bindEvent();
-      // if (ChromeXt.cspRules.length == 0) {
-      //   this._$el.find("li.eruda-csp-rules")[0].style = "display:none;";
-      // }
+      if (ChromeXt.cspRules.length == 0) {
+        this._$el.find("li.eruda-csp-rules > h2 > span")[0].className =
+          c("icon-add add");
+        this._$el.find("li.eruda-csp-rules > div")[0].hidden = true;
+      }
       this._$el
         .on("click", ".eruda-user-agent .eruda-icon-save", (e) => {
           this._container.notify("User-Agent config saved");
@@ -217,6 +219,11 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
         .on("click", ".eruda-user-agent .eruda-icon-reset", (_e) => {
           this._container.notify("User-Agent will be restored after refresh");
           ChromeXt.dispatch("userAgent", { origin: window.location.origin });
+        })
+        .on("click", ".eruda-csp-rules .eruda-icon-add", (_e) => {
+          this._$el.find("li.eruda-csp-rules > h2 > span")[0].className =
+            c("icon-save save");
+          this._$el.find("li.eruda-csp-rules > div")[0].hidden = false;
         })
         .on("click", ".eruda-csp-rules .eruda-icon-save", (e) => {
           this._container.notify("CSP Rules config saved");
@@ -261,31 +268,22 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
   eruda.Elements = elements;
   eruda.Resources = resources;
   eruda.Info = info;
+  eruda._styles = _eruda_styles;
+  delete _eruda_styles;
   eruda._configured = true;
-  eruda._font_fix =
-    "[class^='eruda-icon-']:before { font-size: 14px; } .eruda-icon-arrow-left:before { content: '←'; } .eruda-icon-arrow-right:before { content: '→'; } .eruda-icon-clear:before { content: '✖'; font-size: 17px; } .eruda-icon-compress:before { content: '🗎'; } .eruda-icon-copy:before, .luna-text-viewer-icon-copy:before { content: '⎘ '; font-size: 16px; font-weight: bold; } .eruda-icon-delete:before { content: '⌫'; font-weight: bold; } .eruda-icon-expand:before { content: '⌄'; } .eruda-icon-eye:before { content: '🧿'; } div.eruda-btn.eruda-search { margin-top: 4px; } .eruda-icon-filter:before { content: '⭃'; font-size: 19px; font-weight: bold; margin-right: -5px; display: block; transform: rotate(90deg); } .eruda-icon-play:before { content: '▷'; } .eruda-icon-record:before { content: '●'; } .eruda-icon-refresh:before { content: '↻'; font-size: 18px; font-weight: bold; } .eruda-icon-reset:before { content: '↺'; font-size: 18px; font-weight: bold; display: block; transform: rotate(270deg) translate(5px, 0); } .eruda-icon-search:before { content: '🔍'; } .eruda-icon-select:before { content: '➤'; font-size: 14px; display: block; transform: rotate(232deg); } .eruda-icon-tool:before { content: '⚙'; font-size: 30px; } .luna-console-icon-error:before { content: '✗'; } .luna-console-icon-warn:before { content: '⚠'; } [class$='icon-caret-right']:before, [class$='icon-arrow-right']:before { content: '▼'; font-size: 9px; display: block; transform: rotate(-0.25turn); } [class$='icon-caret-down']:before, [class$='icon-arrow-down']:before { content: '▼'; font-size: 9px; }";
   eruda._localConfig = () => {
     if (!document.querySelector("#eruda")) {
       return;
     }
-    addErudaStyle(
-      "chromext_new_icons",
-      ".eruda-icon-add:before { content: '➕'; font-size: 10px; vertical-align: 3px; } .eruda-icon-save:before { content: '💾'; font-size: 10px; vertical-align: 3px; }"
-    );
-    addErudaStyle(
-      "chromext_eruda_dom_fix",
-      "#eruda-elements div.eruda-dom-viewer-container { overflow-x: hidden;} #eruda-elements div.eruda-dom-viewer-container > div.eruda-dom-viewer { overflow-x: scroll;} .luna-dom-viewer { min-width: 80vw;}"
-    );
-    addErudaStyle(
-      "chromext_plugin",
-      "#eruda-info li .eruda-title span {padding: 4px 5px; margin: 0; float: right;} #eruda-info .eruda-user-agent h2, #eruda-info .eruda-csp-rules h2 { padding-bottom: 12px;} #eruda-info .eruda-userscripts div.eruda-content, #eruda-resources div.eruda-commands {display: flex; flex-wrap: wrap; justify-content: space-around; > span {padding: 0.3em; margin: 0.3em; border: 0.5px solid violet;}}"
-    );
+    addErudaStyle("chromext_new_icons", eruda._styles[1]);
+    addErudaStyle("chromext_eruda_dom_fix", eruda._styles[2]);
+    addErudaStyle("chromext_plugin", eruda._styles[3]);
     if (typeof eruda._shouldFixfont == "undefined") {
       eruda._shouldFixfont = false;
       document.addEventListener("securitypolicyviolation", (e) => {
         if (e.blockedURI == "data" && e.violatedDirective == "font-src") {
           eruda._shouldFixfont = true;
-          addErudaStyle("chromext_eruda_font_fix", eruda._font_fix);
+          addErudaStyle("chromext_font_fix", eruda._styles[0]);
         } else if (
           e.blockedURI == "inline" &&
           e.target == document.querySelector("#eruda")
@@ -295,7 +293,7 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
         }
       });
     } else if (eruda._shouldFixfont) {
-      addErudaStyle("chromext_eruda_font_fix", eruda._font_fix);
+      addErudaStyle("chromext_font_fix", eruda._styles[0]);
     }
   };
 

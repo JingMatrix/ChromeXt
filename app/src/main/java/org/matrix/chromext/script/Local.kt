@@ -108,7 +108,11 @@ object Local {
     ResourceMerge.enrich(ctx)
     promptInstallUserScript = ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
     customizeDevTool = ctx.assets.open("devtools.js").bufferedReader().use { it.readText() }
-    eruda = ctx.assets.open("eruda.js").bufferedReader().use { it.readText() }
+    val css =
+        JSONArray(ctx.assets.open("eruda.css").bufferedReader().use { it.readText() }.split("\n\n"))
+    eruda =
+        "const _eruda_styles = ${css};\n" +
+            ctx.assets.open("eruda.js").bufferedReader().use { it.readText() }
     val localScript =
         ctx.assets
             .open("scripts.js")
