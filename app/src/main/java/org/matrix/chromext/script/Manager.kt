@@ -63,7 +63,7 @@ object ScriptDbManager {
   fun invokeScript(url: String, origin: String) {
     val codes = mutableListOf<String>()
     if (cspRules.contains(origin)) {
-      codes.add("ChromeXt.cspRules=`${cspRules.get(origin)}`;${Local.cspRule}")
+      codes.add("ChromeXt.cspRules.push(...`${cspRules.get(origin)}`.split(';;'));${Local.cspRule}")
     }
     if (cosmeticFilters.contains(origin)) {
       codes.add("ChromeXt.filters=`${cosmeticFilters.get(origin)}`;${cosmeticFilter}")

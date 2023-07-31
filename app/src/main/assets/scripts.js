@@ -1,24 +1,20 @@
 if (typeof ChromeXt == "undefined") {
-  const ChromeXt = new EventTarget();
-  const hidden = Symbol("debug");
-  Object.defineProperty(ChromeXt, hidden, {
-    value: console.debug.bind(console),
+  class ChromeXtTarget extends EventTarget {
+    #debug = console.debug.bind(console);
+    scripts = [];
+    commands = [];
+    cspRules = [];
+    post(event, detail) {
+      this.dispatchEvent(new CustomEvent(event, { detail }));
+    }
+    dispatch(action, payload) {
+      this.#debug(JSON.stringify({ action, payload }));
+    }
+  }
+  Object.defineProperty(globalThis, "ChromeXt", {
+    value: new ChromeXtTarget(),
   });
-  Object.defineProperties(ChromeXt, {
-    scripts: { value: [] },
-    commands: { value: [] },
-    post: {
-      value: function (event, detail) {
-        ChromeXt.dispatchEvent(new CustomEvent(event, { detail }));
-      },
-    },
-    dispatch: {
-      value: function (action, payload) {
-        this[hidden](JSON.stringify({ action, payload }));
-      },
-    },
-  });
-  Object.defineProperty(globalThis, "ChromeXt", { value: ChromeXt });
+  Object.freeze(ChromeXt);
 }
 // Kotlin separator
 
@@ -36,17 +32,20 @@ try {
 }
 // Kotlin separator
 
-if (ChromeXt.cspRules) {
-  // Skip empty cspRules
-  const meta = document.createElement("meta");
-  meta.setAttribute("http-equiv", "Content-Security-Policy");
-  meta.setAttribute("content", ChromeXt.cspRules);
-  try {
-    document.head.append(meta);
-  } catch {
-    setTimeout(() => {
+if (ChromeXt.cspRules.length > 0) {
+  ChromeXt.cspRules.forEach((rule) => {
+    if (rule.length == 0) return;
+    // Skip empty cspRules
+    const meta = document.createElement("meta");
+    meta.setAttribute("http-equiv", "Content-Security-Policy");
+    meta.setAttribute("content", rule);
+    try {
       document.head.append(meta);
-    }, 0);
-  }
+    } catch {
+      setTimeout(() => {
+        document.head.append(meta);
+      }, 0);
+    }
+  });
 }
 // Kotlin separator

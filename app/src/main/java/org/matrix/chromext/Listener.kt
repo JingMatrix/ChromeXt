@@ -33,14 +33,30 @@ object Listener {
   private fun syncSharedPreference(
       payload: String,
       item: String,
-      cache: MutableMap<String, String>
+      cache: MutableMap<String, String>,
+      concatenate: String? = null
   ): String? {
     val result = JSONObject(payload)
     val origin = result.getString("origin")
     val sharedPref = Chrome.getContext().getSharedPreferences(item, Context.MODE_PRIVATE)
     with(sharedPref.edit()) {
       if (result.has("data") && result.optString("data").length > 0) {
-        val data = result.getString("data")
+        val data =
+            if (concatenate == null) {
+              result.getString("data")
+            } else {
+              val oldData = cache.get(origin)?.split(concatenate)?.toMutableList()
+              val newItem = result.getString("data").split(concatenate).filter { it.length > 0 }
+              val list =
+                  if (oldData != null) {
+                    oldData.add("")
+                    oldData.addAll(newItem)
+                    oldData
+                  } else {
+                    newItem
+                  }
+              list.joinToString(concatenate)
+            }
         putString(origin, data)
         cache.put(origin, data)
       } else if (cache.containsKey(origin)) {
@@ -159,7 +175,7 @@ object Listener {
         callback = syncSharedPreference(payload, "UserAgent", ScriptDbManager.userAgents)
       }
       "cspRule" -> {
-        callback = syncSharedPreference(payload, "CSPRule", ScriptDbManager.cspRules)
+        callback = syncSharedPreference(payload, "CSPRule", ScriptDbManager.cspRules, ";")
       }
       "inspectPages" -> {
         thread {

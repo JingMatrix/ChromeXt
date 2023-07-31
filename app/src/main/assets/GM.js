@@ -208,6 +208,7 @@ function runScript(meta) {
   GM_info.uuid = Math.random();
   GM_info.scriptHandler = "ChromeXt";
   GM_info.version = "3.5.0";
+  Object.freeze(GM_info);
   ChromeXt.scripts.push(GM_info);
 }
 
