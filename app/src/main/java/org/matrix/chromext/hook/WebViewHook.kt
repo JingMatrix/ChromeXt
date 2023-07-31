@@ -12,25 +12,14 @@ import java.lang.ref.WeakReference
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 import org.matrix.chromext.devtools.DEV_FRONT_END
+import org.matrix.chromext.script.Local
 import org.matrix.chromext.script.ScriptDbManager
-import org.matrix.chromext.script.openEruda
 import org.matrix.chromext.utils.Log
-import org.matrix.chromext.utils.ResourceMerge
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
 
 object WebViewHook : BaseHook() {
-
-  val promptInstallUserScript: String
-  val customizeDevTool: String
-
-  init {
-    val ctx = Chrome.getContext()
-    ResourceMerge.enrich(ctx)
-    promptInstallUserScript = ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
-    customizeDevTool = ctx.assets.open("devtools.js").bufferedReader().use { it.readText() }
-  }
 
   var ViewClient: Class<*>? = null
   var ChromeClient: Class<*>? = null
@@ -71,12 +60,12 @@ object WebViewHook : BaseHook() {
       val enableJS = view.settings.javaScriptEnabled
       val enableDOMStorage = view.settings.domStorageEnabled
       webView = WeakReference(view)
-      evaluateJavascript("globalThis.ChromeXt=console.debug.bind(console);")
+      evaluateJavascript(Local.initChromeXt)
       if (url.endsWith(".user.js")) {
-        evaluateJavascript(promptInstallUserScript)
+        evaluateJavascript(Local.promptInstallUserScript)
       } else if (url.startsWith(DEV_FRONT_END)) {
         view.settings.userAgentString = null
-        evaluateJavascript(customizeDevTool)
+        evaluateJavascript(Local.customizeDevTool)
       } else if (!url.endsWith("/ChromeXt/")) {
         val protocol = url.split("://")
         if (protocol.size > 1 && arrayOf("https", "http", "file").contains(protocol.first())) {
@@ -116,7 +105,7 @@ object WebViewHook : BaseHook() {
                             if (isChromeXt) {
                               Listener.on("inspectPages")
                             } else {
-                              evaluateJavascript(openEruda)
+                              evaluateJavascript(Local.openEruda)
                             }
                             mode.finish()
                             true

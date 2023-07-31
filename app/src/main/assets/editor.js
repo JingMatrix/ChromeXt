@@ -13,7 +13,7 @@ async function installScript(force = false) {
     } else {
       script = document.body.innerText;
     }
-    ChromeXt(JSON.stringify({ action: "installScript", payload: script }));
+    ChromeXt.dispatch("installScript", script);
   }
 }
 

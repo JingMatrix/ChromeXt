@@ -19,7 +19,7 @@ import org.matrix.chromext.Listener
 import org.matrix.chromext.R
 import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.proxy.UserScriptProxy
-import org.matrix.chromext.script.openEruda
+import org.matrix.chromext.script.Local
 import org.matrix.chromext.utils.*
 
 object readerMode {
@@ -96,7 +96,7 @@ object MenuHook : BaseHook() {
           } else {
             title.setText("Open eruda console")
             erudaRow.setOnClickListener {
-              UserScriptProxy.evaluateJavascript(openEruda)
+              UserScriptProxy.evaluateJavascript(Local.openEruda)
               pageInfoController!!.invokeMethod() { name == "destroy" }
             }
           }
@@ -125,7 +125,8 @@ object MenuHook : BaseHook() {
             }
           }
           "org.matrix.chromext:id/developer_tools_id" -> Listener.on("inspectPages")
-          "org.matrix.chromext:id/eruda_console_id" -> UserScriptProxy.evaluateJavascript(openEruda)
+          "org.matrix.chromext:id/eruda_console_id" ->
+              UserScriptProxy.evaluateJavascript(Local.openEruda)
           "${ctx.getPackageName()}:id/reload_menu_id" -> {
             return Listener.on("userAgentSpoof", getUrl()) != null
           }

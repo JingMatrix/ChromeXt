@@ -7,12 +7,7 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
       if (this.#filter.length > 0) {
         payload.data = this.#filter;
       }
-      ChromeXt(
-        JSON.stringify({
-          action: "cosmeticFilter",
-          payload,
-        })
-      );
+      ChromeXt.dispatch("cosmeticFilter", payload);
     }
     parseFilter(filter) {
       if (typeof filter == "string") {
@@ -212,39 +207,26 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
         .on("click", ".eruda-user-agent .eruda-icon-save", (e) => {
           this._container.notify("User-Agent config saved");
           e.stopPropagation();
-          ChromeXt(
-            JSON.stringify({
-              action: "userAgent",
-              payload: {
-                origin: window.location.origin,
-                data: this._$el.find("li.eruda-user-agent > div").text(),
-              },
-            })
-          );
+          ChromeXt.dispatch("userAgent", {
+            origin: window.location.origin,
+            data: this._$el.find("li.eruda-user-agent > div").text(),
+          });
         })
         .on("click", ".eruda-user-agent .eruda-icon-reset", (_e) => {
           this._container.notify("User-Agent will be restored after refresh");
-          ChromeXt(
-            JSON.stringify({
-              action: "userAgent",
-              payload: { origin: window.location.origin },
-            })
-          );
+          ChromeXt.dispatch("userAgent", { origin: window.location.origin });
         })
         .on("click", ".eruda-csp-rules .eruda-icon-save", (e) => {
           this._container.notify("CSP Rules config saved");
           e.stopPropagation();
-          const data = {
-            action: "cspRule",
-            payload: {
-              origin: window.location.origin,
-            },
+          const payload = {
+            origin: window.location.origin,
           };
           const rule = this._$el.find("li.eruda-csp-rules > div").text() || "";
           if (rule.length > 0) {
-            data.payload.data = rule;
+            payload.data = rule;
           }
-          ChromeXt(JSON.stringify(data));
+          ChromeXt.dispatch("cspRule", payload);
         })
         .on("click", ".eruda-userscripts .eruda-script", (e) => {
           const sources = this._container.get("sources");
@@ -260,9 +242,7 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
           Array.from(e.curTarget.files).forEach((f) => {
             if (f.name.endsWith(".user.js")) {
               f.text().then((s) => {
-                ChromeXt(
-                  JSON.stringify({ action: "installScript", payload: s })
-                );
+                ChromeXt.dispatch("installScript", s);
                 this._container.notify("Installing " + f.name);
               });
             } else {
@@ -356,12 +336,10 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
       "Eruda is blocked, it is advisable to use Content-Security-Policy to block JavaScripts on this website.\n\nDo you want to proceed in this way (current page will be reloaded)?\n\nNote: To remove the Content-Security-Policy rule, set it to be empty in the eruda Info panel."
     )
   ) {
-    ChromeXt(
-      JSON.stringify({
-        action: "cspRule",
-        payload: { origin: window.location.origin, data: cspRules },
-      })
-    );
+    ChromeXt.dispatch("cspRule", {
+      origin: window.location.origin,
+      data: cspRules,
+    });
     window.location.reload();
   }
 }

@@ -11,20 +11,15 @@ window.addEventListener("load", () => {
 class WebSocket {
   constructor() {
     this.url = arguments[0];
-    this.targetTabId = this.url.split("/").pop();
-    this.detail = {
-      action: "websocket",
-      payload: { targetTabId: this.targetTabId },
-    };
-    const detail = this.detail;
-    ChromeXt(JSON.stringify(detail));
+    this.payload = { targetTabId: this.url.split("/").pop() };
+    ChromeXt.dispatch("websocket", this.payload);
     this.sessions = new Map();
 
     window.addEventListener("inspect_pages", (e) => {
-      detail.payload.tabId = e.detail.find(
+      this.payload.tabId = e.detail.find(
         (info) => info.url == window.location.href
       ).id;
-      ChromeXt(JSON.stringify(detail));
+      ChromeXt.dispatch("websocket", this.payload);
     });
 
     window.addEventListener("websocket", (e) => {
@@ -48,7 +43,7 @@ class WebSocket {
   }
 
   send() {
-    this.detail.payload.message = arguments[0];
-    ChromeXt(JSON.stringify(this.detail));
+    this.payload.message = arguments[0];
+    ChromeXt.dispatch("websocket", this.payload);
   }
 }

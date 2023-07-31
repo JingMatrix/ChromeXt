@@ -9,15 +9,14 @@ import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.ResourceMerge
 
 object GM {
-
-  val localScript: Map<String, String>
+  private val localScript: Map<String, String>
 
   init {
     val ctx = Chrome.getContext()
     ResourceMerge.enrich(ctx)
     localScript =
         ctx.assets
-            .open("local_script.js")
+            .open("GM.js")
             .bufferedReader()
             .use { it.readText() }
             .split("// Kotlin separator\n\n")
@@ -96,32 +95,27 @@ object GM {
   }
 }
 
-const val openEruda =
-    """
-try {
-  if (eruda._isInit) {
-    eruda.hide();
-    eruda.destroy();
-  } else {
-    eruda.init();
-    eruda._localConfig();
-    eruda.show();
-  }
-} catch (e) {
-  globalThis.ChromeXt(JSON.stringify({ action: 'loadEruda', payload: '' }));
-}"""
+object Local {
 
-const val cspRule =
-    """
-if (ChromeXt.cspRules) {
-  const meta = document.createElement('meta');
-  meta.setAttribute('http-equiv', 'Content-Security-Policy');
-  meta.setAttribute('content', ChromeXt.cspRules);
-  try {
-    document.head.append(meta);
-  } catch {
-    setTimeout(() => {
-      document.head.append(meta);
-    }, 0);
+  val promptInstallUserScript: String
+  val customizeDevTool: String
+  val initChromeXt: String
+  val openEruda: String
+  val cspRule: String
+
+  init {
+    val ctx = Chrome.getContext()
+    ResourceMerge.enrich(ctx)
+    promptInstallUserScript = ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
+    customizeDevTool = ctx.assets.open("devtools.js").bufferedReader().use { it.readText() }
+    val localScript =
+        ctx.assets
+            .open("scripts.js")
+            .bufferedReader()
+            .use { it.readText() }
+            .split("// Kotlin separator\n\n")
+    initChromeXt = localScript[0]
+    openEruda = localScript[1]
+    cspRule = localScript[2]
   }
-}"""
+}

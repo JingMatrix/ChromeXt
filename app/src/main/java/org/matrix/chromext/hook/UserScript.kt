@@ -6,24 +6,14 @@ import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 import org.matrix.chromext.devtools.DEV_FRONT_END
 import org.matrix.chromext.proxy.UserScriptProxy
+import org.matrix.chromext.script.Local
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
-import org.matrix.chromext.utils.ResourceMerge
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
 
 object UserScriptHook : BaseHook() {
-
-  val promptInstallUserScript: String
-  val customizeDevTool: String
-
-  init {
-    val ctx = Chrome.getContext()
-    ResourceMerge.enrich(ctx)
-    promptInstallUserScript = ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
-    customizeDevTool = ctx.assets.open("devtools.js").bufferedReader().use { it.readText() }
-  }
 
   override fun init() {
 
@@ -45,11 +35,11 @@ object UserScriptHook : BaseHook() {
           if (url.startsWith("chrome")) {
             return@hookAfter
           }
-          proxy.evaluateJavascript("globalThis.ChromeXt=console.debug.bind(console);")
+          proxy.evaluateJavascript(Local.initChromeXt)
           if (url.endsWith(".user.js")) {
-            proxy.evaluateJavascript(promptInstallUserScript)
+            proxy.evaluateJavascript(Local.promptInstallUserScript)
           } else if (url.startsWith(DEV_FRONT_END)) {
-            proxy.evaluateJavascript(customizeDevTool)
+            proxy.evaluateJavascript(Local.customizeDevTool)
           } else if (!url.endsWith("/ChromeXt/")) {
             thread {
               val origin = proxy.parseOrigin(url)

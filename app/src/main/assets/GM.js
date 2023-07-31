@@ -126,12 +126,7 @@ function scriptStorage(data) {
   if (broadcast) {
     window.dispatchEvent(new CustomEvent("scriptStorage", { detail: payload }));
   }
-  ChromeXt(
-    JSON.stringify({
-      action: "scriptStorage",
-      payload,
-    })
-  );
+  ChromeXt.dispatch("scriptStorage", payload);
 }
 
 function promiseListenerFactory(
@@ -182,12 +177,7 @@ function runScript(meta) {
             detail: { uuid, id: GM_info.script.id },
           });
           script += `\nwindow.dispatchEvent(new CustomEvent('unsafe_eval', ${detail}));`;
-          ChromeXt(
-            JSON.stringify({
-              action: "unsafeEval",
-              payload: script,
-            })
-          );
+          ChromeXt.dispatch("unsafeEval", script);
           await promiseListenerFactory("unsafe_eval", uuid);
         }
       }
@@ -217,9 +207,6 @@ function runScript(meta) {
   GM_info.uuid = Math.random();
   GM_info.scriptHandler = "ChromeXt";
   GM_info.version = "3.5.0";
-  if (typeof ChromeXt.scripts == "undefined") {
-    ChromeXt.scripts = [];
-  }
   ChromeXt.scripts.push(GM_info);
 }
 
@@ -326,9 +313,6 @@ function GM_openInTab(url, options) {
 // Kotlin separator
 
 function GM_registerMenuCommand(title, listener, _accessKey = "Dummy") {
-  if (typeof ChromeXt.commands == "undefined") {
-    ChromeXt.commands = [];
-  }
   const index = ChromeXt.commands.findIndex(
     (e) => e.id == GM_info.script.id && e.title == title
   );
@@ -437,12 +421,7 @@ function GM_xmlhttpRequest(details) {
     details.headers["User-Agent"] = window.navigator.userAgent;
   }
 
-  ChromeXt(
-    JSON.stringify({
-      action: "xmlhttpRequest",
-      payload: { id: GM_info.script.id, request: details, uuid },
-    })
-  );
+  ChromeXt.dispatch("xmlhttpRequest", { id: GM_info.script.id, request: details, uuid });
 
   const tmpListener = (e) => {
     if (e.detail.id == GM_info.script.id && e.detail.uuid == uuid) {
@@ -511,12 +490,7 @@ function GM_xmlhttpRequest(details) {
 
   return {
     abort: () => {
-      ChromeXt(
-        JSON.stringify({
-          action: "xmlhttpRequest",
-          payload: { uuid, abort: true },
-        })
-      );
+      ChromeXt.dispatch("xmlhttpRequest", { uuid, abort: true });
     },
   };
 }
