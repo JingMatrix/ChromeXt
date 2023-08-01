@@ -4,6 +4,7 @@ if (typeof ChromeXt == "undefined") {
     scripts = [];
     commands = [];
     cspRules = [];
+    filters = [];
     post(event, detail) {
       this.dispatchEvent(new CustomEvent(event, { detail }));
     }
@@ -48,4 +49,32 @@ if (ChromeXt.cspRules.length > 0) {
     }
   });
 }
+// Kotlin separator
+
+window.addEventListener("DOMContentLoaded", () => {
+  function GM_addStyle(css) {
+    const style = document.createElement("style");
+    style.setAttribute("type", "text/css");
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
+
+  if (ChromeXt.filters.length > 0) {
+    filter = ChromeXt.filters.filter((item) => item.trim() != "").join(", ");
+    try {
+      GM_addStyle(filter + " {display: none !important;}");
+    } finally {
+      window.addEventListener("load", () => {
+        document.querySelectorAll(filter).forEach((node) => {
+          node.hidden = true;
+          node.style.display = "none";
+        });
+      });
+    }
+  }
+
+  document
+    .querySelectorAll("amp-ad,amp-embed,amp-sticky-ad")
+    .forEach((node) => node.remove());
+});
 // Kotlin separator

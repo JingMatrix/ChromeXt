@@ -14,7 +14,6 @@ object ScriptDbManager {
   val cosmeticFilters: MutableMap<String, String>
   val userAgents: MutableMap<String, String>
   val cspRules: MutableMap<String, String>
-  val cosmeticFilter: String
 
   init {
     val ctx = Chrome.getContext()
@@ -30,8 +29,6 @@ object ScriptDbManager {
     cspRules =
         ctx.getSharedPreferences("CSPRule", Context.MODE_PRIVATE).getAll()
             as MutableMap<String, String>
-
-    cosmeticFilter = ctx.assets.open("cosmetic_filter.js").bufferedReader().use { it.readText() }
   }
 
   fun insert(vararg script: Script) {
@@ -66,7 +63,8 @@ object ScriptDbManager {
       codes.add("ChromeXt.cspRules.push(...`${cspRules.get(origin)}`.split(';;'));${Local.cspRule}")
     }
     if (cosmeticFilters.contains(origin)) {
-      codes.add("ChromeXt.filters=`${cosmeticFilters.get(origin)}`;${cosmeticFilter}")
+      codes.add(
+          "ChromeXt.filters.push(...JSON.parse(`${cosmeticFilters.get(origin)}`));${Local.cosmeticFilter}")
     }
     if (userAgents.contains(origin)) {
       codes.add(

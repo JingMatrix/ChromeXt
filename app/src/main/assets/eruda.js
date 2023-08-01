@@ -12,9 +12,9 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
     parseFilter(filter) {
       if (typeof filter == "string") {
         filter = JSON.parse(filter);
-        if (Array.isArray(filter)) {
-          this.#filter = filter;
-        }
+      }
+      if (Array.isArray(filter)) {
+        this.#filter = filter;
       }
     }
     add(rule) {

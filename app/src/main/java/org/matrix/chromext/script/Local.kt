@@ -102,6 +102,7 @@ object Local {
   val initChromeXt: String
   val openEruda: String
   val cspRule: String
+  val cosmeticFilter: String
 
   init {
     val ctx = Chrome.getContext()
@@ -122,5 +123,6 @@ object Local {
     initChromeXt = localScript[0]
     openEruda = localScript[1]
     cspRule = localScript[2]
+    cosmeticFilter = localScript[3]
   }
 }
