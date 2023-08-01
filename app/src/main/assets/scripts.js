@@ -1,10 +1,76 @@
 if (typeof ChromeXt == "undefined") {
+  class SyncArray extends Array {
+    #name;
+    #sync;
+    #freeze;
+    #inited = false;
+    constructor(name, sync = true, freeze = false) {
+      if (
+        typeof name == "string" &&
+        typeof sync == "boolean" &&
+        typeof freeze == "boolean"
+      ) {
+        super();
+        this.#name = name;
+        this.#sync = sync;
+        this.#freeze = freeze;
+        this.#inited = this.#freeze;
+      } else {
+        super(...arguments);
+        this.#inited = true;
+        this.#sync = false;
+        this.#freeze = false;
+      }
+    }
+
+    init(value) {
+      if (this.#inited || this.length > 0) {
+        throw new Error(
+          `Array ${this.#name} is already initialized with elements`
+        );
+      } else {
+        if (typeof value == "string") {
+          value == JSON.parse(value);
+        }
+        super.push(...value);
+      }
+    }
+
+    sync(data) {
+      if (this.#sync && typeof this.#name == "string") {
+        const payload = { origin: window.location.origin, name: this.#name };
+        if (typeof data == "object" && Array.isArray(data)) {
+          payload.data = data;
+        } else if (this.length > 0) {
+          payload.data = new Array(...this);
+        }
+        ChromeXt.dispatch("syncData", payload);
+      }
+    }
+
+    pop() {
+      super.pop.apply(this, arguments);
+      this.sync();
+    }
+    push() {
+      super.push.apply(this, arguments);
+      this.sync();
+    }
+    fill() {
+      super.fill.apply(this, arguments);
+      this.sync();
+    }
+    splice() {
+      super.splice.apply(this, arguments);
+      this.sync();
+    }
+  }
   class ChromeXtTarget extends EventTarget {
     #debug = console.debug.bind(console);
-    scripts = [];
-    commands = [];
-    cspRules = [];
-    filters = [];
+    scripts = new SyncArray("scripts", false, true);
+    commands = new SyncArray("commands", false, false);
+    cspRules = new SyncArray("cspRules");
+    filters = new SyncArray("filters");
     post(event, detail) {
       this.dispatchEvent(new CustomEvent(event, { detail }));
     }
@@ -60,7 +126,9 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   if (ChromeXt.filters.length > 0) {
-    filter = ChromeXt.filters.filter((item) => item.trim() != "").join(", ");
+    filter = ChromeXt.filters
+      .filter((item) => item.trim().length > 0)
+      .join(", ");
     try {
       GM_addStyle(filter + " {display: none !important;}");
     } finally {

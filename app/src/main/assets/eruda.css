@@ -24,7 +24,7 @@
   font-weight: bold;
 }
 li > h2 > span.eruda-icon-copy:before {
-	transform: translateY(-12px);
+  transform: translateY(-12px);
 }
 .eruda-icon-delete:before {
   content: "X";
@@ -127,6 +127,9 @@ div.eruda-btn.eruda-search {
   padding: 4px 5px;
   margin: 0;
   float: right;
+}
+#eruda-info .eruda-csp-rules > div.eruda-content {
+  white-space: pre-wrap;
 }
 #eruda-info .eruda-user-agent h2,
 #eruda-info .eruda-csp-rules h2 {

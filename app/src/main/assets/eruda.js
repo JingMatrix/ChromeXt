@@ -1,20 +1,9 @@
 if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
   class Filter {
-    #filter = [];
-    constructor() {}
+    #filter = new Array(...ChromeXt.filters);
     #write() {
-      let payload = { origin: window.location.origin };
       if (this.#filter.length > 0) {
-        payload.data = this.#filter;
-      }
-      ChromeXt.dispatch("cosmeticFilter", payload);
-    }
-    parseFilter(filter) {
-      if (typeof filter == "string") {
-        filter = JSON.parse(filter);
-      }
-      if (Array.isArray(filter)) {
-        this.#filter = filter;
+        ChromeXt.filters.sync(this.#filter);
       }
     }
     add(rule) {
@@ -22,7 +11,7 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
         rule = rule.trim();
         if (rule != "" && !this.#filter.includes(rule)) {
           this.#filter.push(rule);
-          this.#write();
+          ChromeXt.filters.push(rule);
         }
       }
     }
@@ -49,7 +38,6 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
   class elements extends eruda.Elements {
     constructor() {
       super();
-      eruda._filter.parseFilter(ChromeXt.filters);
       this._deleteNode = () => {
         const node = this._curNode;
         const selector = generateQuerySelector(node);
@@ -177,17 +165,15 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
             "title"
           )}">User CSP Rules<span class="${c(
             "icon-save save"
-          )}"></span></h2><div class="${c(
-            "content"
-          )}" contenteditable="true">${ChromeXt.cspRules.join(
-            ";\t"
-          )}</div></li><li class="${c("userscripts")}"><h2 class="${c(
+          )}"></span></h2><div class="${c("content")}" contenteditable="true">${
+            ChromeXt.cspRules.join(" | ") + " | "
+          }</div></li><li class="${c("userscripts")}"><h2 class="${c(
             "title"
           )}">UserScripts<span class="${c(
             "icon-add add"
           )}"></span><input type="file" multiple id="new_script" accept="text/javascript" style="display:none"/></h2><div class="${c(
             "content"
-          )}">${(ChromeXt.scripts || [])
+          )}">${ChromeXt.scripts
             .map(
               (info, index) =>
                 `<span data-index=${index} class="${c("script")}">${
@@ -211,14 +197,18 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
         .on("click", ".eruda-user-agent .eruda-icon-save", (e) => {
           this._container.notify("User-Agent config saved");
           e.stopPropagation();
-          ChromeXt.dispatch("userAgent", {
+          ChromeXt.dispatch("syncData", {
             origin: window.location.origin,
+            name: "userAgent",
             data: this._$el.find("li.eruda-user-agent > div").text(),
           });
         })
         .on("click", ".eruda-user-agent .eruda-icon-reset", (_e) => {
           this._container.notify("User-Agent will be restored after refresh");
-          ChromeXt.dispatch("userAgent", { origin: window.location.origin });
+          ChromeXt.dispatch("syncData", {
+            origin: window.location.origin,
+            name: "userAgent",
+          });
         })
         .on("click", ".eruda-csp-rules .eruda-icon-add", (_e) => {
           this._$el.find("li.eruda-csp-rules > h2 > span")[0].className =
@@ -228,17 +218,12 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
         .on("click", ".eruda-csp-rules .eruda-icon-save", (e) => {
           this._container.notify("CSP Rules config saved");
           e.stopPropagation();
-          const payload = {
-            origin: window.location.origin,
-          };
           const rules = this._$el.find("li.eruda-csp-rules > div").text() || "";
-          ChromeXt.dispatch("cspRule", payload);
-          rules.split(";\t").forEach((rule) => {
-            if (rule.length > 0) {
-              payload.data = rule;
-              ChromeXt.dispatch("cspRule", payload);
-            }
-          });
+          ChromeXt.cspRules.sync(
+            rules
+              .split(" | ")
+              .filter((r) => r.length > 0)
+          );
         })
         .on("click", ".eruda-userscripts .eruda-script", (e) => {
           const sources = this._container.get("sources");
@@ -340,10 +325,7 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
     ) &&
     !ChromeXt.cspRules.includes(cspRule)
   ) {
-    ChromeXt.dispatch("cspRule", {
-      origin: window.location.origin,
-      data: cspRule,
-    });
+    ChromeXt.cspRules.push(cspRule);
     window.location.reload();
   }
 }
