@@ -208,6 +208,7 @@ function runScript(meta) {
   GM_info.uuid = Math.random();
   GM_info.scriptHandler = "ChromeXt";
   GM_info.version = "3.5.0";
+  Object.freeze(GM_info.script);
   Object.freeze(GM_info);
   ChromeXt.scripts.push(GM_info);
 }
@@ -333,9 +334,11 @@ function GM_registerMenuCommand(title, listener, _accessKey = "Dummy") {
 // Kotlin separator
 
 function GM_addValueChangeListener(key, listener) {
-  const index = GM_info.valueListener.findIndex((e) => e.key == key);
+  const index = GM_info.valueListener.findIndex(
+    (e) => e.key == key && e.listener == listener
+  );
   if (index != -1) {
-    GM_info.valueListener[index].listener = listener;
+    GM_info.valueListener[index].enabled = true;
     return index;
   }
   GM_info.valueListener.push({ key, listener, enabled: true });
