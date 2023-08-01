@@ -40,7 +40,9 @@ if (typeof ChromeXt == "undefined") {
       if (this.#sync && typeof this.#name == "string") {
         const payload = { origin: window.location.origin, name: this.#name };
         if (typeof data == "object" && Array.isArray(data)) {
-          payload.data = data;
+          payload.data = this.#freeze
+            ? data.filter((it) => Object.isFrozen(it))
+            : data;
         } else if (this.length > 0) {
           payload.data = new Array(...this);
         }
@@ -53,10 +55,19 @@ if (typeof ChromeXt == "undefined") {
       this.sync();
     }
     push() {
-      super.push.apply(this, arguments);
+      const args = this.#freeze
+        ? Array(...arguments).filter((it) => Object.isFrozen(it))
+        : arguments;
+      super.push.apply(this, args);
       this.sync();
     }
     fill() {
+      if (
+        this.#freeze &&
+        arguments.length > 1 &&
+        !Object.isFrozen(arguments[0])
+      )
+        return;
       super.fill.apply(this, arguments);
       this.sync();
     }
@@ -80,6 +91,7 @@ if (typeof ChromeXt == "undefined") {
   }
   Object.defineProperty(globalThis, "ChromeXt", {
     value: new ChromeXtTarget(),
+    enumerable: true,
   });
   Object.freeze(ChromeXt);
 }

@@ -49,6 +49,9 @@ function GM_bootstrap() {
     };
   }
 
+  if (meta.grants.includes("GM.ChromeXt")) {
+    GM.ChromeXt = LockedChromeXt.unlock(key);
+  }
   if (
     meta.grants.includes("GM_setValue") ||
     meta.grants.includes("GM_listValues")
@@ -60,7 +63,7 @@ function GM_bootstrap() {
     meta.grants.includes("GM_getValue") ||
     meta.grants.includes("GM.getValue")
   ) {
-    ChromeXt.addEventListener("scriptStorage", (e) => {
+    LockedChromeXt.unlock(key).addEventListener("scriptStorage", (e) => {
       if (e.detail.id != GM_info.script.id) {
         return;
       }
@@ -124,9 +127,9 @@ function scriptStorage(data) {
     broadcast,
   };
   if (broadcast) {
-    ChromeXt.post("scriptStorage", payload);
+    LockedChromeXt.unlock(key).post("scriptStorage", payload);
   }
-  ChromeXt.dispatch("scriptStorage", payload);
+  LockedChromeXt.unlock(key).dispatch("scriptStorage", payload);
 }
 
 function promiseListenerFactory(
@@ -142,12 +145,12 @@ function promiseListenerFactory(
         e.stopImmediatePropagation();
         const data = e.detail.data || null;
         if (closeCondition(data)) {
-          ChromeXt.removeEventListener(event, tmpListener);
+          LockedChromeXt.unlock(key).removeEventListener(event, tmpListener);
           listener(data, resolve, reject);
         }
       }
     };
-    ChromeXt.addEventListener(event, tmpListener);
+    LockedChromeXt.unlock(key).addEventListener(event, tmpListener);
   });
 }
 
@@ -178,7 +181,7 @@ function runScript(meta) {
             id: GM_info.script.id,
           });
           script += `\nChromeXt.post('unsafe_eval', ${detail});`;
-          ChromeXt.dispatch("unsafeEval", script);
+          LockedChromeXt.unlock(key).dispatch("unsafeEval", script);
           await promiseListenerFactory("unsafe_eval", uuid);
         }
       }
@@ -210,23 +213,79 @@ function runScript(meta) {
   GM_info.version = "3.5.0";
   Object.freeze(GM_info.script);
   Object.freeze(GM_info);
-  ChromeXt.scripts.push(GM_info);
+  LockedChromeXt.unlock(key).scripts.push(GM_info);
 }
 
-const globalThis =
-  typeof unsafeWindow != "undefined"
-    ? unsafeWindow
-    : new Proxy(window, {
-        get(target, prop) {
-          if (prop.startsWith("_")) {
-            return undefined;
-          } else {
-            let value = target[prop];
-            return typeof value === "function" ? value.bind(target) : value;
-          }
-        },
-      });
-
+// Save a reference to ChromeXt and block its access from the script context
+const key = Symbol("ChromeXt");
+class ChromeXtLock {
+  #ChromeXt;
+  #key;
+  constructor(key) {
+    if (typeof key == "symbol") {
+      this.#ChromeXt = ChromeXt;
+      this.#key = key;
+    } else {
+      throw new Error("Invalid key to construct a lock");
+    }
+  }
+  unlock() {
+    if (arguments[0] == this.#key) {
+      return this.#ChromeXt;
+    } else {
+      return undefined;
+    }
+  }
+}
+const LockedChromeXt = new ChromeXtLock(key);
+const proxiedWindow = {};
+for (const p of Object.keys(window)) {
+  if (p == "ChromeXt") break;
+  const v = window[p];
+  if (v == window) continue;
+  proxiedWindow[p] = typeof v == "function" ? v.bind(window) : v;
+}
+Object.keys(EventTarget.prototype).forEach(
+  (f) => (proxiedWindow[f] = window[f].bind(window))
+);
+const globalThis = new Proxy(
+  typeof unsafeWindow != "undefined" ? unsafeWindow : window,
+  {
+    set(_target, prop, value) {
+      const allowUnsafeWindow = GM_info.script.grants.includes("unsafeWindow");
+      if (allowUnsafeWindow) {
+        Reflect.set(...arguments);
+      } else {
+        proxiedWindow[prop] = value;
+      }
+    },
+    get(target, prop, receiver) {
+      if (
+        target[prop] == target ||
+        (typeof target[prop] == "object" &&
+          typeof target[prop].ChromeXt == "object" &&
+          target[prop].ChromeXt.__proto__.name == "ChromeXtTarget")
+      )
+        return receiver;
+      const allowUnsafeWindow = GM_info.script.grants.includes("unsafeWindow");
+      const allowChromeXt = GM_info.script.grants.includes("GM.ChromeXt");
+      if (prop == "ChromeXt" && !allowChromeXt) {
+        return undefined;
+      }
+      if (
+        allowUnsafeWindow ||
+        (typeof target[prop] != "undefined" &&
+          !target.propertyIsEnumerable(prop))
+      ) {
+		const v = target[prop];
+        return typeof v == "function" ? v.bind(window) : v;
+      } else {
+        return proxiedWindow[prop];
+      }
+    },
+  }
+);
+delete ChromeXtLock;
 // Kotlin separator
 
 function GM_addStyle(css) {
@@ -250,7 +309,7 @@ function GM_removeValueChangeListener(index) {
 // Kotlin separator
 
 function GM_unregisterMenuCommand(index) {
-  ChromeXt.commands[index].enabled = false;
+  LockedChromeXt.unlock(key).commands[index].enabled = false;
 }
 // Kotlin separator
 
@@ -316,20 +375,20 @@ function GM_openInTab(url, options) {
 // Kotlin separator
 
 function GM_registerMenuCommand(title, listener, _accessKey = "Dummy") {
-  const index = ChromeXt.commands.findIndex(
+  const index = LockedChromeXt.unlock(key).commands.findIndex(
     (e) => e.id == GM_info.script.id && e.title == title
   );
   if (index != -1) {
-    ChromeXt.commands[index].listener = listener;
+    LockedChromeXt.unlock(key).commands[index].listener = listener;
     return index;
   }
-  ChromeXt.commands.push({
+  LockedChromeXt.unlock(key).commands.push({
     id: GM_info.script.id,
     title,
     listener,
     enabled: true,
   });
-  return ChromeXt.commands.length - 1;
+  return LockedChromeXt.unlock(key).commands.length - 1;
 }
 // Kotlin separator
 
@@ -426,7 +485,7 @@ function GM_xmlhttpRequest(details) {
     details.headers["User-Agent"] = window.navigator.userAgent;
   }
 
-  ChromeXt.dispatch("xmlhttpRequest", {
+  LockedChromeXt.unlock(key).dispatch("xmlhttpRequest", {
     id: GM_info.script.id,
     request: details,
     uuid,
@@ -490,16 +549,22 @@ function GM_xmlhttpRequest(details) {
             details["on" + e.detail.type](data);
           }
           if (["loadend", "error"].includes(e.detail.type)) {
-            ChromeXt.removeEventListener("xmlhttpRequest", tmpListener);
+            LockedChromeXt.unlock(key).removeEventListener(
+              "xmlhttpRequest",
+              tmpListener
+            );
           }
       }
     }
   };
-  ChromeXt.addEventListener("xmlhttpRequest", tmpListener);
+  LockedChromeXt.unlock(key).addEventListener("xmlhttpRequest", tmpListener);
 
   return {
     abort: () => {
-      ChromeXt.dispatch("xmlhttpRequest", { uuid, abort: true });
+      LockedChromeXt.unlock(key).dispatch("xmlhttpRequest", {
+        uuid,
+        abort: true,
+      });
     },
   };
 }

@@ -34,6 +34,7 @@ object GM {
     script.grant.forEach {
       when (it) {
         "GM_info" -> return@forEach
+        "GM.ChromeXt" -> return@forEach
         "unsafeWindow" -> grants += "const unsafeWindow = window;"
         "GM_log" -> grants += "const GM_log = console.log.bind(console);"
         else ->
@@ -83,7 +84,7 @@ object GM {
             mapOf("scriptMetaStr" to script.meta, "script" to JSONObject().put("id", script.id)))
     val codes =
         mutableListOf(
-            "(() => { const GM = {}; const GM_info = ${GM_info}; GM_info.script.code = () => {${code}};\n${grants}GM_bootstrap();})();")
+            "(() => { const GM = {}; const GM_info = ${GM_info}; GM_info.script.code = (key=null,window=globalThis,ChromeXt=GM.ChromeXt) => {${code}};\n${grants}GM_bootstrap();})();")
     if (script.storage != null) {
       val storage_info =
           JSONObject(mapOf("id" to script.id, "data" to JSONObject().put("init", script.storage!!)))
