@@ -4,6 +4,7 @@ function GM_bootstrap() {
   if (typeof meta.code != "function") {
     return;
   }
+  meta["inject-into"] = "page";
   let match;
   while ((match = row.exec(GM_info.scriptMetaStr.trim())) !== null) {
     if (meta[match[1]]) {
@@ -11,22 +12,27 @@ function GM_bootstrap() {
       meta[match[1]].push(match[2]);
     } else meta[match[1]] = match[2];
   }
-  meta.includes = meta.include || [];
-  meta.matches = meta.match || [];
-  meta.excludes = meta.exclude || [];
-  meta.requires =
-    typeof meta.require == "string" ? [meta.require] : meta.require || [];
-  meta.grants =
-    typeof meta.grants == "string" ? [meta.grant] : meta.grant || [];
+  for (const it of [
+    "include",
+    "match",
+    "exlcude",
+    "require",
+    "grant",
+    "connect",
+  ]) {
+    const plural = it.endsWith("h") ? it + "es" : it + "s";
+    meta[plural] = typeof meta[it] == "string" ? [meta[it]] : meta[it] || [];
+    Object.freeze(meta[plural]);
+    delete meta[it];
+  }
+  delete meta.resource;
+
+  GM_info.allowWindow =
+    meta.grants.includes("unsafeWindow") || meta["inject-into"] == "page";
+  if (GM_info.allowWindow) unsafeWindow = globalThis;
   meta["run-at"] = Array.isArray(meta["run-at"])
     ? meta["run-at"][0]
     : meta["run-at"] || "document-idle";
-  delete meta.include;
-  delete meta.match;
-  delete meta.exclude;
-  delete meta.require;
-  delete meta.resource;
-  delete meta.grant;
 
   if (
     meta.grants.includes("GM.xmlHttpRequest") &&
@@ -238,53 +244,50 @@ class ChromeXtLock {
   }
 }
 const LockedChromeXt = new ChromeXtLock(key);
-const proxiedWindow = {};
+let unsafeWindow = undefined;
+const handler = {
+  window: {},
+  set(_target, prop, value) {
+    if (GM_info.allowWindow) {
+      Reflect.set(...arguments);
+    } else {
+      this.window[prop] = value;
+    }
+  },
+  get(target, prop, receiver) {
+    if (
+      target[prop] == target ||
+      (typeof target[prop] == "object" &&
+        typeof target[prop].ChromeXt == "object" &&
+        target[prop].ChromeXt.__proto__.name == "ChromeXtTarget")
+    )
+      return receiver;
+    const allowChromeXt = GM_info.script.grants.includes("GM.ChromeXt");
+    if (prop == "ChromeXt" && !allowChromeXt) {
+      return undefined;
+    }
+    if (
+      GM_info.allowWindow ||
+      (typeof target[prop] != "undefined" && !target.propertyIsEnumerable(prop))
+    ) {
+      const v = target[prop];
+      return typeof v == "function" ? v.bind(window) : v;
+    } else {
+      return this.window[prop];
+    }
+  },
+};
 for (const p of Object.keys(window)) {
   if (p == "ChromeXt") break;
   const v = window[p];
   if (v == window) continue;
-  proxiedWindow[p] = typeof v == "function" ? v.bind(window) : v;
+  handler.window[p] = typeof v == "function" ? v.bind(window) : v;
 }
 Object.keys(EventTarget.prototype).forEach(
-  (f) => (proxiedWindow[f] = window[f].bind(window))
+  (f) => (handler.window[f] = window[f].bind(window))
 );
-const globalThis = new Proxy(
-  typeof unsafeWindow != "undefined" ? unsafeWindow : window,
-  {
-    set(_target, prop, value) {
-      const allowUnsafeWindow = GM_info.script.grants.includes("unsafeWindow");
-      if (allowUnsafeWindow) {
-        Reflect.set(...arguments);
-      } else {
-        proxiedWindow[prop] = value;
-      }
-    },
-    get(target, prop, receiver) {
-      if (
-        target[prop] == target ||
-        (typeof target[prop] == "object" &&
-          typeof target[prop].ChromeXt == "object" &&
-          target[prop].ChromeXt.__proto__.name == "ChromeXtTarget")
-      )
-        return receiver;
-      const allowUnsafeWindow = GM_info.script.grants.includes("unsafeWindow");
-      const allowChromeXt = GM_info.script.grants.includes("GM.ChromeXt");
-      if (prop == "ChromeXt" && !allowChromeXt) {
-        return undefined;
-      }
-      if (
-        allowUnsafeWindow ||
-        (typeof target[prop] != "undefined" &&
-          !target.propertyIsEnumerable(prop))
-      ) {
-		const v = target[prop];
-        return typeof v == "function" ? v.bind(window) : v;
-      } else {
-        return proxiedWindow[prop];
-      }
-    },
-  }
-);
+const globalThis = new Proxy(window, handler);
+delete handler;
 delete ChromeXtLock;
 // Kotlin separator
 
@@ -448,6 +451,22 @@ function GM_getResourceURL(name) {
 function GM_xmlhttpRequest(details) {
   if (!details.url) {
     throw new Error("GM_xmlhttpRequest requires a URL.");
+  } else {
+    const domain = new URL(details.url).hostname;
+    const connects = GM_info.script.connects;
+    let allowed = false;
+    if (location.hostname.endsWith(domain) && connects.includes("self"))
+      allowed = true;
+    if (connects.includes("*")) allowed = true;
+    if (!allowed) {
+      connects.forEach((it) => {
+        if (it.endsWith(domain)) allowed = true;
+      });
+    }
+    if (!allowed) {
+      console.error("Connection to", url, "is not declared using @connect");
+      return;
+    }
   }
   const uuid = Math.random();
   details.method = details.method ? details.method.toUpperCase() : "GET";
