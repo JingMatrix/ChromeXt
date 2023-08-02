@@ -499,7 +499,9 @@ GM.bootstrap = () => {
               uuid,
               id: GM_info.script.id,
             });
-            script += `\nChromeXt.post('unsafe_eval', ${detail});`;
+            script =
+              script.replace("ChromeXt", "LockedChromeXt") +
+              `\nChromeXt.post('unsafe_eval', ${detail});`;
             LockedChromeXt.unlock(key).dispatch("unsafeEval", script);
             await promiseListenerFactory("unsafe_eval", uuid);
           }
@@ -572,13 +574,10 @@ GM.handler = {
     return value;
   },
   get(target, prop, receiver) {
-    if (
-      target[prop] == target ||
-      (typeof target[prop] == "object" &&
-        typeof target[prop].ChromeXt == "object" &&
-        target[prop].ChromeXt.__proto__.name == "ChromeXtTarget")
-    )
-      return receiver;
+    try {
+      if (target[prop].ChromeXt.__proto__.name == "ChromeXtTarget")
+        return receiver;
+    } catch {}
     const allowChromeXt = GM_info.script.grants.includes("GM.ChromeXt");
     if (prop == "ChromeXt" && !allowChromeXt) {
       return undefined;

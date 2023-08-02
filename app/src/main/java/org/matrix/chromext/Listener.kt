@@ -65,6 +65,7 @@ object Listener {
     runCatching {
           val data = JSONObject(text)
           val action = data.getString("action")
+          if (data.optBoolean("blocked")) throw Error("Blocked Access")
           val payload = data.optString("payload")
           if (checkPermisson(action, currentTab)) {
             val callback = on(action, payload, currentTab)

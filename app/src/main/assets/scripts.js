@@ -56,7 +56,7 @@ if (typeof ChromeXt == "undefined") {
     }
     push() {
       const args = this.#freeze
-        ? Array(...arguments).filter((it) => Object.isFrozen(it))
+        ? Array.from(arguments).filter((it) => Object.isFrozen(it))
         : arguments;
       super.push.apply(this, args);
       this.sync();
@@ -77,7 +77,24 @@ if (typeof ChromeXt == "undefined") {
     }
   }
   class ChromeXtTarget extends EventTarget {
-    #debug = console.debug.bind(console);
+    #debug;
+    constructor() {
+      super();
+      this.#debug = console.debug.bind(console);
+      const self = this;
+      console.debug = function () {
+        let args = Array.from(arguments);
+        try {
+          const data = JSON.parse(args.map((it) => it.toString()).join(" "));
+          if ("action" in data) {
+            data.blocked = true;
+            args = [JSON.stringify(data)];
+            console.warn("Block access to ChromeXt APIs");
+          }
+        } catch {}
+        self.#debug(...args);
+      };
+    }
     scripts = new SyncArray("scripts", false, true);
     commands = new SyncArray("commands", false, false);
     cspRules = new SyncArray("cspRules");
