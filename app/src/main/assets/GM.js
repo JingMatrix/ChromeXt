@@ -1,294 +1,11 @@
-function GM_bootstrap() {
-  const row = /\/\/\s+@(\S+)\s+(.+)/g;
-  const meta = GM_info.script;
-  if (typeof meta.code != "function") {
-    return;
-  }
-  meta["inject-into"] = "page";
-  let match;
-  while ((match = row.exec(GM_info.scriptMetaStr.trim())) !== null) {
-    if (meta[match[1]]) {
-      if (typeof meta[match[1]] == "string") meta[match[1]] = [meta[match[1]]];
-      meta[match[1]].push(match[2]);
-    } else meta[match[1]] = match[2];
-  }
-  for (const it of [
-    "include",
-    "match",
-    "exlcude",
-    "require",
-    "grant",
-    "connect",
-  ]) {
-    const plural = it.endsWith("h") ? it + "es" : it + "s";
-    meta[plural] = typeof meta[it] == "string" ? [meta[it]] : meta[it] || [];
-    Object.freeze(meta[plural]);
-    delete meta[it];
-  }
-  delete meta.resource;
-
-  GM_info.allowWindow =
-    meta.grants.includes("unsafeWindow") || meta["inject-into"] == "page";
-  if (GM_info.allowWindow) unsafeWindow = globalThis;
-  meta["run-at"] = Array.isArray(meta["run-at"])
-    ? meta["run-at"][0]
-    : meta["run-at"] || "document-idle";
-
-  if (
-    meta.grants.includes("GM.xmlHttpRequest") &&
-    meta.grants.includes("GM_xmlhttpRequest")
-  ) {
-    GM.xmlHttpRequest = async (details) => {
-      return await new Promise((resolve, reject) => {
-        const onload = details.onload;
-        const onerror = details.onerror;
-        details.onload = (d) => {
-          if (typeof onload == "function") onload(d);
-          resolve(d);
-        };
-        details.onerror = (e) => {
-          if (typeof onerror == "function") onerror(e);
-          reject(e);
-        };
-        GM_xmlhttpRequest(details);
-      });
-    };
-  }
-
-  if (meta.grants.includes("GM.ChromeXt")) {
-    GM.ChromeXt = LockedChromeXt.unlock(key);
-  }
-  if (
-    meta.grants.includes("GM_setValue") ||
-    meta.grants.includes("GM_listValues")
-  ) {
-    GM_info.storage = {};
-  }
-
-  if (
-    meta.grants.includes("GM_getValue") ||
-    meta.grants.includes("GM.getValue")
-  ) {
-    LockedChromeXt.unlock(key).addEventListener("scriptStorage", (e) => {
-      if (e.detail.id != GM_info.script.id) {
-        return;
-      }
-      e.stopImmediatePropagation();
-      const data = e.detail.data;
-      if ("init" in data) {
-        GM_info.storage = data.init;
-        runScript(meta);
-        return;
-      }
-      if ("key" in data && data.key in GM_info.storage) {
-        if (e.detail.uuid == GM_info.uuid && e.detail.broadcast != true) return;
-        GM_info.valueListener.forEach((v) => {
-          if (v.enabled == true && v.key == data.key) {
-            v.listener(
-              GM_info.storage[data.key] || null,
-              data.value,
-              e.detail.uuid != GM_info.uuid
-            );
-          }
-        });
-      }
-      GM_info.storage[data.key] = data.value;
-    });
-    GM_info.valueListener = [];
-
-    const valueAsked = [];
-    GM.getValue = async function (key) {
-      const id = Math.random();
-      if (!valueAsked.includes(key)) {
-        valueAsked.push(key);
-        return GM_info.storage[key];
-      }
-      scriptStorage({ key, id, broadcast: false });
-      return await promiseListenerFactory(
-        "scriptSyncValue",
-        GM_info.uuid,
-        GM_info.script.id,
-        (data, resolve, _reject) => {
-          GM_info.storage[key] = data.value;
-          resolve(data.value);
-        },
-        (data) => data.id == id && data.key == key
-      );
-    };
-  } else {
-    runScript(meta);
-  }
-}
-
-function scriptStorage(data) {
-  let broadcast = GM_info.script.grants.includes("GM_addValueChangeListener");
-  if ("broadcast" in data && !data.broadcast) {
-    broadcast = false;
-    delete data.broadcast;
-  }
-  let payload = {
-    id: GM_info.script.id,
-    data,
-    uuid: GM_info.uuid,
-    broadcast,
-  };
-  if (broadcast) {
-    LockedChromeXt.unlock(key).post("scriptStorage", payload);
-  }
-  LockedChromeXt.unlock(key).dispatch("scriptStorage", payload);
-}
-
-function promiseListenerFactory(
-  event,
-  uuid,
-  id = GM_info.script.id,
-  listener = (_data, resolve, _reject) => resolve(true),
-  closeCondition = () => true
-) {
-  return new Promise((resolve, reject) => {
-    const tmpListener = (e) => {
-      if (e.detail.id == id && e.detail.uuid == uuid) {
-        e.stopImmediatePropagation();
-        const data = e.detail.data || null;
-        if (closeCondition(data)) {
-          LockedChromeXt.unlock(key).removeEventListener(event, tmpListener);
-          listener(data, resolve, reject);
-        }
-      }
-    };
-    LockedChromeXt.unlock(key).addEventListener(event, tmpListener);
-  });
-}
-
-function runScript(meta) {
-  if (meta.requires.length > 0) {
-    meta.sync_code = meta.code;
-    meta.code = async () => {
-      for (const url of meta.requires) {
-        let script;
-        try {
-          script = await (await fetch(url)).text();
-        } catch {
-          script = await new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-              url,
-              onload: (res) => resolve(res.responseText),
-              onerror: (e) => reject(e),
-              ontimeout: (e) => reject(e),
-            });
-          });
-        }
-        try {
-          new Function(script)();
-        } catch {
-          const uuid = Math.random();
-          const detail = JSON.stringify({
-            uuid,
-            id: GM_info.script.id,
-          });
-          script += `\nChromeXt.post('unsafe_eval', ${detail});`;
-          LockedChromeXt.unlock(key).dispatch("unsafeEval", script);
-          await promiseListenerFactory("unsafe_eval", uuid);
-        }
-      }
-      meta.sync_code();
-    };
-  }
-
-  switch (meta["run-at"]) {
-    case "document-start":
-      meta.code();
-      break;
-    case "document-end":
-      if (document.readyState != "loading") {
-        meta.code();
-      } else {
-        window.addEventListener("DOMContentLoaded", meta.code);
-      }
-      break;
-    default:
-      if (document.readyState == "complete") {
-        meta.code();
-      } else {
-        window.addEventListener("load", meta.code);
-      }
-  }
-
-  GM_info.uuid = Math.random();
-  GM_info.scriptHandler = "ChromeXt";
-  GM_info.version = "3.5.0";
-  Object.freeze(GM_info.script);
-  Object.freeze(GM_info);
-  LockedChromeXt.unlock(key).scripts.push(GM_info);
-}
-
-// Save a reference to ChromeXt and block its access from the script context
-const key = Symbol("ChromeXt");
-class ChromeXtLock {
-  #ChromeXt;
-  #key;
-  constructor(key) {
-    if (typeof key == "symbol") {
-      this.#ChromeXt = ChromeXt;
-      this.#key = key;
-    } else {
-      throw new Error("Invalid key to construct a lock");
-    }
-  }
-  unlock() {
-    if (arguments[0] == this.#key) {
-      return this.#ChromeXt;
-    } else {
-      return undefined;
-    }
-  }
-}
-const LockedChromeXt = new ChromeXtLock(key);
-let unsafeWindow = undefined;
-const handler = {
-  window: {},
-  set(_target, prop, value) {
-    if (GM_info.allowWindow) {
-      Reflect.set(...arguments);
-    } else {
-      this.window[prop] = value;
-    }
-  },
-  get(target, prop, receiver) {
-    if (
-      target[prop] == target ||
-      (typeof target[prop] == "object" &&
-        typeof target[prop].ChromeXt == "object" &&
-        target[prop].ChromeXt.__proto__.name == "ChromeXtTarget")
-    )
-      return receiver;
-    const allowChromeXt = GM_info.script.grants.includes("GM.ChromeXt");
-    if (prop == "ChromeXt" && !allowChromeXt) {
-      return undefined;
-    }
-    if (
-      GM_info.allowWindow ||
-      (typeof target[prop] != "undefined" && !target.propertyIsEnumerable(prop))
-    ) {
-      const v = target[prop];
-      return typeof v == "function" ? v.bind(window) : v;
-    } else {
-      return this.window[prop];
-    }
-  },
-};
-for (const p of Object.keys(window)) {
-  if (p == "ChromeXt") break;
-  const v = window[p];
-  if (v == window) continue;
-  handler.window[p] = typeof v == "function" ? v.bind(window) : v;
-}
-Object.keys(EventTarget.prototype).forEach(
-  (f) => (handler.window[f] = window[f].bind(window))
-);
-const globalThis = new Proxy(window, handler);
-delete handler;
-delete ChromeXtLock;
+const self = globalThis;
+const parent = globalThis;
+const frames = globalThis;
+const top = globalThis;
+// TODO: fix bug: top and frames might be undefined in IIFE context
+GM_info.script.code = startScript;
+Object.freeze(GM_info.script);
+startScript(null, globalThis);
 // Kotlin separator
 
 function GM_addStyle(css) {
@@ -410,14 +127,14 @@ function GM_addValueChangeListener(key, listener) {
 
 function GM_setValue(key, value) {
   GM_info.storage[key] = value;
-  scriptStorage({ key, value });
+  GM.scriptStorage({ key, value });
 }
 // Kotlin separator
 
 function GM_deleteValue(key) {
   if (key in GM_info.storage) {
     delete GM_info.storage[key];
-    scriptStorage({ key });
+    GM.scriptStorage({ key });
   }
 }
 // Kotlin separator
@@ -487,7 +204,11 @@ function GM_xmlhttpRequest(details) {
       case ArrayBuffer:
         details.data = new Uint8Array(details.data);
       case Uint8Array:
-        data = bytesToBase64(data);
+        data = btoa(
+          (binString = Array.from(data, (x) => String.fromCodePoint(x)).join(
+            ""
+          ))
+        );
         break;
       default:
         details.binary = false;
@@ -587,8 +308,295 @@ function GM_xmlhttpRequest(details) {
     },
   };
 }
+// Kotlin separator
 
-function bytesToBase64(bytes) {
-  const binString = Array.from(bytes, (x) => String.fromCodePoint(x)).join("");
-  return btoa(binString);
-}
+GM.bootstrap = () => {
+  delete GM.bootstrap;
+  const row = /\/\/\s+@(\S+)\s+(.+)/g;
+  const meta = GM_info.script;
+  if (typeof meta.code != "function") {
+    return;
+  }
+  let match;
+  while ((match = row.exec(GM_info.scriptMetaStr.trim())) !== null) {
+    if (meta[match[1]]) {
+      if (typeof meta[match[1]] == "string") meta[match[1]] = [meta[match[1]]];
+      meta[match[1]].push(match[2]);
+    } else meta[match[1]] = match[2];
+  }
+  for (const it of [
+    "include",
+    "match",
+    "exlcude",
+    "require",
+    "grant",
+    "connect",
+  ]) {
+    const plural = it.endsWith("h") ? it + "es" : it + "s";
+    meta[plural] = typeof meta[it] == "string" ? [meta[it]] : meta[it] || [];
+    Object.freeze(meta[plural]);
+    delete meta[it];
+  }
+  delete meta.resource;
+
+  GM_info.allowWindow =
+    meta.grants.includes("unsafeWindow") || meta["inject-into"] == "page";
+  if (GM_info.allowWindow) unsafeWindow = globalThis;
+  meta["run-at"] = Array.isArray(meta["run-at"])
+    ? meta["run-at"][0]
+    : meta["run-at"] || "document-idle";
+
+  if (
+    meta.grants.includes("GM.xmlHttpRequest") &&
+    meta.grants.includes("GM_xmlhttpRequest")
+  ) {
+    GM.xmlHttpRequest = async (details) => {
+      return await new Promise((resolve, reject) => {
+        const onload = details.onload;
+        const onerror = details.onerror;
+        details.onload = (d) => {
+          if (typeof onload == "function") onload(d);
+          resolve(d);
+        };
+        details.onerror = (e) => {
+          if (typeof onerror == "function") onerror(e);
+          reject(e);
+        };
+        GM_xmlhttpRequest(details);
+      });
+    };
+  }
+
+  if (meta.grants.includes("GM.ChromeXt")) {
+    GM.ChromeXt = LockedChromeXt.unlock(key);
+  }
+  if (
+    meta.grants.includes("GM_setValue") ||
+    meta.grants.includes("GM_listValues")
+  ) {
+    GM_info.storage = {};
+  }
+
+  if (
+    meta.grants.includes("GM_getValue") ||
+    meta.grants.includes("GM.getValue")
+  ) {
+    GM.scriptStorage = function (data) {
+      const grants = GM_info.script.grants;
+      let broadcast = grants.includes("GM_addValueChangeListener");
+      if ("broadcast" in data && !data.broadcast) {
+        broadcast = false;
+        delete data.broadcast;
+      }
+      let payload = {
+        id: GM_info.script.id,
+        data,
+        uuid: GM_info.uuid,
+        broadcast,
+      };
+      if (broadcast) {
+        LockedChromeXt.unlock(key).post("scriptStorage", payload);
+      }
+      LockedChromeXt.unlock(key).dispatch("scriptStorage", payload);
+    };
+    Object.freeze(GM.scriptStorage);
+
+    LockedChromeXt.unlock(key).addEventListener("scriptStorage", (e) => {
+      if (e.detail.id != GM_info.script.id) {
+        return;
+      }
+      e.stopImmediatePropagation();
+      const data = e.detail.data;
+      if ("init" in data) {
+        GM_info.storage = data.init;
+        runScript(meta);
+        return;
+      }
+      if ("key" in data && data.key in GM_info.storage) {
+        if (e.detail.uuid == GM_info.uuid && e.detail.broadcast != true) return;
+        GM_info.valueListener.forEach((v) => {
+          if (v.enabled == true && v.key == data.key) {
+            v.listener(
+              GM_info.storage[data.key] || null,
+              data.value,
+              e.detail.uuid != GM_info.uuid
+            );
+          }
+        });
+      }
+      GM_info.storage[data.key] = data.value;
+    });
+    GM_info.valueListener = [];
+
+    const valueAsked = [];
+    GM.getValue = async function (key) {
+      const id = Math.random();
+      if (!valueAsked.includes(key)) {
+        valueAsked.push(key);
+        return GM_info.storage[key];
+      }
+      GM.scriptStorage({ key, id, broadcast: false });
+      return await promiseListenerFactory(
+        "scriptSyncValue",
+        GM_info.uuid,
+        GM_info.script.id,
+        (data, resolve, _reject) => {
+          GM_info.storage[key] = data.value;
+          resolve(data.value);
+        },
+        (data) => data.id == id && data.key == key
+      );
+    };
+  } else {
+    runScript(meta);
+  }
+
+  function promiseListenerFactory(
+    event,
+    uuid,
+    id = GM_info.script.id,
+    listener = (_data, resolve, _reject) => resolve(true),
+    closeCondition = () => true
+  ) {
+    return new Promise((resolve, reject) => {
+      const tmpListener = (e) => {
+        if (e.detail.id == id && e.detail.uuid == uuid) {
+          e.stopImmediatePropagation();
+          const data = e.detail.data || null;
+          if (closeCondition(data)) {
+            LockedChromeXt.unlock(key).removeEventListener(event, tmpListener);
+            listener(data, resolve, reject);
+          }
+        }
+      };
+      LockedChromeXt.unlock(key).addEventListener(event, tmpListener);
+    });
+  }
+
+  function runScript(meta) {
+    if (meta.requires.length > 0) {
+      meta.sync_code = meta.code;
+      meta.code = async () => {
+        for (const url of meta.requires) {
+          let script;
+          try {
+            script = await (await fetch(url)).text();
+          } catch {
+            script = await new Promise((resolve, reject) => {
+              GM_xmlhttpRequest({
+                url,
+                onload: (res) => resolve(res.responseText),
+                onerror: (e) => reject(e),
+                ontimeout: (e) => reject(e),
+              });
+            });
+          }
+          try {
+            new Function(script)();
+          } catch {
+            const uuid = Math.random();
+            const detail = JSON.stringify({
+              uuid,
+              id: GM_info.script.id,
+            });
+            script += `\nChromeXt.post('unsafe_eval', ${detail});`;
+            LockedChromeXt.unlock(key).dispatch("unsafeEval", script);
+            await promiseListenerFactory("unsafe_eval", uuid);
+          }
+        }
+        meta.sync_code();
+      };
+    }
+
+    switch (meta["run-at"]) {
+      case "document-start":
+        meta.code();
+        break;
+      case "document-end":
+        if (document.readyState != "loading") {
+          meta.code();
+        } else {
+          window.addEventListener("DOMContentLoaded", meta.code);
+        }
+        break;
+      default:
+        if (document.readyState == "complete") {
+          meta.code();
+        } else {
+          window.addEventListener("load", meta.code);
+        }
+    }
+
+    GM_info.uuid = Math.random();
+    GM_info.scriptHandler = "ChromeXt";
+    GM_info.version = "3.5.0";
+    Object.freeze(GM_info);
+    LockedChromeXt.unlock(key).scripts.push(GM_info);
+  }
+};
+
+const key = Symbol("ChromeXt");
+// Save a reference to ChromeXt and block its access from the script context
+GM.ChromeXtLock = class {
+  #ChromeXt;
+  #key;
+  constructor(key) {
+    if (typeof key == "symbol") {
+      this.#ChromeXt = ChromeXt;
+      this.#key = key;
+    } else {
+      throw new Error("Invalid key to construct a lock");
+    }
+  }
+  unlock() {
+    if (arguments[0] == this.#key) {
+      return this.#ChromeXt;
+    } else {
+      return undefined;
+    }
+  }
+};
+const LockedChromeXt = new GM.ChromeXtLock(key);
+let unsafeWindow = undefined;
+GM.handler = {
+  window: {},
+  keys: Object.keys(window),
+  set(target, prop, value) {
+    if (target[prop] != value || target.propertyIsEnumerable(prop)) {
+      if (GM_info.allowWindow) {
+        Reflect.set(...arguments);
+      } else {
+        this.window[prop] = value;
+      }
+    }
+    return value;
+  },
+  get(target, prop, receiver) {
+    if (
+      target[prop] == target ||
+      (typeof target[prop] == "object" &&
+        typeof target[prop].ChromeXt == "object" &&
+        target[prop].ChromeXt.__proto__.name == "ChromeXtTarget")
+    )
+      return receiver;
+    const allowChromeXt = GM_info.script.grants.includes("GM.ChromeXt");
+    if (prop == "ChromeXt" && !allowChromeXt) {
+      return undefined;
+    }
+    if (
+      GM_info.allowWindow ||
+      this.keys.includes(prop) ||
+      (typeof target[prop] != "undefined" && !target.propertyIsEnumerable(prop))
+    ) {
+      const v = target[prop];
+      return typeof v == "function" ? v.bind(window) : v;
+    } else {
+      return this.window[prop];
+    }
+  },
+};
+GM.handler.keys.splice(GM.handler.keys.findIndex((e) => e == "ChromeXt"));
+GM.handler.keys.push(...Object.keys(EventTarget.prototype));
+const globalThis = new Proxy(window, GM.handler);
+delete GM.handler;
+delete GM.ChromeXtLock;

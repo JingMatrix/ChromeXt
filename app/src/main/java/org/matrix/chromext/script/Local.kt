@@ -20,7 +20,13 @@ object GM {
             .bufferedReader()
             .use { it.readText() }
             .split("// Kotlin separator\n\n")
-            .associateBy({ it.lines()[0].split("(")[0].split(" ").last() }, { it })
+            .associateBy(
+                {
+                  val decalre = it.lines()[0]
+                  val sep = if (decalre.startsWith("function")) "(" else " ="
+                  decalre.split(sep)[0].split(" ").last()
+                },
+                { it })
   }
 
   fun bootstrap(script: Script): List<String> {
@@ -77,14 +83,15 @@ object GM {
       grants += "GM_info.script.resources = ${Resources};"
     }
 
-    grants += localScript.get("GM_bootstrap")!!
+    grants += localScript.get("GM.bootstrap")!!
+    code = localScript.get("self")!! + "function startScript(key, window){${code}};"
 
     val GM_info =
         JSONObject(
             mapOf("scriptMetaStr" to script.meta, "script" to JSONObject().put("id", script.id)))
     val codes =
         mutableListOf(
-            "(() => { const GM = {}; const GM_info = ${GM_info}; GM_info.script.code = (key=null,window=globalThis,ChromeXt=GM.ChromeXt) => {${code}};\n${grants}GM_bootstrap();})();")
+            "(() => { const GM = {}; const GM_info = ${GM_info}; GM_info.script.code = () => {${code}};\n${grants}GM.bootstrap();})();")
     if (script.storage != null) {
       val storage_info =
           JSONObject(mapOf("id" to script.id, "data" to JSONObject().put("init", script.storage!!)))
