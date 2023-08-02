@@ -26,7 +26,10 @@ function editor() {
   const meta = document.createElement("meta");
   const style = document.createElement("style");
   const js = document.createElement("script");
-  scriptMeta.innerHTML = script.shift() + separator;
+  scriptMeta.innerHTML = (script.shift() + separator).replace(
+    "GM.ChromeXt",
+    "<em>GM.ChromeXt</em>"
+  );
   scriptMeta.id = "meta";
   code.innerHTML = script.join(separator);
   code.id = "code";
@@ -37,36 +40,7 @@ function editor() {
     "content",
     "width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"
   );
-  style.textContent = `@import url('https://unpkg.com/@speed-highlight/core/dist/themes/default.css');
-	html {overflow-x: hidden}
-	pre {overflow-x: scroll}
-	body { margin: 0}
-	[class*="shj-lang-"] {
-		border-radius: 0;
-		color: #abb2bf;
-		background: #161b22;
-		font: 1em monospace;
-		padding: 8px 5px;
-		margin: 0;
-		width: 100vw;
-		word-break: break-word;
-	}
-	[class*="shj-lang-"]:before {color: #6f9aff}
-	.shj-syn-deleted,
-	.shj-syn-err,
-	.shj-syn-var {color: #e06c75}
-	.shj-syn-section,
-	.shj-syn-oper,
-	.shj-syn-kwd {color: #c678dd}
-	.shj-syn-class {color: #e5c07b}
-	.shj-numbers,
-	.shj-syn-cmnt {color: #76839a}
-	.shj-syn-insert {color: #98c379}
-	.shj-syn-type {color: #56b6c2}
-	.shj-syn-num,
-	.shj-syn-bool {color: #d19a66}
-	.shj-syn-str,
-	.shj-syn-func {color: #61afef}`;
+  style.textContent = _editor_style;
   js.setAttribute("type", "module");
   js.textContent =
     "import { highlightElement } from 'https://unpkg.com/@speed-highlight/core/dist/index.js'; highlightElement(document.querySelector('#code'), 'js', { hideLineNumbers: true });";

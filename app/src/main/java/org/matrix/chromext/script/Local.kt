@@ -115,9 +115,14 @@ object Local {
   init {
     val ctx = Chrome.getContext()
     ResourceMerge.enrich(ctx)
-    promptInstallUserScript = ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
+    var css =
+        JSONArray(
+            ctx.assets.open("editor.css").bufferedReader().use { it.readText() }.split("\n\n"))
+    promptInstallUserScript =
+        "const _editor_style = ${css}[0];\n" +
+            ctx.assets.open("editor.js").bufferedReader().use { it.readText() }
     customizeDevTool = ctx.assets.open("devtools.js").bufferedReader().use { it.readText() }
-    val css =
+    css =
         JSONArray(ctx.assets.open("eruda.css").bufferedReader().use { it.readText() }.split("\n\n"))
     eruda =
         "const _eruda_styles = ${css};\n" +
