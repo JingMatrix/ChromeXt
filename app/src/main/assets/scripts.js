@@ -1,12 +1,23 @@
 if (typeof ChromeXt == "undefined") {
   const ArrayKeys = Object.getOwnPropertyNames(Array.prototype);
   const EventTargetKeys = Object.getOwnPropertyNames(EventTarget.prototype);
+  const ChromeXtTargetKeys = ["script", "command", "cspRule", "filter"];
+  const unlock = Symbol("unlock");
   class SyncArray extends Array {
     #name;
     #sync;
     #freeze;
     #ChromeXt;
     #inited = false;
+    #key = null;
+    /** @param {ChromeXtTarget} key */
+    set ChromeXt(key) {
+      this.#key = key;
+      setTimeout(() => {
+        this.#key = null;
+      }, 0);
+    }
+
     constructor(ChromeXt, name, sync = true, freeze = false) {
       if (
         ChromeXt instanceof ChromeXtTarget &&
@@ -28,18 +39,18 @@ if (typeof ChromeXt == "undefined") {
       }
       ArrayKeys.forEach((m) => {
         if (typeof this[m] != "function") return;
-        const self = this;
-        Object.defineProperty(self, m, {
+        Object.defineProperty(this, m, {
           configurable: false,
-          value: function () {
-            return self.#verify(arguments, m);
+          value: (...args) => {
+            return this.#verify(Array.from(args), m);
           },
         });
       });
 
       Object.defineProperty(this, "sync", {
         configurable: false,
-        value: (data, ChromeXt = this.#ChromeXt) => {
+        value: (data, ChromeXt = this.#key || this.#ChromeXt) => {
+          this.#key = null;
           if (this.#sync && typeof this.#name == "string") {
             const payload = {
               origin: window.location.origin,
@@ -47,7 +58,7 @@ if (typeof ChromeXt == "undefined") {
             };
             if (typeof data == "object" && Array.isArray(data)) {
               if (this.#freeze) data = data.filter((it) => Object.isFrozen(it));
-              if (this.length > 0) payload.data = data;
+              if (data.length > 0) payload.data = data;
             }
             ChromeXt.dispatch("syncData", payload);
           }
@@ -71,23 +82,18 @@ if (typeof ChromeXt == "undefined") {
 
     #getChromeXt() {
       let ChromeXt;
-      if (
-        this.ChromeXt instanceof ChromeXtTarget &&
-        !this.ChromeXt.isLocked()
-      ) {
-        // Temporarily unlock using proxy, might leak the ChromeXt object by listening at the value of this.ChromeXt
-        ChromeXt = this.ChromeXt;
-        delete this.ChromeXt;
+      if (this.#key instanceof ChromeXtTarget && !this.#key.isLocked()) {
+        ChromeXt = this.#key;
       } else if (this.#ChromeXt.isLocked()) {
-        throw new Error(`ChromeXt is locked`);
+        throw new Error(`ChromeXt locked`);
       } else {
         ChromeXt = this.#ChromeXt;
       }
+      this.#key = null;
       return ChromeXt;
     }
 
     #verify(args, method) {
-      args = Array.from(args);
       const ChromeXt = this.#getChromeXt(args);
       if (this.#freeze) {
         let n = 0;
@@ -111,16 +117,23 @@ if (typeof ChromeXt == "undefined") {
     #debug;
     #key = null;
     #target;
+    #scripts;
+    #commands;
+    #cspRules;
+    #filters;
     constructor(debug, target) {
       if (typeof debug == "function" && target instanceof EventTarget) {
         this.#debug = debug;
         this.#target = target;
       } else {
+        this.#scripts = new SyncArray(this, "scripts", false, true);
+        this.#commands = new SyncArray(this, "commands", false, false);
+        this.#cspRules = new SyncArray(this, "cspRules");
+        this.#filters = new SyncArray(this, "filters");
         this.#target = new EventTarget();
         this.#debug = console.debug.bind(debug);
-        const self = this;
-        console.debug = function () {
-          let args = Array.from(arguments);
+        console.debug = (...args) => {
+          args = Array.from(args);
           try {
             const data = JSON.parse(args.map((it) => it.toString()).join(" "));
             if ("action" in data) {
@@ -129,23 +142,62 @@ if (typeof ChromeXt == "undefined") {
               console.warn("Block access to ChromeXt APIs");
             }
           } catch {}
-          self.#debug(...args);
+          this.#debug(...args);
         };
       }
       EventTargetKeys.forEach((m) => {
-        const self = this;
-        Object.defineProperty(self, m, {
+        Object.defineProperty(this, m, {
           configurable: false,
-          value: function () {
-            return this.#target[m].apply(this.#target, Array.from(arguments));
+          value: (...args) => {
+            return this.#target[m].apply(this.#target, Array.from(args));
+          },
+        });
+      });
+      ChromeXtTargetKeys.forEach((p) => {
+        Object.defineProperty(this, p + "s", {
+          configurable: false,
+          set(v) {
+            if (v.ChromeXt[unlock] == ChromeXt) {
+              this.#factory(p, v);
+              return true;
+            } else {
+              throw Error(`Illegal access to the setter of ${p}s`);
+            }
+          },
+          get() {
+            if (!this.isLocked()) {
+              return this.#factory(p);
+            } else {
+              throw new Error("ChromeXt locked");
+            }
           },
         });
       });
     }
-    scripts = new SyncArray(this, "scripts", false, true);
-    commands = new SyncArray(this, "commands", false, false);
-    cspRules = new SyncArray(this, "cspRules");
-    filters = new SyncArray(this, "filters");
+    #factory(key, v) {
+      let result;
+      switch (key) {
+        case "script":
+          if (v) this.#scripts = v;
+          result = this.#scripts;
+          break;
+        case "command":
+          if (v) this.#commands = v;
+          result = this.#commands;
+          break;
+        case "cspRule":
+          if (v) this.#cspRules = v;
+          result = this.#cspRules;
+          break;
+        case "filter":
+          if (v) this.#filters = v;
+          result = this.#filters;
+          break;
+      }
+      return v || result instanceof SyncArray
+        ? result
+        : new Error(`Invalid field #${key}s`);
+    }
     post(event, detail, key = null) {
       if (key != this.#key) throw new Error("ChromeXt locked");
       this.dispatchEvent(new CustomEvent(event, { detail }));
@@ -162,26 +214,24 @@ if (typeof ChromeXt == "undefined") {
         this.#key = key;
       }
     }
-    unlock(key, eventOnly = true) {
+    unlock(key, apiOnly = true) {
       if (!this.isLocked()) {
         return this;
       } else if (this.#key == key) {
         const UnLocked = new ChromeXtTarget(this.#debug, this.#target);
-        if (!eventOnly) {
-          Object.keys(UnLocked).forEach((k) => {
-            if (UnLocked[k] instanceof SyncArray)
-              UnLocked[k] = new Proxy(this[k], {
-                get(target, prop) {
-                  const value = target[prop];
-                  if (typeof value == "function") {
-                    target.ChromeXt = UnLocked;
-                    setTimeout(() => {
-                      delete target.ChromeXt;
-                    }, 0);
-                  }
-                  return Reflect.get(...arguments);
-                },
-              });
+        if (!apiOnly) {
+          UnLocked[unlock] = ChromeXt;
+          ChromeXtTargetKeys.forEach((k) => {
+            UnLocked[k + "s"] = new Proxy(this.#factory(k), {
+              get(target, prop) {
+                if (prop == "ChromeXt") return UnLocked;
+                const value = target[prop];
+                if (typeof value == "function") {
+                  target.ChromeXt = UnLocked;
+                }
+                return Reflect.get(...arguments);
+              },
+            });
           });
         }
         return UnLocked;
@@ -214,29 +264,28 @@ try {
 
 (() => {
   const cspRules = ChromeXt.cspRules;
-  if (cspRules.length > 0) {
-    cspRules.forEach((rule) => {
-      if (rule.length == 0) return;
-      // Skip empty cspRules
-      const meta = document.createElement("meta");
-      meta.setAttribute("http-equiv", "Content-Security-Policy");
-      meta.setAttribute("content", rule);
-      try {
+  if (cspRules.length == 0) return;
+  cspRules.forEach((rule) => {
+    if (rule.length == 0) return;
+    // Skip empty cspRules
+    const meta = document.createElement("meta");
+    meta.setAttribute("http-equiv", "Content-Security-Policy");
+    meta.setAttribute("content", rule);
+    try {
+      document.head.append(meta);
+    } catch {
+      setTimeout(() => {
         document.head.append(meta);
-      } catch {
-        setTimeout(() => {
-          document.head.append(meta);
-        }, 0);
-      }
-    });
-  }
+      }, 0);
+    }
+  });
 })();
 // Kotlin separator
 
 (() => {
-  const tmp_filter = ChromeXt.filters
-    .filter((item) => item.trim().length > 0)
-    .join(", ");
+  let filter = ChromeXt.filters.filter((item) => item.trim().length > 0);
+  if (filter.length == 0) return;
+  filter = filter.join(", ");
   window.addEventListener("DOMContentLoaded", () => {
     function GM_addStyle(css) {
       const style = document.createElement("style");
@@ -245,10 +294,10 @@ try {
       document.head.appendChild(style);
     }
     try {
-      GM_addStyle(tmp_filter + " {display: none !important;}");
+      GM_addStyle(filter + " {display: none !important;}");
     } finally {
       window.addEventListener("load", () => {
-        document.querySelectorAll(tmp_filter).forEach((node) => {
+        document.querySelectorAll(filter).forEach((node) => {
           node.hidden = true;
           node.style.display = "none";
         });

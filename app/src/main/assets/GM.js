@@ -1,12 +1,15 @@
-const self = globalThis;
-const parent = globalThis;
-const frames = globalThis;
-const top = globalThis;
-// TODO: fix bug: top and frames might be undefined in IIFE context by the codes above
+const globalThis = GM.globalThis;
+const window = GM.globalThis;
+const self = GM.globalThis;
+const parent = GM.globalThis;
+const frames = GM.globalThis;
+const top = GM.globalThis;
+delete GM.globalThis;
+// Override possible references to the original window object.
+// Note that from the DevTools console, these objects are undefined if they are not used in the script debugging context.
 delete GM_info.script.code;
 Object.freeze(GM_info.script);
 const ChromeXt = GM.ChromeXt;
-startScript(null, globalThis);
 // Kotlin separator
 
 function GM_addStyle(css) {
@@ -315,7 +318,7 @@ GM.bootstrap = () => {
   delete GM.bootstrap;
   const row = /\/\/\s+@(\S+)\s+(.+)/g;
   const meta = GM_info.script;
-  if (typeof meta.code != "function") {
+  if (typeof meta.code != "function" && typeof ChromeXt != "undefined") {
     return;
   }
   let match;
@@ -340,12 +343,56 @@ GM.bootstrap = () => {
   }
   delete meta.resource;
 
-  GM_info.allowWindow =
-    meta.grants.includes("unsafeWindow") || meta["inject-into"] == "page";
-  if (GM_info.allowWindow) unsafeWindow = globalThis;
   meta["run-at"] = Array.isArray(meta["run-at"])
     ? meta["run-at"][0]
     : meta["run-at"] || "document-idle";
+
+  if (
+    meta.grants.includes("unsafeWindow") ||
+    meta["inject-into"] == "page" ||
+    meta.requires.length > 0
+  ) {
+    GM.globalThis = window;
+  } else {
+    const handler = {
+      // A handler to block access to globalThis
+      window: {},
+      keys: Object.keys(window),
+      // These keys will be accessible to the getter but not to the setter
+      set(target, prop, value) {
+        if (target[prop] != value || target.propertyIsEnumerable(prop)) {
+          // Avoid redefining global non-enumerable classes, such as Object and Proxy, which are accessible to the getter
+          this.window[prop] = value;
+        }
+        return true;
+      },
+      get(target, prop, receiver) {
+        if (target[prop] == target) return receiver;
+        // Block possible jail break
+        if (
+          this.keys.includes(prop) ||
+          (typeof target[prop] != "undefined" &&
+            !target.propertyIsEnumerable(prop))
+          // Simulate an isolated window object, where common functions are available
+        ) {
+          const v = target[prop];
+          return prop != "ChromeXt" &&
+            this.keys.includes(prop) &&
+            typeof v == "function"
+            ? v.bind(window)
+            : v;
+          // Avoid changing the binding property of global non-enumerable classes
+          // ChromeXt is non-configurable, and thus should not be bound
+        } else {
+          return this.window[prop];
+        }
+      },
+    };
+    handler.keys.splice(handler.keys.findIndex((e) => e == "ChromeXt") + 1);
+    // Drop user-defined keys in the global context
+    handler.keys.push(...Object.keys(EventTarget.prototype));
+    GM.globalThis = new Proxy(window, handler);
+  }
 
   if (
     meta.grants.includes("GM.xmlHttpRequest") &&
@@ -538,27 +585,22 @@ GM.bootstrap = () => {
   }
 };
 
-const key = GM.key;
-// Save the key to ChromeXt and remove its reference
-delete GM.key;
+const key = Symbol("key");
 GM.ChromeXtLock = class {
-  #key;
+  #key = key;
   #ChromeXt;
-  constructor(key) {
-    if (typeof key == "number" && ChromeXt.isLocked()) {
-      this.#key = key;
+  constructor(GM) {
+    if (typeof GM.key == "number" && ChromeXt.isLocked()) {
+      this.#ChromeXt = ChromeXt.unlock(GM.key, false);
+      GM.key = null; // Revoke key
     } else {
       throw new Error("Invalid key to construct a lock");
     }
-    const self = this;
-    Object.defineProperty(self, "unlock", {
+    Object.defineProperty(this, "unlock", {
       configurable: false,
-      value: function (key) {
-        if (key == self.#key) {
-          if (typeof self.#ChromeXt == "undefined") {
-            self.#ChromeXt = ChromeXt.unlock(key, false);
-          }
-          return self.#ChromeXt;
+      value: (key) => {
+        if (key == this.#key) {
+          return this.#ChromeXt;
         } else {
           throw new Error("Fail to unlock ChromeXtLock");
         }
@@ -566,40 +608,7 @@ GM.ChromeXtLock = class {
     });
   }
 };
-const LockedChromeXt = new GM.ChromeXtLock(key);
-let unsafeWindow = undefined;
-GM.handler = {
-  window: {},
-  keys: Object.keys(window),
-  //These keys will be free to getter but not to setter
-  set(target, prop, value) {
-    if (target[prop] != value || target.propertyIsEnumerable(prop)) {
-      if (GM_info.allowWindow) {
-        Reflect.set(...arguments);
-      } else {
-        this.window[prop] = value;
-      }
-    }
-    return true;
-  },
-  get(target, prop, receiver) {
-    if (target[prop] == target && !GM_info.allowWindow) return receiver;
-    if (
-      GM_info.allowWindow ||
-      this.keys.includes(prop) ||
-      (typeof target[prop] != "undefined" && !target.propertyIsEnumerable(prop))
-    ) {
-      const v = target[prop];
-      return this.keys.includes(prop) && typeof v == "function"
-        ? v.bind(window)
-        : v;
-    } else {
-      return this.window[prop];
-    }
-  },
-};
-GM.handler.keys.splice(GM.handler.keys.findIndex((e) => e == "ChromeXt"));
-GM.handler.keys.push(...Object.keys(EventTarget.prototype));
-const globalThis = new Proxy(window, GM.handler);
-delete GM.handler;
+const LockedChromeXt = new GM.ChromeXtLock(GM);
+delete GM.key;
 delete GM.ChromeXtLock;
+// Delete references

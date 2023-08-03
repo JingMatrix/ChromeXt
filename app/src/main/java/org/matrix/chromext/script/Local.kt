@@ -85,7 +85,7 @@ object GM {
     }
 
     grants += localScript.get("GM.bootstrap")!!
-    code = localScript.get("self")!! + "function startScript(key, window){${code}};"
+    code = localScript.get("globalThis")!! + "((key) => {${code}})(null);"
 
     val GM_info =
         JSONObject(

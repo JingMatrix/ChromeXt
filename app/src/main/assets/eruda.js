@@ -3,9 +3,7 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
   class Filter {
     #filter = new Array(...ChromeXt.filters);
     #write() {
-      if (this.#filter.length > 0) {
-        ChromeXt.filters.sync(this.#filter);
-      }
+      ChromeXt.filters.sync(this.#filter);
     }
     add(rule) {
       if (typeof rule == "string") {
