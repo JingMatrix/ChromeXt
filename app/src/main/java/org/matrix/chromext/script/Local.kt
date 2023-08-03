@@ -131,7 +131,7 @@ object Local {
                 .open("eruda.js")
                 .bufferedReader()
                 .use { it.readText() }
-                .replace("ChromeXtUnlockKeyForEruda", key.toString())
+                .replaceFirst("ChromeXtUnlockKeyForEruda", key.toString())
     val localScript =
         ctx.assets
             .open("scripts.js")
