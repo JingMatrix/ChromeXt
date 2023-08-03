@@ -2,6 +2,7 @@ package org.matrix.chromext.script
 
 import java.io.File
 import java.io.FileReader
+import kotlin.random.Random
 import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
@@ -91,11 +92,11 @@ object GM {
             mapOf("scriptMetaStr" to script.meta, "script" to JSONObject().put("id", script.id)))
     val codes =
         mutableListOf(
-            "(() => { const GM = {}; const GM_info = ${GM_info}; GM_info.script.code = () => {${code}};\n${grants}GM.bootstrap();})();")
+            "(() => { const GM = {key:${Local.key}}; const GM_info = ${GM_info}; GM_info.script.code = () => {${code}};\n${grants}GM.bootstrap();})();")
     if (script.storage != null) {
       val storage_info =
           JSONObject(mapOf("id" to script.id, "data" to JSONObject().put("init", script.storage!!)))
-      codes.add("ChromeXt.post('scriptStorage', ${storage_info});")
+      codes.add("ChromeXt.unlock(${Local.key}).post('scriptStorage', ${storage_info});")
     }
 
     return codes
@@ -111,6 +112,7 @@ object Local {
   val openEruda: String
   val cspRule: String
   val cosmeticFilter: String
+  val key = Random.nextDouble()
 
   init {
     val ctx = Chrome.getContext()
@@ -126,7 +128,11 @@ object Local {
         JSONArray(ctx.assets.open("eruda.css").bufferedReader().use { it.readText() }.split("\n\n"))
     eruda =
         "const _eruda_styles = ${css};\n" +
-            ctx.assets.open("eruda.js").bufferedReader().use { it.readText() }
+            ctx.assets
+                .open("eruda.js")
+                .bufferedReader()
+                .use { it.readText() }
+                .replace("ChromeXtUnlockKeyForEruda", key.toString())
     val localScript =
         ctx.assets
             .open("scripts.js")
@@ -134,7 +140,7 @@ object Local {
             .use { it.readText() }
             .split("// Kotlin separator\n\n")
     initChromeXt = localScript[0]
-    openEruda = localScript[1]
+    openEruda = localScript[1].replaceFirst("ChromeXtUnlockKeyForEruda", key.toString())
     cspRule = localScript[2]
     cosmeticFilter = localScript[3]
   }

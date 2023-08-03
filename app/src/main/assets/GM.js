@@ -2,9 +2,10 @@ const self = globalThis;
 const parent = globalThis;
 const frames = globalThis;
 const top = globalThis;
-// TODO: fix bug: top and frames might be undefined in IIFE context
-GM_info.script.code = startScript;
+// TODO: fix bug: top and frames might be undefined in IIFE context by the codes above
+delete GM_info.script.code;
 Object.freeze(GM_info.script);
+const ChromeXt = GM.ChromeXt;
 startScript(null, globalThis);
 // Kotlin separator
 
@@ -537,25 +538,32 @@ GM.bootstrap = () => {
   }
 };
 
-const key = Symbol("ChromeXt");
-// Save a reference to ChromeXt and block its access from the script context
+const key = GM.key;
+// Save the key to ChromeXt and remove its reference
+delete GM.key;
 GM.ChromeXtLock = class {
-  #ChromeXt;
   #key;
+  #ChromeXt;
   constructor(key) {
-    if (typeof key == "symbol") {
-      this.#ChromeXt = ChromeXt;
+    if (typeof key == "number" && ChromeXt.isLocked()) {
       this.#key = key;
     } else {
       throw new Error("Invalid key to construct a lock");
     }
-  }
-  unlock() {
-    if (arguments[0] == this.#key) {
-      return this.#ChromeXt;
-    } else {
-      return undefined;
-    }
+    const self = this;
+    Object.defineProperty(self, "unlock", {
+      configurable: false,
+      value: function (key) {
+        if (key == self.#key) {
+          if (typeof self.#ChromeXt == "undefined") {
+            self.#ChromeXt = ChromeXt.unlock(key, false);
+          }
+          return self.#ChromeXt;
+        } else {
+          throw new Error("Fail to unlock ChromeXtLock");
+        }
+      },
+    });
   }
 };
 const LockedChromeXt = new GM.ChromeXtLock(key);
@@ -563,6 +571,7 @@ let unsafeWindow = undefined;
 GM.handler = {
   window: {},
   keys: Object.keys(window),
+  //These keys will be free to getter but not to setter
   set(target, prop, value) {
     if (target[prop] != value || target.propertyIsEnumerable(prop)) {
       if (GM_info.allowWindow) {
@@ -571,24 +580,19 @@ GM.handler = {
         this.window[prop] = value;
       }
     }
-    return value;
+    return true;
   },
   get(target, prop, receiver) {
-    try {
-      if (target[prop].ChromeXt.__proto__.name == "ChromeXtTarget")
-        return receiver;
-    } catch {}
-    const allowChromeXt = GM_info.script.grants.includes("GM.ChromeXt");
-    if (prop == "ChromeXt" && !allowChromeXt) {
-      return undefined;
-    }
+    if (target[prop] == target && !GM_info.allowWindow) return receiver;
     if (
       GM_info.allowWindow ||
       this.keys.includes(prop) ||
       (typeof target[prop] != "undefined" && !target.propertyIsEnumerable(prop))
     ) {
       const v = target[prop];
-      return typeof v == "function" ? v.bind(window) : v;
+      return this.keys.includes(prop) && typeof v == "function"
+        ? v.bind(window)
+        : v;
     } else {
       return this.window[prop];
     }

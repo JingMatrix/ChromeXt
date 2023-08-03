@@ -8,6 +8,7 @@ import java.net.URL
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
+import org.matrix.chromext.script.Local
 
 class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: Any?) {
   val response = JSONObject(mapOf("id" to id, "uuid" to uuid))
@@ -101,7 +102,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
   ) {
     response.put("type", type)
     response.put("data", data)
-    val code = "ChromeXt.post('xmlhttpRequest', ${response});"
+    val code = "ChromeXt.unlock(${Local.key}).post('xmlhttpRequest', ${response});"
     Chrome.evaluateJavascript(listOf(code), currentTab)
     if (disconnect) {
       Listener.xmlhttpRequests.remove(response.getDouble("uuid"))

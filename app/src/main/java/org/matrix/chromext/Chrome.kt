@@ -12,6 +12,7 @@ import org.matrix.chromext.devtools.hitDevTools
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.UserScriptProxy
+import org.matrix.chromext.script.Local
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
 
@@ -120,7 +121,7 @@ object Chrome {
       excludeSelf: Boolean = true,
       matching: (String) -> Boolean
   ) {
-    val code = "ChromeXt.post('${event}', ${data});"
+    val code = "ChromeXt.unlock(${Local.key}).post('${event}', ${data});"
     Log.d("broadcasting ${event}")
     wakeUpDevTools()
     val pages = getInspectPages()!!

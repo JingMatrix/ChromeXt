@@ -1,3 +1,4 @@
+const ChromeXt = globalThis.ChromeXt.unlock(ChromeXtUnlockKeyForEruda, false);
 if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
   class Filter {
     #filter = new Array(...ChromeXt.filters);
@@ -220,9 +221,7 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
           e.stopPropagation();
           const rules = this._$el.find("li.eruda-csp-rules > div").text() || "";
           ChromeXt.cspRules.sync(
-            rules
-              .split(" | ")
-              .filter((r) => r.length > 0)
+            rules.split(" | ").filter((r) => r.length > 0)
           );
         })
         .on("click", ".eruda-userscripts .eruda-script", (e) => {

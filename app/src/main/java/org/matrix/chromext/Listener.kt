@@ -114,7 +114,7 @@ object Listener {
             data.put("value", script.storage!!.get(key))
           }
           detail.put("data", data)
-          callback = "ChromeXt.post('scriptSyncValue', ${detail});"
+          callback = "ChromeXt.unlock(${Local.key}).post('scriptSyncValue', ${detail});"
         } else {
           script.storage!!.remove(key)
         }
@@ -146,11 +146,11 @@ object Listener {
           callback = FileReader(eruda).use { it.readText() } + "\n"
           callback += Local.eruda
           callback += "eruda.init(); eruda._localConfig(); eruda.show();"
-          Chrome.evaluateJavascript(listOf(callback))
+          Chrome.evaluateJavascript(listOf("(()=>{${callback}})();"))
           callback = null
         } else {
           Log.toast(ctx, "Updating Eruda...")
-          Download.start(ERUD_URL, "Download/Eruda.js", true) { on("loadEruda", "") }
+          Download.start(ERUD_URL, "Download/Eruda.js", true) { on("loadEruda") }
         }
       }
       "syncData" -> {
@@ -166,7 +166,7 @@ object Listener {
       }
       "inspectPages" -> {
         thread {
-          val code = "ChromeXt.post('inspect_pages', ${getInspectPages()});"
+          val code = "ChromeXt.unlock(${Local.key}).post('inspect_pages', ${getInspectPages()});"
           Chrome.evaluateJavascript(listOf(code), currentTab)
         }
       }
@@ -174,7 +174,7 @@ object Listener {
         if (payload == "") {
           val detail = JSONObject(mapOf("type" to "init"))
           detail.put("ids", JSONArray(ScriptDbManager.scripts.map { it.id }))
-          callback = "ChromeXt.post('userscript', ${detail});"
+          callback = "ChromeXt.unlock(${Local.key}).post('userscript', ${detail});"
         } else {
           val data = JSONObject(payload)
           if (data.has("meta")) {
@@ -200,14 +200,14 @@ object Listener {
               dbHelper.close()
             } else {
               val result = JSONArray(scripts.map { it.meta })
-              callback = "ChromeXt.post('script_meta', ${result});"
+              callback = "ChromeXt.unlock(${Local.key}).post('script_meta', ${result});"
             }
           }
         }
       }
       "extension" -> {
         if (payload == "" && BuildConfig.DEBUG) {
-          callback = "ChromeXt.post('extension', ${LocalFiles.start()});"
+          callback = "ChromeXt.unlock(${Local.key}).post('extension', ${LocalFiles.start()});"
         }
       }
       "websocket" -> {
@@ -235,7 +235,7 @@ object Listener {
             fun response(res: JSONObject): Boolean? {
               val mTab = devToolClients.get(key)?.second
               if (mTab?.isClosed() == false) {
-                mTab.evaluateJavascript("ChromeXt.post('websocket', ${res})")
+                mTab.evaluateJavascript("ChromeXt.unlock(${Local.key}).post('websocket', ${res})")
                 return true
               }
               return false
