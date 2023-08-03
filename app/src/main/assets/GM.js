@@ -27,6 +27,9 @@ function GM_addStyle(css) {
 }
 // Kotlin separator
 
+const GM_log = console.log.bind(console);
+// Kotlin separator
+
 function GM_removeValueChangeListener(index) {
   GM_info.valueListener[index].enabled = false;
 }

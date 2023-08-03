@@ -43,7 +43,6 @@ object GM {
         "GM_info" -> return@forEach
         "GM.ChromeXt" -> return@forEach
         "unsafeWindow" -> return@forEach
-        "GM_log" -> grants += "const GM_log = console.log.bind(console);"
         else ->
             if (localScript.containsKey(it)) {
               grants += localScript.get(it)

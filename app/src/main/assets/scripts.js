@@ -132,18 +132,6 @@ if (typeof ChromeXt == "undefined") {
         this.#filters = new SyncArray(this, "filters");
         this.#target = new EventTarget();
         this.#debug = console.debug.bind(debug);
-        console.debug = (...args) => {
-          args = Array.from(args);
-          try {
-            const data = JSON.parse(args.map((it) => it.toString()).join(" "));
-            if ("action" in data) {
-              data.blocked = true;
-              args = [JSON.stringify(data)];
-              console.warn("Block access to ChromeXt APIs");
-            }
-          } catch {}
-          this.#debug(...args);
-        };
       }
       EventTargetKeys.forEach((m) => {
         Object.defineProperty(this, m, {
@@ -212,6 +200,18 @@ if (typeof ChromeXt == "undefined") {
     lock(key) {
       if (!this.isLocked() && typeof key == "number") {
         this.#key = key;
+        console.debug = (...args) => {
+          args = Array.from(args);
+          try {
+            const data = JSON.parse(args.map((it) => it.toString()).join(" "));
+            if ("action" in data) {
+              data.blocked = true;
+              args = [JSON.stringify(data)];
+              console.warn("Block access to ChromeXt APIs");
+            }
+          } catch {}
+          this.#debug(...args);
+        };
       }
     }
     unlock(key, apiOnly = true) {

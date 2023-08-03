@@ -217,8 +217,8 @@ object Listener {
           return callback
         }
 
-        val tabId = detail.optString("tabId")
         val targetTabId = detail.getString("targetTabId")
+        val tabId = detail.optString("tabId")
         val key = Pair(targetTabId, tabId)
 
         if (detail.has("message")) {
@@ -235,7 +235,7 @@ object Listener {
             fun response(res: JSONObject): Boolean? {
               val mTab = devToolClients.get(key)?.second
               if (mTab?.isClosed() == false) {
-                mTab.evaluateJavascript("ChromeXt.unlock(${Local.key}).post('websocket', ${res})")
+                mTab.evaluateJavascript("ChromeXt.post('websocket', ${res})")
                 return true
               }
               return false
