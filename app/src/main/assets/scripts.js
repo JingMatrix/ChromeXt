@@ -1,55 +1,36 @@
 if (typeof ChromeXt == "undefined") {
   const ArrayKeys = Object.getOwnPropertyNames(Array.prototype);
   const EventTargetKeys = Object.getOwnPropertyNames(EventTarget.prototype);
-  const ChromeXtTargetKeys = ["script", "command", "cspRule", "filter"];
+  const ChromeXtTargetKeys = ["scripts", "commands", "cspRules", "filters"];
   const unlock = Symbol("unlock");
+
   class SyncArray extends Array {
     #name;
     #sync;
     #freeze;
-    #ChromeXt;
     #inited = false;
     #key = null;
-    /** @param {ChromeXtTarget} key */
-    set ChromeXt(key) {
-      this.#key = key;
-      setTimeout(() => {
-        this.#key = null;
-      }, 0);
-    }
 
-    constructor(ChromeXt, name, sync = true, freeze = false) {
-      if (
-        ChromeXt instanceof ChromeXtTarget &&
-        typeof name == "string" &&
-        typeof sync == "boolean" &&
-        typeof freeze == "boolean"
-      ) {
-        super();
-        this.#ChromeXt = ChromeXt;
-        this.#name = name;
-        this.#sync = sync;
-        this.#freeze = freeze;
-        this.#inited = this.#freeze;
-      } else {
-        super(...arguments);
-        this.#inited = true;
-        this.#sync = false;
-        this.#freeze = false;
-      }
+    constructor(name, sync = true, freeze = false) {
+      super();
+      this.#name = name;
+      this.#sync = sync;
+      this.#freeze = freeze;
+      this.#inited = this.#freeze;
+
       ArrayKeys.forEach((m) => {
         if (typeof this[m] != "function") return;
         Object.defineProperty(this, m, {
           configurable: false,
           value: (...args) => {
-            return this.#verify(Array.from(args), m);
+            return this.#verify(args, m);
           },
         });
       });
 
       Object.defineProperty(this, "sync", {
         configurable: false,
-        value: (data, ChromeXt = this.#key || this.#ChromeXt) => {
+        value: (data = this, ChromeXt = this.#key || globalThis.ChromeXt) => {
           this.#key = null;
           if (this.#sync && typeof this.#name == "string") {
             const payload = {
@@ -66,11 +47,17 @@ if (typeof ChromeXt == "undefined") {
       });
     }
 
+    /** @param {ChromeXtTarget} key */
+    set ChromeXt(key) {
+      this.#key = key;
+      setTimeout(() => {
+        this.#key = null;
+      });
+    }
+
     init(value) {
       if (this.#inited || this.length > 0) {
-        throw new Error(
-          `Array ${this.#name} is already initialized with elements`
-        );
+        throw new Error(`Array ${this.#name} already initialized`);
       } else {
         if (typeof value == "string") {
           value == JSON.parse(value);
@@ -80,21 +67,18 @@ if (typeof ChromeXt == "undefined") {
       }
     }
 
-    #getChromeXt() {
-      let ChromeXt;
+    #checkChromeXt() {
       if (this.#key instanceof ChromeXtTarget && !this.#key.isLocked()) {
-        ChromeXt = this.#key;
-      } else if (this.#ChromeXt.isLocked()) {
+        return true;
+      } else if (globalThis.ChromeXt.isLocked()) {
         throw new Error(`ChromeXt locked`);
       } else {
-        ChromeXt = this.#ChromeXt;
+        return true;
       }
-      this.#key = null;
-      return ChromeXt;
     }
 
     #verify(args, method) {
-      const ChromeXt = this.#getChromeXt(args);
+      this.#checkChromeXt(args);
       if (this.#freeze) {
         let n = 0;
         if (method == "push") {
@@ -104,15 +88,15 @@ if (typeof ChromeXt == "undefined") {
         }
         for (let i = 0; i < n; i++) {
           if (!Object.isFrozen(args[i]))
-            throw new Error(`Argument ${args[i]} is not frozen`);
+            throw new Error(`Element ${args[i]} is not frozen`);
         }
       }
       const result = super[method].apply(this, args);
-      if (["pop", "push", "fill", "splice"].includes(method))
-        this.sync(this, ChromeXt);
+      if (["pop", "push", "fill", "splice"].includes(method)) this.sync();
       return result;
     }
   }
+
   class ChromeXtTarget {
     #debug;
     #key = null;
@@ -126,10 +110,6 @@ if (typeof ChromeXt == "undefined") {
         this.#debug = debug;
         this.#target = target;
       } else {
-        this.#scripts = new SyncArray(this, "scripts", false, true);
-        this.#commands = new SyncArray(this, "commands", false, false);
-        this.#cspRules = new SyncArray(this, "cspRules");
-        this.#filters = new SyncArray(this, "filters");
         this.#target = new EventTarget();
         this.#debug = console.debug.bind(debug);
       }
@@ -137,19 +117,25 @@ if (typeof ChromeXt == "undefined") {
         Object.defineProperty(this, m, {
           configurable: false,
           value: (...args) => {
-            return this.#target[m].apply(this.#target, Array.from(args));
+            return this.#target[m].apply(this.#target, args);
           },
         });
       });
       ChromeXtTargetKeys.forEach((p) => {
-        Object.defineProperty(this, p + "s", {
+        const v = new SyncArray(
+          p,
+          p != "scripts" && p != "commands",
+          p == "scripts"
+        );
+        this.#factory(p, v);
+        Object.defineProperty(this, p, {
           configurable: false,
           set(v) {
             if (v.ChromeXt[unlock] == ChromeXt) {
               this.#factory(p, v);
               return true;
             } else {
-              throw Error(`Illegal access to the setter of ${p}s`);
+              throw Error(`Illegal access to the setter of ${p}`);
             }
           },
           get() {
@@ -162,29 +148,23 @@ if (typeof ChromeXt == "undefined") {
         });
       });
     }
-    #factory(key, v) {
-      let result;
-      switch (key) {
-        case "script":
+    #factory(p, v) {
+      // Set or get private properties
+      switch (p) {
+        case "scripts":
           if (v) this.#scripts = v;
-          result = this.#scripts;
-          break;
-        case "command":
+          return this.#scripts;
+        case "commands":
           if (v) this.#commands = v;
-          result = this.#commands;
-          break;
-        case "cspRule":
+          return this.#commands;
+        case "cspRules":
           if (v) this.#cspRules = v;
-          result = this.#cspRules;
-          break;
-        case "filter":
+          return this.#cspRules;
+        case "filters":
           if (v) this.#filters = v;
-          result = this.#filters;
-          break;
+          return this.#filters;
       }
-      return v || result instanceof SyncArray
-        ? result
-        : new Error(`Invalid field #${key}s`);
+      throw new Error(`Invalid field #${key}`);
     }
     post(event, detail, key = null) {
       if (key != this.#key) throw new Error("ChromeXt locked");
@@ -222,7 +202,7 @@ if (typeof ChromeXt == "undefined") {
         if (!apiOnly) {
           UnLocked[unlock] = ChromeXt;
           ChromeXtTargetKeys.forEach((k) => {
-            UnLocked[k + "s"] = new Proxy(this.#factory(k), {
+            UnLocked[k] = new Proxy(this.#factory(k), {
               get(target, prop) {
                 if (prop == "ChromeXt") return UnLocked;
                 const value = target[prop];

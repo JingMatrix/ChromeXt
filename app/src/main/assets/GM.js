@@ -7,7 +7,9 @@ const top = GM.globalThis;
 delete GM.globalThis;
 // Override possible references to the original window object.
 // Note that from the DevTools console, these objects are undefined if they are not used in the script debugging context.
+// However, one can break this jail using setTimeout or Function.
 delete GM_info.script.code;
+delete GM.key;
 Object.freeze(GM_info.script);
 const ChromeXt = GM.ChromeXt;
 // Kotlin separator
@@ -102,20 +104,21 @@ function GM_openInTab(url, options) {
 // Kotlin separator
 
 function GM_registerMenuCommand(title, listener, _accessKey = "Dummy") {
-  const index = LockedChromeXt.unlock(key).commands.findIndex(
+  const ChromeXt = LockedChromeXt.unlock(key);
+  const index = ChromeXt.commands.findIndex(
     (e) => e.id == GM_info.script.id && e.title == title
   );
   if (index != -1) {
-    LockedChromeXt.unlock(key).commands[index].listener = listener;
+    ChromeXt.commands[index].listener = listener;
     return index;
   }
-  LockedChromeXt.unlock(key).commands.push({
+  ChromeXt.commands.push({
     id: GM_info.script.id,
     title,
     listener,
     enabled: true,
   });
-  return LockedChromeXt.unlock(key).commands.length - 1;
+  return ChromeXt.commands.length - 1;
 }
 // Kotlin separator
 
@@ -211,11 +214,7 @@ function GM_xmlhttpRequest(details) {
       case ArrayBuffer:
         details.data = new Uint8Array(details.data);
       case Uint8Array:
-        data = btoa(
-          (binString = Array.from(data, (x) => String.fromCodePoint(x)).join(
-            ""
-          ))
-        );
+        data = btoa(Array.from(data, (x) => String.fromCodePoint(x)).join(""));
         break;
       default:
         details.binary = false;
@@ -232,7 +231,8 @@ function GM_xmlhttpRequest(details) {
     details.headers["User-Agent"] = window.navigator.userAgent;
   }
 
-  LockedChromeXt.unlock(key).dispatch("xmlhttpRequest", {
+  const ChromeXt = LockedChromeXt.unlock(key);
+  ChromeXt.dispatch("xmlhttpRequest", {
     id: GM_info.script.id,
     request: details,
     uuid,
@@ -296,19 +296,16 @@ function GM_xmlhttpRequest(details) {
             details["on" + e.detail.type](data);
           }
           if (["loadend", "error"].includes(e.detail.type)) {
-            LockedChromeXt.unlock(key).removeEventListener(
-              "xmlhttpRequest",
-              tmpListener
-            );
+            ChromeXt.removeEventListener("xmlhttpRequest", tmpListener);
           }
       }
     }
   };
-  LockedChromeXt.unlock(key).addEventListener("xmlhttpRequest", tmpListener);
+  ChromeXt.addEventListener("xmlhttpRequest", tmpListener);
 
   return {
     abort: () => {
-      LockedChromeXt.unlock(key).dispatch("xmlhttpRequest", {
+      ChromeXt.dispatch("xmlhttpRequest", {
         uuid,
         abort: true,
       });
@@ -353,7 +350,7 @@ GM.bootstrap = () => {
   if (
     meta.grants.includes("unsafeWindow") ||
     meta["inject-into"] == "page" ||
-    meta.requires.length > 0
+    meta.grants.includes("none")
   ) {
     GM.globalThis = window;
   } else {
@@ -382,7 +379,7 @@ GM.bootstrap = () => {
           return prop != "ChromeXt" &&
             this.keys.includes(prop) &&
             typeof v == "function"
-            ? v.bind(window)
+            ? v.bind(target)
             : v;
           // Avoid changing the binding property of global non-enumerable classes
           // ChromeXt is non-configurable, and thus should not be bound
@@ -418,9 +415,11 @@ GM.bootstrap = () => {
     };
   }
 
+  const ChromeXt = LockedChromeXt.unlock(key);
   if (meta.grants.includes("GM.ChromeXt")) {
-    GM.ChromeXt = LockedChromeXt.unlock(key);
+    GM.ChromeXt = ChromeXt;
   }
+
   if (
     meta.grants.includes("GM_setValue") ||
     meta.grants.includes("GM_listValues")
@@ -446,13 +445,13 @@ GM.bootstrap = () => {
         broadcast,
       };
       if (broadcast) {
-        LockedChromeXt.unlock(key).post("scriptStorage", payload);
+        ChromeXt.post("scriptStorage", payload);
       }
-      LockedChromeXt.unlock(key).dispatch("scriptStorage", payload);
+      ChromeXt.dispatch("scriptStorage", payload);
     };
     Object.freeze(GM.scriptStorage);
 
-    LockedChromeXt.unlock(key).addEventListener("scriptStorage", (e) => {
+    ChromeXt.addEventListener("scriptStorage", (e) => {
       if (e.detail.id != GM_info.script.id) {
         return;
       }
@@ -515,12 +514,12 @@ GM.bootstrap = () => {
           e.stopImmediatePropagation();
           const data = e.detail.data || null;
           if (closeCondition(data)) {
-            LockedChromeXt.unlock(key).removeEventListener(event, tmpListener);
+            ChromeXt.removeEventListener(event, tmpListener);
             listener(data, resolve, reject);
           }
         }
       };
-      LockedChromeXt.unlock(key).addEventListener(event, tmpListener);
+      ChromeXt.addEventListener(event, tmpListener);
     });
   }
 
@@ -550,10 +549,8 @@ GM.bootstrap = () => {
               uuid,
               id: GM_info.script.id,
             });
-            script =
-              script.replace("ChromeXt", "LockedChromeXt") +
-              `\nChromeXt.post('unsafe_eval', ${detail});`;
-            LockedChromeXt.unlock(key).dispatch("unsafeEval", script);
+            script += `\nChromeXt.unlock(${GM.key}).post('unsafe_eval', ${detail});`;
+            ChromeXt.dispatch("unsafeEval", script);
             await promiseListenerFactory("unsafe_eval", uuid);
           }
         }
@@ -584,7 +581,7 @@ GM.bootstrap = () => {
     GM_info.scriptHandler = "ChromeXt";
     GM_info.version = "3.5.0";
     Object.freeze(GM_info);
-    LockedChromeXt.unlock(key).scripts.push(GM_info);
+    ChromeXt.scripts.push(GM_info);
   }
 };
 
@@ -595,7 +592,6 @@ GM.ChromeXtLock = class {
   constructor(GM) {
     if (typeof GM.key == "number" && ChromeXt.isLocked()) {
       this.#ChromeXt = ChromeXt.unlock(GM.key, false);
-      GM.key = null; // Revoke key
     } else {
       throw new Error("Invalid key to construct a lock");
     }
@@ -612,6 +608,4 @@ GM.ChromeXtLock = class {
   }
 };
 const LockedChromeXt = new GM.ChromeXtLock(GM);
-delete GM.key;
 delete GM.ChromeXtLock;
-// Delete references
