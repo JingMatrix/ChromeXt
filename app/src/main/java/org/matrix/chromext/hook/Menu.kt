@@ -200,10 +200,7 @@ object MenuHook : BaseHook() {
                       Chrome.refreshTab(it.args[1])
                       val url = getUrl()
                       val skip =
-                          url != "chrome-native://newtab/" &&
-                              (menu.size() <= 20 ||
-                                  !(it.args[2] as Boolean) ||
-                                  (it.args[3] as Boolean))
+                          (menu.size() <= 20 || !(it.args[2] as Boolean) || (it.args[3] as Boolean))
                       // Infalte only for the main_menu, which has more than 20 items at least
 
                       if (skip) return@hookBefore
