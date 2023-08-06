@@ -10,6 +10,7 @@ add URL comparison there and evaluate JavaScript using the `javascript:` scheme 
 Chromium based browsers,
 such as [Egde](https://www.microsoft.com/en-us/edge/download),
 [Bromite](https://github.com/bromite/bromite),
+[Samsung Internet](https://en.wikipedia.org/wiki/Samsung_Internet),
 and [Brave](https://github.com/brave/brave-browser), are fully supported.
 
 Most WebView based browsers are also supported, if not, please report it.
@@ -75,12 +76,13 @@ From the three dots page menu, ChromeXt offers you
 For `Edge` browser, these menus are moved to the page info menu,
 which locates at the left corner inside the URL input bar.
 
-For WebView based browsers, these menu items are presented in the context menu.
+For WebView based browsers and _Samsung Internet_, these menu items are presented in the context menu.
 
 ## Bonus
 
 Since WebView based browsers have no unified designs, the following
 first four features are not supported for them.
+(Unfortunately, they are neither supported for _Samsung Internet_.)
 
 ### Open in Chrome
 
@@ -182,6 +184,7 @@ and [GM.js](app/src/main/assets/GM.js)
 - [x] Convert exported bookmarks to HTML format
 - [x] Show executed scripts on current page
 - [x] Make a YouTube presentation video
+- [x] Support Samsung Internet browser
 - [ ] Use `iframe` and local server to run general [WebExtensions](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions)
 - [ ] Support importing UserScripts from Tampermonkey exports
 - [ ] Support backup and restore
