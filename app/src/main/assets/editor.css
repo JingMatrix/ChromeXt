@@ -4,10 +4,10 @@ html {
 }
 pre {
   overflow-x: scroll;
-  > em {
-	font-weight: bold;
-	color: yellow;
-  }
+}
+pre > em {
+  font-weight: bold;
+  color: yellow;
 }
 body {
   margin: 0;
