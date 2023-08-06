@@ -10,6 +10,9 @@ import android.widget.LinearLayout
 import java.io.File
 import java.io.FileReader
 import java.lang.ref.WeakReference
+import java.lang.reflect.InvocationHandler
+import java.lang.reflect.Method
+import java.lang.reflect.Proxy
 import kotlin.text.Regex
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
@@ -18,7 +21,6 @@ import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.findFieldOrNull
 import org.matrix.chromext.utils.findMethod
-import org.matrix.chromext.utils.hookBefore
 
 const val ERUD_URL = "https://cdn.jsdelivr.net/npm/eruda@latest/eruda.min.js"
 
@@ -241,33 +243,19 @@ object MenuProxy {
                 })
 
     mClickListener.setAccessible(true)
-    if (mClickListener.getType() == OnClickListener::class.java) {
-      preferences.forEach { (name, pref) ->
-        mClickListener.set(
-            pref,
-            object : OnClickListener {
-              override fun onClick(v: View) {
-                listeners[name]?.invoke(pref)
-              }
-            })
-      }
-    } else if (!clickHooked) {
-      clickHooked = true
-      val mPreference = mClickListener.getType().getDeclaredFields().first()
-      val prefTitles =
-          preferences.entries.map { (name, pref) ->
-            Pair(name, pref.toString().split(" ").take(3).joinToString(" "))
-          }
-      findMethod(mClickListener.getType()) { name == "onClick" }
-          .hookBefore {
-            prefTitles.forEach(
-                fun(p: Pair<String, String>) {
-                  if (mPreference.get(it.thisObject)!!.toString().startsWith(p.second)) {
-                    listeners[p.first]?.invoke(mPreference.get(it.thisObject)!!)
-                    it.result = true
+    preferences.forEach { (name, pref) ->
+      mClickListener.set(
+          pref,
+          Proxy.newProxyInstance(
+              Chrome.getContext().getClassLoader(),
+              arrayOf(mClickListener.getType()),
+              object : InvocationHandler {
+                override fun invoke(proxy: Any, method: Method, args: Array<Any>) {
+                  if (method.name == "onClick" && args.size == 1 && args[0] is View) {
+                    listeners[name]?.invoke(pref)
                   }
-                })
-          }
+                }
+              }))
     }
     mClickListener.setAccessible(false)
   }
