@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import java.lang.reflect.Modifier
+import org.matrix.chromext.Chrome
 import org.matrix.chromext.proxy.IntentProxy
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookBefore
@@ -29,13 +30,20 @@ object IntentHook : BaseHook() {
 
     findMethod(proxy.intentHandler, true) {
           Modifier.isStatic(getModifiers()) &&
-              getParameterTypes() contentDeepEquals
-                  arrayOf(Context::class.java, Intent::class.java, String::class.java)
+              (name == "startActivityForTrustedIntentInternal" ||
+                  getParameterTypes() contentDeepEquals
+                      arrayOf(Context::class.java, Intent::class.java, String::class.java))
         }
         // private static void startActivityForTrustedIntentInternal(Context context,
         // Intent intent, String componentClassName)
         .hookBefore {
-          val intent = it.args[1] as Intent
+          val intent =
+              if (Chrome.isSamsung) {
+                it.args[0]
+              } else {
+                it.args[1]
+              }
+                  as Intent
           if (intent.hasExtra("org.chromium.chrome.browser.customtabs.MEDIA_VIEWER_URL")) {
             val fileurl = convertDownloadUrl(it.args[0] as Context, intent.getData()!!)
             if (fileurl != null) {

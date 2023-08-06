@@ -8,6 +8,7 @@ import java.io.OutputStream
 import java.security.SecureRandom
 import kotlin.experimental.xor
 import org.json.JSONObject
+import org.matrix.chromext.Chrome
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.utils.Log
@@ -182,7 +183,11 @@ class WebSocketFrame(msg: String?) {
 fun connectDevTools(client: LocalSocket) {
   val address =
       if (UserScriptHook.isInit) {
-        "chrome_devtools_remote"
+        if (Chrome.isSamsung) {
+          "Terrace_devtools_remote"
+        } else {
+          "chrome_devtools_remote"
+        }
       } else if (WebViewHook.isInit) {
         "webview_devtools_remote"
       } else {

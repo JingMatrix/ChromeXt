@@ -29,7 +29,7 @@ object UserScriptHook : BaseHook() {
     findMethod(proxy.tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
         // public void onUpdateUrl(GURL url)
         .hookAfter {
-          val tab = proxy.mTab.get(it.thisObject)!!
+          val tab = proxy.getTab(it.thisObject)!!
           Chrome.refreshTab(tab)
           val url = proxy.parseUrl(it.args[0])!!
           if (url.startsWith("chrome")) {
@@ -56,7 +56,7 @@ object UserScriptHook : BaseHook() {
         .hookAfter {
           // This should be the way to communicate with the front-end of ChromeXt
           if (it.args[0] as Int == 0) {
-            Listener.startAction(it.args[1] as String, proxy.mTab.get(it.thisObject))
+            Listener.startAction(it.args[1] as String, proxy.getTab(it.thisObject))
           } else {
             Log.d(
                 when (it.args[0] as Int) {
@@ -69,7 +69,7 @@ object UserScriptHook : BaseHook() {
         }
 
     findMethod(proxy.navigationControllerImpl) {
-          getParameterTypes() contentDeepEquals arrayOf(proxy.loadUrlParams)
+          name == "loadUrl" || getParameterTypes() contentDeepEquals arrayOf(proxy.loadUrlParams)
         }
         // public void loadUrl(LoadUrlParams params)
         .hookBefore {

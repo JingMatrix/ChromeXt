@@ -1,13 +1,8 @@
 package org.matrix.chromext.hook
 
 import android.os.Handler
-import android.view.ActionMode
-import android.view.Menu
-import android.view.MenuItem
-import android.view.View
 import android.webkit.ConsoleMessage
 import android.webkit.WebView
-import de.robv.android.xposed.XC_MethodHook.Unhook
 import java.lang.ref.WeakReference
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
@@ -79,40 +74,6 @@ object WebViewHook : BaseHook() {
         view.settings.domStorageEnabled = enableDOMStorage
       }
     }
-
-    var contextMenuHook: Unhook? = null
-    findMethod(View::class.java) { name == "startActionMode" && getParameterTypes().size == 2 }
-        // public ActionMode startActionMode (ActionMode.Callback callback,
-        //         int type)
-        .hookBefore {
-          if (it.args[1] as Int == ActionMode.TYPE_FLOATING && it.thisObject is WebView) {
-            val view = it.thisObject as WebView
-            val isChromeXt = view.getUrl()!!.endsWith("/ChromeXt/")
-            webView = WeakReference(view)
-            contextMenuHook?.unhook()
-            contextMenuHook =
-                findMethod(it.args[0]::class.java) { name == "onCreateActionMode" }
-                    // public abstract boolean onCreateActionMode (ActionMode mode, Menu menu)
-                    .hookAfter {
-                      val mode = it.args[0] as ActionMode
-                      val menu = it.args[1] as Menu
-                      val erudaMenu = menu.add(Menu.NONE, Menu.NONE, Menu.NONE, "Eruda console")
-                      if (isChromeXt) {
-                        erudaMenu.setTitle("Developer tools")
-                      }
-                      erudaMenu.setOnMenuItemClickListener(
-                          MenuItem.OnMenuItemClickListener {
-                            if (isChromeXt) {
-                              Listener.on("inspectPages")
-                            } else {
-                              evaluateJavascript(Local.openEruda)
-                            }
-                            mode.finish()
-                            true
-                          })
-                    }
-          }
-        }
 
     findMethod(WebView::class.java) { name == "loadUrl" }
         // public void loadUrl (String url)

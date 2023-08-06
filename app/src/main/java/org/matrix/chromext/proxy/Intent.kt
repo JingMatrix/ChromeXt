@@ -8,13 +8,23 @@ import org.matrix.chromext.utils.findFieldOrNull
 
 object IntentProxy {
 
-  val chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
+  val chromeTabbedActivity =
+      if (Chrome.isSamsung) {
+        Chrome.load("com.sec.terrace.TerraceActivity")
+      } else {
+        Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
+      }
+
   val intentHandler =
-      // Grep 'Ignoring internal Chrome URL from untrustworthy source.' to get the class
-      // org/chromium/chrome/browser/IntentHandler.java
-      findField(Chrome.load("org.chromium.chrome.browser.app.ChromeActivity")) {
-            Modifier.isFinal(getModifiers()) &&
-                findFieldOrNull(type, true) { type == Pair::class.java } != null
-          }
-          .type
+      if (Chrome.isSamsung) {
+        Chrome.load("com.sec.android.app.sbrowser.externalnav.SBrowserIntentHandler")
+      } else {
+        // Grep 'Ignoring internal Chrome URL from untrustworthy source.' to get the class
+        // org/chromium/chrome/browser/IntentHandler.java
+        findField(Chrome.load("org.chromium.chrome.browser.app.ChromeActivity")) {
+              Modifier.isFinal(getModifiers()) &&
+                  findFieldOrNull(type, true) { type == Pair::class.java } != null
+            }
+            .type
+      }
 }

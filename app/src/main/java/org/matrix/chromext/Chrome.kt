@@ -21,10 +21,11 @@ object Chrome {
   private var currentTab: WeakReference<Any>? = null
   private var devToolsReady = false
 
+  var isBrave = false
   var isDev = false
   var isEdge = false
+  var isSamsung = false
   var isVivaldi = false
-  var isBrave = false
 
   fun init(ctx: Context, packageName: String? = null) {
     val initialized = mContext != null
@@ -35,10 +36,11 @@ object Chrome {
     if (ctx is Application) {
       Log.d("Started a WebView based browser")
     }
-    isEdge = packageName.startsWith("com.microsoft.emmx")
-    isVivaldi = packageName == "com.vivaldi.browser"
     isBrave = packageName.startsWith("com.brave.browser")
     isDev = packageName.endsWith("canary") || packageName.endsWith("dev")
+    isEdge = packageName.startsWith("com.microsoft.emmx")
+    isSamsung = packageName.startsWith("com.sec.android.app.sbrowser")
+    isVivaldi = packageName == "com.vivaldi.browser"
     @Suppress("DEPRECATION")
     val packageInfo = ctx.getPackageManager()?.getPackageInfo(packageName, 0)
     Log.i("Package: ${packageName}, v${packageInfo?.versionName}")

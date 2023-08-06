@@ -8,6 +8,7 @@ import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import org.matrix.chromext.hook.BaseHook
+import org.matrix.chromext.hook.ContextMenuHook
 import org.matrix.chromext.hook.GestureNavHook
 import org.matrix.chromext.hook.IntentHook
 import org.matrix.chromext.hook.MenuHook
@@ -30,6 +31,7 @@ val supportedPackages =
         "com.microsoft.emmx.beta",
         "com.microsoft.emmx.canary",
         "com.microsoft.emmx.dev",
+        "com.sec.android.app.sbrowser",
         "com.vivaldi.browser",
         "com.vivaldi.browser.snapshot",
         "org.bromite.bromite",
@@ -51,7 +53,11 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
           .getDeclaredConstructors()[1]
           .hookAfter {
             Chrome.init(it.args[0] as Context, lpparam.packageName)
-            initHooks(UserScriptHook, GestureNavHook, MenuHook, IntentHook)
+            if (Chrome.isSamsung) {
+              initHooks(UserScriptHook, ContextMenuHook, IntentHook)
+            } else {
+              initHooks(UserScriptHook, GestureNavHook, MenuHook, IntentHook)
+            }
           }
     } else {
       val ctx = AndroidAppHelper.currentApplication()
@@ -65,7 +71,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
         if (it.thisObject::class != WebViewClient::class) {
           WebViewHook.ViewClient = it.thisObject::class.java
           if (WebViewHook.ChromeClient != null) {
-            initHooks(WebViewHook)
+            initHooks(WebViewHook, ContextMenuHook)
           }
         }
       }
@@ -74,7 +80,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
         if (it.thisObject::class != WebViewClient::class) {
           WebViewHook.ChromeClient = it.thisObject::class.java
           if (WebViewHook.ViewClient != null) {
-            initHooks(WebViewHook)
+            initHooks(WebViewHook, ContextMenuHook)
           }
         }
       }

@@ -2,6 +2,7 @@ package org.matrix.chromext.devtools
 
 import android.net.LocalSocket
 import org.json.JSONArray
+import org.matrix.chromext.utils.Log
 
 const val DEV_FRONT_END = "https://chrome-devtools-frontend.appspot.com"
 
@@ -29,6 +30,7 @@ fun getInspectPages(): JSONArray? {
         }
       }
       .onFailure {
+        Log.ex(it)
         return null
       }
   return JSONArray(response)
