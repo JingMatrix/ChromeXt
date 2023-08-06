@@ -3,29 +3,27 @@ async function installScript(force = false) {
     force = confirm("Confirm ChromeXt to install this UserScript?");
   }
   if (force) {
-    let script;
-    if (
-      document.characterSet != "UTF-8" &&
-      window.location.href.startsWith("http")
-    ) {
-      const response = await fetch(window.location.href);
-      script = await response.text();
-    } else {
-      script = document.body.innerText;
-    }
+    const script = document.body.innerText;
     ChromeXt.dispatch("installScript", script);
   }
 }
 
-function editor() {
-  const separator = "==/UserScript==\n";
+renderEditor = (windows1252, highlightElement) => {
   const code = document.querySelector("body > pre");
-  const script = code.innerHTML.split(separator);
 
+  if (document.characterSet == "windows-1252") {
+    const bytes_16 = windows1252.encode(code.textContent, {
+      mode: "replacement",
+    });
+    const bytes = new Uint8Array(bytes_16);
+    const utf8 = new TextDecoder();
+    code.textContent = utf8.decode(bytes);
+  }
+
+  const separator = "==/UserScript==\n";
+  const script = code.innerHTML.split(separator);
+  if (separator.length == 1) return;
   const scriptMeta = document.createElement("pre");
-  const meta = document.createElement("meta");
-  const style = document.createElement("style");
-  const js = document.createElement("script");
   scriptMeta.innerHTML = (script.shift() + separator).replace(
     "GM.ChromeXt",
     "<em>GM.ChromeXt</em>"
@@ -34,6 +32,22 @@ function editor() {
   code.innerHTML = script.join(separator);
   code.id = "code";
   code.removeAttribute("style");
+  document.body.prepend(scriptMeta);
+
+  highlightElement(document.querySelector("#code"), "js", {
+    hideLineNumbers: true,
+  });
+
+  scriptMeta.setAttribute("contenteditable", true);
+  code.setAttribute("contenteditable", true);
+  setTimeout(installScript);
+};
+
+function prepareDOM() {
+  const meta = document.createElement("meta");
+  const style = document.createElement("style");
+  const js = document.createElement("script");
+
   style.setAttribute("type", "text/css");
   meta.setAttribute("name", "viewport");
   meta.setAttribute(
@@ -43,21 +57,15 @@ function editor() {
   style.textContent = _editor_style;
   js.setAttribute("type", "module");
   js.textContent =
-    "import { highlightElement } from 'https://unpkg.com/@speed-highlight/core/dist/index.js'; highlightElement(document.querySelector('#code'), 'js', { hideLineNumbers: true });";
+    "import * as windows1252 from 'https://cdn.jsdelivr.net/npm/windows-1252@3.0.4/+esm'; import { highlightElement } from 'https://unpkg.com/@speed-highlight/core/dist/index.js'; renderEditor(windows1252, highlightElement);";
 
-  document.body.prepend(scriptMeta);
   document.head.appendChild(meta);
   document.head.appendChild(style);
   document.head.appendChild(js);
-  if (document.characterSet == "UTF-8") {
-    scriptMeta.setAttribute("contenteditable", true);
-    code.setAttribute("contenteditable", true);
-  }
-  setTimeout(installScript, 500);
 }
 
 if (document.readyState == "complete") {
-  editor();
+  prepareDOM();
 } else {
-  window.onload = editor;
+  window.onload = prepareDOM;
 }

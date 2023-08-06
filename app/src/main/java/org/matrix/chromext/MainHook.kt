@@ -10,7 +10,6 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
 import org.matrix.chromext.hook.BaseHook
 import org.matrix.chromext.hook.ContextMenuHook
 import org.matrix.chromext.hook.GestureNavHook
-import org.matrix.chromext.hook.IntentHook
 import org.matrix.chromext.hook.MenuHook
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
@@ -54,9 +53,9 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
           .hookAfter {
             Chrome.init(it.args[0] as Context, lpparam.packageName)
             if (Chrome.isSamsung) {
-              initHooks(UserScriptHook, ContextMenuHook, IntentHook)
+              initHooks(UserScriptHook, ContextMenuHook)
             } else {
-              initHooks(UserScriptHook, GestureNavHook, MenuHook, IntentHook)
+              initHooks(UserScriptHook, GestureNavHook, MenuHook)
             }
           }
     } else {

@@ -1,6 +1,7 @@
 package org.matrix.chromext.proxy
 
 import android.net.Uri
+import android.provider.OpenableColumns
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
@@ -135,5 +136,22 @@ object UserScriptProxy {
     } else {
       return null
     }
+  }
+
+  fun isUserScript(url: String): Boolean {
+    if (url.endsWith(".user.js")) {
+      return true
+    } else if (url.startsWith("content://")) {
+      Chrome.getContext().getContentResolver().query(Uri.parse(url), null, null, null, null)?.use {
+          cursor ->
+        cursor.moveToFirst()
+        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+        val filename = cursor.getString(nameIndex)
+        if (filename.endsWith(".js")) {
+          return true
+        }
+      }
+    }
+    return false
   }
 }

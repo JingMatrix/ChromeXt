@@ -36,7 +36,7 @@ object UserScriptHook : BaseHook() {
             return@hookAfter
           }
           proxy.evaluateJavascript(Local.initChromeXt)
-          if (url.endsWith(".user.js")) {
+          if (proxy.isUserScript(url)) {
             proxy.evaluateJavascript(Local.promptInstallUserScript)
           } else if (url.startsWith(DEV_FRONT_END)) {
             proxy.evaluateJavascript(Local.customizeDevTool)

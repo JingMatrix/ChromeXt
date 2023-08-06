@@ -11,14 +11,11 @@ const val TAG = "ChromeXt"
 
 class OpenInChrome : Activity() {
   var defaultPackage = "com.android.chrome"
-  var isSamsung = false
 
   fun invokeChromeTabbed(url: String) {
+    val activity = "com.google.android.apps.chrome.Main"
     val chromeMain =
-        Intent(Intent.ACTION_MAIN)
-            .setComponent(ComponentName(defaultPackage, "com.google.android.apps.chrome.Main"))
-    // Ensure that Chrome is started
-    startActivity(chromeMain)
+        Intent(Intent.ACTION_MAIN).setComponent(ComponentName(defaultPackage, activity))
     startActivity(chromeMain.putExtra("ChromeXt", url))
   }
 
@@ -36,7 +33,8 @@ class OpenInChrome : Activity() {
     } else {
       defaultPackage = avaiblePackages.last()
     }
-    var isSamsung = defaultPackage.startsWith("com.sec.android.app.sbrowser")
+
+    val isSamsung = defaultPackage.startsWith("com.sec.android.app.sbrowser")
     val intent: Intent = getIntent()
     val destination: ComponentName =
         ComponentName(
@@ -52,7 +50,6 @@ class OpenInChrome : Activity() {
       intent.setDataAndType(intent.getData(), "text/html")
       startActivity(intent)
     } else if (intent.action == Intent.ACTION_SEND && !isSamsung) {
-
       var text = intent.getStringExtra(Intent.EXTRA_TEXT)
       if (text == null || intent.getType() != "text/plain") {
         finish()

@@ -1,6 +1,8 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuInflater
@@ -325,6 +327,16 @@ object MenuHook : BaseHook() {
         .hookAfter {
           if (it.result::class.java == proxy.developerSettings) {
             ResourceMerge.enrich(it.args[0] as Context)
+          }
+        }
+
+    findMethod(proxy.chromeTabbedActivity) { name == "onNewIntent" || name == "onMAMNewIntent" }
+        .hookBefore {
+          val intent = it.args[0] as Intent
+          if (intent.hasExtra("ChromeXt")) {
+            intent.setAction(Intent.ACTION_VIEW)
+            var url = intent.getStringExtra("ChromeXt") as String
+            intent.setData(Uri.parse(url))
           }
         }
   }
