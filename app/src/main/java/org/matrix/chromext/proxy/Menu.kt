@@ -92,7 +92,9 @@ object MenuProxy {
   val addPreferencesFromResource =
       findMethod(preferenceFragmentCompat, true) {
         getParameterTypes() contentDeepEquals arrayOf(Int::class.java) &&
-            getReturnType() == Void.TYPE
+            getReturnType() == Void.TYPE &&
+            // There exist other methods with the same signatures
+            !name[0].isUpperCase()
       }
 
   fun setClickListener(preferences: Map<String, Any>) {
