@@ -143,7 +143,7 @@ Here are corresponding files you might want / need to change:
 2. Tampermonkey API: [Local.kt](app/src/main/java/org/matrix/chromext/script/Local.kt)
 and [GM.js](app/src/main/assets/GM.js)
 3. Eruda configuration: [eruda.js](app/src/main/assets/eruda.js)
-4. Support more WebView based browsers: [WebViewHook.kt](app/src/main/java/org/matrix/chromext/hook/WebViewHook.kt)
+4. Support more WebView based browsers: [WebView.kt](app/src/main/java/org/matrix/chromext/hook/WebView.kt)
 
 ## Development plans
 

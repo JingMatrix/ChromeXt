@@ -142,3 +142,16 @@ object Chrome {
     }
   }
 }
+
+object Resource {
+  private var module_path: String? = null
+
+  fun init(packagePath: String) {
+    module_path = packagePath
+  }
+
+  fun enrich(ctx: Context) {
+    // Log.d("Enriching context for " + ctx.toString())
+    ctx.assets.invokeMethod(module_path!!) { name == "addAssetPath" }
+  }
+}

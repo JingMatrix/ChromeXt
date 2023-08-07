@@ -6,15 +6,15 @@ import kotlin.random.Random
 import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.Resource
 import org.matrix.chromext.utils.Log
-import org.matrix.chromext.utils.ResourceMerge
 
 object GM {
   private val localScript: Map<String, String>
 
   init {
     val ctx = Chrome.getContext()
-    ResourceMerge.enrich(ctx)
+    Resource.enrich(ctx)
     localScript =
         ctx.assets
             .open("GM.js")
@@ -115,7 +115,7 @@ object Local {
 
   init {
     val ctx = Chrome.getContext()
-    ResourceMerge.enrich(ctx)
+    Resource.enrich(ctx)
     var css =
         JSONArray(
             ctx.assets.open("editor.css").bufferedReader().use { it.readText() }.split("\n\n"))

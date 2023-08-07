@@ -1,14 +1,19 @@
 package org.matrix.chromext.hook
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.graphics.Insets
+import android.graphics.Rect
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -16,13 +21,17 @@ import android.widget.TextView
 import de.robv.android.xposed.XC_MethodHook.Unhook
 import java.lang.reflect.Modifier
 import java.util.ArrayList
+import kotlin.math.roundToInt
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 import org.matrix.chromext.R
+import org.matrix.chromext.Resource
 import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.Local
 import org.matrix.chromext.utils.*
+import org.matrix.chromext.utils.findMethod
+import org.matrix.chromext.utils.hookBefore
 
 object readerMode {
   val ID = 31415926
@@ -78,7 +87,7 @@ object MenuHook : BaseHook() {
       }
       proxy.pageInfoView.getDeclaredConstructors()[0].hookAfter {
         val ctx = it.args[0] as Context
-        ResourceMerge.enrich(ctx)
+        Resource.enrich(ctx)
         val url = getUrl()
         if (!url.startsWith("edge://")) {
           val erudaRow =
@@ -178,7 +187,7 @@ object MenuHook : BaseHook() {
                                 as ImageButton
                         bookmarkButton.setVisibility(View.VISIBLE)
                         val ctx = mContext.get(it.thisObject) as Context
-                        ResourceMerge.enrich(ctx)
+                        Resource.enrich(ctx)
                         bookmarkButton.setImageResource(R.drawable.ic_book)
                         bookmarkButton.setId(readerMode.ID)
                       }
@@ -197,7 +206,7 @@ object MenuHook : BaseHook() {
                     .hookBefore {
                       val ctx = mContext.get(it.thisObject) as Context
                       Chrome.init(ctx)
-                      ResourceMerge.enrich(ctx)
+                      Resource.enrich(ctx)
                       val menu = it.args[0] as Menu
                       Chrome.refreshTab(it.args[1])
                       val url = getUrl()
@@ -326,7 +335,7 @@ object MenuHook : BaseHook() {
         }
         .hookAfter {
           if (it.result::class.java == proxy.developerSettings) {
-            ResourceMerge.enrich(it.args[0] as Context)
+            Resource.enrich(it.args[0] as Context)
           }
         }
 
@@ -339,5 +348,37 @@ object MenuHook : BaseHook() {
             intent.setData(Uri.parse(url))
           }
         }
+
+    findMethod(WindowInsets::class.java) { name == "getSystemGestureInsets" }
+        .hookBefore {
+          val ctx = Chrome.getContext()
+          val sharedPref = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
+          if (sharedPref.getBoolean("gesture_mod", true)) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+              it.result = Insets.of(0, 0, 0, 0)
+            }
+            fixConflict(ctx as Activity, true)
+          } else {
+            fixConflict(ctx as Activity, false)
+          }
+        }
+  }
+
+  fun fixConflict(activity: Activity?, excludeSystemGesture: Boolean) {
+    if (activity == null) return
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      val decoView = activity.getWindow().getDecorView()
+      val width = decoView.getWidth()
+      val height = decoView.getHeight()
+      val excludeHeight: Int =
+          (activity.getResources().getDisplayMetrics().density * 100).roundToInt()
+      if (excludeSystemGesture) {
+        decoView.setSystemGestureExclusionRects(
+            // public Rect (int left, int top, int right, int bottom)
+            listOf(Rect(width / 2, height / 2 - excludeHeight, width, height / 2 + excludeHeight)))
+      } else {
+        decoView.setSystemGestureExclusionRects(listOf(Rect(0, 0, 0, 0)))
+      }
+    }
   }
 }

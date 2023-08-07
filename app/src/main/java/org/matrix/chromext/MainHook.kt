@@ -9,12 +9,10 @@ import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import org.matrix.chromext.hook.BaseHook
 import org.matrix.chromext.hook.ContextMenuHook
-import org.matrix.chromext.hook.GestureNavHook
 import org.matrix.chromext.hook.MenuHook
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.utils.Log
-import org.matrix.chromext.utils.ResourceMerge
 import org.matrix.chromext.utils.hookAfter
 
 val supportedPackages =
@@ -55,7 +53,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             if (Chrome.isSamsung) {
               initHooks(UserScriptHook, ContextMenuHook)
             } else {
-              initHooks(UserScriptHook, GestureNavHook, MenuHook)
+              initHooks(UserScriptHook, MenuHook)
             }
           }
     } else {
@@ -87,7 +85,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
   }
 
   override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
-    ResourceMerge.init(startupParam.modulePath)
+    Resource.init(startupParam.modulePath)
   }
 
   private fun initHooks(vararg hook: BaseHook) {

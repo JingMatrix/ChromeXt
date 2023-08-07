@@ -108,11 +108,10 @@ object MenuProxy {
     }
     setSummary.invoke(preferences["eruda"], summary)
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-      setChecked.invoke(preferences["gesture_mod"], sharedPref.getBoolean("gesture_mod", true))
-    } else {
-      setChecked.invoke(preferences["gesture_mod"], false)
-    }
+    setChecked.invoke(
+        preferences["gesture_mod"],
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            sharedPref.getBoolean("gesture_mod", true))
 
     var reset_confirming = 1
     val listeners =
