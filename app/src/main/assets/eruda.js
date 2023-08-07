@@ -309,6 +309,10 @@ if (typeof eruda != "undefined" && typeof eruda._configured == "undefined") {
     style.textContent = content;
     erudaroot.append(style);
   }
+
+  eruda.init();
+  eruda._localConfig();
+  eruda.show();
 } else if (typeof eruda == "undefined") {
   const cspRule = "script-src 'none'";
   const meta = document.head.querySelector(`meta[content="${cspRule}"]`);

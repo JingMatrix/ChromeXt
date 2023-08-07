@@ -59,7 +59,7 @@ function prepareDOM() {
     const code = document.querySelector("body > pre");
     const text = code.textContent;
     if (!/^[\p{ASCII}]*$/u.test(text)) {
-      import("https://cdn.jsdelivr.net/npm/windows-1252@3.0.4/+esm").then(
+      import("https://cdn.jsdelivr.net/npm/windows-1252@latest/+esm").then(
         (windows1252) => {
           const bytes_16 = windows1252.encode(code.textContent, {
             mode: "replacement",
