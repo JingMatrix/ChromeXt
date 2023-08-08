@@ -74,16 +74,15 @@ object Listener {
             if (callback != null) Chrome.evaluateJavascript(listOf(callback), currentTab)
           }
         }
-        .onFailure { Log.d("Ignore console.debug: " + text) }
+        .onFailure { Log.i("${it::class.java.name}: startAction fails with " + text) }
   }
 
   fun on(action: String, payload: String = "", currentTab: Any? = null): String? {
     var callback: String? = null
     when (action) {
       "focus" -> {
-        val activity =
-            (currentTab ?: Chrome.getTab())?.invokeMethod { name == "getContext" } as Activity
-        activity.window.decorView.requestFocus()
+        val activity = (currentTab ?: Chrome.getTab())?.invokeMethod { name == "getContext" }
+        if (activity is Activity) activity.window.decorView.requestFocus()
       }
       "installScript" -> {
         val script = parseScript(payload, "", true)

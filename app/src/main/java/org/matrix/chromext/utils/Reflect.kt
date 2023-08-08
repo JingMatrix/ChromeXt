@@ -38,14 +38,9 @@ fun findMethodOrNull(
 }
 
 fun Any.invokeMethod(vararg args: Any?, condition: MethodCondition): Any? {
-  this::class
-      .java
-      .declaredMethods
-      .firstOrNull { it.condition() }
-      ?.let {
-        it.isAccessible = true
-        return it(this, *args)
-      }
+  findMethodOrNull(this::class.java, true, condition)?.let {
+    return it(this, *args)
+  }
   throw NoSuchMethodException()
 }
 
