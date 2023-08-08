@@ -1,5 +1,6 @@
 package org.matrix.chromext
 
+import android.app.Activity
 import android.content.Context
 import java.io.File
 import java.io.FileReader
@@ -20,6 +21,7 @@ import org.matrix.chromext.script.parseScript
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.XMLHttpRequest
+import org.matrix.chromext.utils.invokeMethod
 
 object Listener {
 
@@ -78,6 +80,11 @@ object Listener {
   fun on(action: String, payload: String = "", currentTab: Any? = null): String? {
     var callback: String? = null
     when (action) {
+      "focus" -> {
+        val activity =
+            (currentTab ?: Chrome.getTab())?.invokeMethod { name == "getContext" } as Activity
+        activity.window.decorView.requestFocus()
+      }
       "installScript" -> {
         val script = parseScript(payload, "", true)
         if (script == null) {

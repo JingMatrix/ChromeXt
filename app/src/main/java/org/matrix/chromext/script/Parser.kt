@@ -50,14 +50,11 @@ fun parseScript(input: String, storage: String?, updateResource: Boolean = false
     }
   }
 
-  if (script.grant.contains("GM_getResourceURL") && !script.grant.contains("GM_getResourceText")) {
-    script.grant.add("GM_getResourceText")
-  }
-
-  if (!script.grant.contains("GM_xmlhttpRequest")) {
-    if (script.require.size > 0 || script.grant.contains("GM_download")) {
-      script.grant.add("GM_xmlhttpRequest")
-    }
+  if (!script.grant.contains("GM_xmlhttpRequest") &&
+      (script.require.size > 0 ||
+          script.grant.contains("GM_download") ||
+          script.grant.contains("GM.xmlHttpRequest"))) {
+    script.grant.add("GM_xmlhttpRequest")
   }
 
   if (script.grant.contains("GM.getValue") || script.grant.contains("GM_getValue")) {

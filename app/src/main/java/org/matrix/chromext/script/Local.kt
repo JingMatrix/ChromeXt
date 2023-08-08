@@ -45,15 +45,13 @@ object GM {
         else ->
             if (localScript.containsKey(it)) {
               grants += localScript.get(it)
-            } else if (!it.contains(".")) {
+            } else if (it.startsWith("GM_")) {
               grants +=
-                  "function ${it}(...args) { console.error('${it} is not implemented in ChromeXt yet, called with', args) }\n"
+                  "function ${it}(){ console.error('${it} is not implemented in ChromeXt yet, called with', arguments) }\n"
             } else if (it.startsWith("GM.")) {
-              val name = it.substring(3)
-              if (script.grant.contains("GM_${name}")) {
-                grants +=
-                    "${it} = async (...arguments) => new Promise((resolve, reject) => {resolve(GM_${name}(...arguments))});"
-              }
+              val name = "GM_" + it.substring(3)
+              if (localScript.containsKey(name))
+                  grants += localScript.get(name) + "${it}={sync: ${name}};\n"
             }
       }
     }

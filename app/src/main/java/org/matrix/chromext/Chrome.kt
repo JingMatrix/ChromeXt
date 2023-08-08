@@ -69,17 +69,21 @@ object Chrome {
   }
 
   fun getTab(): Any? {
-    return currentTab?.get()
+    return if (UserScriptHook.isInit) {
+      currentTab?.get()
+    } else if (WebViewHook.isInit) {
+      WebViewHook.webView?.get()
+    } else {
+      null
+    }
   }
 
   fun getUrl(currentTab: Any? = null): String? {
-    if (UserScriptHook.isInit) {
-      return UserScriptProxy.parseUrl(
-          (currentTab ?: Chrome.getTab())?.invokeMethod { name == "getUrl" })
-    } else if (WebViewHook.isInit) {
-      return WebViewHook.webView?.get()?.getUrl()
+    val url = (currentTab ?: getTab())?.invokeMethod { name == "getUrl" }
+    return if (UserScriptHook.isInit) {
+      UserScriptProxy.parseUrl(url)
     } else {
-      return null
+      url as String?
     }
   }
 

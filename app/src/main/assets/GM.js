@@ -12,6 +12,22 @@ delete GM_info.script.code;
 delete GM.key;
 Object.freeze(GM_info.script);
 const ChromeXt = GM.ChromeXt;
+GM_info.script.grants.forEach((p) => {
+  if (!p.startsWith("GM.")) return;
+  const name = p.substring(3);
+  if (name == "xmlHttpRequest" || typeof GM[name] != "object") return;
+  const sync = GM[name].sync;
+  if (typeof sync == "function") {
+    GM[name] = function () {
+      return new Promise(async (resolve) => {
+        const result = await sync.apply(null, arguments);
+        resolve(result);
+      });
+    };
+  } else if ("sync" in GM[name]) {
+    delete GM[name];
+  }
+});
 // Kotlin separator
 
 function GM_addStyle(css) {
@@ -33,6 +49,22 @@ const unsafeWindow = window;
 // Kotlin separator
 
 const GM_log = console.log.bind(console);
+// Kotlin separator
+
+function GM_setClipboard(data, info = "text/plain") {
+  let type = info.mimetype || info;
+  if (!type.includes("/")) type = type == "html" ? "text/html" : "text/plain";
+  const blob = new Blob([data], { type });
+  data = [new ClipboardItem({ [type]: blob })];
+  return new Promise((resolve) => {
+    window.addEventListener(
+      "focus",
+      (_) => navigator.clipboard.write(data).then(() => resolve()),
+      { once: true }
+    );
+    LockedChromeXt.unlock(key).dispatch("focus");
+  });
+}
 // Kotlin separator
 
 function GM_removeValueChangeListener(index) {
@@ -190,11 +222,11 @@ function GM_xmlhttpRequest(details) {
     if (connects.includes("*")) allowed = true;
     if (!allowed) {
       connects.forEach((it) => {
-        if (it.endsWith(domain)) allowed = true;
+        if (domain.endsWith(it)) allowed = true;
       });
     }
     if (!allowed) {
-      console.error("Connection to", url, "is not declared using @connect");
+      console.error("Connection to", domain, "is not declared using @connect");
       return;
     }
   }
@@ -397,12 +429,9 @@ GM.bootstrap = () => {
     GM.globalThis = new Proxy(window, handler);
   }
 
-  if (
-    meta.grants.includes("GM.xmlHttpRequest") &&
-    meta.grants.includes("GM_xmlhttpRequest")
-  ) {
-    GM.xmlHttpRequest = async (details) => {
-      return await new Promise((resolve, reject) => {
+  if (meta.grants.includes("GM.xmlHttpRequest")) {
+    GM.xmlHttpRequest = (details) => {
+      return new Promise(async (resolve, reject) => {
         const onload = details.onload;
         const onerror = details.onerror;
         details.onload = (d) => {
