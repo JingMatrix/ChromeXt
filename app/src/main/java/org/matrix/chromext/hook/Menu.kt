@@ -125,8 +125,7 @@ object MenuHook : BaseHook() {
         }
         when (ctx.resources.getResourceName(id)) {
           "org.matrix.chromext:id/extension_id" -> {
-            Log.toast(ctx, "Work in progress, might be ready in the future :)")
-            Listener.startAction("{action: 'extension'}")
+            Listener.on("extension")
           }
           "org.matrix.chromext:id/install_script_id" -> {
             if (getUrl().startsWith("https://raw.githubusercontent.com/")) {
@@ -139,7 +138,8 @@ object MenuHook : BaseHook() {
           "org.matrix.chromext:id/eruda_console_id" ->
               UserScriptProxy.evaluateJavascript(Local.openEruda)
           "${ctx.getPackageName()}:id/reload_menu_id" -> {
-            return Listener.on("userAgentSpoof", getUrl()) != null
+            val isLoading = proxy.mIsLoading.get(Chrome.getTab()) as Boolean
+            if (!isLoading) return Listener.on("userAgentSpoof", getUrl()) != null
           }
         }
         return false
@@ -357,22 +357,22 @@ object MenuHook : BaseHook() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
               it.result = Insets.of(0, 0, 0, 0)
             }
-            fixConflict(ctx as Activity, true)
+            toggleGestureConflict(true)
           } else {
-            fixConflict(ctx as Activity, false)
+            toggleGestureConflict(false)
           }
         }
   }
 
-  fun fixConflict(activity: Activity?, excludeSystemGesture: Boolean) {
-    if (activity == null) return
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+  private fun toggleGestureConflict(excludeSystemGesture: Boolean) {
+    val activity = Chrome.getTab()?.invokeMethod() { name == "getContext" }
+    if (activity is Activity && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
       val decoView = activity.getWindow().getDecorView()
-      val width = decoView.getWidth()
-      val height = decoView.getHeight()
-      val excludeHeight: Int =
-          (activity.getResources().getDisplayMetrics().density * 100).roundToInt()
       if (excludeSystemGesture) {
+        val width = decoView.getWidth()
+        val height = decoView.getHeight()
+        val excludeHeight: Int =
+            (activity.getResources().getDisplayMetrics().density * 100).roundToInt()
         decoView.setSystemGestureExclusionRects(
             // public Rect (int left, int top, int right, int bottom)
             listOf(Rect(width / 2, height / 2 - excludeHeight, width, height / 2 + excludeHeight)))

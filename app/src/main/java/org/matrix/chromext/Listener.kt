@@ -203,8 +203,12 @@ object Listener {
         }
       }
       "extension" -> {
-        if (payload == "" && BuildConfig.DEBUG) {
-          callback = "ChromeXt.post('extension', ${LocalFiles.start()});"
+        if (payload == "") {
+          if (BuildConfig.DEBUG) {
+            callback = "ChromeXt.post('extension', ${LocalFiles.start()});"
+          } else {
+            Log.toast(Chrome.getContext(), "Work in progress, might be ready in the future :)")
+          }
         }
       }
       "websocket" -> {

@@ -64,6 +64,13 @@ object MenuProxy {
           as Class<*>
   val tabImpl = Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
 
+  val mIsLoading =
+      tabImpl.getDeclaredFields().run {
+        val loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
+        val anchorIndex = indexOfFirst { it.type == loadUrlParams }
+        slice(anchorIndex..size - 1).find { it.type == Boolean::class.java }!!
+      }
+
   private val preference = Chrome.load("androidx.preference.Preference")
   private val mClickListener =
       findField(preference) {
