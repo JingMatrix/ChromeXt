@@ -524,6 +524,7 @@ GM.bootstrap = () => {
   }
 
   function runScript(meta) {
+    if (ChromeXt.scripts.findIndex((e) => e.id == meta.id) != -1) return;
     if (meta.requires.length > 0) {
       meta.sync_code = meta.code;
       meta.code = async () => {
@@ -596,7 +597,6 @@ GM.ChromeXtLock = class {
       throw new Error("Invalid key to construct a lock");
     }
     Object.defineProperty(this, "unlock", {
-      configurable: false,
       value: (key) => {
         if (key == this.#key) {
           return this.#ChromeXt;

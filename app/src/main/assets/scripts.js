@@ -8,7 +8,6 @@ if (typeof ChromeXt == "undefined") {
     #name;
     #sync;
     #freeze;
-    #inited = false;
     #key = null;
 
     constructor(name, sync = true, freeze = false) {
@@ -16,12 +15,10 @@ if (typeof ChromeXt == "undefined") {
       this.#name = name;
       this.#sync = sync;
       this.#freeze = freeze;
-      this.#inited = this.#freeze;
 
       ArrayKeys.forEach((m) => {
         if (typeof this[m] != "function") return;
         Object.defineProperty(this, m, {
-          configurable: false,
           value: (...args) => {
             return this.#verify(args, m);
           },
@@ -29,7 +26,6 @@ if (typeof ChromeXt == "undefined") {
       });
 
       Object.defineProperty(this, "sync", {
-        configurable: false,
         value: (data = this, ChromeXt = this.#key || globalThis.ChromeXt) => {
           this.#key = null;
           if (this.#sync && typeof this.#name == "string") {
@@ -53,18 +49,6 @@ if (typeof ChromeXt == "undefined") {
       setTimeout(() => {
         this.#key = null;
       });
-    }
-
-    init(value) {
-      if (this.#inited || this.length > 0) {
-        throw new Error(`Array ${this.#name} already initialized`);
-      } else {
-        if (typeof value == "string") {
-          value == JSON.parse(value);
-        }
-        super.push(...value);
-        this.#inited = true;
-      }
     }
 
     #checkChromeXt() {
@@ -115,8 +99,8 @@ if (typeof ChromeXt == "undefined") {
       }
       EventTargetKeys.forEach((m) => {
         Object.defineProperty(this, m, {
-          configurable: false,
           value: (...args) => {
+            if (this.isLocked()) throw new Error("ChromeXt locked");
             return this.#target[m].apply(this.#target, args);
           },
         });
@@ -129,7 +113,6 @@ if (typeof ChromeXt == "undefined") {
         );
         this.#factory(p, v);
         Object.defineProperty(this, p, {
-          configurable: false,
           set(v) {
             if (v.ChromeXt[unlock] == ChromeXt) {
               this.#factory(p, v);
@@ -142,7 +125,7 @@ if (typeof ChromeXt == "undefined") {
             if (!this.isLocked()) {
               return this.#factory(p);
             } else {
-              throw new Error("ChromeXt locked");
+              return [];
             }
           },
         });
@@ -166,8 +149,7 @@ if (typeof ChromeXt == "undefined") {
       }
       throw new Error(`Invalid field #${key}`);
     }
-    post(event, detail, key = null) {
-      if (key != this.#key) throw new Error("ChromeXt locked");
+    post(event, detail) {
       this.dispatchEvent(new CustomEvent(event, { detail }));
     }
     dispatch(action, payload, key = null) {
@@ -195,9 +177,7 @@ if (typeof ChromeXt == "undefined") {
       }
     }
     unlock(key, apiOnly = true) {
-      if (!this.isLocked()) {
-        return this;
-      } else if (this.#key == key) {
+      if (this.#key == key || !this.isLocked()) {
         const UnLocked = new ChromeXtTarget(this.#debug, this.#target);
         if (!apiOnly) {
           UnLocked[unlock] = ChromeXt;
