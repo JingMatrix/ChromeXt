@@ -126,13 +126,18 @@ function GM_download(details) {
 }
 // Kotlin separator
 
-function GM_openInTab(url, options) {
-  const gm_window = window.open(url, "_blank");
+function GM_openInTab(url, options = true) {
+  let target = "GM_openInTab";
   if (typeof options == "boolean") {
     options = { active: !options };
   }
-  if ("active" in options && options.active) {
+  if (options.setParent) target = "_self";
+  const gm_window = window.open(url, target);
+  if (options.active) {
     gm_window.focus();
+  } else {
+    gm_window.blur();
+    window.focus();
   }
   return gm_window;
 }
