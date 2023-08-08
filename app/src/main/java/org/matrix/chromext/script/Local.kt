@@ -42,7 +42,6 @@ object GM {
       when (it) {
         "GM_info" -> return@forEach
         "GM.ChromeXt" -> return@forEach
-        "unsafeWindow" -> return@forEach
         else ->
             if (localScript.containsKey(it)) {
               grants += localScript.get(it)

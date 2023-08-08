@@ -29,6 +29,9 @@ function GM_addStyle(css) {
 }
 // Kotlin separator
 
+const unsafeWindow = window;
+// Kotlin separator
+
 const GM_log = console.log.bind(console);
 // Kotlin separator
 
