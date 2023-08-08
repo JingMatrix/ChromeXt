@@ -54,9 +54,14 @@ Currently, ChromeXt supports almost all [Tampermonkey APIs](https://www.tampermo
 6. @grant GM_setValue, GM_getValue (less powerful than GM.getValue), GM_listValues, GM_addValueChangeListener, GM_removeValueChangeListener
 7. @require, @resource (Without [Subresource Integrity](https://www.tampermonkey.net/documentation.php#api:Subresource_Integrity))
 
-These APIs are implemented differently from the official ones, see the source file
+These APIs are implemented differently from the official ones, refer to the source files
 [Local.kt](app/src/main/java/org/matrix/chromext/script/Local.kt) and
 [GM.js](app/src/main/assets/GM.js) if you have doubts or questions.
+
+Moreover, there is the powerful (dangerous) `GM.ChromeXt` API, which must be declared by `@grant GM.ChromeXt` to _unlock_ its usage.
+It is locked by default so that the users are protected from malicious UserScripts exploiting ChromeXt.
+This API allows scripts to use the JavaScript method `ChromeXt.dispatch(action, payload)`, which is fundamental to implement other APIs. (Hence, one can find usage examples in [GM.js](app/src/main/assets/GM.js)).
+Dispatched `action` and `payload` are handled by [Listener.kt](app/src/main/java/org/matrix/chromext/Listener.kt).
 
 ### UserScripts manager front end
 
