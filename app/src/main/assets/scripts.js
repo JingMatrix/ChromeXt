@@ -2,7 +2,7 @@ if (typeof ChromeXt == "undefined") {
   const ArrayKeys = Object.getOwnPropertyNames(Array.prototype);
   const EventTargetKeys = Object.getOwnPropertyNames(EventTarget.prototype);
   const ChromeXtTargetKeys = ["scripts", "commands", "cspRules", "filters"];
-  const unlock = Symbol("unlock");
+  let unlock;
 
   class SyncArray extends Array {
     #name;
@@ -97,6 +97,9 @@ if (typeof ChromeXt == "undefined") {
         this.#target = new EventTarget();
         this.#debug = console.debug.bind(debug);
       }
+      if (this.#debug.toString() != "function () { [native code] }") {
+        throw Error("ChromeXt is disabled for security concern");
+      }
       EventTargetKeys.forEach((m) => {
         Object.defineProperty(this, m, {
           value: (...args) => {
@@ -114,7 +117,7 @@ if (typeof ChromeXt == "undefined") {
         this.#factory(p, v);
         Object.defineProperty(this, p, {
           set(v) {
-            if (v.ChromeXt[unlock] == ChromeXt) {
+            if (typeof unlock == "symbol" && v.ChromeXt[unlock] == ChromeXt) {
               this.#factory(p, v);
               return true;
             } else {
@@ -152,33 +155,29 @@ if (typeof ChromeXt == "undefined") {
     post(event, detail) {
       this.dispatchEvent(new CustomEvent(event, { detail }));
     }
-    dispatch(action, payload, key = null) {
-      if (key != this.#key) throw new Error("ChromeXt locked");
+    dispatch(action, payload) {
+      if (this.isLocked()) throw new Error("ChromeXt locked");
+      let key = -1;
+      if (typeof unlock == "symbol") key = Number(unlock.description);
       // Kotlin anchor
-      this.#debug(JSON.stringify({ action, payload }));
+      this.#debug(JSON.stringify({ action, payload, key }));
     }
     isLocked() {
       return this.#key != null;
     }
     lock(key) {
-      if (!this.isLocked() && typeof key == "number") {
+      if (
+        !this.isLocked() &&
+        typeof key == "number" &&
+        typeof unlock != "symbol"
+      ) {
         this.#key = key;
-        console.debug = (...args) => {
-          args = Array.from(args);
-          try {
-            const data = JSON.parse(args.map((it) => it.toString()).join(" "));
-            if ("action" in data) {
-              data.blocked = true;
-              args = [JSON.stringify(data)];
-              console.warn("Block access to ChromeXt APIs");
-            }
-          } catch {}
-          this.#debug(...args);
-        };
+        unlock = Symbol(key);
       }
     }
     unlock(key, apiOnly = true) {
-      if (this.#key == key || !this.isLocked()) {
+      if (!this.isLocked()) throw Error("ChromeXt is not locked");
+      if (this.#key == key) {
         const UnLocked = new ChromeXtTarget(this.#debug, this.#target);
         if (!apiOnly) {
           UnLocked[unlock] = ChromeXt;
