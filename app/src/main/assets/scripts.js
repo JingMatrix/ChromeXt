@@ -98,7 +98,11 @@ if (typeof ChromeXt == "undefined") {
         this.#debug = console.debug.bind(debug);
       }
       if (this.#debug.toString() != "function () { [native code] }") {
-        throw Error("ChromeXt is disabled for security concern");
+        const warning =
+          "Current page can potentially damage your browser by exploiting ChromeXt, do you trust it?";
+        if (!confirm(warning)) {
+          throw Error("ChromeXt is disabled for security concern");
+        }
       }
       EventTargetKeys.forEach((m) => {
         Object.defineProperty(this, m, {
@@ -155,7 +159,7 @@ if (typeof ChromeXt == "undefined") {
     post(event, detail) {
       this.dispatchEvent(new CustomEvent(event, { detail }));
     }
-    dispatch(action, payload) {
+    dispatch(action, payload = null) {
       if (this.isLocked()) throw new Error("ChromeXt locked");
       let key = -1;
       if (typeof unlock == "symbol") key = Number(unlock.description);
