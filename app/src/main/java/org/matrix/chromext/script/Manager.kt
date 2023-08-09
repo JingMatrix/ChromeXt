@@ -96,7 +96,7 @@ object ScriptDbManager {
         runScripts = true
       }
     }
-    codes.add("ChromeXt.lock(${Local.key});")
+    if (runScripts) codes.add("ChromeXt.lock(${Local.key});")
     Chrome.evaluateJavascript(listOf(codes.joinToString("\n")))
     if (runScripts) {
       codes.clear()

@@ -39,7 +39,9 @@ object WebViewHook : BaseHook() {
         .hookAfter {
           // This should be the way to communicate with the front-end of ChromeXt
           val consoleMessage = it.args[0] as ConsoleMessage
-          if (consoleMessage.messageLevel() == ConsoleMessage.MessageLevel.TIP) {
+          if (consoleMessage.messageLevel() == ConsoleMessage.MessageLevel.TIP &&
+              consoleMessage.sourceId() == "" &&
+              consoleMessage.lineNumber() == Chrome.lineOfGM) {
             Listener.startAction(consoleMessage.message())
           } else {
             Log.d(

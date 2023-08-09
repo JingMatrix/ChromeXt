@@ -39,7 +39,9 @@ object UserScriptHook : BaseHook() {
         // String sourceId)
         .hookAfter {
           // This should be the way to communicate with the front-end of ChromeXt
-          if (it.args[0] as Int == 0) {
+          val lineNumber = it.args[2] as Int
+          val sourceId = it.args[3] as String
+          if (it.args[0] as Int == 0 && sourceId.length == 0 && lineNumber == Chrome.lineOfGM) {
             Listener.startAction(it.args[1] as String, proxy.getTab(it.thisObject))
           } else {
             Log.d(
@@ -48,7 +50,7 @@ object UserScriptHook : BaseHook() {
                   2 -> "W"
                   3 -> "E"
                   else -> "V"
-                } + ": [${it.args[3]}@${it.args[2]}] ${it.args[1]}")
+                } + ": [${sourceId}@${lineNumber}] ${it.args[1]}")
           }
         }
 
