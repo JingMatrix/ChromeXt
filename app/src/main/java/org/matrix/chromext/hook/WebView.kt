@@ -17,12 +17,16 @@ object WebViewHook : BaseHook() {
   var ChromeClient: Class<*>? = null
 
   fun evaluateJavascript(code: String?) {
-    Handler(Chrome.getContext().getMainLooper()).post {
-      val webView = Chrome.getTab() as WebView?
-      if (code != null && webView != null) {
+    val webView = Chrome.getTab() as WebView?
+    if (code != null && code.length > 0 && webView != null) {
+      Handler(Chrome.getContext().getMainLooper()).post {
+        val enableJS = webView.settings.javaScriptEnabled
+        val enableDOM = webView.settings.domStorageEnabled
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
         webView.evaluateJavascript(code, null)
+        webView.settings.javaScriptEnabled = enableJS
+        webView.settings.domStorageEnabled = enableDOM
       }
     }
   }
@@ -52,9 +56,7 @@ object WebViewHook : BaseHook() {
 
     fun onUpdateUrl(url: String, view: WebView) {
       Chrome.updateTab(view)
-      val enableJS = view.settings.javaScriptEnabled
       ScriptDbManager.invokeScript(url)
-      view.settings.javaScriptEnabled = enableJS
     }
 
     findMethod(WebView::class.java) { name == "loadUrl" }
