@@ -1,12 +1,12 @@
 package org.matrix.chromext.proxy
 
 import android.net.Uri
-import android.provider.OpenableColumns
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.invokeMethod
+import org.matrix.chromext.utils.parseOrigin
 
 object UserScriptProxy {
   // It is possible to do a HTTP POST with LoadUrlParams Class
@@ -124,32 +124,6 @@ object UserScriptProxy {
           mVerbatimHeaders.set(urlParams, header)
         }
         return true
-      }
-    }
-    return false
-  }
-
-  fun parseOrigin(url: String): String? {
-    val protocol = url.split("://")
-    if (protocol.size > 1 && arrayOf("https", "http", "file").contains(protocol.first())) {
-      return protocol.first() + "://" + protocol[1].split("/").first()
-    } else {
-      return null
-    }
-  }
-
-  fun isUserScript(url: String): Boolean {
-    if (url.endsWith(".user.js")) {
-      return true
-    } else if (url.startsWith("content://")) {
-      Chrome.getContext().getContentResolver().query(Uri.parse(url), null, null, null, null)?.use {
-          cursor ->
-        cursor.moveToFirst()
-        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-        val filename = cursor.getString(nameIndex)
-        if (filename.endsWith(".js")) {
-          return true
-        }
       }
     }
     return false

@@ -5,8 +5,15 @@ import android.content.Context
 import android.database.AbstractWindowedCursor
 import android.database.CursorWindow
 import android.os.Build
+import android.webkit.WebView
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.isChromeXtFrontEnd
+import org.matrix.chromext.utils.isDevToolsFrontEnd
+import org.matrix.chromext.utils.isUserScript
+import org.matrix.chromext.utils.matching
+import org.matrix.chromext.utils.parseOrigin
 
 object ScriptDbManager {
 
@@ -57,23 +64,45 @@ object ScriptDbManager {
     dbHelper.close()
   }
 
-  fun invokeScript(url: String, origin: String) {
-    val codes = mutableListOf<String>()
-    if (cspRules.contains(origin)) {
-      codes.add("ChromeXt.cspRules.push(...${cspRules.get(origin)});${Local.cspRule}")
-    }
-    if (cosmeticFilters.contains(origin)) {
-      codes.add("ChromeXt.filters.push(...${cosmeticFilters.get(origin)});${Local.cosmeticFilter}")
-    }
-    if (userAgents.contains(origin)) {
-      codes.add(
-          "Object.defineProperties(window.navigator,{userAgent:{value:'${userAgents.get(origin)}'}});")
+  fun invokeScript(url: String) {
+    val codes = mutableListOf<String>(Local.initChromeXt)
+    val webSettings =
+        if (WebViewHook.isInit) {
+          (Chrome.getTab() as WebView?)?.settings
+        } else {
+          null
+        }
+    var runScripts = false
+    if (isUserScript(url)) {
+      codes.add(Local.promptInstallUserScript)
+    } else if (isDevToolsFrontEnd(url)) {
+      codes.add(Local.customizeDevTool)
+      webSettings?.userAgentString = null
+    } else if (!isChromeXtFrontEnd(url)) {
+      val origin = parseOrigin(url)
+      if (origin != null) {
+        if (cspRules.contains(origin)) {
+          codes.add("ChromeXt.cspRules.push(...${cspRules.get(origin)});${Local.cspRule}")
+        }
+        if (cosmeticFilters.contains(origin)) {
+          codes.add(
+              "ChromeXt.filters.push(...${cosmeticFilters.get(origin)});${Local.cosmeticFilter}")
+        }
+        if (userAgents.contains(origin)) {
+          val agent = userAgents.get(origin)
+          codes.add("Object.defineProperties(window.navigator,{userAgent:{value:'${agent}'}});")
+          webSettings?.userAgentString = agent
+        }
+        runScripts = true
+      }
     }
     codes.add("ChromeXt.lock(${Local.key});")
     Chrome.evaluateJavascript(listOf(codes.joinToString("\n")))
-    codes.clear()
-    scripts.filter { matching(it, url) }.forEach { codes.addAll(GM.bootstrap(it)) }
-    Chrome.evaluateJavascript(codes)
+    if (runScripts) {
+      codes.clear()
+      scripts.filter { matching(it, url) }.forEach { codes.addAll(GM.bootstrap(it)) }
+      Chrome.evaluateJavascript(codes)
+    }
   }
 
   fun updateScriptStorage() {

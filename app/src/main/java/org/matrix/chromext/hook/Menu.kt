@@ -205,10 +205,9 @@ object MenuHook : BaseHook() {
                     // currentTab, boolean canShowRequestDesktopSite, boolean isChromeScheme)
                     .hookBefore {
                       val ctx = mContext.get(it.thisObject) as Context
-                      Chrome.init(ctx)
                       Resource.enrich(ctx)
                       val menu = it.args[0] as Menu
-                      Chrome.refreshTab(it.args[1])
+                      Chrome.updateTab(it.args[1])
                       val url = getUrl()
                       val skip =
                           (menu.size() <= 20 || !(it.args[2] as Boolean) || (it.args[3] as Boolean))
@@ -282,7 +281,7 @@ object MenuHook : BaseHook() {
                 if (subType.getInterfaces().size == 1 &&
                     findFieldOrNull(subType) { type == proxy.propertyModel } != null) {
                   readerMode.init(subType)
-                  Chrome.refreshTab(it.thisObject)
+                  Chrome.updateTab(it.thisObject)
                   findReaderHook!!.unhook()
                 }
               }
@@ -365,7 +364,7 @@ object MenuHook : BaseHook() {
   }
 
   private fun toggleGestureConflict(excludeSystemGesture: Boolean) {
-    val activity = Chrome.getTab()?.invokeMethod() { name == "getContext" }
+    val activity = Chrome.getContext()
     if (activity is Activity && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
       val decoView = activity.getWindow().getDecorView()
       if (excludeSystemGesture) {

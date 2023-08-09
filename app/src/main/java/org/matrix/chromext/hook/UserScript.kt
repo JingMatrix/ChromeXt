@@ -1,12 +1,9 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
-import kotlin.concurrent.thread
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
-import org.matrix.chromext.devtools.DEV_FRONT_END
 import org.matrix.chromext.proxy.UserScriptProxy
-import org.matrix.chromext.script.Local
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
@@ -30,23 +27,10 @@ object UserScriptHook : BaseHook() {
         // public void onUpdateUrl(GURL url)
         .hookAfter {
           val tab = proxy.getTab(it.thisObject)!!
-          Chrome.refreshTab(tab)
+          Chrome.updateTab(tab)
           val url = proxy.parseUrl(it.args[0])!!
-          if (url.startsWith("chrome")) {
-            return@hookAfter
-          }
-          proxy.evaluateJavascript(Local.initChromeXt)
-          if (proxy.isUserScript(url)) {
-            proxy.evaluateJavascript(Local.promptInstallUserScript)
-          } else if (url.startsWith(DEV_FRONT_END)) {
-            proxy.evaluateJavascript(Local.customizeDevTool)
-          } else if (!url.endsWith("/ChromeXt/")) {
-            thread {
-              val origin = proxy.parseOrigin(url)
-              if (origin != null) {
-                ScriptDbManager.invokeScript(url, origin)
-              }
-            }
+          if (!url.startsWith("chrome")) {
+            ScriptDbManager.invokeScript(url)
           }
         }
 

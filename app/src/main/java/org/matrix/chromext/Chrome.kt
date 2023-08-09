@@ -18,7 +18,7 @@ import org.matrix.chromext.utils.invokeMethod
 
 object Chrome {
   private var mContext: WeakReference<Context>? = null
-  private var currentTab: WeakReference<Any>? = null
+  private var mTab: WeakReference<Any>? = null
   private var devToolsReady = false
 
   var isBrave = false
@@ -61,7 +61,8 @@ object Chrome {
   }
 
   fun getContext(): Context {
-    return mContext!!.get()!!
+    val activity = getTab()?.invokeMethod { name == "getContext" } as Context?
+    return activity ?: mContext!!.get()!!
   }
 
   fun load(className: String): Class<*> {
@@ -69,13 +70,7 @@ object Chrome {
   }
 
   fun getTab(): Any? {
-    return if (UserScriptHook.isInit) {
-      currentTab?.get()
-    } else if (WebViewHook.isInit) {
-      WebViewHook.webView?.get()
-    } else {
-      null
-    }
+    return mTab?.get()
   }
 
   fun getUrl(currentTab: Any? = null): String? {
@@ -87,8 +82,8 @@ object Chrome {
     }
   }
 
-  fun refreshTab(tab: Any?) {
-    if (tab != null) currentTab = WeakReference(tab)
+  fun updateTab(tab: Any?) {
+    if (tab != null) mTab = WeakReference(tab)
   }
 
   private fun evaluateJavascript(codes: List<String>, tabId: String) {

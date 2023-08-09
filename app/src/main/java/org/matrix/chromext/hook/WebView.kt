@@ -3,11 +3,8 @@ package org.matrix.chromext.hook
 import android.os.Handler
 import android.webkit.ConsoleMessage
 import android.webkit.WebView
-import java.lang.ref.WeakReference
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
-import org.matrix.chromext.devtools.DEV_FRONT_END
-import org.matrix.chromext.script.Local
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
@@ -18,14 +15,14 @@ object WebViewHook : BaseHook() {
 
   var ViewClient: Class<*>? = null
   var ChromeClient: Class<*>? = null
-  var webView: WeakReference<WebView>? = null
 
   fun evaluateJavascript(code: String?) {
     Handler(Chrome.getContext().getMainLooper()).post {
+      val webView = Chrome.getTab() as WebView?
       if (code != null && webView != null) {
-        webView?.get()?.settings?.javaScriptEnabled = true
-        webView?.get()?.settings?.domStorageEnabled = true
-        webView?.get()?.evaluateJavascript(code, null)
+        webView.settings.javaScriptEnabled = true
+        webView.settings.domStorageEnabled = true
+        webView.evaluateJavascript(code, null)
       }
     }
   }
@@ -52,27 +49,10 @@ object WebViewHook : BaseHook() {
         }
 
     fun onUpdateUrl(url: String, view: WebView) {
+      Chrome.updateTab(view)
       val enableJS = view.settings.javaScriptEnabled
-      val enableDOMStorage = view.settings.domStorageEnabled
-      webView = WeakReference(view)
-      evaluateJavascript(Local.initChromeXt)
-      if (url.endsWith(".user.js")) {
-        evaluateJavascript(Local.promptInstallUserScript)
-      } else if (url.startsWith(DEV_FRONT_END)) {
-        view.settings.userAgentString = null
-        evaluateJavascript(Local.customizeDevTool)
-      } else if (!url.endsWith("/ChromeXt/")) {
-        val protocol = url.split("://")
-        if (protocol.size > 1 && arrayOf("https", "http", "file").contains(protocol.first())) {
-          val origin = protocol.first() + "://" + protocol[1].split("/").first()
-          if (ScriptDbManager.userAgents.contains(origin)) {
-            view.settings.userAgentString = ScriptDbManager.userAgents.get(origin)
-          }
-          ScriptDbManager.invokeScript(url, origin)
-        }
-        view.settings.javaScriptEnabled = enableJS
-        view.settings.domStorageEnabled = enableDOMStorage
-      }
+      ScriptDbManager.invokeScript(url)
+      view.settings.javaScriptEnabled = enableJS
     }
 
     findMethod(WebView::class.java) { name == "loadUrl" }

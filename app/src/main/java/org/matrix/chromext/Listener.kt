@@ -7,21 +7,22 @@ import java.io.FileReader
 import kotlin.concurrent.thread
 import org.json.JSONArray
 import org.json.JSONObject
-import org.matrix.chromext.devtools.DEV_FRONT_END
 import org.matrix.chromext.devtools.DevToolClient
 import org.matrix.chromext.devtools.getInspectPages
 import org.matrix.chromext.extension.LocalFiles
+import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.proxy.ERUD_URL
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.Local
 import org.matrix.chromext.script.ScriptDbHelper
 import org.matrix.chromext.script.ScriptDbManager
-import org.matrix.chromext.script.matching
 import org.matrix.chromext.script.parseScript
 import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.XMLHttpRequest
-import org.matrix.chromext.utils.invokeMethod
+import org.matrix.chromext.utils.isChromeXtFrontEnd
+import org.matrix.chromext.utils.isDevToolsFrontEnd
+import org.matrix.chromext.utils.matching
 
 object Listener {
 
@@ -56,10 +57,8 @@ object Listener {
 
   private fun checkPermisson(action: String, tab: Any?): Boolean {
     val url = Chrome.getUrl(tab)!!
-    if (allowedActions.get("front-end")!!.contains(action) && !url.endsWith("/ChromeXt/"))
-        return false
-    if (allowedActions.get("devtools")!!.contains(action) && !url.startsWith(DEV_FRONT_END))
-        return false
+    if (allowedActions.get("front-end")!!.contains(action) && !isChromeXtFrontEnd(url)) return false
+    if (allowedActions.get("devtools")!!.contains(action) && !isDevToolsFrontEnd(url)) return false
     return true
   }
 
@@ -81,7 +80,7 @@ object Listener {
     var callback: String? = null
     when (action) {
       "focus" -> {
-        val activity = (currentTab ?: Chrome.getTab())?.invokeMethod { name == "getContext" }
+        val activity = Chrome.getContext()
         if (activity is Activity) activity.window.decorView.requestFocus()
       }
       "installScript" -> {
@@ -139,10 +138,12 @@ object Listener {
         }
       }
       "userAgentSpoof" -> {
-        val loadUrlParams = UserScriptProxy.newLoadUrlParams(payload)
-        if (UserScriptProxy.userAgentHook(payload, loadUrlParams)) {
-          UserScriptProxy.loadUrl.invoke(Chrome.getTab(), loadUrlParams)
-          callback = "console.log('User-Agent spoofed');"
+        if (UserScriptHook.isInit) {
+          val loadUrlParams = UserScriptProxy.newLoadUrlParams(payload)
+          if (UserScriptProxy.userAgentHook(payload, loadUrlParams)) {
+            UserScriptProxy.loadUrl.invoke(Chrome.getTab(), loadUrlParams)
+            callback = "console.log('User-Agent spoofed');"
+          }
         }
       }
       "loadEruda" -> {
