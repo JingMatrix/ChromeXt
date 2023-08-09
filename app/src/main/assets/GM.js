@@ -617,7 +617,7 @@ GM.bootstrap = () => {
 
     GM_info.uuid = Math.random();
     GM_info.scriptHandler = "ChromeXt";
-    GM_info.version = "3.5.0";
+    GM_info.version = "3.6.0";
     Object.freeze(GM_info);
     ChromeXt.scripts.push(GM_info);
   }
