@@ -110,6 +110,9 @@ object Local {
   val cosmeticFilter: String
   val key = Random.nextDouble()
 
+  val anchorInChromeXt: Int
+  // lineNumber of the anchor in GM.js, used to verify ChromeXt.dispatch
+
   init {
     val ctx = Chrome.getContext()
     Resource.enrich(ctx)
@@ -136,6 +139,7 @@ object Local {
             .use { it.readText() }
             .split("// Kotlin separator\n\n")
     initChromeXt = localScript[0]
+    anchorInChromeXt = initChromeXt.split("\n").indexOfFirst { it.endsWith("// Kotlin anchor") } + 2
     openEruda = localScript[1].replaceFirst("ChromeXtUnlockKeyForEruda", key.toString())
     cspRule = localScript[2]
     cosmeticFilter = localScript[3]

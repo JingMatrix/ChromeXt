@@ -5,6 +5,7 @@ import android.webkit.ConsoleMessage
 import android.webkit.WebView
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
+import org.matrix.chromext.script.Local
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
@@ -45,7 +46,7 @@ object WebViewHook : BaseHook() {
           val consoleMessage = it.args[0] as ConsoleMessage
           if (consoleMessage.messageLevel() == ConsoleMessage.MessageLevel.TIP &&
               consoleMessage.sourceId() == "" &&
-              consoleMessage.lineNumber() == Chrome.lineOfGM) {
+              consoleMessage.lineNumber() == Local.anchorInChromeXt) {
             Listener.startAction(consoleMessage.message())
           } else {
             Log.d(

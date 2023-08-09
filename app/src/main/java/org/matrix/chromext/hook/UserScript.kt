@@ -4,6 +4,7 @@ import android.content.Context
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 import org.matrix.chromext.proxy.UserScriptProxy
+import org.matrix.chromext.script.Local
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
@@ -41,7 +42,9 @@ object UserScriptHook : BaseHook() {
           // This should be the way to communicate with the front-end of ChromeXt
           val lineNumber = it.args[2] as Int
           val sourceId = it.args[3] as String
-          if (it.args[0] as Int == 0 && sourceId.length == 0 && lineNumber == Chrome.lineOfGM) {
+          if (it.args[0] as Int == 0 &&
+              sourceId.length == 0 &&
+              lineNumber == Local.anchorInChromeXt) {
             Listener.startAction(it.args[1] as String, proxy.getTab(it.thisObject))
           } else {
             Log.d(

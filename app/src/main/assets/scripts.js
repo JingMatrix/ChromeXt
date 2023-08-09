@@ -154,6 +154,7 @@ if (typeof ChromeXt == "undefined") {
     }
     dispatch(action, payload, key = null) {
       if (key != this.#key) throw new Error("ChromeXt locked");
+      // Kotlin anchor
       this.#debug(JSON.stringify({ action, payload }));
     }
     isLocked() {

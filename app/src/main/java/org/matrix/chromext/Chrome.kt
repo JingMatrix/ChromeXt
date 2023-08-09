@@ -21,9 +21,6 @@ object Chrome {
   private var mTab: WeakReference<Any>? = null
   private var devToolsReady = false
 
-  val lineOfGM = 157
-  // Hard-code lineNumber in GM.js, used to verify ChromeXt.dispatch
-
   var isBrave = false
   var isDev = false
   var isEdge = false
