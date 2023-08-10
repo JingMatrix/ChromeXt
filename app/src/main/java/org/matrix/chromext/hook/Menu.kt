@@ -30,8 +30,6 @@ import org.matrix.chromext.proxy.MenuProxy
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.Local
 import org.matrix.chromext.utils.*
-import org.matrix.chromext.utils.findMethod
-import org.matrix.chromext.utils.hookBefore
 
 object readerMode {
   val ID = 31415926
@@ -98,7 +96,7 @@ object MenuHook : BaseHook() {
           val subTitle = proxy.mSubtitle.get(erudaRow) as TextView
           (subTitle.getParent() as? ViewGroup)?.removeView(subTitle)
           val title = proxy.mTitle.get(erudaRow) as TextView
-          if (url.endsWith("/ChromeXt/")) {
+          if (isChromeXtFrontEnd(url)) {
             title.setText("Open developer tools")
             erudaRow.setOnClickListener {
               Listener.on("inspectPages")
@@ -238,12 +236,12 @@ object MenuHook : BaseHook() {
                       // Show items with indices in main_menu.xml
                       val toShow = mutableListOf<Int>(1)
 
-                      if (url.endsWith(".user.js")) {
+                      if (isUserScript(url)) {
                         toShow.clear()
                         toShow.add(2)
                       }
 
-                      if (url.endsWith("/ChromeXt/")) {
+                      if (isChromeXtFrontEnd(url)) {
                         toShow.clear()
                         toShow.addAll(listOf(3, 4))
                       }
