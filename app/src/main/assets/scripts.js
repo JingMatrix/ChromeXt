@@ -159,7 +159,7 @@ if (typeof ChromeXt == "undefined") {
     post(event, detail) {
       this.dispatchEvent(new CustomEvent(event, { detail }));
     }
-    dispatch(action, payload = null) {
+    dispatch(action, payload) {
       if (this.isLocked()) throw new Error("ChromeXt locked");
       let key = -1;
       if (typeof unlock == "symbol") key = Number(unlock.description);
