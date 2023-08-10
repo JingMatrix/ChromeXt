@@ -35,6 +35,7 @@ if (typeof ChromeXt == "undefined") {
             };
             if (typeof data == "object" && Array.isArray(data)) {
               if (this.#freeze) data = data.filter((it) => Object.isFrozen(it));
+              data = [...new Set(data)];
               if (data.length > 0) payload.data = data;
             }
             ChromeXt.dispatch("syncData", payload);
@@ -159,9 +160,9 @@ if (typeof ChromeXt == "undefined") {
     post(event, detail) {
       this.dispatchEvent(new CustomEvent(event, { detail }));
     }
-    dispatch(action, payload) {
-      if (this.isLocked()) throw new Error("ChromeXt locked");
-      let key = -1;
+    dispatch(action, payload, key) {
+      if (this.isLocked() && key != this.#key)
+        throw new Error("ChromeXt locked");
       if (typeof unlock == "symbol") key = Number(unlock.description);
       // Kotlin anchor
       this.#debug(JSON.stringify({ action, payload, key }));
