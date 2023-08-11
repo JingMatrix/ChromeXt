@@ -59,7 +59,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     } else {
       val ctx = AndroidAppHelper.currentApplication()
       if (ctx != null && lpparam.packageName != "android") {
-        Chrome.init(ctx, lpparam.processName)
+        Chrome.init(ctx, ctx.getPackageName())
       } else {
         return
       }
