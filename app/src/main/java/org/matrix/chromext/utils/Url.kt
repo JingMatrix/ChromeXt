@@ -65,8 +65,8 @@ fun isUserScript(url: String): Boolean {
   if (url.endsWith(".user.js")) {
     return true
   } else if (url.startsWith("content://")) {
-    Chrome.getContext().getContentResolver().query(Uri.parse(url), null, null, null, null)?.use {
-        cursor ->
+    Chrome.getContext().contentResolver.query(Uri.parse(url), null, null, null, null)?.use { cursor
+      ->
       cursor.moveToFirst()
       val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
       val filename = cursor.getString(nameIndex)

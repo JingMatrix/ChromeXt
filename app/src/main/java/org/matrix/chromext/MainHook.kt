@@ -47,7 +47,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     if (supportedPackages.contains(lpparam.packageName)) {
       lpparam.classLoader
           .loadClass("org.chromium.ui.base.WindowAndroid")
-          .getDeclaredConstructors()[1]
+          .declaredConstructors[1]
           .hookAfter {
             Chrome.init(it.args[0] as Context, lpparam.packageName)
             if (Chrome.isSamsung) {
@@ -59,12 +59,12 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     } else {
       val ctx = AndroidAppHelper.currentApplication()
       if (ctx != null && lpparam.packageName != "android") {
-        Chrome.init(ctx, ctx.getPackageName())
+        Chrome.init(ctx, ctx.packageName)
       } else {
         return
       }
 
-      WebViewClient::class.java.getDeclaredConstructors()[0].hookAfter {
+      WebViewClient::class.java.declaredConstructors[0].hookAfter {
         if (it.thisObject::class != WebViewClient::class) {
           WebViewHook.ViewClient = it.thisObject::class.java
           if (WebViewHook.ChromeClient != null) {
@@ -73,7 +73,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
         }
       }
 
-      WebChromeClient::class.java.getDeclaredConstructors()[0].hookAfter {
+      WebChromeClient::class.java.declaredConstructors[0].hookAfter {
         if (it.thisObject::class != WebViewClient::class) {
           WebViewHook.ChromeClient = it.thisObject::class.java
           if (WebViewHook.ViewClient != null) {

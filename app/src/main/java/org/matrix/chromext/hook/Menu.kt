@@ -45,22 +45,18 @@ object readerMode {
 
   fun enable() {
     val mDistillerUrl =
-        readerModeManager!!.getDeclaredFields().filter { it.type == UserScriptProxy.gURL }.last()!!
+        readerModeManager!!.declaredFields.filter { it.type == UserScriptProxy.gURL }.last()!!
     val activateReaderMode =
         // There exist other methods with the same signatures
-        findMethod(readerModeManager!!) {
-          getParameterTypes().size == 0 && getReturnType() == Void.TYPE
-        }
+        findMethod(readerModeManager!!) { parameterTypes.size == 0 && returnType == Void.TYPE }
 
-    val manager =
-        readerModeManager!!.getDeclaredConstructors()[0].newInstance(Chrome.getTab(), null)
+    val manager = readerModeManager!!.declaredConstructors[0].newInstance(Chrome.getTab(), null)
 
     mDistillerUrl.setAccessible(true)
     mDistillerUrl.set(
         manager,
-        UserScriptProxy.gURL
-            .getDeclaredConstructors()[1]
-            .newInstance("https://github.com/JingMatrix/ChromeXt"))
+        UserScriptProxy.gURL.declaredConstructors[1].newInstance(
+            "https://github.com/JingMatrix/ChromeXt"))
     mDistillerUrl.setAccessible(false)
 
     activateReaderMode.invoke(manager)
@@ -80,16 +76,16 @@ object MenuHook : BaseHook() {
     if (Chrome.isEdge) {
       // Add eruda menu to page_info dialog
       var pageInfoController: Any? = null
-      proxy.pageInfoControllerRef.getDeclaredConstructors()[0].hookAfter {
+      proxy.pageInfoControllerRef.declaredConstructors[0].hookAfter {
         pageInfoController = it.thisObject
       }
-      proxy.pageInfoView.getDeclaredConstructors()[0].hookAfter {
+      proxy.pageInfoView.declaredConstructors[0].hookAfter {
         val ctx = it.args[0] as Context
         Resource.enrich(ctx)
         val url = getUrl()
         if (!url.startsWith("edge://")) {
           val erudaRow =
-              proxy.pageInfoRowView.getDeclaredConstructors()[0].newInstance(ctx, null) as ViewGroup
+              proxy.pageInfoRowView.declaredConstructors[0].newInstance(ctx, null) as ViewGroup
           erudaRow.setVisibility(View.VISIBLE)
           val icon = proxy.mIcon.get(erudaRow) as ImageView
           icon.setImageResource(R.drawable.ic_devtools)
@@ -135,7 +131,7 @@ object MenuHook : BaseHook() {
           "org.matrix.chromext:id/developer_tools_id" -> Listener.on("inspectPages")
           "org.matrix.chromext:id/eruda_console_id" ->
               UserScriptProxy.evaluateJavascript(Local.openEruda)
-          "${ctx.getPackageName()}:id/reload_menu_id" -> {
+          "${ctx.packageName}:id/reload_menu_id" -> {
             val isLoading = proxy.mIsLoading.get(Chrome.getTab()) as Boolean
             if (!isLoading) return Listener.on("userAgentSpoof", getUrl()) != null
           }
@@ -145,8 +141,8 @@ object MenuHook : BaseHook() {
 
       findMethod(proxy.chromeTabbedActivity) {
             // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
-            getParameterTypes() contentDeepEquals arrayOf(Int::class.java, Boolean::class.java) &&
-                getReturnType() == Boolean::class.java
+            parameterTypes contentDeepEquals arrayOf(Int::class.java, Boolean::class.java) &&
+                returnType == Boolean::class.java
           }
           .hookBefore {
             if (menuHandler(it.thisObject as Context, it.args[0] as Int)) {
@@ -157,14 +153,13 @@ object MenuHook : BaseHook() {
       var findMenuHook: Unhook? = null
       findMenuHook =
           findMethod(proxy.chromeTabbedActivity) {
-                getParameterTypes().size == 0 &&
-                    getReturnType().isInterface() &&
-                    getReturnType().getDeclaredMethods().size > 6
+                parameterTypes.size == 0 &&
+                    returnType.isInterface() &&
+                    returnType.declaredMethods.size > 6
               }
               .hookAfter {
                 findMenuHook!!.unhook()
-                val appMenuPropertiesDelegateImpl =
-                    it.result::class.java.getSuperclass() as Class<*>
+                val appMenuPropertiesDelegateImpl = it.result::class.java.superclass as Class<*>
                 val mContext =
                     findField(appMenuPropertiesDelegateImpl, true) { type == Context::class.java }
                 mContext.setAccessible(true)
@@ -175,7 +170,7 @@ object MenuHook : BaseHook() {
                   // https://github.com/brave/brave-core/blob/master/android/java/
                   // org/chromium/chrome/browser/appmenu/BraveTabbedAppMenuPropertiesDelegate.java
                   findMethod(it.result::class.java, true) {
-                        getParameterTypes().size == 2 && getParameterTypes()[1] == View::class.java
+                        parameterTypes.size == 2 && getParameterTypes()[1] == View::class.java
                       }
                       // public void onFooterViewInflated(AppMenuHandler appMenuHandler, View view)
                       .hookAfter {
@@ -192,12 +187,12 @@ object MenuHook : BaseHook() {
                 }
 
                 findMethod(appMenuPropertiesDelegateImpl, true) {
-                      getParameterTypes() contentDeepEquals
+                      parameterTypes contentDeepEquals
                           arrayOf(
                               Menu::class.java,
                               proxy.tab,
                               Boolean::class.java,
-                              Boolean::class.java) && getReturnType() == Void.TYPE
+                              Boolean::class.java) && returnType == Void.TYPE
                     }
                     // protected void updateRequestDesktopSiteMenuItem(Menu menu, @Nullable Tab
                     // currentTab, boolean canShowRequestDesktopSite, boolean isChromeScheme)
@@ -269,14 +264,14 @@ object MenuHook : BaseHook() {
       var findReaderHook: Unhook? = null
       findReaderHook =
           findMethod(proxy.tabImpl) {
-                getParameterTypes() contentDeepEquals arrayOf(proxy.emptyTabObserver) &&
-                    getReturnType() == Void.TYPE
+                parameterTypes contentDeepEquals arrayOf(proxy.emptyTabObserver) &&
+                    returnType == Void.TYPE
                 // There exist other methods with the same signatures
               }
               // public void addObserver(TabObserver observer)
               .hookAfter {
                 val subType = it.args[0]::class.java
-                if (subType.getInterfaces().size == 1 &&
+                if (subType.interfaces.size == 1 &&
                     findFieldOrNull(subType) { type == proxy.propertyModel } != null) {
                   readerMode.init(subType)
                   Chrome.updateTab(it.thisObject)
@@ -287,9 +282,9 @@ object MenuHook : BaseHook() {
 
     // var findSwipeRefreshHandler: Unhook? = null
     // findSwipeRefreshHandler =
-    //     proxy.tabWebContentsUserData.getDeclaredConstructors()[0].hookAfter {
+    //     proxy.tabWebContentsUserData.declaredConstructors[0].hookAfter {
     //       val subType = it.thisObject::class.java
-    //       if (subType.getInterfaces() contentDeepEquals arrayOf(proxy.overscrollRefreshHandler))
+    //       if (subType.interfaces contentDeepEquals arrayOf(proxy.overscrollRefreshHandler))
     //		{
     //         findSwipeRefreshHandler!!.unhook()
     //         findMethod(subType) { name == "release" }
@@ -324,8 +319,8 @@ object MenuHook : BaseHook() {
         }
 
     findMethod(proxy.developerSettings, true) {
-          Modifier.isStatic(getModifiers()) &&
-              getParameterTypes() contentDeepEquals
+          Modifier.isStatic(modifiers) &&
+              parameterTypes contentDeepEquals
                   arrayOf(Context::class.java, String::class.java, Bundle::class.java)
           // public static Fragment instantiate(Context context,
           // String fname, @Nullable Bundle args)
@@ -364,12 +359,11 @@ object MenuHook : BaseHook() {
   private fun toggleGestureConflict(excludeSystemGesture: Boolean) {
     val activity = Chrome.getContext()
     if (activity is Activity && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-      val decoView = activity.getWindow().getDecorView()
+      val decoView = activity.window.decorView
       if (excludeSystemGesture) {
-        val width = decoView.getWidth()
-        val height = decoView.getHeight()
-        val excludeHeight: Int =
-            (activity.getResources().getDisplayMetrics().density * 100).roundToInt()
+        val width = decoView.width
+        val height = decoView.height
+        val excludeHeight: Int = (activity.resources.displayMetrics.density * 100).roundToInt()
         decoView.setSystemGestureExclusionRects(
             // public Rect (int left, int top, int right, int bottom)
             listOf(Rect(width / 2, height / 2 - excludeHeight, width, height / 2 + excludeHeight)))

@@ -20,7 +20,7 @@ object WebViewHook : BaseHook() {
   fun evaluateJavascript(code: String?) {
     val webView = Chrome.getTab() as WebView?
     if (code != null && code.length > 0 && webView != null) {
-      Handler(Chrome.getContext().getMainLooper()).post {
+      Handler(Chrome.getContext().mainLooper).post {
         val enableJS = webView.settings.javaScriptEnabled
         val enableDOM = webView.settings.domStorageEnabled
         webView.settings.javaScriptEnabled = true
@@ -38,7 +38,7 @@ object WebViewHook : BaseHook() {
 
     findMethod(ChromeClient!!, true) {
           name == "onConsoleMessage" &&
-              getParameterTypes() contentDeepEquals arrayOf(ConsoleMessage::class.java)
+              parameterTypes contentDeepEquals arrayOf(ConsoleMessage::class.java)
         }
         // public boolean onConsoleMessage (ConsoleMessage consoleMessage)
         .hookAfter {

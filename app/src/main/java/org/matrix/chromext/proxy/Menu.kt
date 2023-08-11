@@ -34,38 +34,37 @@ object MenuProxy {
   val tab = Chrome.load("org.chromium.chrome.browser.tab.Tab")
 
   // val tabWebContentsUserData =
-  //     Chrome.load("org.chromium.chrome.browser.tab.TabFavicon").getSuperclass() as Class<*>
+  //     Chrome.load("org.chromium.chrome.browser.tab.TabFavicon").superclass as Class<*>
   // val overscrollRefreshHandler = Chrome.load("org.chromium.ui.OverscrollRefreshHandler")
 
   private val pageInfoController =
       Chrome.load("org.chromium.components.page_info.PageInfoController")
   val pageInfoRowView = Chrome.load("org.chromium.components.page_info.PageInfoRowView")
-  val mIcon = pageInfoRowView.getDeclaredFields()[0]
-  val mTitle = pageInfoRowView.getDeclaredFields()[1]
-  val mSubtitle = pageInfoRowView.getDeclaredFields()[2]
+  val mIcon = pageInfoRowView.declaredFields[0]
+  val mTitle = pageInfoRowView.declaredFields[1]
+  val mSubtitle = pageInfoRowView.declaredFields[2]
   val pageInfoView =
       if (Chrome.isEdge) {
         Chrome.load("org.chromium.components.page_info.PageInfoView")
       } else {
-        findField(pageInfoController) { type.getSuperclass() == FrameLayout::class.java }.type
+        findField(pageInfoController) { type.superclass == FrameLayout::class.java }.type
       }
   val mRowWrapper = findFieldOrNull(pageInfoView) { type == LinearLayout::class.java }
   val pageInfoControllerRef =
       // A particular WebContentsObserver designed for PageInfoController
       findField(pageInfoController) {
-            type.getDeclaredFields().size == 1 &&
-                (type.getDeclaredFields()[0].type == pageInfoController ||
-                    type.getDeclaredFields()[0].type == WeakReference::class.java)
+            type.declaredFields.size == 1 &&
+                (type.declaredFields[0].type == pageInfoController ||
+                    type.declaredFields[0].type == WeakReference::class.java)
           }
           .type
 
   val emptyTabObserver =
-      Chrome.load("org.chromium.chrome.browser.login.ChromeHttpAuthHandler").getSuperclass()
-          as Class<*>
+      Chrome.load("org.chromium.chrome.browser.login.ChromeHttpAuthHandler").superclass as Class<*>
   val tabImpl = Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
 
   val mIsLoading =
-      tabImpl.getDeclaredFields().run {
+      tabImpl.declaredFields.run {
         val loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
         val anchorIndex = indexOfFirst { it.type == loadUrlParams }
         slice(anchorIndex..size - 1).find { it.type == Boolean::class.java }!!
@@ -74,35 +73,41 @@ object MenuProxy {
   private val preference = Chrome.load("androidx.preference.Preference")
   private val mClickListener =
       findField(preference) {
-        type == OnClickListener::class.java ||
-            type.getInterfaces().contains(OnClickListener::class.java)
+        type == OnClickListener::class.java || type.interfaces.contains(OnClickListener::class.java)
       }
   private val setSummary =
       findMethod(preference) {
-        getParameterTypes() contentDeepEquals arrayOf(CharSequence::class.java) &&
-            getReturnType() == Void.TYPE
+        parameterTypes contentDeepEquals arrayOf(CharSequence::class.java) &&
+            returnType == Void.TYPE
       }
   private val twoStatePreference =
-      Chrome.load("org.chromium.components.browser_ui.settings.ChromeSwitchPreference")
-          .getSuperclass() as Class<*>
+      Chrome.load("org.chromium.components.browser_ui.settings.ChromeSwitchPreference").superclass
+          as Class<*>
   private val setChecked =
       findMethod(twoStatePreference, true) {
-        getParameterTypes() contentDeepEquals arrayOf(Boolean::class.java)
+        parameterTypes contentDeepEquals arrayOf(Boolean::class.java)
       }
 
-  private val preferenceFragmentCompat = developerSettings.getSuperclass() as Class<*>
+  private val preferenceFragmentCompat =
+      if (Chrome.isBrave) {
+        developerSettings.superclass.superclass
+      } else {
+        developerSettings.superclass
+      }
+          as Class<*>
   val findPreference =
-      findMethod(preferenceFragmentCompat, true) {
-        getParameterTypes() contentDeepEquals arrayOf(CharSequence::class.java) &&
-            getReturnType() == preference
+      findMethod(preferenceFragmentCompat) {
+        parameterTypes contentDeepEquals arrayOf(CharSequence::class.java) &&
+            returnType == preference
       }
   val addPreferencesFromResource =
-      findMethod(preferenceFragmentCompat, true) {
-        getParameterTypes() contentDeepEquals arrayOf(Int::class.java) &&
-            getReturnType() == Void.TYPE &&
+      preferenceFragmentCompat.declaredMethods
+          .filter {
+            it.parameterTypes contentDeepEquals arrayOf(Int::class.java) &&
+                it.returnType == Void.TYPE
             // There exist other methods with the same signatures
-            !name[0].isUpperCase()
-      }
+          }
+          .last()
 
   fun setClickListener(preferences: Map<String, Any>) {
     val ctx = Chrome.getContext()
@@ -125,7 +130,7 @@ object MenuProxy {
         mapOf(
             "bookmark" to
                 fun(_: Any) {
-                  val bookmark = File(ctx.getFilesDir(), "../app_chrome/Default/Bookmarks")
+                  val bookmark = File(ctx.filesDir, "../app_chrome/Default/Bookmarks")
                   if (bookmark.exists()) {
                     var html =
                         "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<!-- This is an automatically generated file. It will be read and overwritten. DO NOT EDIT! -->\n<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=UTF-8\">\n<TITLE>Bookmarks</TITLE>\n<H1>Bookmarks</H1>\n<DL><p>\n"
@@ -209,7 +214,7 @@ object MenuProxy {
                   }
                   with(
                       ctx.getSharedPreferences(
-                              Chrome.getContext().getPackageName() + "_preferences",
+                              Chrome.getContext().packageName + "_preferences",
                               Context.MODE_PRIVATE)
                           .edit()) {
                         putBoolean("developer", false)
@@ -255,8 +260,8 @@ object MenuProxy {
       mClickListener.set(
           pref,
           Proxy.newProxyInstance(
-              Chrome.getContext().getClassLoader(),
-              arrayOf(mClickListener.getType()),
+              Chrome.getContext().classLoader,
+              arrayOf(mClickListener.type),
               object : InvocationHandler {
                 override fun invoke(proxy: Any, method: Method, args: Array<Any>) {
                   if (method.name == "onClick" && args.size == 1 && args[0] is View) {

@@ -17,7 +17,7 @@ object UserScriptHook : BaseHook() {
 
     val proxy = UserScriptProxy
 
-    // proxy.tabModelJniBridge.getDeclaredConstructors()[0].hookAfter {
+    // proxy.tabModelJniBridge.declaredConstructors[0].hookAfter {
     //   Chrome.addTabModel(it.thisObject)
     // }
 
@@ -58,7 +58,7 @@ object UserScriptHook : BaseHook() {
         }
 
     findMethod(proxy.navigationControllerImpl) {
-          name == "loadUrl" || getParameterTypes() contentDeepEquals arrayOf(proxy.loadUrlParams)
+          name == "loadUrl" || parameterTypes contentDeepEquals arrayOf(proxy.loadUrlParams)
         }
         // public void loadUrl(LoadUrlParams params)
         .hookBefore {

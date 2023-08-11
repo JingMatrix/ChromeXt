@@ -56,13 +56,11 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
                 outputStream.write(data.toByteArray())
               }
             }
-            val data =
-                JSONObject(
-                    mapOf("status" to getResponseCode(), "statusText" to getResponseMessage()))
+            val data = JSONObject(mapOf("status" to responseCode, "statusText" to responseMessage))
             data.put(
                 "responseHeaders",
                 JSONObject(
-                    getHeaderFields()
+                    headerFields
                         .filter { it.key != null }
                         .mapValues { it.value.joinToString(" ") }))
 

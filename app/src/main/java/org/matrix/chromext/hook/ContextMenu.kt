@@ -17,7 +17,7 @@ object ContextMenuHook : BaseHook() {
   override fun init() {
 
     var contextMenuHook: Unhook? = null
-    findMethod(View::class.java) { name == "startActionMode" && getParameterTypes().size == 2 }
+    findMethod(View::class.java) { name == "startActionMode" && parameterTypes.size == 2 }
         // public ActionMode startActionMode (ActionMode.Callback callback,
         //         int type)
         .hookBefore {

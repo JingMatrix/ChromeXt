@@ -53,7 +53,7 @@ object Download {
   ): BroadcastReceiver {
     return object : BroadcastReceiver() {
       override fun onReceive(ctx: Context, intent: Intent) {
-        if (intent.getAction() == DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
+        if (intent.action == DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
           val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, 0)
           if (downloadId == id) {
             val downloadManager = ctx.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager

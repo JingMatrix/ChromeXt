@@ -41,8 +41,7 @@ object Chrome {
     isEdge = packageName.startsWith("com.microsoft.emmx")
     isSamsung = packageName.startsWith("com.sec.android.app.sbrowser")
     isVivaldi = packageName == "com.vivaldi.browser"
-    @Suppress("DEPRECATION")
-    val packageInfo = ctx.getPackageManager()?.getPackageInfo(packageName, 0)
+    @Suppress("DEPRECATION") val packageInfo = ctx.packageManager?.getPackageInfo(packageName, 0)
     Log.i("Package: ${packageName}, v${packageInfo?.versionName}")
   }
 
@@ -66,7 +65,7 @@ object Chrome {
   }
 
   fun load(className: String): Class<*> {
-    return getContext().getClassLoader().loadClass(className)
+    return getContext().classLoader.loadClass(className)
   }
 
   fun getTab(): Any? {
@@ -101,7 +100,7 @@ object Chrome {
   fun evaluateJavascript(codes: List<String>, currentTab: Any? = null) {
     if (codes.size == 0) return
 
-    Handler(getContext().getMainLooper()).post {
+    Handler(getContext().mainLooper).post {
       if (WebViewHook.isInit) {
         codes.forEach { WebViewHook.evaluateJavascript(it) }
       } else if (UserScriptHook.isInit) {

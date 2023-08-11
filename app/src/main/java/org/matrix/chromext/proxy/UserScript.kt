@@ -42,8 +42,8 @@ object UserScriptProxy {
           } else {
             Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
           }) {
-            getParameterTypes() contentDeepEquals arrayOf(loadUrlParams) &&
-                getReturnType() ==
+            parameterTypes contentDeepEquals arrayOf(loadUrlParams) &&
+                returnType ==
                     if (Chrome.isSamsung) {
                       Void.TYPE
                     } else {
@@ -58,8 +58,8 @@ object UserScriptProxy {
   }
 
   fun newLoadUrlParams(url: String): Any {
-    val constructor = loadUrlParams.getDeclaredConstructors().first()
-    val types = constructor.getParameterTypes()
+    val constructor = loadUrlParams.declaredConstructors.first()
+    val types = constructor.parameterTypes
     if (types contentDeepEquals arrayOf(Int::class.java, String::class.java)) {
       return constructor.newInstance(0, url)
     } else if (types contentDeepEquals arrayOf(String::class.java, Int::class.java)) {
@@ -120,7 +120,7 @@ object UserScriptProxy {
           urlParams.invokeMethod(header) { name == "setVerbatimHeaders" }
         } else {
           val mVerbatimHeaders =
-              loadUrlParams.getDeclaredFields().filter { it.getType() == String::class.java }[1]
+              loadUrlParams.declaredFields.filter { it.type == String::class.java }[1]
           mVerbatimHeaders.set(urlParams, header)
         }
         return true

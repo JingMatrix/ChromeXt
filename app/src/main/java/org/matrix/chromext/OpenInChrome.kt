@@ -23,8 +23,7 @@ class OpenInChrome : Activity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
-    @Suppress("DEPRECATION")
-    val installedApplications = getPackageManager().getInstalledApplications(0)
+    @Suppress("DEPRECATION") val installedApplications = packageManager.getInstalledApplications(0)
     val avaiblePackages = supportedPackages.intersect(installedApplications.map { it.packageName })
     if (avaiblePackages.size == 0) {
       Log.toast(this, "No supported Chrome installed")
@@ -47,11 +46,11 @@ class OpenInChrome : Activity() {
 
     if (intent.action == Intent.ACTION_VIEW) {
       intent.setComponent(destination)
-      intent.setDataAndType(intent.getData(), "text/html")
+      intent.setDataAndType(intent.data, "text/html")
       startActivity(intent)
     } else if (intent.action == Intent.ACTION_SEND && !isSamsung) {
       var text = intent.getStringExtra(Intent.EXTRA_TEXT)
-      if (text == null || intent.getType() != "text/plain") {
+      if (text == null || intent.type != "text/plain") {
         finish()
         return
       }
