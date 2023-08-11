@@ -52,18 +52,7 @@ if (typeof ChromeXt == "undefined") {
       });
     }
 
-    #checkChromeXt() {
-      if (this.#key instanceof ChromeXtTarget && !this.#key.isLocked()) {
-        return true;
-      } else if (globalThis.ChromeXt.isLocked()) {
-        throw new Error(`ChromeXt locked`);
-      } else {
-        return true;
-      }
-    }
-
     #verify(args, method) {
-      this.#checkChromeXt(args);
       if (this.#freeze) {
         let n = 0;
         if (method == "push") {
@@ -77,7 +66,12 @@ if (typeof ChromeXt == "undefined") {
         }
       }
       const result = super[method].apply(this, args);
-      if (["pop", "push", "fill", "splice"].includes(method)) this.sync();
+      if (
+        this.#key instanceof ChromeXtTarget &&
+        !this.#key.isLocked() &&
+        ["pop", "push", "fill", "splice"].includes(method)
+      )
+        this.sync();
       return result;
     }
   }
@@ -227,10 +221,8 @@ try {
 }
 // Kotlin separator
 
-(() => {
-  const cspRules = ChromeXt.cspRules;
-  if (cspRules.length == 0) return;
-  cspRules.forEach((rule) => {
+if (ChromeXt.cspRules.length > 0) {
+  ChromeXt.cspRules.forEach((rule) => {
     if (rule.length == 0) return;
     // Skip empty cspRules
     const meta = document.createElement("meta");
@@ -244,13 +236,11 @@ try {
       }, 0);
     }
   });
-})();
+}
 // Kotlin separator
 
-(() => {
-  let filter = ChromeXt.filters.filter((item) => item.trim().length > 0);
-  if (filter.length == 0) return;
-  filter = filter.join(", ");
+if (ChromeXt.filters.length > 0) {
+  const filter = ChromeXt.filters.join(", ");
   window.addEventListener("DOMContentLoaded", () => {
     function GM_addStyle(css) {
       const style = document.createElement("style");
@@ -272,4 +262,4 @@ try {
       .querySelectorAll("amp-ad,amp-embed,amp-sticky-ad")
       .forEach((node) => node.remove());
   });
-})();
+}

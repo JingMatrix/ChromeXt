@@ -6,6 +6,7 @@ import android.database.AbstractWindowedCursor
 import android.database.CursorWindow
 import android.os.Build
 import android.webkit.WebView
+import org.json.JSONArray
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.utils.Log
@@ -82,11 +83,16 @@ object ScriptDbManager {
       val origin = parseOrigin(url)
       if (origin != null) {
         if (cspRules.contains(origin)) {
-          codes.add("ChromeXt.cspRules.push(...${cspRules.get(origin)});${Local.cspRule}")
+          runCatching {
+            val rule = JSONArray(cspRules.get(origin))
+            codes.add("ChromeXt.cspRules.push(...${rule});${Local.cspRule}")
+          }
         }
         if (cosmeticFilters.contains(origin)) {
-          codes.add(
-              "ChromeXt.filters.push(...${cosmeticFilters.get(origin)});${Local.cosmeticFilter}")
+          runCatching {
+            val filter = JSONArray(cosmeticFilters.get(origin))
+            codes.add("ChromeXt.filters.push(...${filter});${Local.cosmeticFilter}")
+          }
         }
         if (userAgents.contains(origin)) {
           val agent = userAgents.get(origin)
