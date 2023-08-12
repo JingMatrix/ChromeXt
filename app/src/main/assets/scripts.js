@@ -90,14 +90,7 @@ if (typeof ChromeXt == "undefined") {
         this.#target = target;
       } else {
         this.#target = new EventTarget();
-        this.#debug = console.debug.bind(debug);
-      }
-      if (this.#debug.toString() != "function () { [native code] }") {
-        const warning =
-          "Current page can potentially damage your browser by exploiting ChromeXt, do you trust it?";
-        if (!confirm(warning)) {
-          throw Error("ChromeXt is disabled for security concern");
-        }
+        this.#debug = console.debug.bind(console);
       }
       EventTargetKeys.forEach((m) => {
         Object.defineProperty(this, m, {
