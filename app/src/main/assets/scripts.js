@@ -205,6 +205,23 @@ if (typeof ChromeXt == "undefined") {
   });
   Object.freeze(ChromeXt);
 }
+
+trustedTypes.polices = new Set();
+trustedTypes.createPolicy = new Proxy(trustedTypes.createPolicy, {
+  apply(target, thisArg, args) {
+    const createHTML = args[1].createHTML;
+    args[1].createHTML = function () {
+      if (this.bypass == true) {
+        return arguments[0];
+      } else {
+        return createHTML.apply(this, arguments);
+      }
+    };
+    const result = target.apply(thisArg, args);
+    trustedTypes.polices.add(result);
+    return result;
+  },
+});
 // Kotlin separator
 
 try {

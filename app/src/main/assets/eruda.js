@@ -4,9 +4,15 @@ const __initDevTools = eruda._initDevTools;
 eruda._initDevTools = function () {
   if (!HTMLDivElement.prototype.fixed) {
     HTMLDivElement.prototype.fixed = true;
-    const stubHTMLPolicy = trustedTypes.createPolicy("eruda", {
-      createHTML: (s) => s,
-    });
+    let stubHTMLPolicy;
+    try {
+      stubHTMLPolicy = trustedTypes.createPolicy("eruda", {
+        createHTML: (s) => s,
+      });
+    } catch {
+      stubHTMLPolicy = trustedTypes.polices.values().next().value;
+      stubHTMLPolicy.bypass = true;
+    }
     const _insertAdjacentHTML = HTMLElement.prototype.insertAdjacentHTML;
     HTMLDivElement.prototype.insertAdjacentHTML = function (p, t) {
       return _insertAdjacentHTML.apply(this, [p, stubHTMLPolicy.createHTML(t)]);
