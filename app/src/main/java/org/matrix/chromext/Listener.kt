@@ -22,6 +22,7 @@ import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.XMLHttpRequest
 import org.matrix.chromext.utils.isChromeXtFrontEnd
 import org.matrix.chromext.utils.isDevToolsFrontEnd
+import org.matrix.chromext.utils.isUserScript
 import org.matrix.chromext.utils.matching
 
 object Listener {
@@ -57,7 +58,11 @@ object Listener {
 
   private fun checkPermisson(action: String, key: Double, tab: Any?): Boolean {
     val url = Chrome.getUrl(tab)!!
-    if (!isChromeXtFrontEnd(url) && !isDevToolsFrontEnd(url) && key != Local.key) return false
+    if (!isChromeXtFrontEnd(url) &&
+        !isDevToolsFrontEnd(url) &&
+        !isUserScript(url) &&
+        key != Local.key)
+        return false
     if (allowedActions.get("front-end")!!.contains(action) && !isChromeXtFrontEnd(url)) return false
     if (allowedActions.get("devtools")!!.contains(action) && !isDevToolsFrontEnd(url)) return false
     return true
