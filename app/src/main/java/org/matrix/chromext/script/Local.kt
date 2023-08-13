@@ -130,7 +130,7 @@ object Local {
     css =
         JSONArray(ctx.assets.open("eruda.css").bufferedReader().use { it.readText() }.split("\n\n"))
     eruda =
-        "const _eruda_styles = ${css};\n" +
+        "eruda._styles = ${css};\n" +
             ctx.assets
                 .open("eruda.js")
                 .bufferedReader()
@@ -154,10 +154,8 @@ object Local {
     val eruda = File(ctx.getExternalFilesDir(null), "Download/Eruda.js")
     if (eruda.exists() || versionText != null) {
       val verisonReg = Regex(" eruda v(?<version>[\\d\\.]+) https://")
-      val vMatchGroup =
-          verisonReg
-              .find((versionText ?: FileReader(eruda).use { it.readText() }).lines()[0])
-              ?.groups as? MatchNamedGroupCollection
+      val firstLine = (versionText ?: FileReader(eruda).use { it.readText() }).lines()[0]
+      val vMatchGroup = verisonReg.find(firstLine)?.groups as? MatchNamedGroupCollection
       if (vMatchGroup != null) {
         return vMatchGroup.get("version")?.value as String
       }

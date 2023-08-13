@@ -15,9 +15,8 @@ import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.Listener
 import org.matrix.chromext.script.Local
-import org.matrix.chromext.utils.Download
-import org.matrix.chromext.utils.ERUD_URL
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.findFieldOrNull
@@ -182,17 +181,8 @@ object MenuProxy {
                   }
                 },
             "eruda" to
-                fun(obj: Any) {
-                  Download.start(ERUD_URL, "Download/Eruda.js", true) {
-                    val new_version = Local.getErudaVersion(ctx, it)
-                    if (new_version != Local.eruda_version) {
-                      Local.eruda_version = new_version
-                      Log.toast(ctx, "Updated to eruda v" + new_version)
-                      setSummary.invoke(obj, "Current version: v" + new_version)
-                    } else {
-                      Log.toast(ctx, "Eruda is already the lastest")
-                    }
-                  }
+                fun(_: Any) {
+                  Listener.on("updateEruda")
                 },
             "exit" to
                 fun(_: Any) {

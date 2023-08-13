@@ -164,9 +164,21 @@ object Listener {
           codes.add("{${Local.eruda}}\n//# sourceURL=local://ChromeXt/eruda")
           Chrome.evaluateJavascript(codes)
         } else {
-          Log.toast(ctx, "Updating Eruda...")
-          Download.start(ERUD_URL, "Download/Eruda.js", true) {
-            Local.eruda_version = Local.getErudaVersion(ctx, it)
+          on("updateEruda", JSONObject().put("load", true).toString())
+        }
+      }
+      "updateEruda" -> {
+        val ctx = Chrome.getContext()
+        Log.toast(ctx, "Updating Eruda...")
+        Download.start(ERUD_URL + "@latest/eruda.js", "Download/Eruda.js", true) {
+          val new_version = Local.getErudaVersion(ctx, it.take(100))
+          if (new_version != Local.eruda_version) {
+            Local.eruda_version = new_version
+            Log.toast(ctx, "Updated to eruda v" + new_version)
+          } else {
+            Log.toast(ctx, "Eruda is already the lastest")
+          }
+          if (payload != "" && JSONObject(payload).optBoolean("load")) {
             on("loadEruda")
           }
         }

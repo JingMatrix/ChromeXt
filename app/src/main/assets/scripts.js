@@ -223,7 +223,6 @@ try {
     eruda.destroy();
   } else {
     eruda.init();
-    eruda._localConfig();
     eruda.show();
   }
 } catch (e) {

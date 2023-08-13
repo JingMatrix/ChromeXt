@@ -1,4 +1,4 @@
-/* font-fix */
+/* font_fix */
 [class^="eruda-icon"]:before {
   font-size: 10px;
   display: block;
@@ -22,9 +22,6 @@
   content: "⎘ ";
   font-size: 14px;
   font-weight: bold;
-}
-li > h2 > span.eruda-icon-copy:before {
-  transform: translateY(-12px);
 }
 .eruda-icon-delete:before {
   content: "X";
@@ -123,9 +120,11 @@ div.eruda-btn.eruda-search {
 }
 
 /* plugin */
+h2.eruda-title {
+  width: 100%;
+}
 #eruda-info li .eruda-title span {
-  padding: 4px 5px;
-  margin: 0;
+  padding-left: 8px;
   float: right;
 }
 #eruda-info .eruda-csp-rules > div.eruda-content {
@@ -134,6 +133,9 @@ div.eruda-btn.eruda-search {
 #eruda-info .eruda-user-agent h2,
 #eruda-info .eruda-csp-rules h2 {
   padding-bottom: 12px;
+}
+#eruda-info .eruda-check-update {
+  text-align: center;
 }
 #eruda-info .eruda-userscripts div.eruda-content,
 #eruda-resources div.eruda-commands {
@@ -145,4 +147,13 @@ div.eruda-btn.eruda-search {
     margin: 0.3em;
     border: 0.5px solid violet;
   }
+}
+#eruda-resources .eruda-filter-item {
+  width: 90%;
+  padding: 0.3em;
+}
+#eruda-resources .eruda-delete-filter {
+  width: 10%;
+  margin: auto;
+  text-align: center;
 }

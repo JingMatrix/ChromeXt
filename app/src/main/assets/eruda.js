@@ -26,7 +26,65 @@ eruda._initDevTools = function () {
   __initDevTools.apply(this, arguments);
 };
 
+const __initStyle = eruda._initStyle;
+eruda._initStyle = function () {
+  __initStyle.apply(this, arguments);
+  addErudaStyle("chromext_new_icons", eruda._styles[1]);
+  addErudaStyle("chromext_eruda_dom_fix", eruda._styles[2]);
+  addErudaStyle("chromext_plugin", eruda._styles[3]);
+  if (typeof eruda._bypassCSPFont == "undefined") {
+    eruda._bypassCSPFont = false;
+    document.addEventListener("securitypolicyviolation", bypassCSP);
+  } else if (eruda._bypassCSPFont) {
+    addErudaStyle("chromext_font_fix", eruda._styles[0]);
+  }
+  function bypassCSP(e) {
+    if (!e.sourceFile.endsWith("eruda.js")) return;
+    e.stopImmediatePropagation();
+    if (e.blockedURI == "data" && e.violatedDirective == "font-src") {
+      eruda._bypassCSPFont = true;
+      addErudaStyle("chromext_font_fix", eruda._styles[0]);
+      document.removeEventListener("securitypolicyviolation", bypassCSP);
+    } else if (e.blockedURI == "inline" && e.target == eruda._container) {
+      console.error("Impossible to load Eruda");
+    }
+  }
+  function addErudaStyle(id, content) {
+    const erudaroot = eruda._shadowRoot;
+    if (erudaroot.querySelector("style#" + id)) {
+      return;
+    }
+    const style = document.createElement("style");
+    style.id = id;
+    style.setAttribute("type", "text/css");
+    style.textContent = content;
+    erudaroot.append(style);
+  }
+};
+
+const _enable = eruda.chobitsu.domain("Overlay").enable;
+eruda.chobitsu.domain("Overlay").enable = function () {
+  if (_enable.enabled) return;
+  _enable.enabled = true;
+  _enable.apply(this, arguments);
+  const overlay =
+    eruda._container.parentNode.querySelector(".__chobitsu-hide__").shadowRoot;
+  const tooltip = overlay.querySelector("div.luna-dom-highlighter > div");
+  Object.defineProperty(tooltip, "innerHTML", {
+    set(value) {
+      if (value.hooked) return;
+      if (value === "") value = trustedTypes.emptyHTML;
+      value.hooked = true;
+      this.innerHTML = value;
+    },
+  });
+};
+
 class Filter {
+  #el;
+  constructor(selector) {
+    this.#el = selector;
+  }
   #filter = new Array(...ChromeXt.filters);
   #write() {
     ChromeXt.filters.sync(this.#filter);
@@ -49,60 +107,85 @@ class Filter {
   new() {
     this.#filter.push("");
   }
-  save(container) {
+  save() {
     this.#filter = [];
-    container
-      .querySelectorAll(".eruda-filter-item")
-      .forEach((it) => this.#filter.push(it.innerText.trim()));
+    Array.from(this.#el.find(".eruda-filter-item")).forEach((it) =>
+      this.#filter.push(it.innerText.trim())
+    );
     this.remove("");
     this.#write();
   }
 }
 
-eruda._filter = new Filter();
+const c = eruda.util.classPrefix;
+
 class elements extends eruda.Elements {
   constructor() {
     super();
     this._deleteNode = () => {
       const node = this._curNode;
-      const selector = generateQuerySelector(node);
-      eruda._filter.add(selector);
+      const selector = this.generateQuerySelector(node);
+      this._container.get("resources")._filter.add(selector);
       if (node.parentNode) {
         node.parentNode.removeChild(node);
       }
     };
   }
-}
-
-function c(str) {
-  return str
-    .split(" ")
-    .map((it) => "eruda-" + it)
-    .join(" ");
+  static generateQuerySelector(el) {
+    if (el.tagName.toLowerCase() == "html") return "html";
+    let str = el.tagName.toLowerCase();
+    if (el.id != "") {
+      str += "#" + el.id;
+    } else if (el.className != "") {
+      let classes = el.className
+        .split(/\s/)
+        .filter((rule) => rule.trim() != "");
+      str += "." + classes.join(".");
+    } else {
+      return this.generateQuerySelector(el.parentNode) + " > " + str;
+    }
+    return str;
+  }
 }
 
 class resources extends eruda.Resources {
+  _initTpl() {
+    super._initTpl();
+    this._$el.prepend(`<div class="${c("section commands")}">
+<h2 class="${c("title")}">UserScript Commands</h2><div class="${c(
+      "commands"
+    )}">${ChromeXt.commands
+      .filter((m) => m.enabled)
+      .map(
+        (command, index) =>
+          `<span data-index=${index} class="${c("command")}">${
+            command.title
+          }</span>`
+      )
+      .join("")}</div>
+</div>`);
+    this._$el.prepend(`<div class="${c("section filters")}"></div>`);
+    this._$filter = this._$el.find(".eruda-filters.eruda-section");
+    this._filter = new Filter(this._$filter);
+  }
   _bindEvent() {
     super._bindEvent();
-    const $el = this._$el;
-    const self = this;
-    const container = this._container;
-    $el
-      .on("click", ".eruda-delete-filter", function (e) {
+    this._$el
+      .on("click", ".eruda-delete-filter", (e) => {
         const rule = e.curTarget.dataset.key;
-        eruda._filter.remove(rule);
-        self.refreshFilter();
+        this._filter.remove(rule);
+        this.refreshFilter();
       })
       .on("click", ".eruda-new-filter", () => {
-        eruda._filter.save(this._$ChromeXtFilter[0]);
-        eruda._filter.new();
-        self.refreshFilter();
-        this._$ChromeXtFilter.find(".eruda-filter-item").last()[0].focus();
+        this._filter.save();
+        this._filter.new();
+        this.refreshFilter();
+        this._$filter.find(".eruda-filter-item").last()[0].focus();
       })
       .on("click", ".eruda-save-filter", () => {
-        eruda._filter.save(this._$ChromeXtFilter[0]);
-        self.refreshFilter();
-        container.notify("Filter Saved");
+        this._filter.save();
+        this.refreshFilter();
+        this._container.notify("Filter Saved");
       })
       .on("click", ".eruda-command", (e) => {
         const index = e.curTarget.dataset.index;
@@ -110,52 +193,23 @@ class resources extends eruda.Resources {
         eruda.hide();
       });
   }
-  _initTpl() {
-    super._initTpl();
-    if (typeof ChromeXt.commands != "undefined") {
-      this._$el.prepend(`<div class="${c("section commands")}">
-<h2 class="${c(
-        "title"
-      )}" style="width: 100%;">UserScript Commands</h2><div class="${c(
-        "commands"
-      )}">${ChromeXt.commands
-        .filter((m) => m.enabled)
-        .map(
-          (command, index) =>
-            `<span data-index=${index} class="${c("command")}">${
-              command.title
-            }</span>`
-        )
-        .join("")}</div>
-</div>`);
-    }
-    this._$el.prepend(`<div class="${c("section filters")}"></div>`);
-    this._$ChromeXtFilter = this._$el.find(".eruda-filters.eruda-section");
-  }
   refresh() {
     return super.refresh().refreshFilter();
   }
-
   refreshFilter() {
     let filterHtml = "<li></li>";
-
-    let filter = eruda._filter.get();
+    const filter = this._filter.get();
     if (filter.length > 0) {
       filterHtml = filter
         .map(
           (key) => `<li style="display: flex;">
-          <span style="width:90%;padding:0.3em;" contentEditable="true" class="${c(
-            "filter-item"
-          )}">${key}</span>
-		  <span style="width:10%;margin:auto;text-align:center;" class="${c(
-        "icon-delete delete-filter"
-      )}" data-key="${key}"></span>
+          <span contentEditable="true" class="${c("filter-item")}">${key}</span>
+		  <span class="${c("icon-delete delete-filter")}" data-key="${key}"></span>
         </li>`
         )
         .join("");
     }
-
-    this._$ChromeXtFilter.html(`<h2 class="${c("title")}">Cosmetic Filters
+    this._$filter.html(`<h2 class="${c("title")}">Cosmetic Filters
 			<div class="${c("btn save-filter")}"><span class="${c(
       "icon icon-save"
     )}"></span></div>
@@ -168,12 +222,23 @@ class resources extends eruda.Resources {
     return this;
   }
 }
+
 class info extends eruda.Info {
-  _render() {
-    const infos = this._infos;
-    this._infos = infos.filter((info) => info.name != "User Agent");
-    super._render();
-    this._infos = infos;
+  _infos = {};
+  add(name, val) {
+    this._infos[name] = val;
+  }
+  _addDefInfo() {
+    super._addDefInfo();
+    delete this._infos["Backers"];
+    delete this._infos["User Agent"];
+    this._infos["About"] = `<div class="${c("check-update")}">Eruda v${
+      eruda.version
+    }</div>`;
+    this._infos = Object.entries(this._infos).map((d) => {
+      return { name: d[0], val: d[1] };
+    });
+    this._render();
   }
   _renderHtml(html) {
     if (html.startsWith("<ul>")) {
@@ -190,8 +255,10 @@ class info extends eruda.Info {
           "title"
         )}">User CSP Rules<span class="${c(
           "icon-save save"
-        )}"></span></h2><div class="${c("content")}" contenteditable="true">${
-          ChromeXt.cspRules.join(" | ") + " | "
+        )}"></span></h2><div class="${c("content")}">${
+          ChromeXt.cspRules.length > 0
+            ? ChromeXt.cspRules.join(" | ") + " | "
+            : ""
         }</div></li><li class="${c("userscripts")}"><h2 class="${c(
           "title"
         )}">UserScripts<span class="${c(
@@ -216,7 +283,6 @@ class info extends eruda.Info {
     if (ChromeXt.cspRules.length == 0) {
       this._$el.find("li.eruda-csp-rules > h2 > span")[0].className =
         c("icon-add add");
-      this._$el.find("li.eruda-csp-rules > div")[0].hidden = true;
     }
     this._$el
       .on("click", ".eruda-user-agent .eruda-icon-save", (e) => {
@@ -229,7 +295,7 @@ class info extends eruda.Info {
         });
       })
       .on("click", ".eruda-user-agent .eruda-icon-reset", (_e) => {
-        this._container.notify("User-Agent will be restored after refresh");
+        this._container.notify("User-Agent restored");
         ChromeXt.dispatch("syncData", {
           origin: window.location.origin,
           name: "userAgent",
@@ -238,7 +304,9 @@ class info extends eruda.Info {
       .on("click", ".eruda-csp-rules .eruda-icon-add", (_e) => {
         this._$el.find("li.eruda-csp-rules > h2 > span")[0].className =
           c("icon-save save");
-        this._$el.find("li.eruda-csp-rules > div")[0].hidden = false;
+        const editor = this._$el.find("li.eruda-csp-rules > div")[0];
+        editor.contentEditable = true;
+        editor.focus();
       })
       .on("click", ".eruda-csp-rules .eruda-icon-save", (e) => {
         this._container.notify("CSP Rules config saved");
@@ -255,6 +323,9 @@ class info extends eruda.Info {
       })
       .on("click", ".eruda-userscripts .eruda-add", (_e) => {
         this._$el.find("#new_script")[0].click();
+      })
+      .on("click", ".eruda-check-update", (_e) => {
+        ChromeXt.dispatch("updateEruda");
       })
       .on("change", "#new_script", (e) => {
         Array.from(e.curTarget.files).forEach((f) => {
@@ -274,64 +345,7 @@ class info extends eruda.Info {
 eruda.Elements = elements;
 eruda.Resources = resources;
 eruda.Info = info;
-eruda._styles = _eruda_styles;
-delete _eruda_styles;
-eruda._configured = true;
-eruda._localConfig = () => {
-  if (!document.querySelector("#eruda")) {
-    return;
-  }
-  addErudaStyle("chromext_new_icons", eruda._styles[1]);
-  addErudaStyle("chromext_eruda_dom_fix", eruda._styles[2]);
-  addErudaStyle("chromext_plugin", eruda._styles[3]);
-  if (typeof eruda._shouldFixfont == "undefined") {
-    eruda._shouldFixfont = false;
-    document.addEventListener("securitypolicyviolation", (e) => {
-      if (e.blockedURI == "data" && e.violatedDirective == "font-src") {
-        eruda._shouldFixfont = true;
-        addErudaStyle("chromext_font_fix", eruda._styles[0]);
-      } else if (
-        e.blockedURI == "inline" &&
-        e.target == document.querySelector("#eruda")
-      ) {
-        e.target.remove();
-        alert("Impossible to load Eruda, please consider using DevTools.");
-      }
-    });
-  } else if (eruda._shouldFixfont) {
-    addErudaStyle("chromext_font_fix", eruda._styles[0]);
-  }
-};
 
-function generateQuerySelector(el) {
-  if (el.tagName.toLowerCase() == "html") return "html";
-  let str = el.tagName.toLowerCase();
-  if (el.id != "") {
-    str += "#" + el.id;
-  } else if (el.className != "") {
-    let classes = el.className.split(/\s/).filter((rule) => rule.trim() != "");
-    str += "." + classes.join(".");
-  } else {
-    return generateQuerySelector(el.parentNode) + " > " + str;
-  }
-  return str;
-}
-
-function addErudaStyle(id, content) {
-  if (!document.querySelector("#eruda")) {
-    return;
-  }
-  const erudaroot = document.querySelector("#eruda").shadowRoot;
-  if (erudaroot.querySelector("style#" + id)) {
-    return;
-  }
-  const style = document.createElement("style");
-  style.id = id;
-  style.setAttribute("type", "text/css");
-  style.textContent = content;
-  erudaroot.append(style);
-}
-
+if (typeof define == "function" && define.amd === false) define.amd = true;
 eruda.init();
-eruda._localConfig();
 eruda.show();
