@@ -1,5 +1,6 @@
 package org.matrix.chromext.script
 
+import android.content.Context
 import android.net.Uri
 import java.io.File
 import java.io.FileReader
@@ -111,6 +112,8 @@ object Local {
   val cosmeticFilter: String
   val key = Random.nextDouble()
 
+  var eruda_version: String
+
   val anchorInChromeXt: Int
   // lineNumber of the anchor in GM.js, used to verify ChromeXt.dispatch
 
@@ -133,6 +136,7 @@ object Local {
                 .bufferedReader()
                 .use { it.readText() }
                 .replaceFirst("ChromeXtUnlockKeyForEruda", key.toString())
+    eruda_version = getErudaVersion()
     val localScript =
         ctx.assets
             .open("scripts.js")
@@ -144,5 +148,20 @@ object Local {
     openEruda = localScript[1].replaceFirst("ChromeXtUnlockKeyForEruda", key.toString())
     cspRule = localScript[2]
     cosmeticFilter = localScript[3]
+  }
+
+  fun getErudaVersion(ctx: Context = Chrome.getContext(), versionText: String? = null): String {
+    val eruda = File(ctx.getExternalFilesDir(null), "Download/Eruda.js")
+    if (eruda.exists() || versionText != null) {
+      val verisonReg = Regex(" eruda v(?<version>[\\d\\.]+) https://")
+      val vMatchGroup =
+          verisonReg
+              .find((versionText ?: FileReader(eruda).use { it.readText() }).lines()[0])
+              ?.groups as? MatchNamedGroupCollection
+      if (vMatchGroup != null) {
+        return vMatchGroup.get("version")?.value as String
+      }
+    }
+    return "latest"
   }
 }

@@ -335,7 +335,3 @@ function addErudaStyle(id, content) {
 eruda.init();
 eruda._localConfig();
 eruda.show();
-
-function define(_arr, loader) {
-  globalThis.eruda = loader();
-}

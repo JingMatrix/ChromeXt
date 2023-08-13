@@ -227,6 +227,7 @@ try {
     eruda.show();
   }
 } catch (e) {
+  if (typeof define == "function") define.amd = false;
   ChromeXt.unlock(ChromeXtUnlockKeyForEruda).dispatch("loadEruda");
 }
 // Kotlin separator

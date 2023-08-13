@@ -11,13 +11,13 @@ import org.matrix.chromext.devtools.DevToolClient
 import org.matrix.chromext.devtools.getInspectPages
 import org.matrix.chromext.extension.LocalFiles
 import org.matrix.chromext.hook.UserScriptHook
-import org.matrix.chromext.proxy.ERUD_URL
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.Local
 import org.matrix.chromext.script.ScriptDbHelper
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.script.parseScript
 import org.matrix.chromext.utils.Download
+import org.matrix.chromext.utils.ERUD_URL
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.XMLHttpRequest
 import org.matrix.chromext.utils.isChromeXtFrontEnd
@@ -156,11 +156,19 @@ object Listener {
         val ctx = Chrome.getContext()
         val eruda = File(ctx.getExternalFilesDir(null), "Download/Eruda.js")
         if (eruda.exists()) {
-          val code = FileReader(eruda).use { it.readText() } + "\n" + Local.eruda
-          Chrome.evaluateJavascript(listOf("(()=>{${code}})();"))
+          val codes =
+              mutableListOf(
+                  FileReader(eruda).use { it.readText() } +
+                      "\n" +
+                      "//# sourceURL=${ERUD_URL}@${Local.eruda_version}/eruda.js")
+          codes.add("{${Local.eruda}}\n//# sourceURL=local://ChromeXt/eruda")
+          Chrome.evaluateJavascript(codes)
         } else {
           Log.toast(ctx, "Updating Eruda...")
-          Download.start(ERUD_URL, "Download/Eruda.js", true) { on("loadEruda") }
+          Download.start(ERUD_URL, "Download/Eruda.js", true) {
+            Local.eruda_version = Local.getErudaVersion(ctx, it)
+            on("loadEruda")
+          }
         }
       }
       "syncData" -> {

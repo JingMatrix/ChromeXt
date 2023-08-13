@@ -77,7 +77,7 @@ object UserScriptProxy {
     }
     val code = Uri.encode(script)
     if (code.length < kMaxURLChars - 200) {
-      loadUrl("javascript: ${code}", tab ?: Chrome.getTab())
+      loadUrl("javascript:${code}", tab ?: Chrome.getTab())
       return true
     } else {
       Log.d("evaluateJavascript fails with loadUrl")

@@ -13,16 +13,15 @@ import java.lang.ref.WeakReference
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
-import kotlin.text.Regex
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.script.Local
 import org.matrix.chromext.utils.Download
+import org.matrix.chromext.utils.ERUD_URL
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.findFieldOrNull
 import org.matrix.chromext.utils.findMethod
-
-const val ERUD_URL = "https://cdn.jsdelivr.net/npm/eruda@latest/eruda.min.js"
 
 object MenuProxy {
   private var clickHooked: Boolean = false
@@ -114,9 +113,8 @@ object MenuProxy {
     val sharedPref = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
 
     var summary = "Click to install eruda, size around 0.5 MiB"
-    val version = sharedPref.getString("eruda_version", "unknown")
-    if (version != "unknown") {
-      summary = "Current version: v" + version
+    if (Local.eruda_version != "latest") {
+      summary = "Current version: v" + Local.eruda_version
     }
     setSummary.invoke(preferences["eruda"], summary)
 
@@ -186,19 +184,9 @@ object MenuProxy {
             "eruda" to
                 fun(obj: Any) {
                   Download.start(ERUD_URL, "Download/Eruda.js", true) {
-                    val old_version = sharedPref.getString("eruda_version", "unknown")
-                    var new_version = old_version
-                    val verisonReg = Regex("""/npm/eruda@(?<version>[\d\.]+)/eruda""")
-                    val vMatchGroup =
-                        verisonReg.find(it.take(150))?.groups as? MatchNamedGroupCollection
-                    if (vMatchGroup != null) {
-                      new_version = vMatchGroup.get("version")?.value as String
-                    }
-                    if (old_version != new_version) {
-                      with(sharedPref.edit()) {
-                        putString("eruda_version", new_version)
-                        apply()
-                      }
+                    val new_version = Local.getErudaVersion(ctx, it)
+                    if (new_version != Local.eruda_version) {
+                      Local.eruda_version = new_version
                       Log.toast(ctx, "Updated to eruda v" + new_version)
                       setSummary.invoke(obj, "Current version: v" + new_version)
                     } else {
