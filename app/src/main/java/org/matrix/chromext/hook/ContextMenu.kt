@@ -11,6 +11,7 @@ import org.matrix.chromext.script.Local
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
+import org.matrix.chromext.utils.isChromeXtFrontEnd
 
 object ContextMenuHook : BaseHook() {
 
@@ -22,7 +23,7 @@ object ContextMenuHook : BaseHook() {
         //         int type)
         .hookBefore {
           if (it.args[1] as Int == ActionMode.TYPE_FLOATING) {
-            val isChromeXt = Chrome.getUrl()!!.endsWith("/ChromeXt/")
+            val isChromeXt = isChromeXtFrontEnd(Chrome.getUrl())
             contextMenuHook?.unhook()
             contextMenuHook =
                 findMethod(it.args[0]::class.java) { name == "onCreateActionMode" }
