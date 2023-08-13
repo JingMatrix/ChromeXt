@@ -59,7 +59,8 @@ fun matching(script: Script, url: String): Boolean {
 }
 
 fun isDevToolsFrontEnd(url: String?): Boolean {
-  return url == DEV_FRONT_END
+  if (url == null) return false
+  return url.startsWith(DEV_FRONT_END)
 }
 
 fun isUserScript(url: String?): Boolean {
@@ -83,6 +84,7 @@ fun isUserScript(url: String?): Boolean {
 val trustedHosts = listOf("jingmatrix.github.io", "jianyu-ma.onrender.com", "jianyu-ma.netlify.app")
 
 fun isChromeXtFrontEnd(url: String?): Boolean {
+  if (url == null || !url.endsWith("/ChromeXt/")) return false
   trustedHosts.forEach { if (url == "https://" + it + "/ChromeXt/") return true }
   return false
 }

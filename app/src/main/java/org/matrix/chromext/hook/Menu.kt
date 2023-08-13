@@ -231,6 +231,10 @@ object MenuHook : BaseHook() {
                       // Show items with indices in main_menu.xml
                       val toShow = mutableListOf<Int>(1)
 
+                      if (isDevToolsFrontEnd(url)) {
+                        toShow.clear()
+                      }
+
                       if (isUserScript(url)) {
                         toShow.clear()
                         toShow.add(2)
