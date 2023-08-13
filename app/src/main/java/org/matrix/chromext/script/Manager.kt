@@ -103,6 +103,7 @@ object ScriptDbManager {
       }
     }
     if (runScripts) codes.add("ChromeXt.lock(${Local.key});")
+    codes.add("//# sourceURL=local://ChromeXt")
     Chrome.evaluateJavascript(listOf(codes.joinToString("\n")))
     if (runScripts) {
       codes.clear()

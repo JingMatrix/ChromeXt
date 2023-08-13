@@ -1,5 +1,6 @@
 package org.matrix.chromext.script
 
+import android.net.Uri
 import java.io.File
 import java.io.FileReader
 import kotlin.random.Random
@@ -88,7 +89,7 @@ object GM {
             mapOf("scriptMetaStr" to script.meta, "script" to JSONObject().put("id", script.id)))
     val codes =
         mutableListOf(
-            "(() => { const GM = {key:${Local.key}}; const GM_info = ${GM_info}; GM_info.script.code = () => {${code}};\n${grants}GM.bootstrap();})();")
+            "(() => { const GM = {key:${Local.key}}; const GM_info = ${GM_info}; GM_info.script.code = () => {${code}};\n${grants}GM.bootstrap();})();\n//# sourceURL=local://ChromeXt/${Uri.encode(script.id)}")
     if (script.storage != null) {
       val storage_info =
           JSONObject(mapOf("id" to script.id, "data" to JSONObject().put("init", script.storage!!)))
