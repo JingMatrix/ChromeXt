@@ -17,7 +17,6 @@ eruda._initDevTools = function () {
     HTMLDivElement.prototype.insertAdjacentHTML = function (p, t) {
       return _insertAdjacentHTML.apply(this, [p, stubHTMLPolicy.createHTML(t)]);
     };
-
     const _html = this._$el.__proto__.html;
     this._$el.__proto__.html = function (t) {
       return _html.apply(this, [stubHTMLPolicy.createHTML(t)]);
@@ -72,10 +71,7 @@ eruda.chobitsu.domain("Overlay").enable = function () {
   const tooltip = overlay.querySelector("div.luna-dom-highlighter > div");
   Object.defineProperty(tooltip, "innerHTML", {
     set(value) {
-      if (value.hooked) return;
-      if (value === "") value = trustedTypes.emptyHTML;
-      value.hooked = true;
-      this.innerHTML = value;
+      this.setHTML(value);
     },
   });
 };
