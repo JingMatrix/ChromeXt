@@ -62,12 +62,14 @@ async function prepareDOM() {
       const windows1252 = await import(
         "https://cdn.jsdelivr.net/npm/windows-1252@latest/+esm"
       );
-      const bytes_16 = windows1252.encode(code.textContent, {
-        mode: "replacement",
+      code.textContent = code.textContent.replace(/[^\p{ASCII}]+/gu, (text) => {
+        const bytes_16 = windows1252.encode(text, {
+          mode: "replacement",
+        });
+        const bytes = new Uint8Array(bytes_16);
+        const utf8 = new TextDecoder();
+        return utf8.decode(bytes);
       });
-      const bytes = new Uint8Array(bytes_16);
-      const utf8 = new TextDecoder();
-      code.textContent = utf8.decode(bytes);
     }
   }
   renderEditor();
