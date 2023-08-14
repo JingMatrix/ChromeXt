@@ -120,6 +120,9 @@ div.eruda-btn.eruda-search {
 }
 
 /* plugin */
+.eruda-filters > ul > li {
+  display: flex;
+}
 h2.eruda-title {
   width: 100%;
 }
