@@ -132,6 +132,16 @@ h2.eruda-title {
 }
 #eruda-info .eruda-csp-rules > div.eruda-content {
   white-space: pre-wrap;
+  margin-right: 3em;
+}
+#eruda-info .eruda-user-agent > h2 > span.eruda-reset {
+  margin-top: 2.5em;
+  margin-right: -1.5em;
+}
+#eruda-info .eruda-user-agent > div.eruda-content {
+  text-wrap: balance;
+  text-align: center;
+  margin-right: 3em;
 }
 #eruda-info .eruda-user-agent h2,
 #eruda-info .eruda-csp-rules h2 {

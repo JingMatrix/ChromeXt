@@ -210,7 +210,7 @@ eruda.Resources = class extends eruda.Resources {
   refreshFilter() {
     let filterHtml = "<li></li>";
     const filters = this._filter.get();
-    const spanItem = `span contentEditable="true" class="${c("filter-item")}"`;
+    const spanItem = `span contenteditable="true" class="${c("filter-item")}"`;
     const spanDel = `span class="${c("icon-delete delete-filter")}"`;
     if (filters.length > 0) {
       filterHtml = filters
@@ -274,6 +274,7 @@ eruda.Info = class extends eruda.Info {
     });
     this._infos.splice(2, 2, this._infos[3], this._infos[2]);
     this._render();
+    this._$el.find(".eruda-csp-rules > div")[0].contentEditable = true;
   }
   _render() {
     const infos = [];
