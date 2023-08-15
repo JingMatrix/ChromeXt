@@ -35,21 +35,31 @@ object UserScriptProxy {
       } else {
         Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
       }
+  val tabImpl =
+      if (Chrome.isSamsung) {
+        tabWebContentsDelegateAndroidImpl
+      } else {
+        Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
+      }
+  val mIsLoading =
+      if (Chrome.isSamsung) {
+        tabImpl.declaredFields.find { it.name == "mIsLoading" }!!
+      } else {
+        tabImpl.declaredFields.run {
+          val anchorIndex = indexOfFirst { it.type == loadUrlParams }
+          slice(anchorIndex..size - 1).find { it.type == Boolean::class.java }!!
+        }
+      }
   val loadUrl =
-      findMethod(
-          if (Chrome.isSamsung) {
-            tabWebContentsDelegateAndroidImpl
-          } else {
-            Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
-          }) {
-            parameterTypes contentDeepEquals arrayOf(loadUrlParams) &&
-                returnType ==
-                    if (Chrome.isSamsung) {
-                      Void.TYPE
-                    } else {
-                      Int::class.java
-                    }
-          }
+      findMethod(tabImpl) {
+        parameterTypes contentDeepEquals arrayOf(loadUrlParams) &&
+            returnType ==
+                if (Chrome.isSamsung) {
+                  Void.TYPE
+                } else {
+                  Int::class.java
+                }
+      }
 
   val kMaxURLChars = 2097152
 

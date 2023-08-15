@@ -197,6 +197,8 @@ if (typeof ChromeXt == "undefined") {
     enumerable: true,
   });
   Object.freeze(ChromeXt);
+} else {
+  throw Error("ChromeXt is already defined");
 }
 
 trustedTypes.polices = new Set();

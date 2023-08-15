@@ -27,7 +27,7 @@ object MenuProxy {
 
   val developerSettings =
       Chrome.load("org.chromium.chrome.browser.tracing.settings.DeveloperSettings")
-  val chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
+  val chromeTabbedActivity = UserScriptProxy.chromeTabbedActivity
   val propertyModel = Chrome.load("org.chromium.ui.modelutil.PropertyModel")
   val tab = Chrome.load("org.chromium.chrome.browser.tab.Tab")
 
@@ -59,14 +59,8 @@ object MenuProxy {
 
   val emptyTabObserver =
       Chrome.load("org.chromium.chrome.browser.login.ChromeHttpAuthHandler").superclass as Class<*>
-  val tabImpl = Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
-
-  val mIsLoading =
-      tabImpl.declaredFields.run {
-        val loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
-        val anchorIndex = indexOfFirst { it.type == loadUrlParams }
-        slice(anchorIndex..size - 1).find { it.type == Boolean::class.java }!!
-      }
+  val tabImpl = UserScriptProxy.tabImpl
+  val mIsLoading = UserScriptProxy.mIsLoading
 
   private val preference = Chrome.load("androidx.preference.Preference")
   private val mClickListener =
