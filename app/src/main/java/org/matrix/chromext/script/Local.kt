@@ -51,9 +51,17 @@ object GM {
               grants +=
                   "function ${it}(){ console.error('${it} is not implemented in ChromeXt yet, called with', arguments) }\n"
             } else if (it.startsWith("GM.")) {
-              val name = "GM_" + it.substring(3)
+              val func = it.substring(3)
+              val name =
+                  "GM_" +
+                      if (func == "xmlHttpRequest") {
+                        "xmlhttpRequest"
+                      } else {
+                        func
+                      }
               if (localScript.containsKey(name))
-                  grants += localScript.get(name) + "${it}={sync: ${name}};\n"
+                  if (!script.grant.contains(name)) grants += localScript.get(name)
+              grants += "${it}={sync: ${name}};\n"
             }
       }
     }
