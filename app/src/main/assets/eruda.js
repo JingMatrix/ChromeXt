@@ -58,26 +58,26 @@ eruda._initStyle = new Proxy(eruda._initStyle, {
   apply(target, thisArg, args) {
     const result = target.apply(thisArg, args);
     this.addStyle("new_icons", eruda._styles[1]);
-    this.addStyle("eruda_dom_fix", eruda._styles[2]);
+    this.addStyle("dom_fix", eruda._styles[2]);
     this.addStyle("plugin", eruda._styles[3]);
-    const catchCSP = (e) => {
-      if (!e.sourceFile.endsWith("eruda.js")) return;
-      e.stopImmediatePropagation();
-      if (e.blockedURI == "data" && e.violatedDirective == "font-src") {
-        eruda._replaceFont = true;
-        this.addStyle("font_fix", eruda._styles[0]);
-        document.removeEventListener("securitypolicyviolation", catchCSP);
-      } else if (e.blockedURI == "inline" && e.target == eruda._container) {
-        console.error("Impossible to load Eruda");
-      }
-    };
     if (typeof eruda._replaceFont == "undefined") {
+      const catchCSP = (e) => {
+        if (!e.sourceFile.endsWith("eruda.js")) return;
+        e.stopImmediatePropagation();
+        if (e.blockedURI == "data" && e.violatedDirective == "font-src") {
+          eruda._replaceFont = true;
+          this.addStyle("font_fix", eruda._styles[0]);
+          document.removeEventListener("securitypolicyviolation", catchCSP);
+        } else if (e.blockedURI == "inline" && e.target == eruda._container) {
+          console.error("Impossible to load Eruda");
+        }
+      };
       eruda._replaceFont = false;
       document.addEventListener("securitypolicyviolation", catchCSP);
     } else if (eruda._replaceFont) {
       this.addStyle("font_fix", eruda._styles[0]);
     }
-	return result;
+    return result;
   },
 });
 
@@ -123,36 +123,39 @@ const s = (spans) =>
     .map((e) => `<span class="${c("icon-" + e + " " + e)}"></span>`)
     .join("");
 
-class elements extends eruda.Elements {
+eruda.Elements = class extends eruda.Elements {
   constructor() {
     super();
     this._deleteNode = () => {
       const node = this._curNode;
-      const selector = this.generateQuerySelector(node);
+      const selector = this.getSelector(node);
       this._container.get("resources")._filter.add(selector);
       if (node.parentNode) {
         node.parentNode.removeChild(node);
       }
     };
   }
-  static generateQuerySelector(el) {
-    if (el.tagName.toLowerCase() == "html") return "html";
+  getSelector(el, cont = true) {
+    if (document.documentElement === el) return "html";
     let str = el.tagName.toLowerCase();
     if (el.id != "") {
-      str += "#" + el.id;
+      return str + "#" + el.id;
     } else if (el.className != "") {
-      let classes = el.className
-        .split(/\s/)
-        .filter((rule) => rule.trim() != "");
+      let classes = Array.from(el.classList);
       str += "." + classes.join(".");
-    } else {
-      return this.generateQuerySelector(el.parentNode) + " > " + str;
+      if (classes.length > 1 || !cont) return str;
+      let prev = el.previousSibling;
+      while (prev instanceof Text) {
+        prev = prev.previousSibling;
+      }
+      if (prev && prev.tagName)
+        return this.getSelector(prev, false) + " + " + str;
     }
-    return str;
+    return this.getSelector(el.parentNode, cont) + " > " + str;
   }
-}
+};
 
-class resources extends eruda.Resources {
+eruda.Resources = class extends eruda.Resources {
   _initTpl() {
     super._initTpl();
     this._$el.prepend(`<div class="${c("section commands")}"></div>`);
@@ -224,9 +227,9 @@ class resources extends eruda.Resources {
     );
     return this;
   }
-}
+};
 
-class info extends eruda.Info {
+eruda.Info = class extends eruda.Info {
   add(name, val, cls = { span: ["copy"] }) {
     if (!Array.isArray(this._infos)) {
       this._infos[name] = { val, cls };
@@ -349,11 +352,7 @@ class info extends eruda.Info {
         });
       });
   }
-}
-
-eruda.Elements = elements;
-eruda.Resources = resources;
-eruda.Info = info;
+};
 
 if (typeof define == "function" && define.amd === false) define.amd = true;
 eruda.init();

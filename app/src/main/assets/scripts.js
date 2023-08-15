@@ -271,7 +271,7 @@ if (ChromeXt.filters.length > 0) {
       });
     }
     document
-      .querySelectorAll("amp-ad,amp-embed,amp-sticky-ad")
+      .querySelectorAll("amp-ad,amp-embed,amp-sticky-ad,amp-analytics,amp-auto-ads")
       .forEach((node) => node.remove());
   });
 }
