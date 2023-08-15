@@ -279,15 +279,20 @@ function GM_xmlhttpRequest(details) {
       e.stopImmediatePropagation();
       let data = e.detail.data;
       data.context = details.context;
-      if (data.responseHeaders) {
-        data.finalUrl = data.responseHeaders.Location || details.url;
-        data.total = data.responseHeaders["Content-Length"];
+      let headers = {};
+      if (data.headers) {
+        data.responseHeaders = Object.entries(data.headers)
+          .map(([k, v]) => {
+            headers[k] = v[0];
+            return k + ": " + v[0];
+          })
+          .join("\r\n");
       }
+      data.finalUrl = headers.Location || details.url;
+      data.total = headers["Content-Length"];
       switch (e.detail.type) {
         case "load":
           data.readyState = 4;
-          if ("overrideMimeType" in details)
-            data.responseHeaders["Content-Type"] = details.overrideMimeType;
           details.responseType = details.responseType || "";
           if ([101, 204, 205, 304].includes(data.status)) {
             data.response = null;
@@ -297,7 +302,8 @@ function GM_xmlhttpRequest(details) {
             const arraybuffer = Uint8Array.from(atob(data.response), (m) =>
               m.codePointAt(0)
             ).buffer;
-            const type = data.responseHeaders["Content-Type"] || "";
+            const type =
+              details.overrideMimeType || headers["Content-Type"] || "";
             const blob = new Blob([arraybuffer], { type });
             switch (details.responseType) {
               case "arraybuffer":
@@ -352,6 +358,10 @@ function GM_xmlhttpRequest(details) {
 
 GM.bootstrap = () => {
   delete GM.bootstrap;
+  const ChromeXt = LockedChromeXt.unlock(key);
+  if (ChromeXt.scripts.findIndex((e) => e.id == GM_info.script.id) != -1)
+    return;
+
   const row = /\/\/\s+@(\S+)\s+(.+)/g;
   const meta = GM_info.script;
   if (typeof meta.code != "function" && typeof ChromeXt != "undefined") {
@@ -447,7 +457,6 @@ GM.bootstrap = () => {
     };
   }
 
-  const ChromeXt = LockedChromeXt.unlock(key);
   if (grants.includes("GM.ChromeXt")) {
     GM.ChromeXt = ChromeXt;
   }
@@ -510,7 +519,7 @@ GM.bootstrap = () => {
       if (e.detail.id != GM_info.script.id) return;
       e.stopImmediatePropagation();
       const data = e.detail.data;
-      if ("init" in data) {
+      if ("init" in data && !storageHandler.inited) {
         storageHandler.inited = true;
         storageHandler.storage = data.init;
         runScript(meta);
@@ -561,7 +570,6 @@ GM.bootstrap = () => {
   function runScript(meta) {
     Object.freeze(storageHandler);
     GM_info.storage = new Proxy(storageHandler.storage, storageHandler);
-    if (ChromeXt.scripts.findIndex((e) => e.id == meta.id) != -1) return;
     if (meta.requires.length > 0) {
       meta.sync_code = meta.code;
       meta.code = async () => {

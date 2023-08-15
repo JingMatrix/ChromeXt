@@ -5,6 +5,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
+import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
@@ -58,11 +59,9 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
             }
             val data = JSONObject(mapOf("status" to responseCode, "statusText" to responseMessage))
             data.put(
-                "responseHeaders",
+                "headers",
                 JSONObject(
-                    headerFields
-                        .filter { it.key != null }
-                        .mapValues { it.value.joinToString(" ") }))
+                    headerFields.filter { it.key != null }.mapValues { JSONArray(it.value) }))
 
             val res =
                 if (responseType !in listOf("", "text", "document", "json")) {
