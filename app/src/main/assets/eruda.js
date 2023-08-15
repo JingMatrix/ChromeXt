@@ -1,10 +1,50 @@
 const ChromeXt = globalThis.ChromeXt.unlock(ChromeXtUnlockKeyForEruda, false);
 
 eruda._initDevTools = new Proxy(eruda._initDevTools, {
-  hooked: false,
+  getHeight(node, prop) {
+    return Number(getComputedStyle(node)[prop].slice(0, -2));
+  },
+  eruda_h: 5,
+  fixTop() {
+    const btn_t = this.getHeight(eruda._entryBtn._$el[0], "top");
+    if (window.innerHeight - btn_t < 150) return -2;
+    if (this.eruda_h < btn_t + 100) {
+      return btn_t + 100 - this.eruda_h;
+    } else {
+      return 0;
+    }
+  },
+  hookToggle(devTools) {
+    const _show = devTools.show;
+    devTools.show = (...args) => {
+      const el = devTools._$el[0];
+      const resizer = devTools._$el.find(".eruda-resizer")[0];
+      const top = this.fixTop();
+      if (top > -1 && top + this.eruda_h / 2 < window.innerHeight / 2) {
+        el.style.bottom = "";
+        el.style.top = top + "px";
+        resizer.style.top = this.eruda_h + "px";
+      } else {
+        el.style.top = "";
+        resizer.style.top = "";
+        if (top > 0 && top < window.innerHeight) {
+          el.style.bottom = window.innerHeight - top - this.eruda_h + "px";
+        } else {
+          el.style.bottom = "";
+        }
+      }
+      return _show.apply(devTools, args);
+    };
+    const _hide = devTools.hide;
+    devTools.hide = (...args) => {
+      const el = devTools._$el[0];
+      this.eruda_h = this.getHeight(el, "height");
+      return _hide.apply(devTools, args);
+    };
+  },
+  typesHooked: false,
   bypassTrustedTypes() {
-    if (this.hooked) return;
-    this.hooked = true;
+    if (this.typesHooked) return;
     let stubHTMLPolicy;
     try {
       stubHTMLPolicy = trustedTypes.createPolicy("eruda", {
@@ -38,10 +78,13 @@ eruda._initDevTools = new Proxy(eruda._initDevTools, {
         },
       });
     };
+    this.typesHooked = true;
   },
   apply(target, thisArg, args) {
     this.bypassTrustedTypes();
-    return target.apply(thisArg, args);
+    const result = target.apply(thisArg, args);
+    this.hookToggle(eruda._devTools);
+    return result;
   },
 });
 
