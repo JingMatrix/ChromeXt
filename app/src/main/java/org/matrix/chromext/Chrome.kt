@@ -117,7 +117,7 @@ object Chrome {
 
   fun broadcast(
       event: String,
-      data: String,
+      data: JSONObject,
       excludeSelf: Boolean = true,
       matching: (String) -> Boolean
   ) {

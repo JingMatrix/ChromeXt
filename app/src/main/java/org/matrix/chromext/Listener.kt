@@ -113,7 +113,7 @@ object Listener {
         if (detail.optBoolean("broadcast")) {
           thread {
             detail.remove("broadcast")
-            Chrome.broadcast("scriptStorage", "{detail: ${detail}}") { matching(script, it) }
+            Chrome.broadcast("scriptStorage", detail) { matching(script, it) }
           }
         }
         val data = detail.getJSONObject("data")
