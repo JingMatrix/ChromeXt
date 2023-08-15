@@ -177,15 +177,11 @@ function GM_addValueChangeListener(key, listener) {
 
 function GM_setValue(key, value) {
   GM_info.storage[key] = value;
-  GM.scriptStorage({ key, value });
 }
 // Kotlin separator
 
 function GM_deleteValue(key) {
-  if (key in GM_info.storage) {
-    delete GM_info.storage[key];
-    GM.scriptStorage({ key });
-  }
+  if (key in GM_info.storage) delete GM_info.storage[key];
 }
 // Kotlin separator
 
@@ -263,7 +259,7 @@ function GM_xmlhttpRequest(details) {
 
   if (
     !(
-      "headers" in details &&
+      typeof details.headers == "object" &&
       ("User-Agent" in details.headers || "user-agent" in details.headers)
     )
   ) {
@@ -387,16 +383,13 @@ GM.bootstrap = () => {
     ? meta["run-at"][0]
     : meta["run-at"] || "document-idle";
 
-  if (
-    meta.grants.includes("unsafeWindow") ||
-    meta["inject-into"] == "page" ||
-    meta.grants.includes("none")
-  ) {
+  const grants = meta.grants;
+  if (meta["inject-into"] == "page" || grants.includes("none")) {
     GM.globalThis = window;
   } else {
     const handler = {
       // A handler to block access to globalThis
-      window: {},
+      window: { GM },
       keys: Object.keys(window),
       // These keys will be accessible to the getter but not to the setter
       set(target, prop, value) {
@@ -431,10 +424,12 @@ GM.bootstrap = () => {
     handler.keys.splice(handler.keys.findIndex((e) => e == "ChromeXt") + 1);
     // Drop user-defined keys in the global context
     handler.keys.push(...Object.keys(EventTarget.prototype));
+    if (grants.includes("unsafeWindow"))
+      handler.window.unsafeWindow = unsafeWindow;
     GM.globalThis = new Proxy(window, handler);
   }
 
-  if (meta.grants.includes("GM.xmlHttpRequest")) {
+  if (grants.includes("GM.xmlHttpRequest")) {
     GM.xmlHttpRequest = (details) => {
       return new Promise(async (resolve, reject) => {
         const onload = details.onload;
@@ -453,54 +448,77 @@ GM.bootstrap = () => {
   }
 
   const ChromeXt = LockedChromeXt.unlock(key);
-  if (meta.grants.includes("GM.ChromeXt")) {
+  if (grants.includes("GM.ChromeXt")) {
     GM.ChromeXt = ChromeXt;
   }
 
-  if (
-    meta.grants.includes("GM_setValue") ||
-    meta.grants.includes("GM_listValues")
-  ) {
-    GM_info.storage = {};
-  }
-
-  if (
-    meta.grants.includes("GM_getValue") ||
-    meta.grants.includes("GM.getValue")
-  ) {
-    GM.scriptStorage = function (data) {
-      const grants = GM_info.script.grants;
-      let broadcast = grants.includes("GM_addValueChangeListener");
+  GM_info.uuid = Math.random();
+  const storageHandler = {
+    inited: false,
+    storage: {},
+    broadcast: grants.includes("GM_addValueChangeListener"),
+    payload: {
+      id: meta.id,
+      uuid: GM_info.uuid,
+    },
+    cache: new Set(),
+    sync(data) {
+      if (!this.inited) return;
+      let broadcast = this.broadcast;
       if ("broadcast" in data && !data.broadcast) {
         broadcast = false;
         delete data.broadcast;
       }
-      let payload = {
-        id: GM_info.script.id,
-        data,
-        uuid: GM_info.uuid,
-        broadcast,
-      };
+      const payload = { data, broadcast, ...this.payload };
       if (broadcast) {
         ChromeXt.post("scriptStorage", payload);
       }
       ChromeXt.dispatch("scriptStorage", payload);
-    };
-    Object.freeze(GM.scriptStorage);
-
-    ChromeXt.addEventListener("scriptStorage", (e) => {
-      if (e.detail.id != GM_info.script.id) {
-        return;
+    },
+    deleteProperty(target, key) {
+      delete target.key;
+      this.sync({ key });
+    },
+    set(target, key, value) {
+      target[key] = value;
+      this.sync({ key, value });
+      return true;
+    },
+    async_get(key) {
+      if (!this.cache.has(key)) {
+        this.cache.add(key);
+        return this.storage[key];
       }
+      const id = Math.random();
+      this.sync({ key, id, broadcast: false });
+      return promiseListenerFactory(
+        "scriptSyncValue",
+        GM_info.uuid,
+        meta.id,
+        (data, resolve, _reject) => {
+          this.storage[key] = data.value;
+          resolve(data.value);
+        },
+        (data) => data.id == id && data.key == key
+      );
+    },
+  };
+
+  if (grants.includes("GM.getValue") || grants.includes("GM_getValue")) {
+    GM.getValue = storageHandler.async_get.bind(storageHandler);
+    ChromeXt.addEventListener("scriptStorage", (e) => {
+      if (e.detail.id != GM_info.script.id) return;
       e.stopImmediatePropagation();
       const data = e.detail.data;
       if ("init" in data) {
-        GM_info.storage = data.init;
+        storageHandler.inited = true;
+        storageHandler.storage = data.init;
         runScript(meta);
         return;
       }
       if ("key" in data && data.key in GM_info.storage) {
-        if (e.detail.uuid == GM_info.uuid && e.detail.broadcast != true) return;
+        if (e.detail.uuid == GM_info.uuid && e.detail.broadcast !== true)
+          return;
         GM_info.valueListener.forEach((v) => {
           if (v.enabled == true && v.key == data.key) {
             v.listener(
@@ -511,29 +529,9 @@ GM.bootstrap = () => {
           }
         });
       }
-      GM_info.storage[data.key] = data.value;
+      storageHandler.storage[data.key] = data.value;
     });
     GM_info.valueListener = [];
-
-    const valueAsked = [];
-    GM.getValue = async function (key) {
-      const id = Math.random();
-      if (!valueAsked.includes(key)) {
-        valueAsked.push(key);
-        return GM_info.storage[key];
-      }
-      GM.scriptStorage({ key, id, broadcast: false });
-      return await promiseListenerFactory(
-        "scriptSyncValue",
-        GM_info.uuid,
-        GM_info.script.id,
-        (data, resolve, _reject) => {
-          GM_info.storage[key] = data.value;
-          resolve(data.value);
-        },
-        (data) => data.id == id && data.key == key
-      );
-    };
   } else {
     runScript(meta);
   }
@@ -541,7 +539,7 @@ GM.bootstrap = () => {
   function promiseListenerFactory(
     event,
     uuid,
-    id = GM_info.script.id,
+    id = meta.id,
     listener = (_data, resolve, _reject) => resolve(true),
     closeCondition = () => true
   ) {
@@ -561,6 +559,8 @@ GM.bootstrap = () => {
   }
 
   function runScript(meta) {
+    Object.freeze(storageHandler);
+    GM_info.storage = new Proxy(storageHandler.storage, storageHandler);
     if (ChromeXt.scripts.findIndex((e) => e.id == meta.id) != -1) return;
     if (meta.requires.length > 0) {
       meta.sync_code = meta.code;
@@ -585,7 +585,7 @@ GM.bootstrap = () => {
             const uuid = Math.random();
             const detail = JSON.stringify({
               uuid,
-              id: GM_info.script.id,
+              id: meta.id,
             });
             script += `\nChromeXt.unlock(${GM.key}).post('unsafe_eval', ${detail});`;
             ChromeXt.dispatch("unsafeEval", script);
@@ -615,7 +615,6 @@ GM.bootstrap = () => {
         }
     }
 
-    GM_info.uuid = Math.random();
     GM_info.scriptHandler = "ChromeXt";
     GM_info.version = "3.6.0";
     Object.freeze(GM_info);
