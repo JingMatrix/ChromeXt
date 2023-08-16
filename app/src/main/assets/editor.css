@@ -12,6 +12,15 @@ pre > em {
 body {
   margin: 0;
 }
+dialog#confirm > p#alert {
+  text-align: center;
+  font-weight: bold;
+}
+dialog#confirm > div#interaction {
+  display: flex;
+  justify-content: space-around;
+  padding-top: 1em;
+}
 [class*="shj-lang-"] {
   border-radius: 0;
   color: #abb2bf;

@@ -1,17 +1,13 @@
 async function installScript(force = false) {
   if (!force) {
-    force = confirm("Confirm ChromeXt to install this UserScript?");
-  }
-  if (force) {
+    document.querySelector("dialog#confirm").showModal();
+  } else {
     const script = document.body.innerText;
     ChromeXt.dispatch("installScript", script);
   }
 }
 
 function renderEditor() {
-  if (window.editorReady) return;
-  window.editorReady = true;
-
   const code = document.querySelector("body > pre");
 
   const separator = "==/UserScript==\n";
@@ -27,6 +23,7 @@ function renderEditor() {
   code.id = "code";
   code.removeAttribute("style");
   document.body.prepend(scriptMeta);
+  createDialog();
 
   scriptMeta.setAttribute("contenteditable", true);
   code.setAttribute("contenteditable", true);
@@ -38,6 +35,36 @@ function renderEditor() {
       });
     }
   );
+}
+
+function createDialog() {
+  const dialog = document.createElement("dialog");
+  dialog.id = "confirm";
+  const text = document.createElement("p");
+  text.textContent = "Confirm ChromeXt to install this UserScript?";
+  const div = document.createElement("div");
+  div.id = "interaction";
+  const yes = document.createElement("button");
+  yes.textContent = "Confirm";
+  yes.addEventListener("click", () => {
+    dialog.close();
+    installScript(true);
+  });
+  const no = document.createElement("button");
+  no.addEventListener("click", () => dialog.close());
+  no.textContent = "Close";
+  div.append(yes);
+  div.append(no);
+  dialog.append(text);
+  const askChromeXt = document.querySelector("#meta > em") != undefined;
+  if (askChromeXt) {
+    const alert = document.createElement("p");
+    alert.id = "alert";
+    alert.textContent = "ATTENTION: GM.ChromeXt is declared";
+    dialog.append(alert);
+  }
+  dialog.append(div);
+  document.body.prepend(dialog);
 }
 
 async function prepareDOM() {
