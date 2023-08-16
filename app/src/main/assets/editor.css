@@ -12,6 +12,16 @@ pre > em {
 body {
   margin: 0;
 }
+dialog#confirm {
+  white-space: pre-wrap;
+  text-wrap: balance;
+  top: 40%;
+  position: fixed;
+  max-width: calc((100% - 6px) - 2em);
+}
+dialog#confirm:modal {
+  top: 0;
+}
 dialog#confirm > p#alert {
   text-align: center;
   font-weight: bold;

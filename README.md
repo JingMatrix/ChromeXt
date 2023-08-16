@@ -38,9 +38,6 @@ Notes: currently _to download_ files from `GitHub Actions`, one needs to log in 
 The author uploads releases to [Xposed-Modules-Repo](https://github.com/Xposed-Modules-Repo/org.matrix.chromext/releases) when needed, but not that frequently.
 
 You can then install UserScripts from popular sources: URLs that ends with `.user.js`.
-However, this fails for UserScripts from some domains like `raw.githubusercontent.com`.
-For them, use the `Install UserScript` page menu if you simply want to install them
-without further editing.
 
 ### Supported API
 

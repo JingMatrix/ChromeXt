@@ -1,7 +1,9 @@
 async function installScript(force = false) {
+  const dialog = document.querySelector("dialog#confirm");
   if (!force) {
-    document.querySelector("dialog#confirm").showModal();
+    dialog.showModal();
   } else {
+    dialog.close();
     const script = document.body.innerText;
     ChromeXt.dispatch("installScript", script);
   }
@@ -23,11 +25,11 @@ function renderEditor() {
   code.id = "code";
   code.removeAttribute("style");
   document.body.prepend(scriptMeta);
-  createDialog();
 
   scriptMeta.setAttribute("contenteditable", true);
   code.setAttribute("contenteditable", true);
-  setTimeout(installScript);
+  createDialog();
+  setTimeout(fixDialog);
   import("https://unpkg.com/@speed-highlight/core/dist/index.js").then(
     (imports) => {
       imports.highlightElement(document.querySelector("#code"), "js", {
@@ -40,19 +42,30 @@ function renderEditor() {
 function createDialog() {
   const dialog = document.createElement("dialog");
   dialog.id = "confirm";
+  dialog.textContent =
+    "Code editor is blocked on this page.\n\nPlease use page menu to install this UserScript, or reload current page to enable the editor.";
+  document.body.prepend(dialog);
+  dialog.show();
+}
+
+function fixDialog() {
+  const dialog = document.querySelector("dialog#confirm");
+  if (dialog.textContent == "") return;
+  dialog.close();
+  dialog.textContent = "";
   const text = document.createElement("p");
   text.textContent = "Confirm ChromeXt to install this UserScript?";
   const div = document.createElement("div");
   div.id = "interaction";
   const yes = document.createElement("button");
   yes.textContent = "Confirm";
-  yes.addEventListener("click", () => {
-    dialog.close();
-    installScript(true);
-  });
+  yes.addEventListener("click", () => installScript(true));
   const no = document.createElement("button");
-  no.addEventListener("click", () => dialog.close());
-  no.textContent = "Close";
+  no.addEventListener("click", () => {
+    dialog.close();
+    setTimeout(() => dialog.show(), 30000);
+  });
+  no.textContent = "Ask 30s later";
   div.append(yes);
   div.append(no);
   dialog.append(text);
@@ -64,7 +77,7 @@ function createDialog() {
     dialog.append(alert);
   }
   dialog.append(div);
-  document.body.prepend(dialog);
+  installScript();
 }
 
 async function prepareDOM() {
@@ -79,6 +92,10 @@ async function prepareDOM() {
   );
   style.textContent = _editor_style;
 
+  if (!document.head) {
+    window.addEventListener("DOMContentLoaded", prepareDOM);
+    return;
+  }
   document.head.appendChild(meta);
   document.head.appendChild(style);
 
@@ -102,8 +119,4 @@ async function prepareDOM() {
   renderEditor();
 }
 
-if (document.readyState == "complete") {
-  prepareDOM();
-} else {
-  window.onload = prepareDOM;
-}
+prepareDOM();
