@@ -212,6 +212,14 @@ function GM_getResourceURL(name) {
 // Kotlin separator
 
 function GM_xmlhttpRequest(details) {
+  if (typeof details == "string") {
+    details = new Request(...arguments);
+    if (arguments.length == 2) details.data = arguments[1].body;
+  }
+  if (details instanceof Request) {
+    details.fetch = true;
+  }
+
   if (!details.url) {
     throw new Error("GM_xmlhttpRequest requires a URL.");
   } else {
@@ -234,47 +242,46 @@ function GM_xmlhttpRequest(details) {
   const uuid = Math.random();
   details.method = details.method ? details.method.toUpperCase() : "GET";
 
-  if (
-    "data" in details &&
-    details.data != null &&
-    typeof details.data != "string"
-  ) {
-    details.binary = true;
-  }
-
-  if ("binary" in details && "data" in details && details.binary) {
-    switch (details.data.constructor) {
-      case File:
-      case Blob:
-        details.data = details.data.arrayBuffer();
-      case ArrayBuffer:
-        details.data = new Uint8Array(details.data);
-      case Uint8Array:
-        data = btoa(Array.from(data, (x) => String.fromCodePoint(x)).join(""));
-        break;
-      default:
-        details.binary = false;
+  async function prepareRequest(details) {
+    if (details instanceof Request && details.method != "GET") {
+      details.data = details.data || (await details.blob());
+    }
+    if (
+      "data" in details &&
+      details.data != null &&
+      typeof details.data != "string"
+    ) {
+      details.binary = true;
+    }
+    if ("binary" in details && "data" in details && details.binary) {
+      switch (details.data.constructor) {
+        case File:
+        case Blob:
+          details.data = details.data.arrayBuffer();
+        case ArrayBuffer:
+          details.data = new Uint8Array(details.data);
+        case Uint8Array:
+          data = btoa(
+            Array.from(details.data, (x) => String.fromCodePoint(x)).join("")
+          );
+          break;
+        default:
+          details.binary = false;
+      }
+    }
+    details.headers = details.headers || {};
+    if (details.headers instanceof Headers)
+      Object.defineProperty(details, "headers", {
+        value: Object.fromEntries(details.headers),
+      });
+    const hasUserAgent =
+      "User-Agent" in details.headers || "user-agent" in details.headers;
+    if (!hasUserAgent) {
+      details.headers["User-Agent"] = window.navigator.userAgent;
     }
   }
 
-  if (
-    !(
-      typeof details.headers == "object" &&
-      ("User-Agent" in details.headers || "user-agent" in details.headers)
-    )
-  ) {
-    details.headers = details.headers || {};
-    details.headers["User-Agent"] = window.navigator.userAgent;
-  }
-
-  const ChromeXt = LockedChromeXt.unlock(key);
-  ChromeXt.dispatch("xmlhttpRequest", {
-    id: GM_info.script.id,
-    request: details,
-    uuid,
-  });
-
-  function prepareData(type, data) {
+  function prepareResponse(type, data) {
     data.readyState = 4;
     details.responseType = details.responseType || "";
     if ([101, 204, 205, 304].includes(data.status)) {
@@ -314,29 +321,44 @@ function GM_xmlhttpRequest(details) {
     }
   }
 
-  const promise = new Promise((resolve, reject) => {
+  const ChromeXt = LockedChromeXt.unlock(key);
+
+  const promise = new Promise(async (resolve, reject) => {
+    await prepareRequest(details);
+    let request = details;
+    if (details instanceof Request) {
+      request = {};
+      for (const key in details) request[key] = details[key];
+    }
+    ChromeXt.dispatch("xmlhttpRequest", {
+      id: GM_info.script.id,
+      request,
+      uuid,
+    });
     const tmpListener = (e) => {
       if (e.detail.id == GM_info.script.id && e.detail.uuid == uuid) {
         e.stopImmediatePropagation();
         let data = e.detail.data;
         data.context = details.context;
-        let headers = {};
         if (data.headers) {
-          data.responseHeaders = Object.entries(data.headers)
-            .map(([k, v]) => {
-              headers[k] = v[0];
-              return k + ": " + v[0];
-            })
+          data.headers = new Headers(data.headers);
+          data.responseHeaders = Object.entries(
+            Object.fromEntries(data.headers)
+          )
+            .map(([k, v]) => k + ": " + v)
             .join("\r\n");
+          data.finalUrl = data.headers.get("Location") || details.url;
+          data.total = data.headers.get("Content-Length");
         }
-        data.finalUrl = headers.Location || details.url;
-        data.total = headers["Content-Length"];
         switch (e.detail.type) {
           case "load":
             const type =
-              details.overrideMimeType || headers["Content-Type"] || "";
-            prepareData(type, data);
+              details.overrideMimeType ||
+              data.headers.get("Content-Type") ||
+              "";
+            prepareResponse(type, data);
             if (typeof details.onload == "function") details.onload(data);
+            if (details.fetch) data = new Response(data.response, data);
             resolve(data);
             e.detail.type = "loadend";
           default:
@@ -360,7 +382,11 @@ function GM_xmlhttpRequest(details) {
       uuid,
       abort: true,
     });
+    console.log("GM_xmlhttpRequest aborted");
   };
+  if (details instanceof Request) {
+    details.signal.addEventListener("abort", promise.abort);
+  }
 
   return promise;
 }

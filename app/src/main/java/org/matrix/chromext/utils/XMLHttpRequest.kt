@@ -47,21 +47,20 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
         val encoding = Base64.encodeToString(("${user}:${password}").toByteArray(), Base64.DEFAULT)
         setRequestProperty("Authorization", "Basic " + encoding)
       }
+      var data = JSONObject()
       runCatching {
             response("loadstart", disconnect = false)
             if (method == "POST" && request.has("data")) {
-              val data = request.optString("data")
+              val input = request.optString("data")
               if (binary) {
-                outputStream.write(Base64.decode(data, Base64.DEFAULT))
+                outputStream.write(Base64.decode(input, Base64.DEFAULT))
               } else {
-                outputStream.write(data.toByteArray())
+                outputStream.write(input.toByteArray())
               }
             }
-            val data = JSONObject(mapOf("status" to responseCode, "statusText" to responseMessage))
-            data.put(
-                "headers",
-                JSONObject(
-                    headerFields.filter { it.key != null }.mapValues { JSONArray(it.value) }))
+            data = JSONObject(mapOf("status" to responseCode, "statusText" to responseMessage))
+            val headers = headerFields.filter { it.key != null }.mapValues { JSONArray(it.value) }
+            data.put("headers", JSONObject(headers))
 
             val res =
                 if (responseType !in listOf("", "text", "document", "json")) {
@@ -73,17 +72,17 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
             data.put("response", res)
 
             response("load", data, false)
-            // data.remove("response")
-            // response("loadend", "{}")
           }
           .onFailure {
             if (it is IOException) {
-              val error = errorStream?.bufferedReader()?.use { it.readText() } ?: it.message
-              Log.d(it.toString() + ". ${error} when connecting to ${url}")
+              data.put("type", it::class.java.name)
+              data.put("message", it.message)
+              errorStream?.bufferedReader()?.use { it.readText() }?.let { data.put("error", it) }
+              Log.d("XMLHttpRequest failed with ${url}: " + it.toString())
               if (it is SocketTimeoutException) {
-                response("timeout")
+                response("timeout", data.put("bytesTransferred", it.bytesTransferred))
               } else {
-                response("error", JSONObject(mapOf("error" to error)))
+                response("error", data)
               }
             } else {
               Log.ex(it)
