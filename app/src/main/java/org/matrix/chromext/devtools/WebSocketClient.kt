@@ -15,7 +15,7 @@ import org.matrix.chromext.utils.Log
 
 class DevToolClient(tabId: String) : LocalSocket() {
 
-  private val tabId = tabId
+  val tabId = tabId
   private var id = 1
   private var mClosed = false
 
@@ -42,6 +42,9 @@ class DevToolClient(tabId: String) : LocalSocket() {
 
   override fun close() {
     super.close()
+    if (!mClosed) {
+      Chrome.cspBypassed.remove(this)
+    }
     mClosed = true
   }
 

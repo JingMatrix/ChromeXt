@@ -75,10 +75,10 @@ object ScriptDbManager {
           null
         }
     var runScripts = false
-    var forceDevTools = false
+    var bypassSandbox = false
     if (isUserScript(url)) {
       codes.add(Local.promptInstallUserScript)
-      forceDevTools = shouldBypassSandbox(url)
+      bypassSandbox = shouldBypassSandbox(url)
     } else if (isDevToolsFrontEnd(url)) {
       codes.add(Local.customizeDevTool)
       webSettings?.userAgentString = null
@@ -107,7 +107,7 @@ object ScriptDbManager {
     }
     if (runScripts) codes.add("ChromeXt.lock(${Local.key});")
     codes.add("//# sourceURL=local://ChromeXt")
-    Chrome.evaluateJavascript(listOf(codes.joinToString("\n")), null, forceDevTools)
+    Chrome.evaluateJavascript(listOf(codes.joinToString("\n")), null, bypassSandbox, bypassSandbox)
     if (runScripts) {
       codes.clear()
       scripts.filter { matching(it, url) }.forEach { codes.addAll(GM.bootstrap(it)) }

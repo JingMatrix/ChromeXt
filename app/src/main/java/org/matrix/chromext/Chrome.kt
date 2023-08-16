@@ -27,6 +27,8 @@ object Chrome {
   var isSamsung = false
   var isVivaldi = false
 
+  val cspBypassed = mutableSetOf<DevToolClient>()
+
   fun init(ctx: Context, packageName: String? = null) {
     val initialized = mContext != null
     mContext = WeakReference(ctx)
@@ -85,24 +87,33 @@ object Chrome {
     if (tab != null) mTab = WeakReference(tab)
   }
 
-  private fun evaluateJavascript(codes: List<String>, tabId: String) {
+  private fun evaluateJavascriptDevTools(codes: List<String>, tabId: String, bypassCSP: Boolean) {
     wakeUpDevTools()
-    var client = DevToolClient(tabId)
+    val lastClient = cspBypassed.find { it.tabId == tabId }
+    var client = lastClient ?: DevToolClient(tabId)
     if (client.isClosed()) {
       hitDevTools().close()
       client = DevToolClient(tabId)
     }
-    // client.command(null, "Page.setBypassCSP", JSONObject().put("enabled", true))
     codes.forEach { client.evaluateJavascript(it) }
-    client.close()
+    // Bypass CSP is only effective after reloading
+
+    if ((lastClient == client) != bypassCSP) {
+      client.command(null, "Page.enable", JSONObject())
+      client.command(null, "Page.setBypassCSP", JSONObject().put("enabled", bypassCSP))
+      if (bypassCSP) {
+        cspBypassed.add(client)
+      }
+    }
+    if (!bypassCSP) client.close()
   }
 
   fun evaluateJavascript(
       codes: List<String>,
       currentTab: Any? = null,
-      forceDevTools: Boolean = false
+      forceDevTools: Boolean = false,
+      bypassCSP: Boolean = false,
   ) {
-    if (codes.size == 0) return
     if (forceDevTools) {
       thread {
         val tabId =
@@ -117,9 +128,10 @@ object Chrome {
             } else {
               getTab(currentTab)!!.invokeMethod() { name == "getId" }.toString()
             }
-        evaluateJavascript(codes, tabId)
+        evaluateJavascriptDevTools(codes, tabId, bypassCSP)
       }
     } else {
+      if (codes.size == 0) return
       Handler(getContext().mainLooper).post {
         if (WebViewHook.isInit) {
           codes.forEach { WebViewHook.evaluateJavascript(it) }
