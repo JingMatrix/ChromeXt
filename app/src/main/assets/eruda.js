@@ -23,10 +23,10 @@ eruda._initDevTools = new Proxy(eruda._initDevTools, {
       if (top > -1 && top + this.eruda_h / 2 < window.innerHeight / 2) {
         el.style.bottom = "";
         el.style.top = top + "px";
-        resizer.style.top = this.eruda_h + "px";
+        resizer.style.height = "";
       } else {
         el.style.top = "";
-        resizer.style.top = "";
+        resizer.style.height = "10px";
         if (top > 0 && top < window.innerHeight) {
           el.style.bottom = window.innerHeight - top - this.eruda_h + "px";
         } else {
@@ -317,7 +317,8 @@ eruda.Info = class extends eruda.Info {
     });
     this._infos.splice(2, 2, this._infos[3], this._infos[2]);
     this._render();
-    this._$el.find(".eruda-csp-rules > div")[0].contentEditable = true;
+    if (ChromeXt.cspRules.length > 0)
+      this._$el.find(".eruda-csp-rules > div")[0].contentEditable = true;
   }
   _render() {
     const infos = [];

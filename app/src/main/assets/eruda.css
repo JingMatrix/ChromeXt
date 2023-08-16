@@ -135,8 +135,9 @@ h2.eruda-title {
   margin-right: 3em;
 }
 #eruda-info .eruda-user-agent > h2 > span.eruda-reset {
-  margin-top: 2.5em;
-  margin-right: -1.5em;
+  position: relative;
+  top: 35px;
+  left: 20px;
 }
 #eruda-info .eruda-user-agent > div.eruda-content {
   text-wrap: balance;
