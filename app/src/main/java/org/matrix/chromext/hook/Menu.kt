@@ -122,11 +122,8 @@ object MenuHook : BaseHook() {
             Listener.on("extension")
           }
           "org.matrix.chromext:id/install_script_id" -> {
-            if (getUrl().startsWith("https://raw.githubusercontent.com/")) {
-              Download.start(getUrl(), "UserScript/script.js") { Listener.on("installScript", it) }
-            } else {
-              UserScriptProxy.evaluateJavascript("installScript(true);")
-            }
+            val sandBoxed = shouldBypassSandbox(getUrl())
+            Chrome.evaluateJavascript(listOf("installScript(true);"), null, sandBoxed)
           }
           "org.matrix.chromext:id/developer_tools_id" -> Listener.on("inspectPages")
           "org.matrix.chromext:id/eruda_console_id" ->

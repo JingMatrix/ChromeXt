@@ -68,12 +68,12 @@ object Chrome {
     return getContext().classLoader.loadClass(className)
   }
 
-  fun getTab(): Any? {
-    return mTab?.get()
+  fun getTab(referTab: Any? = null): Any? {
+    return referTab ?: mTab?.get()
   }
 
   fun getUrl(currentTab: Any? = null): String? {
-    val url = (currentTab ?: getTab())?.invokeMethod { name == "getUrl" }
+    val url = getTab(currentTab)?.invokeMethod { name == "getUrl" }
     return if (UserScriptHook.isInit) {
       UserScriptProxy.parseUrl(url)
     } else {
@@ -97,19 +97,35 @@ object Chrome {
     client.close()
   }
 
-  fun evaluateJavascript(codes: List<String>, currentTab: Any? = null) {
+  fun evaluateJavascript(
+      codes: List<String>,
+      currentTab: Any? = null,
+      forceDevTools: Boolean = false
+  ) {
     if (codes.size == 0) return
-
-    Handler(getContext().mainLooper).post {
-      if (WebViewHook.isInit) {
-        codes.forEach { WebViewHook.evaluateJavascript(it) }
-      } else if (UserScriptHook.isInit) {
-        val failed = codes.filter { !UserScriptProxy.evaluateJavascript(it, currentTab) }
-        if (failed.size > 0) {
-          thread {
-            evaluateJavascript(
-                failed, (currentTab ?: getTab())!!.invokeMethod() { name == "getId" }.toString())
-          }
+    if (forceDevTools) {
+      thread {
+        val tabId =
+            if (WebViewHook.isInit) {
+              val url = getUrl(currentTab)
+              filterTabs {
+                    optString("type") == "page" &&
+                        optString("url") == url &&
+                        !JSONObject(getString("description")).optBoolean("never_attached")
+                  }
+                  .first()
+            } else {
+              getTab(currentTab)!!.invokeMethod() { name == "getId" }.toString()
+            }
+        evaluateJavascript(codes, tabId)
+      }
+    } else {
+      Handler(getContext().mainLooper).post {
+        if (WebViewHook.isInit) {
+          codes.forEach { WebViewHook.evaluateJavascript(it) }
+        } else if (UserScriptHook.isInit) {
+          val failed = codes.filter { !UserScriptProxy.evaluateJavascript(it, currentTab) }
+          if (failed.size > 0) evaluateJavascript(failed, currentTab, true)
         }
       }
     }
@@ -123,21 +139,28 @@ object Chrome {
   ) {
     val code = "ChromeXt.unlock(${Local.key}).post('${event}', ${data});"
     Log.d("broadcasting ${event}")
+
+    val tabs = filterTabs {
+      optString("type") == "page" &&
+          matching(optString("url")) &&
+          (optString("description") == "" ||
+              !JSONObject(getString("description")).optBoolean("never_attached"))
+    }
+
+    if (tabs.size > 1 || !excludeSelf) {
+      tabs.forEach { evaluateJavascript(listOf(code), it) }
+    }
+  }
+
+  private fun filterTabs(condition: JSONObject.() -> Boolean): List<String> {
     wakeUpDevTools()
     val pages = getInspectPages()!!
     val tabs = mutableListOf<String>()
     for (i in 0 until pages.length()) {
       val tab = pages.getJSONObject(i)
-      if (tab.optString("type") == "page" && matching(tab.optString("url"))) {
-        if (tab.optString("description") == "" ||
-            !JSONObject(tab.getString("description")).optBoolean("never_attached")) {
-          tabs.add(tab.getString("id"))
-        }
-      }
+      if (condition.invoke(tab)) tabs.add(tab.getString("id"))
     }
-    if (tabs.size > 1 || !excludeSelf) {
-      tabs.forEach { evaluateJavascript(listOf(code), it) }
-    }
+    return tabs
   }
 }
 

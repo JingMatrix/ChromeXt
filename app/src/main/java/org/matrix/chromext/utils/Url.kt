@@ -81,11 +81,19 @@ fun isUserScript(url: String?): Boolean {
   return false
 }
 
-val trustedHosts = listOf("jingmatrix.github.io", "jianyu-ma.onrender.com", "jianyu-ma.netlify.app")
+private val trustedHosts =
+    listOf("jingmatrix.github.io", "jianyu-ma.onrender.com", "jianyu-ma.netlify.app")
 
 fun isChromeXtFrontEnd(url: String?): Boolean {
   if (url == null || !url.endsWith("/ChromeXt/")) return false
   trustedHosts.forEach { if (url == "https://" + it + "/ChromeXt/") return true }
+  return false
+}
+
+private val sandboxHosts = listOf("raw.githubusercontent.com")
+
+fun shouldBypassSandbox(url: String?): Boolean {
+  sandboxHosts.forEach { if (url?.startsWith("https://" + it) == true) return true }
   return false
 }
 
