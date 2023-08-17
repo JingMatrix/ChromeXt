@@ -64,7 +64,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
 
             val res =
                 if (responseType !in listOf("", "text", "document", "json")) {
-                  Base64.encodeToString(inputStream.readAllBytes(), Base64.DEFAULT)
+                  Base64.encodeToString(inputStream.readBytes(), Base64.DEFAULT)
                 } else {
                   inputStream.bufferedReader().use { it.readText() }
                 }
