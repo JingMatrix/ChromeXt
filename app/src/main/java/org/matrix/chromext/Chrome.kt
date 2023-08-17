@@ -92,6 +92,7 @@ object Chrome {
     val lastClient = cspBypassed.find { it.tabId == tabId }
     var client = lastClient ?: DevToolClient(tabId)
     if (client.isClosed()) {
+      cspBypassed.remove(client)
       hitDevTools().close()
       client = DevToolClient(tabId)
     }
@@ -103,6 +104,8 @@ object Chrome {
       client.command(null, "Page.setBypassCSP", JSONObject().put("enabled", bypassCSP))
       if (bypassCSP) {
         cspBypassed.add(client)
+      } else {
+        cspBypassed.remove(client)
       }
     }
     if (!bypassCSP) client.close()

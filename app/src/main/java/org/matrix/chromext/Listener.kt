@@ -259,6 +259,7 @@ object Listener {
           }
           thread {
             target?.close()
+            devSessions.remove(target)
             hitDevTools().close()
             target = DevToolClient(targetTabId)
             if (!target!!.isClosed()) {

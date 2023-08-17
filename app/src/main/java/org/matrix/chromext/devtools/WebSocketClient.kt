@@ -9,7 +9,6 @@ import java.security.SecureRandom
 import kotlin.experimental.xor
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
-import org.matrix.chromext.Listener
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.utils.Log
@@ -43,10 +42,6 @@ class DevToolClient(tabId: String) : LocalSocket() {
 
   override fun close() {
     super.close()
-    if (!mClosed) {
-      Chrome.cspBypassed.remove(this)
-      Listener.devSessions.remove(this)
-    }
     mClosed = true
   }
 
