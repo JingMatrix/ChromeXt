@@ -8,42 +8,86 @@ window.addEventListener("load", () => {
   document.body.prepend(style);
 });
 
-class WebSocket {
-  constructor() {
-    this.url = arguments[0];
-    this.payload = { targetTabId: this.url.split("/").pop() };
-    ChromeXt.dispatch("websocket", this.payload);
-    this.sessions = new Map();
+class WebSocket extends EventTarget {
+  binaryType = "blob"; // Not used for DevTools protectol
+  #state;
+  #url;
+  #payload;
+  #pending = [];
 
-    ChromeXt.addEventListener("inspect_pages", (e) => {
-      this.payload.tabId = e.detail.find(
-        (info) => info.url == window.location.href
-      ).id;
-      ChromeXt.dispatch("websocket", this.payload);
-    });
-
-    ChromeXt.addEventListener("websocket", (e) => {
-      const type = Object.keys(e.detail)[0];
-      const data = e.detail[type];
-      if (
-        type == "message" &&
-        !("id" in data) &&
-        "method" in data &&
-        "params" in data
-      ) {
-        const targetInfo = data.params.targetInfo;
-        if (typeof targetInfo != "undefined" && targetInfo.type != "page") {
-          console.info("Ignore inspecting", targetInfo.type, targetInfo.url);
-          // To inspect them, we may need to change the targetTabId
-          return;
-        }
-      }
-      this["on" + type](new MessageEvent(type, { data }));
-    });
+  get bufferedAmount() {
+    return new Blob(this.#pending).size;
+  }
+  get extensions() {
+    return "";
+  }
+  get protocol() {
+    return "";
+  }
+  get readyState() {
+    return this.#state;
+  }
+  get url() {
+    return this.#url;
   }
 
-  send() {
-    this.payload.message = arguments[0];
-    ChromeXt.dispatch("websocket", this.payload);
+  constructor() {
+    super();
+    this.#state = 0;
+    this.#url = arguments[0];
+    this.#payload = { targetTabId: this.#url.split("/").pop() };
+    ChromeXt.dispatch("websocket", this.#payload);
+    ChromeXt.addEventListener("websocket", this.#handler.bind(this));
+  }
+
+  #handler(e) {
+    const type = Object.keys(e.detail)[0];
+    const data = e.detail[type];
+    if (type == "message" && !("id" in data) && "params" in data) {
+      const targetInfo = data.params.targetInfo;
+      if (typeof targetInfo != "undefined" && targetInfo.type != "page") {
+        console.info("Ignore inspecting", targetInfo.type, targetInfo.url);
+        // To inspect them, we may need to change the targetTabId
+        return;
+      }
+    } else if (type == "close") {
+      this.close();
+    } else if (type == "open") {
+      this.#state = 1;
+      // It would be better if the target is attached,
+      // but there is no way to do so, neither to replay the pending message later.
+    }
+    const event = new MessageEvent(type, { data });
+    try {
+      this["on" + type](event);
+    } catch {
+      this.dispatchEvent(event);
+    }
+  }
+
+  send(msg) {
+    if (typeof msg == "string") {
+      this.#pending.push(msg);
+    } else {
+      throw Error("Invalid message", msg);
+    }
+    if (this.#state == 1) {
+      this.#pending.forEach((msg) => {
+        this.#payload.message = msg;
+        ChromeXt.dispatch("websocket", this.#payload);
+      });
+      this.#pending.length = 0;
+    }
+  }
+
+  close() {
+    this.#state = 2;
+    const event = new MessageEvent("close");
+    if (typeof this.onclose == "function") {
+      this.onclose(event);
+    } else {
+      this.dispatchEvent(event);
+    }
+    this.#state = 3;
   }
 }

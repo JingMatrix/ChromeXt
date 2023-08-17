@@ -9,6 +9,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.devtools.DevToolClient
 import org.matrix.chromext.devtools.getInspectPages
+import org.matrix.chromext.devtools.hitDevTools
 import org.matrix.chromext.extension.LocalFiles
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.proxy.UserScriptProxy
@@ -28,7 +29,7 @@ import org.matrix.chromext.utils.matching
 object Listener {
 
   val xmlhttpRequests = mutableMapOf<Double, XMLHttpRequest>()
-  val devToolClients = mutableMapOf<Pair<String, String>, Pair<DevToolClient, DevToolClient>>()
+  val devSessions = mutableSetOf<DevToolClient>()
   val allowedActions =
       mapOf(
           "front-end" to listOf("inspect_pages", "userscript", "extension"),
@@ -246,53 +247,26 @@ object Listener {
       }
       "websocket" -> {
         val detail = JSONObject(payload)
-        if (!detail.has("tabId")) {
-          on("inspectPages")
-          return callback
-        }
-
         val targetTabId = detail.getString("targetTabId")
-        val tabId = detail.optString("tabId")
-        val key = Pair(targetTabId, tabId)
-
+        var target = devSessions.find { it.tabId == targetTabId }
         if (detail.has("message")) {
           val message = JSONObject(detail.getString("message"))
-          devToolClients
-              .get(key)
-              ?.first
-              ?.command(
-                  message.getInt("id"),
-                  message.getString("method"),
-                  message.getJSONObject("params"))
+          target?.command(
+              message.getInt("id"), message.getString("method"), message.getJSONObject("params"))
         } else {
+          fun response(res: JSONObject) {
+            Chrome.evaluateJavascript(listOf("ChromeXt.post('websocket', ${res})"), currentTab)
+          }
           thread {
-            fun response(res: JSONObject): Boolean? {
-              val mTab = devToolClients.get(key)?.second
-              if (mTab?.isClosed() == false) {
-                mTab.evaluateJavascript("ChromeXt.post('websocket', ${res})")
-                return true
-              }
-              return false
+            target?.close()
+            hitDevTools().close()
+            target = DevToolClient(targetTabId)
+            if (!target!!.isClosed()) {
+              devSessions.add(target!!)
+              response(JSONObject(mapOf("open" to true)))
+              target!!.listen { response(JSONObject(mapOf("message" to it))) }
             }
-
-            fun closeSockets() {
-              devToolClients.get(key)?.first?.close()
-              devToolClients.get(key)?.second?.close()
-              devToolClients.remove(key)
-            }
-
-            if (devToolClients.containsKey(key)) {
-              closeSockets()
-            }
-
-            devToolClients.put(key, Pair(DevToolClient(targetTabId), DevToolClient(tabId)))
-
-            response(JSONObject(mapOf("open" to true)))
-            devToolClients.get(key)?.first?.listen {
-              if (response(JSONObject(mapOf("message" to it))) == false) {
-                closeSockets()
-              }
-            }
+            response(JSONObject(mapOf("error" to "Remote session closed")))
           }
         }
       }
