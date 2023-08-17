@@ -31,8 +31,8 @@ android {
   }
 
   compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_19
-    targetCompatibility = JavaVersion.VERSION_19
+    sourceCompatibility = JavaVersion.VERSION_20
+    targetCompatibility = JavaVersion.VERSION_20
   }
 
   lint {
@@ -45,7 +45,7 @@ android {
             "Usability:Icons")
   }
 
-  kotlinOptions { jvmTarget = JavaVersion.VERSION_19.toString() }
+  kotlinOptions { jvmTarget = JavaVersion.VERSION_20.toString() }
 }
 
 dependencies { compileOnly("de.robv.android.xposed:api:82") }
