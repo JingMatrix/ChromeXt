@@ -1,3 +1,5 @@
+prepareDOM();
+
 async function installScript(force = false) {
   const dialog = document.querySelector("dialog#confirm");
   if (!force) {
@@ -11,7 +13,6 @@ async function installScript(force = false) {
 
 function renderEditor() {
   const code = document.querySelector("body > pre");
-
   const separator = "==/UserScript==\n";
   const script = code.innerHTML.split(separator);
   if (separator.length == 1) return;
@@ -28,6 +29,8 @@ function renderEditor() {
 
   scriptMeta.setAttribute("contenteditable", true);
   code.setAttribute("contenteditable", true);
+  scriptMeta.setAttribute("spellcheck", false);
+  code.setAttribute("spellcheck", false);
   createDialog();
   setTimeout(fixDialog);
   import("https://unpkg.com/@speed-highlight/core/dist/index.js").then(
@@ -99,24 +102,104 @@ async function prepareDOM() {
   document.head.appendChild(meta);
   document.head.appendChild(style);
 
-  if (document.characterSet == "windows-1252") {
-    const code = document.querySelector("body > pre");
-    const text = code.textContent;
-    if (!/^[\p{ASCII}]*$/u.test(text)) {
-      const windows1252 = await import(
-        "https://cdn.jsdelivr.net/npm/windows-1252@latest/+esm"
-      );
-      code.textContent = code.textContent.replace(/[^\p{ASCII}]+/gu, (text) => {
-        const bytes_16 = windows1252.encode(text, {
-          mode: "replacement",
-        });
-        const bytes = new Uint8Array(bytes_16);
-        const utf8 = new TextDecoder();
-        return utf8.decode(bytes);
-      });
-    }
-  }
+  await fixEncoding();
   renderEditor();
 }
 
-prepareDOM();
+async function fixEncoding() {
+  const gb18030 = {
+    // Code taken from https://github.com/EtherDream/str2gbk/blob/main/index.js
+    table: null,
+    initGbkTable() {
+      // https://en.wikipedia.org/wiki/GBK_(character_encoding)#Encoding
+      const ranges = [
+        [0xa1, 0xa9, 0xa1, 0xfe],
+        [0xb0, 0xf7, 0xa1, 0xfe],
+        [0x81, 0xa0, 0x40, 0xfe],
+        [0xaa, 0xfe, 0x40, 0xa0],
+        [0xa8, 0xa9, 0x40, 0xa0],
+        [0xaa, 0xaf, 0xa1, 0xfe],
+        [0xf8, 0xfe, 0xa1, 0xfe],
+        [0xa1, 0xa7, 0x40, 0xa0],
+      ];
+      const codes = new Uint16Array(23940);
+      let i = 0;
+      for (const [b1Begin, b1End, b2Begin, b2End] of ranges) {
+        for (let b2 = b2Begin; b2 <= b2End; b2++) {
+          if (b2 !== 0x7f) {
+            for (let b1 = b1Begin; b1 <= b1End; b1++) {
+              codes[i++] = (b2 << 8) | b1;
+            }
+          }
+        }
+      }
+      this.table = new Uint16Array(65536);
+      this.table.fill(0xffff);
+      const str = new TextDecoder("gbk").decode(codes);
+      for (let i = 0; i < str.length; i++) {
+        this.table[str.charCodeAt(i)] = codes[i];
+      }
+    },
+    encode(str, opt = {}) {
+      const defaultOnAlloc = (len) => new Uint8Array(len);
+      const defaultOnError = () => 63; // '?'
+      const onAlloc = opt.onAlloc || defaultOnAlloc;
+      const onError = opt.onError || defaultOnError;
+      const buf = onAlloc(str.length * 2);
+      let n = 0;
+      for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
+        if (code < 0x80) {
+          buf[n++] = code;
+          continue;
+        }
+        const gbk = this.table[code];
+        if (gbk !== 0xffff) {
+          buf[n++] = gbk;
+          buf[n++] = gbk >> 8;
+        } else if (code === 8364) {
+          // 8364 == '€'.charCodeAt(0)
+          // Code Page 936 has a single-byte euro sign at 0x80
+          buf[n++] = 0x80;
+        } else {
+          const ret = onError(i, str);
+          if (ret === -1) {
+            break;
+          }
+          if (ret > 0xff) {
+            buf[n++] = ret;
+            buf[n++] = ret >> 8;
+          } else {
+            buf[n++] = ret;
+          }
+        }
+      }
+      return buf.subarray(0, n);
+    },
+  };
+
+  const code = document.querySelector("body > pre");
+  const text = code.textContent;
+
+  if (document.characterSet != "UTF-8" && !/^[\p{ASCII}]*$/u.test(text)) {
+    let converter = () => new Uint8Array();
+    if (document.characterSet == "windows-1252") {
+      const windows1252 = await import(
+        "https://cdn.jsdelivr.net/npm/windows-1252@latest/+esm"
+      );
+      converter = function (text) {
+        const bytes_16 = windows1252.encode(text, {
+          mode: "replacement",
+        });
+        return new Uint8Array(bytes_16);
+      };
+    } else if (document.characterSet.toLowerCase() == "gb18030") {
+      gb18030.initGbkTable();
+      converter = gb18030.encode.bind(gb18030);
+    }
+    const utf8 = new TextDecoder();
+    code.textContent = code.textContent.replace(/[^\p{ASCII}]+/gu, (text) =>
+      utf8.decode(converter(text))
+    );
+  }
+}
