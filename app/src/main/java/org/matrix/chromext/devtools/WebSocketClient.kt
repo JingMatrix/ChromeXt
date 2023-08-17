@@ -93,7 +93,9 @@ class DevToolClient(tabId: String) : LocalSocket() {
               } else if (len > 0x7d) {
                 throw Exception("Invalid frame length ${len}")
               }
-              val frame = String(inputStream.readNBytes(len))
+              val buffer = ByteArray(len)
+              inputStream.read(buffer, 0, len)
+              val frame = String(buffer)
               if (type == (0x80 or 0xA)) {
                 callback(JSONObject(mapOf("pong" to frame)))
               } else {
