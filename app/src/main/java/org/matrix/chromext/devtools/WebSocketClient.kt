@@ -75,13 +75,17 @@ class DevToolClient(tabId: String) : LocalSocket() {
     this.id += 1
   }
 
+  fun ping(msg: String = "heartbeat") {
+    WebSocketFrame(msg, 0x9).write(outputStream)
+  }
+
   fun listen(callback: (JSONObject) -> Unit = { msg -> Log.d(msg.toString()) }) {
     runCatching {
           while (!isClosed()) {
             val type = inputStream.read()
             if (type == -1) {
               break
-            } else if (type == 0x80 or 0x1) {
+            } else if (type == (0x80 or 0x1) || type == (0x80 or 0xA)) {
               var len = inputStream.read()
               if (len == 0x7e) {
                 len = inputStream.read() shl 8
@@ -94,7 +98,12 @@ class DevToolClient(tabId: String) : LocalSocket() {
               } else if (len > 0x7d) {
                 throw Exception("Invalid frame length ${len}")
               }
-              callback(JSONObject(String(inputStream.readNBytes(len))))
+              val frame = String(inputStream.readNBytes(len))
+              if (type == (0x80 or 0xA)) {
+                callback(JSONObject(mapOf("pong" to frame)))
+              } else {
+                callback(JSONObject(frame))
+              }
             } else {
               throw Exception("Invalid frame type ${type}")
             }
@@ -109,7 +118,7 @@ class DevToolClient(tabId: String) : LocalSocket() {
   }
 }
 
-class WebSocketFrame(msg: String?) {
+class WebSocketFrame(msg: String?, opcode: Int = 0x1) {
   private val mFin: Int
   private val mRsv1: Int
   private val mRsv2: Int
@@ -124,7 +133,7 @@ class WebSocketFrame(msg: String?) {
     mRsv1 = 0x00
     mRsv2 = 0x00
     mRsv3 = 0x00
-    mOpcode = 0x1
+    mOpcode = opcode
     mPayload =
         if (msg == null) {
           ByteArray(0)
