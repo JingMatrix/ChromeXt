@@ -1,3 +1,4 @@
+const invalidChar = "�";
 async function installScript(force = false) {
   const dialog = document.querySelector("dialog#confirm");
   if (!force) {
@@ -24,12 +25,20 @@ function renderEditor(code) {
   code.removeAttribute("style");
   document.body.prepend(scriptMeta);
 
+  if (code.textContent.includes(invalidChar)) {
+    const msg =
+      "Current script may contain badly decoded text.\n\nTo fix possible issues, you can change the browser UI language to English.";
+    createDialog(msg, false);
+  } else {
+    const msg =
+      "Code editor is blocked on this page.\n\nPlease use page menu to install this UserScript, or reload current page to enable the editor.";
+    createDialog(msg);
+  }
+
   scriptMeta.setAttribute("contenteditable", true);
   code.setAttribute("contenteditable", true);
   scriptMeta.setAttribute("spellcheck", false);
   code.setAttribute("spellcheck", false);
-  createDialog();
-  setTimeout(fixDialog);
   import("https://unpkg.com/@speed-highlight/core/dist/index.js").then(
     (imports) => {
       imports.highlightElement(document.querySelector("#code"), "js", {
@@ -39,13 +48,13 @@ function renderEditor(code) {
   );
 }
 
-function createDialog() {
+function createDialog(msg, remove = true) {
   const dialog = document.createElement("dialog");
   dialog.id = "confirm";
-  dialog.textContent =
-    "Code editor is blocked on this page.\n\nPlease use page menu to install this UserScript, or reload current page to enable the editor.";
+  dialog.textContent = msg;
   document.body.prepend(dialog);
   dialog.show();
+  if (remove) setTimeout(fixDialog);
 }
 
 function fixDialog() {
@@ -102,10 +111,15 @@ async function prepareDOM() {
   const code = document.querySelector("body > pre");
   const text = code.textContent;
   if (document.characterSet != "UTF-8" && !/^[\p{ASCII}]*$/u.test(text)) {
-    try {
-      code.textContent = await fetch("").then((res) => res.text());
-    } catch {
-      fixEncoding(code);
+    fixEncoding(code);
+    if (code.textContent.includes(invalidChar)) {
+      try {
+        const text = await fetch("").then((res) => res.text());
+        if (text.includes(invalidChar)) throw new Error("Non UTF-8 text");
+        code.textContent = text;
+      } catch {
+        console.error("Failed to fetch a UTF-8 encoded document");
+      }
     }
   }
   renderEditor(code);
@@ -122,7 +136,7 @@ class Encoding {
     Object.defineProperty(this, "table", { value: this.generateTable() });
   }
   defaultOnError(_input, _index, _result) {
-    return -1;
+    return 0xff;
   }
   defaultOnAlloc = (len) => new Uint8Array(len);
   generateTable() {
@@ -200,7 +214,7 @@ class GBK extends Encoding {
     map.set("€".charCodeAt(0), 0x80);
     return map;
   }
-  replacement = new TextEncoder().encode("？");
+  replacement = new TextEncoder().encode(invalidChar);
   defaultOnError(_input, index, result) {
     // Find last invalid utf-8 encoding
     index = (index - 1) * (result.byteLength / result.length);
@@ -217,7 +231,7 @@ class GBK extends Encoding {
 }
 
 function fixEncoding(code) {
-  let converter = () => "";
+  let converter = () => invalidChar;
   const encoding = document.characterSet.toLowerCase();
   if (
     encoding.startsWith("windows") ||
