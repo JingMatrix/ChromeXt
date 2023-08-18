@@ -80,7 +80,7 @@ function fixDialog() {
   installScript();
 }
 
-function prepareDOM() {
+async function prepareDOM() {
   const meta = document.createElement("meta");
   const style = document.createElement("style");
 
@@ -102,7 +102,11 @@ function prepareDOM() {
   const code = document.querySelector("body > pre");
   const text = code.textContent;
   if (document.characterSet != "UTF-8" && !/^[\p{ASCII}]*$/u.test(text)) {
-    fixEncoding(code);
+    try {    
+      code.textContent = await fetch("").then((res) => res.text());
+    } catch {
+      fixEncoding(code);
+    }
   }
   renderEditor(code);
 }
