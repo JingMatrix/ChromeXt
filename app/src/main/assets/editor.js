@@ -102,7 +102,7 @@ async function prepareDOM() {
   const code = document.querySelector("body > pre");
   const text = code.textContent;
   if (document.characterSet != "UTF-8" && !/^[\p{ASCII}]*$/u.test(text)) {
-    try {    
+    try {
       code.textContent = await fetch("").then((res) => res.text());
     } catch {
       fixEncoding(code);
