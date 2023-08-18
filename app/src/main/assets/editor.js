@@ -131,9 +131,9 @@ class Encoding {
   get encoding() {
     return this.#name;
   }
+  map = new Map();
   constructor(name = "utf-8") {
     this.#name = name.toLowerCase();
-    Object.defineProperty(this, "table", { value: this.generateTable() });
   }
   defaultOnError(_input, _index, _result) {
     return 0xff;
@@ -143,29 +143,41 @@ class Encoding {
     return new Map();
   }
   encode(input, opt = {}) {
+    if (!(this.table instanceof Map))
+      Object.defineProperty(this, "table", {
+        value: new Map([...this.generateTable(), ...this.map]),
+      });
     if (this.encoding == "utf-8") return new TextEncoder().encode(input);
     const onError = opt.onError || this.defaultOnError.bind(this);
     const onAlloc = opt.onAlloc || this.defaultOnAlloc.bind(this);
     const length = input.length;
     const result = onAlloc(length);
     for (let i = 0; i < length; i++) {
-      const codePoint = input.charCodeAt(i);
-      if (0x00 <= codePoint && codePoint < 0x80) {
-        result[i] = codePoint;
-      } else if (this.table.has(codePoint)) {
-        result[i] = this.table.get(codePoint);
-      } else {
+      let charCode = input.charCodeAt(i);
+      if (charCode <= 0xdbff && charCode >= 0xd800) {
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String
+        i++;
+        charCode += input.charCodeAt(i);
+      }
+      if (0x00 <= charCode && charCode < 0x80) {
+        result[i] = charCode;
+      } else if (this.table.has(charCode)) {
+        result[i] = this.table.get(charCode);
+      } else if (input[i] == invalidChar) {
         const ret = onError(input, i, result);
         if (ret === -1) {
           break;
         }
+      } else {
+        console.error(
+          "CharCode for",
+          charCode > 0xffff ? input[i - 1] + input[i] : input[i],
+          "not found in encoding",
+          this.encoding
+        );
       }
     }
-    if (!(result instanceof Uint8Array)) {
-      return new Uint8Array(result.buffer).filter((c) => c != 0x00);
-    } else {
-      return result;
-    }
+    return new Uint8Array(result.buffer).filter((c) => c != 0x00);
   }
   decode(uint8) {
     return new TextDecoder(this.#name).decode(uint8);
@@ -184,50 +196,43 @@ class SingleByte extends Encoding {
   }
 }
 
-class GBK extends Encoding {
+class TwoBytes extends Encoding {
+  intervals = [[]];
   generateTable() {
-    // https://en.wikipedia.org/wiki/GBK_(character_encoding)#Encoding
-    const range = [...Array(23940).keys()];
-    const codePoints = new Uint16Array(23940);
-    const intervals = [
-      [0xa1, 0xa9, 0xa1, 0xfe],
-      [0xb0, 0xf7, 0xa1, 0xfe],
-      [0x81, 0xa0, 0x40, 0xfe],
-      [0xaa, 0xfe, 0x40, 0xa0],
-      [0xa8, 0xa9, 0x40, 0xa0],
-      [0xaa, 0xaf, 0xa1, 0xfe],
-      [0xf8, 0xfe, 0xa1, 0xfe],
-      [0xa1, 0xa7, 0x40, 0xa0],
-    ];
-    let i = 0;
-    for (const [b1Begin, b1End, b2Begin, b2End] of intervals) {
-      for (let b2 = b2Begin; b2 <= b2End; b2++) {
-        if (b2 !== 0x7f) {
-          for (let b1 = b1Begin; b1 <= b1End; b1++) {
-            codePoints[i++] = (b2 << 8) | b1;
+    const map = [];
+    this.intervals.forEach(([b1Begin, b1End, b2Begin, b2End]) => {
+      for (let b1 = b1Begin; b1 <= b1End; b1++) {
+        for (let b2 = b2Begin; b2 <= b2End; b2++) {
+          const code = (b2 << 8) | b1;
+          const str = this.decode(new Uint16Array([code]));
+          if (str.includes(invalidChar)) continue;
+          let charCode = str.charCodeAt(0);
+          if (charCode <= 0xdbff && charCode >= 0xd800) {
+            map.push([charCode + str.charCodeAt(0), code]);
+          } else {
+            map.push([charCode, code]);
           }
         }
       }
-    }
-    const str = this.decode(codePoints);
-    const map = new Map(range.map((i) => [str.charCodeAt(i), codePoints[i]]));
-    map.set("€".charCodeAt(0), 0x80);
+    });
     return map;
   }
-  replacement = new TextEncoder().encode(invalidChar);
+  replacement = 0xff;
   defaultOnError(_input, index, result) {
-    // Find last invalid utf-8 encoding
-    index = (index - 1) * (result.byteLength / result.length);
-    let codePoints = new Uint8Array(result.buffer, index, 1);
-    while (codePoints[0] < 0b11100000) {
-      index = index - 1;
-      codePoints = new Uint8Array(result.buffer, index, 1);
-    }
-    // Replace it
-    codePoints = new Uint8Array(result.buffer, index, this.replacement.length);
-    this.replacement.forEach((c, i) => (codePoints[i] = c));
+    result[index] = this.replacement;
   }
   defaultOnAlloc = (len) => new Uint16Array(len);
+}
+
+class GBK extends TwoBytes {
+  // https://en.wikipedia.org/wiki/GBK_(character_encoding)
+  intervals = [[0x81, 0xfe, 0x40, 0xfe]];
+  map = new Map([["€".charCodeAt(0), 0x80]]);
+}
+
+class Big5 extends TwoBytes {
+  // https://en.wikipedia.org/wiki/Big5
+  intervals = [[0x81, 0xfe, 0x40, 0xfe]];
 }
 
 function fixEncoding(code) {
@@ -242,6 +247,9 @@ function fixEncoding(code) {
     converter = encoder.convert.bind(encoder);
   } else if (encoding.startsWith("gb")) {
     const encoder = new GBK(encoding);
+    converter = encoder.convert.bind(encoder);
+  } else if (encoding == "big5") {
+    const encoder = new Big5(encoding);
     converter = encoder.convert.bind(encoder);
   }
   code.textContent = code.textContent.replace(/[^\p{ASCII}]+/gu, converter);
