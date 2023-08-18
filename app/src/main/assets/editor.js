@@ -80,7 +80,7 @@ function fixDialog() {
   installScript();
 }
 
-function prepareDOM() {
+async function prepareDOM() {
   const meta = document.createElement("meta");
   const style = document.createElement("style");
 
@@ -102,70 +102,80 @@ function prepareDOM() {
   const code = document.querySelector("body > pre");
   const text = code.textContent;
   if (document.characterSet != "UTF-8" && !/^[\p{ASCII}]*$/u.test(text)) {
-    fixEncoding(code);
+    try {    
+      code.textContent = await fetch("").then((res) => res.text());
+    } catch {
+      fixEncoding(code);
+    }
   }
   renderEditor(code);
 }
 
-class Encoder {
+class Encoding {
   #name;
   decoder = new TextDecoder();
   get encoding() {
     return this.#name;
   }
-  constructor(name) {
+  constructor(name = "utf-8") {
     this.#name = name.toLowerCase();
-    Object.defineProperty(this, "table", { value: this.generateIndex() });
+    Object.defineProperty(this, "table", { value: this.generateTable() });
   }
-  defaultOnError = () => 63; // '?'
-  generateIndex() {}
-  encode(input, _opt = {}) {
-    return new TextEncoder().encode(input);
+  defaultOnError(_input, _index, _result) {
+    return -1;
+  }
+  defaultOnAlloc = (len) => new Uint8Array(len);
+  generateTable() {
+    return new Map();
+  }
+  encode(input, opt = {}) {
+    if (this.encoding == "utf-8") return new TextEncoder().encode(input);
+    const onError = opt.onError || this.defaultOnError.bind(this);
+    const onAlloc = opt.onAlloc || this.defaultOnAlloc.bind(this);
+    const length = input.length;
+    const result = onAlloc(length);
+    for (let i = 0; i < length; i++) {
+      const codePoint = input.charCodeAt(i);
+      if (0x00 <= codePoint && codePoint < 0x80) {
+        result[i] = codePoint;
+      } else if (this.table.has(codePoint)) {
+        result[i] = this.table.get(codePoint);
+      } else {
+        const ret = onError(input, i, result);
+        if (ret === -1) {
+          break;
+        }
+      }
+    }
+    if (!(result instanceof Uint8Array)) {
+      return new Uint8Array(result.buffer).filter((c) => c != 0x00);
+    } else {
+      return result;
+    }
+  }
+  decode(uint8) {
+    return new TextDecoder(this.#name).decode(uint8);
   }
   convert(text) {
     return this.decoder.decode(this.encode(text));
   }
 }
 
-class SingleByte extends Encoder {
-  generateIndex() {
+class SingleByte extends Encoding {
+  generateTable() {
     const range = [...Array(0x80).keys()];
-    const str = new TextDecoder(this.encoding).decode(
-      new Uint8Array(range.map((x) => x + 0x80))
-    );
-    return new Map(range.map((i) => [str.charCodeAt(i), i]));
-  }
-  encode(input, opt = { onError: () => 0xfffd }) {
-    const onError = opt.onError || this.defaultOnError;
-    const length = input.length;
-    const result = new Uint8Array(length);
-    for (let i = 0; i < length; i++) {
-      const codePoint = input.charCodeAt(i);
-      if (0x00 <= codePoint && codePoint < 0x80) {
-        result[i] = codePoint;
-        continue;
-      }
-      if (this.table.has(codePoint)) {
-        const pointer = this.table.get(codePoint);
-        // Return a byte whose value is `pointer + 0x80`.
-        result[i] = pointer + 0x80;
-      } else {
-        const ret = onError(i, str);
-        if (ret === -1) {
-          break;
-        } else {
-          result[i] = ret;
-        }
-      }
-    }
-    return result;
+    const codePoints = new Uint8Array(range.map((x) => x + 0x80));
+    const str = this.decode(codePoints);
+    return new Map(range.map((i) => [str.charCodeAt(i), codePoints[i]]));
   }
 }
 
-class GBK extends Encoder {
-  generateIndex() {
+class GBK extends Encoding {
+  generateTable() {
     // https://en.wikipedia.org/wiki/GBK_(character_encoding)#Encoding
-    const ranges = [
+    const range = [...Array(23940).keys()];
+    const codePoints = new Uint16Array(23940);
+    const intervals = [
       [0xa1, 0xa9, 0xa1, 0xfe],
       [0xb0, 0xf7, 0xa1, 0xfe],
       [0x81, 0xa0, 0x40, 0xfe],
@@ -175,58 +185,35 @@ class GBK extends Encoder {
       [0xf8, 0xfe, 0xa1, 0xfe],
       [0xa1, 0xa7, 0x40, 0xa0],
     ];
-    const codes = new Uint16Array(23940);
     let i = 0;
-    for (const [b1Begin, b1End, b2Begin, b2End] of ranges) {
+    for (const [b1Begin, b1End, b2Begin, b2End] of intervals) {
       for (let b2 = b2Begin; b2 <= b2End; b2++) {
         if (b2 !== 0x7f) {
           for (let b1 = b1Begin; b1 <= b1End; b1++) {
-            codes[i++] = (b2 << 8) | b1;
+            codePoints[i++] = (b2 << 8) | b1;
           }
         }
       }
     }
-    const table = new Uint16Array(65536);
-    table.fill(0xffff);
-    const str = new TextDecoder(this.encoding).decode(codes);
-    for (let i = 0; i < str.length; i++) {
-      table[str.charCodeAt(i)] = codes[i];
-    }
-    return table;
+    const str = this.decode(codePoints);
+    const map = new Map(range.map((i) => [str.charCodeAt(i), codePoints[i]]));
+    map.set("€".charCodeAt(0), 0x80);
+    return map;
   }
-  encode(str, opt = {}) {
-    const onError = opt.onError || this.defaultOnError;
-    const buf = new Uint8Array(str.length * 2);
-    let n = 0;
-    for (let i = 0; i < str.length; i++) {
-      const code = str.charCodeAt(i);
-      if (code < 0x80) {
-        buf[n++] = code;
-        continue;
-      }
-      const gbk = this.table[code];
-      if (gbk !== 0xffff) {
-        buf[n++] = gbk;
-        buf[n++] = gbk >> 8;
-      } else if (code === 8364) {
-        // 8364 == '€'.charCodeAt(0)
-        // Code Page 936 has a single-byte euro sign at 0x80
-        buf[n++] = 0x80;
-      } else {
-        const ret = onError(i, str);
-        if (ret === -1) {
-          break;
-        }
-        if (ret > 0xff) {
-          buf[n++] = ret;
-          buf[n++] = ret >> 8;
-        } else {
-          buf[n++] = ret;
-        }
-      }
+  replacement = new TextEncoder().encode("？");
+  defaultOnError(_input, index, result) {
+    // Find last invalid utf-8 encoding
+    index = (index - 1) * (result.byteLength / result.length);
+    let codePoints = new Uint8Array(result.buffer, index, 1);
+    while (codePoints[0] < 0b11100000) {
+      index = index - 1;
+      codePoints = new Uint8Array(result.buffer, index, 1);
     }
-    return buf.subarray(0, n);
+    // Replace it
+    codePoints = new Uint8Array(result.buffer, index, this.replacement.length);
+    this.replacement.forEach((c, i) => (codePoints[i] = c));
   }
+  defaultOnAlloc = (len) => new Uint16Array(len);
 }
 
 function fixEncoding(code) {
