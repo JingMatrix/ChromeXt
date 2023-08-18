@@ -1,7 +1,6 @@
 package org.matrix.chromext.utils
 
 import android.net.Uri
-import android.provider.OpenableColumns
 import kotlin.text.Regex
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.Script
@@ -67,18 +66,23 @@ fun isUserScript(url: String?): Boolean {
   if (url == null) return false
   if (url.endsWith(".user.js")) {
     return true
-  } else if (url.startsWith("content://")) {
-    Chrome.getContext().contentResolver.query(Uri.parse(url), null, null, null, null)?.use { cursor
-      ->
-      cursor.moveToFirst()
-      val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-      val filename = cursor.getString(nameIndex)
-      if (filename.endsWith(".js")) {
-        return true
-      }
+  } else {
+    return resolveContentUrl(url)?.endsWith(".user.js") == true
+  }
+}
+
+fun resolveContentUrl(url: String): String? {
+  if (!url.startsWith("content://")) return null
+  Chrome.getContext().contentResolver.query(Uri.parse(url), null, null, null, null)?.use { cursor ->
+    cursor.moveToFirst()
+    // val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+    val dataIndex = cursor.getColumnIndex("_data")
+    // val filename = cursor.getString(nameIndex)
+    if (dataIndex != -1) {
+      return cursor.getString(dataIndex)
     }
   }
-  return false
+  return null
 }
 
 private val trustedHosts =

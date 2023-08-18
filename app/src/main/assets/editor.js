@@ -10,7 +10,7 @@ async function installScript(force = false) {
   }
 }
 
-function renderEditor(code) {
+function renderEditor(code, checkEncoding = true) {
   const separator = "==/UserScript==\n";
   const script = code.innerHTML.split(separator);
   if (separator.length == 1) return;
@@ -19,42 +19,51 @@ function renderEditor(code) {
     "GM.ChromeXt",
     "<em>GM.ChromeXt</em>"
   );
-  scriptMeta.id = "meta";
   code.innerHTML = script.join(separator);
   code.id = "code";
   code.removeAttribute("style");
+  scriptMeta.id = "meta";
   document.body.prepend(scriptMeta);
 
-  if (code.textContent.includes(invalidChar)) {
+  if (code.textContent.includes(invalidChar) && checkEncoding) {
     const msg =
       "Current script may contain badly decoded text.\n\nTo fix possible issues, you can change the browser UI language to English.";
     createDialog(msg, false);
+    ChromeXt.addEventListener("userscript", (e) => {
+      const file = e.detail.code;
+      code.textContent = file;
+      setTimeout(fixDialog);
+      scriptMeta.remove();
+      renderEditor(code, false);
+    });
   } else {
-    const msg =
-      "Code editor is blocked on this page.\n\nPlease use page menu to install this UserScript, or reload current page to enable the editor.";
-    createDialog(msg);
-  }
-
-  scriptMeta.setAttribute("contenteditable", true);
-  code.setAttribute("contenteditable", true);
-  scriptMeta.setAttribute("spellcheck", false);
-  code.setAttribute("spellcheck", false);
-  import("https://unpkg.com/@speed-highlight/core/dist/index.js").then(
-    (imports) => {
-      imports.highlightElement(document.querySelector("#code"), "js", {
-        hideLineNumbers: true,
-      });
+    if (checkEncoding) {
+      const msg =
+        "Code editor is blocked on this page.\n\nPlease use page menu to install this UserScript, or reload current page to enable the editor.";
+      createDialog(msg);
+      setTimeout(fixDialog);
     }
-  );
+
+    scriptMeta.setAttribute("contenteditable", true);
+    code.setAttribute("contenteditable", true);
+    scriptMeta.setAttribute("spellcheck", false);
+    code.setAttribute("spellcheck", false);
+    import("https://unpkg.com/@speed-highlight/core/dist/index.js").then(
+      (imports) => {
+        imports.highlightElement(document.querySelector("#code"), "js", {
+          hideLineNumbers: true,
+        });
+      }
+    );
+  }
 }
 
-function createDialog(msg, remove = true) {
+function createDialog(msg) {
   const dialog = document.createElement("dialog");
   dialog.id = "confirm";
   dialog.textContent = msg;
   document.body.prepend(dialog);
   dialog.show();
-  if (remove) setTimeout(fixDialog);
 }
 
 function fixDialog() {
@@ -110,7 +119,11 @@ async function prepareDOM() {
 
   const code = document.querySelector("body > pre");
   const text = code.textContent;
-  if (document.characterSet != "UTF-8" && !/^[\p{ASCII}]*$/u.test(text)) {
+  if (
+    !window.location.href.startsWith("content://") &&
+    document.characterSet != "UTF-8" &&
+    !/^[\p{ASCII}]*$/u.test(text)
+  ) {
     fixEncoding(code);
     if (code.textContent.includes(invalidChar)) {
       try {
@@ -135,8 +148,8 @@ class Encoding {
   constructor(name = "utf-8") {
     this.#name = name.toLowerCase();
   }
-  defaultOnError(_input, _index, _result) {
-    return 0xff;
+  defaultOnError(_input, index, result) {
+    result[index] = 0xff;
   }
   defaultOnAlloc = (len) => new Uint8Array(len);
   generateTable() {
@@ -168,13 +181,8 @@ class Encoding {
         if (ret === -1) {
           break;
         }
-      } else {
-        console.error(
-          "CharCode for",
-          charCode > 0xffff ? input[i - 1] + input[i] : input[i],
-          "not found in encoding",
-          this.encoding
-        );
+        // } else {
+        // console.error("CharCode for", charCode > 0xffff ? input[i - 1] + input[i] : input[i], "not found in encoding", this.encoding);
       }
     }
     return new Uint8Array(result.buffer).filter((c) => c != 0x00);
@@ -216,10 +224,6 @@ class TwoBytes extends Encoding {
       }
     });
     return map;
-  }
-  replacement = 0xff;
-  defaultOnError(_input, index, result) {
-    result[index] = this.replacement;
   }
   defaultOnAlloc = (len) => new Uint16Array(len);
 }
