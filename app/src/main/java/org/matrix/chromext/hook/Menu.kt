@@ -203,9 +203,12 @@ object MenuHook : BaseHook() {
                           (menu.size() <= 20 || !(it.args[2] as Boolean) || (it.args[3] as Boolean))
                       // Infalte only for the main_menu, which has more than 20 items at least
 
-                      if (skip) return@hookBefore
+                      if (skip && !isUserScript(url)) return@hookBefore
 
-                      if (menu.getItem(0).hasSubMenu() && readerMode.isInit() && !Chrome.isBrave) {
+                      if (!skip &&
+                          menu.getItem(0).hasSubMenu() &&
+                          readerMode.isInit() &&
+                          !Chrome.isBrave) {
                         // The first menu item should be the @id/icon_row_menu_id
 
                         val infoMenu = menu.getItem(0).getSubMenu()!!.getItem(3)
@@ -235,6 +238,11 @@ object MenuHook : BaseHook() {
                       if (isUserScript(url)) {
                         toShow.clear()
                         toShow.add(2)
+                        if (skip) {
+                          items.find { it.itemId == R.id.install_script_id }?.setVisible(true)
+                          mItems.setAccessible(false)
+                          return@hookBefore
+                        }
                       }
 
                       if (isChromeXtFrontEnd(url)) {
@@ -257,7 +265,7 @@ object MenuHook : BaseHook() {
                         newMenuItem.setVisible(true)
                         items.add(position + 1, newMenuItem)
                       }
-                      for (i in 0..4) items.removeLast()
+                      for (i in 0..3) items.removeLast()
                       mItems.setAccessible(false)
                     }
               }
