@@ -4,10 +4,9 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.AbstractWindowedCursor
 import android.database.CursorWindow
+import android.net.Uri
 import android.os.Build
 import android.webkit.WebView
-import java.io.File
-import java.io.FileReader
 import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
@@ -109,11 +108,19 @@ object ScriptDbManager {
         runScripts = true
       }
     }
-    if (Chrome.isSamsung && url.startsWith("content://")) {
-      val path = resolveContentUrl(url)!!
-      if (path.endsWith(".js")) {
-        val data = JSONObject(mapOf("code" to FileReader(File(path)).use { it.readText() }))
-        codes.add("ChromeXt.post('userscript', ${data})")
+    val path = resolveContentUrl(url)
+    if (path?.endsWith(".js") == true) {
+      if (Chrome.isSamsung || !path.startsWith("/")) {
+        val text =
+            Chrome.getContext()
+                .contentResolver
+                .openInputStream(Uri.parse(url))
+                ?.bufferedReader()
+                ?.readText()
+        if (text != null) {
+          val data = JSONObject(mapOf("code" to text))
+          codes.add("ChromeXt.post('userscript', ${data})")
+        }
       }
     }
     if (runScripts) codes.add("ChromeXt.lock(${Local.key});")

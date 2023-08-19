@@ -1,4 +1,20 @@
 const invalidChar = "�";
+
+ChromeXt.addEventListener("userscript", (e) => {
+  const dialog = document.querySelector("dialog#confirm");
+  let code = document.querySelector("#code");
+  const scriptMeta = document.querySelector("#meta");
+  if (document.body.innerText.includes(invalidChar)) {
+    if (!code) code = document.querySelector("body > pre");
+    const file = e.detail.code;
+    code.textContent = file;
+    if (!dialog) createDialog("Encoding fixed by ChromeXt");
+    setTimeout(fixDialog);
+    if (scriptMeta) scriptMeta.remove();
+    renderEditor(code, false);
+  }
+});
+
 async function installScript(force = false) {
   const dialog = document.querySelector("dialog#confirm");
   if (!force) {
@@ -11,10 +27,12 @@ async function installScript(force = false) {
 }
 
 function renderEditor(code, checkEncoding = true) {
+  let scriptMeta = document.querySelector("#meta");
+  if (scriptMeta) return;
   const separator = "==/UserScript==\n";
   const script = code.innerHTML.split(separator);
   if (separator.length == 1) return;
-  const scriptMeta = document.createElement("pre");
+  scriptMeta = document.createElement("pre");
   scriptMeta.innerHTML = (script.shift() + separator).replace(
     "GM.ChromeXt",
     "<em>GM.ChromeXt</em>"
@@ -29,13 +47,6 @@ function renderEditor(code, checkEncoding = true) {
     const msg =
       "Current script may contain badly decoded text.\n\nTo fix possible issues, you can change the browser UI language to English.";
     createDialog(msg, false);
-    ChromeXt.addEventListener("userscript", (e) => {
-      const file = e.detail.code;
-      code.textContent = file;
-      setTimeout(fixDialog);
-      scriptMeta.remove();
-      renderEditor(code, false);
-    });
   } else {
     if (checkEncoding) {
       const msg =
@@ -248,7 +259,9 @@ function fixEncoding(code) {
     const encoder = new TwoBytes(encoding);
     converter = encoder.convert.bind(encoder);
   }
-  code.textContent = code.textContent.replace(/[^\p{ASCII}]+/gu, converter);
+  const fixedText = code.textContent.replace(/[^\p{ASCII}]+/gu, converter);
+  let scriptMeta = document.querySelector("#meta");
+  if (!scriptMeta) code.textContent = fixedText;
 }
 
 prepareDOM();
