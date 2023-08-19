@@ -6,7 +6,7 @@ class Encoding {
   get encoding() {
     return this.#name;
   }
-  map = new Map();
+  map = () => [];
   constructor(name = "utf-8") {
     this.#name = name.toLowerCase();
   }
@@ -14,13 +14,16 @@ class Encoding {
     result[index] = 0xff;
   }
   defaultOnAlloc = (len) => new Uint8Array(len);
-  generateTable() {
+  static generateTable() {
     return new Map();
   }
   encode(input, opt = {}) {
     if (!(this.table instanceof Map))
       Object.defineProperty(this, "table", {
-        value: new Map([...this.generateTable(), ...this.map]),
+        value: new Map([
+          ...this.constructor.generateTable(this.decode.bind(this)),
+          ...this.map(),
+        ]),
       });
     if (this.encoding == "utf-8") return new TextEncoder().encode(input);
     const onError = opt.onError || this.defaultOnError.bind(this);
@@ -58,23 +61,24 @@ class Encoding {
 }
 
 class SingleByte extends Encoding {
-  generateTable() {
-    const range = [...Array(0x80).keys()];
-    const codePoints = new Uint8Array(range.map((x) => x + 0x80));
-    const str = this.decode(codePoints);
+  static generateTable(decode, start = 0x80, end = 0xff) {
+    const range = [...Array(end - start + 1).keys()];
+    const codePoints = new Uint8Array(range.map((x) => x + start));
+    const str = decode(codePoints);
+    console.assert(str.length == codePoints.length);
     return new Map(range.map((i) => [str.charCodeAt(i), codePoints[i]]));
   }
 }
 
 class TwoBytes extends Encoding {
-  intervals = [[0x81, 0xfe, 0x40, 0xfe]];
-  generateTable() {
+  static intervals = [[0x81, 0xfe, 0x40, 0xfe]];
+  static generateTable(decode) {
     const map = [];
     this.intervals.forEach(([b1Begin, b1End, b2Begin, b2End]) => {
       for (let b1 = b1Begin; b1 <= b1End; b1++) {
         for (let b2 = b2Begin; b2 <= b2End; b2++) {
           const code = (b2 << 8) | b1;
-          const str = this.decode(new Uint16Array([code]));
+          const str = decode(new Uint16Array([code]));
           if (str.includes(invalidChar)) continue;
           let charCode = str.charCodeAt(0);
           if (charCode <= 0xdbff && charCode >= 0xd800) {
@@ -92,7 +96,12 @@ class TwoBytes extends Encoding {
 
 class GBK extends TwoBytes {
   // https://en.wikipedia.org/wiki/GBK_(character_encoding)
-  map = new Map([["€".charCodeAt(0), 0x80]]);
+  map = () => [["€".charCodeAt(0), 0x80]];
+}
+
+class SJIS extends TwoBytes {
+  // https://en.wikipedia.org/wiki/Shift_JIS
+  map = () => SingleByte.generateTable(this.decode.bind(this), 0xa1, 0xdf);
 }
 
 function fixEncoding() {
@@ -122,20 +131,21 @@ function fixEncoding() {
   } else if (encoding.startsWith("gb")) {
     const encoder = new GBK(encoding);
     converter = encoder.convert.bind(encoder);
+  } else if (encoding == "shift_jis") {
+    const encoder = new SJIS(encoding);
+    converter = encoder.convert.bind(encoder);
   } else {
     const encoder = new TwoBytes(encoding);
     converter = encoder.convert.bind(encoder);
   }
   text = text.replace(/[^\p{ASCII}]+/gu, converter);
+  const failed = text.includes(invalidChar);
   const url = window.location.href;
-  if (!text.includes(invalidChar)) {
-    node.textContent = text;
-    return true;
-  } else if (url.startsWith("http") && !url.endsWith(".js")) {
+  node.textContent = text;
+  if (failed && url.startsWith("http") && !url.endsWith(".js")) {
     fetch("")
       .then((res) => res.text())
       .then((t) => (node.textContent = t));
-  } else {
-    return false;
   }
+  return !failed;
 }
