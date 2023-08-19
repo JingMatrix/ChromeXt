@@ -42,14 +42,13 @@ object UserScriptProxy {
         Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
       }
   val mIsLoading =
-      if (Chrome.isSamsung) {
-        tabImpl.declaredFields.find { it.name == "mIsLoading" }!!
-      } else {
-        tabImpl.declaredFields.run {
-          val anchorIndex = indexOfFirst { it.type == loadUrlParams }
-          slice(anchorIndex..size - 1).find { it.type == Boolean::class.java }!!
-        }
-      }
+      tabImpl.declaredFields
+          .run {
+            val target = find { it.name == "mIsLoading" }
+            val anchorIndex = indexOfFirst { it.type == loadUrlParams }
+            target ?: slice(anchorIndex..size - 1).find { it.type == Boolean::class.java }!!
+          }
+          .also { it.isAccessible = true }
   val loadUrl =
       findMethod(tabImpl) {
         parameterTypes contentDeepEquals arrayOf(loadUrlParams) &&

@@ -14,6 +14,7 @@ import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.Local
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.invokeMethod
 
 object Chrome {
@@ -62,6 +63,7 @@ object Chrome {
   }
 
   fun getContext(): Context {
+    if (Chrome.isSamsung) return mContext!!.get()!!
     val activity = getTab()?.invokeMethod { name == "getContext" } as Context?
     return activity ?: mContext!!.get()!!
   }
@@ -84,7 +86,13 @@ object Chrome {
   }
 
   fun updateTab(tab: Any?) {
-    if (tab != null) mTab = WeakReference(tab)
+    if (tab != null) {
+      mTab = WeakReference(tab)
+      if (Chrome.isSamsung) {
+        val context = findField(tab::class.java) { name == "mContext" }
+        mContext = WeakReference(context.get(tab) as Context)
+      }
+    }
   }
 
   private fun evaluateJavascriptDevTools(codes: List<String>, tabId: String, bypassCSP: Boolean) {
