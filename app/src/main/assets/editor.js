@@ -119,11 +119,7 @@ async function prepareDOM() {
 
   const code = document.querySelector("body > pre");
   const text = code.textContent;
-  if (
-    !window.location.href.startsWith("content://") &&
-    document.characterSet != "UTF-8" &&
-    !/^[\p{ASCII}]*$/u.test(text)
-  ) {
+  if (document.characterSet != "UTF-8" && !/^[\p{ASCII}]*$/u.test(text)) {
     fixEncoding(code);
     if (code.textContent.includes(invalidChar)) {
       try {
@@ -205,7 +201,7 @@ class SingleByte extends Encoding {
 }
 
 class TwoBytes extends Encoding {
-  intervals = [[]];
+  intervals = [[0x81, 0xfe, 0x40, 0xfe]];
   generateTable() {
     const map = [];
     this.intervals.forEach(([b1Begin, b1End, b2Begin, b2End]) => {
@@ -216,7 +212,7 @@ class TwoBytes extends Encoding {
           if (str.includes(invalidChar)) continue;
           let charCode = str.charCodeAt(0);
           if (charCode <= 0xdbff && charCode >= 0xd800) {
-            map.push([charCode + str.charCodeAt(0), code]);
+            map.push([charCode + str.charCodeAt(1), code]);
           } else {
             map.push([charCode, code]);
           }
@@ -230,13 +226,7 @@ class TwoBytes extends Encoding {
 
 class GBK extends TwoBytes {
   // https://en.wikipedia.org/wiki/GBK_(character_encoding)
-  intervals = [[0x81, 0xfe, 0x40, 0xfe]];
   map = new Map([["€".charCodeAt(0), 0x80]]);
-}
-
-class Big5 extends TwoBytes {
-  // https://en.wikipedia.org/wiki/Big5
-  intervals = [[0x81, 0xfe, 0x40, 0xfe]];
 }
 
 function fixEncoding(code) {
@@ -245,6 +235,8 @@ function fixEncoding(code) {
   if (
     encoding.startsWith("windows") ||
     encoding.startsWith("iso-8859") ||
+    encoding.startsWith("koi") ||
+    encoding.startsWith("ibm") ||
     encoding.includes("mac")
   ) {
     const encoder = new SingleByte(encoding);
@@ -252,8 +244,8 @@ function fixEncoding(code) {
   } else if (encoding.startsWith("gb")) {
     const encoder = new GBK(encoding);
     converter = encoder.convert.bind(encoder);
-  } else if (encoding == "big5") {
-    const encoder = new Big5(encoding);
+  } else {
+    const encoder = new TwoBytes(encoding);
     converter = encoder.convert.bind(encoder);
   }
   code.textContent = code.textContent.replace(/[^\p{ASCII}]+/gu, converter);
