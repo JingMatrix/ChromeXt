@@ -367,7 +367,7 @@ object MenuHook : BaseHook() {
           val intent = it.args[1] as Intent
           if (intent.hasExtra("org.chromium.chrome.browser.customtabs.MEDIA_VIEWER_URL")) {
             val fileurl = resolveContentUrl(intent.getData()!!.toString())!!
-            if (fileurl.endsWith(".js") && fileurl.startsWith("/")) {
+            if (fileurl.startsWith("/")) {
               intent.setData(Uri.parse("file://" + fileurl))
             }
           }

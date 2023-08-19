@@ -114,6 +114,7 @@ object Local {
   val promptInstallUserScript: String
   val customizeDevTool: String
   val eruda: String
+  val encoding: String
   val initChromeXt: String
   val openEruda: String
   val cspRule: String
@@ -144,6 +145,7 @@ object Local {
                 .bufferedReader()
                 .use { it.readText() }
                 .replaceFirst("ChromeXtUnlockKeyForEruda", key.toString())
+    encoding = ctx.assets.open("encoding.js").bufferedReader().use { it.readText() }
     eruda_version = getErudaVersion()
     val localScript =
         ctx.assets

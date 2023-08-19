@@ -71,6 +71,25 @@ object ScriptDbManager {
 
   fun invokeScript(url: String) {
     val codes = mutableListOf<String>(Local.initChromeXt)
+    val path = resolveContentUrl(url)
+    if (path != null && (Chrome.isSamsung || !path.startsWith("/"))) {
+      val text =
+          Chrome.getContext()
+              .contentResolver
+              .openInputStream(Uri.parse(url))
+              ?.bufferedReader()
+              ?.readText()
+      if (text != null) {
+        val data = JSONObject(mapOf("utf-8" to text))
+        codes.add("window.encoding=${data};")
+        codes.add(Local.encoding)
+        codes.add("fixEncoding();")
+      }
+    }
+    if (url.endsWith(".txt") && codes.size == 1) {
+      codes.add(Local.encoding)
+      codes.add("fixEncoding();")
+    }
     val webSettings =
         if (WebViewHook.isInit) {
           (Chrome.getTab() as WebView?)?.settings
@@ -80,6 +99,7 @@ object ScriptDbManager {
     var runScripts = false
     var bypassSandbox = false
     if (isUserScript(url)) {
+      if (codes.size == 1) codes.add(Local.encoding)
       codes.add(Local.promptInstallUserScript)
       bypassSandbox = shouldBypassSandbox(url)
     } else if (isDevToolsFrontEnd(url)) {
@@ -106,21 +126,6 @@ object ScriptDbManager {
           webSettings?.userAgentString = agent
         }
         runScripts = true
-      }
-    }
-    val path = resolveContentUrl(url)
-    if (path?.endsWith(".js") == true) {
-      if (Chrome.isSamsung || !path.startsWith("/")) {
-        val text =
-            Chrome.getContext()
-                .contentResolver
-                .openInputStream(Uri.parse(url))
-                ?.bufferedReader()
-                ?.readText()
-        if (text != null) {
-          val data = JSONObject(mapOf("code" to text))
-          codes.add("ChromeXt.post('userscript', ${data})")
-        }
       }
     }
     if (runScripts) codes.add("ChromeXt.lock(${Local.key});")
