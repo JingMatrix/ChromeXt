@@ -107,20 +107,41 @@ class SJIS extends TwoBytes {
   map = () => SingleByte.generateTable(this.decode.bind(this), 0xa1, 0xdf);
 }
 
-function fixEncoding() {
+function useUTF8(text, utf8, encoding = document.characterSet.toLowerCase()) {
+  // Check if text with given encoding is proper, utf8 is the same data encoded with utf8
+  // Return true if we should discard given encoding and use UTF-8 insteadly
+  const encoded = new TextDecoder(encoding).decode(
+    new TextEncoder().encode(utf8)
+  );
+  const length = Math.min(text.length, encoded.length);
+  const result = text.slice(0, length) == encoded.slice(0, length);
+  const msg = "The declared encoding is " + (result ? "incorrect" : "correct");
+  console.debug(msg);
+  return result;
+}
+
+function fixEncoding(tryPart = false, tryFetch = false) {
   // return false if failed
   const node = document.querySelector("body > pre");
+  const url = window.location.href;
   if (!node) return false;
-  let text = node.textContent;
-  if (document.characterSet == "UTF-8" || /^[\p{ASCII}]*$/u.test(text))
+  const text = node.textContent;
+  const encoding = document.characterSet.toLowerCase();
+  if (
+    url.startsWith("file://") ||
+    document.characterSet == "UTF-8" ||
+    /^[\p{ASCII}]*$/u.test(text)
+  )
     return true;
-  if (window.encoding) {
-    if (!window.encoding.fixed) node.textContent = window.encoding["utf-8"];
-    window.encoding.fixed = true;
+  if (window.content) {
+    if (!window.content.fixed) {
+      const utf8 = window.content["utf-8"];
+      if (useUTF8(text, utf8, encoding)) node.textContent = utf8;
+    }
+    window.content.fixed = true;
     return true;
   }
   let converter = () => invalidChar;
-  const encoding = document.characterSet.toLowerCase();
   if (
     encoding.startsWith("windows") ||
     encoding.startsWith("iso-8859") ||
@@ -140,14 +161,22 @@ function fixEncoding() {
     const encoder = new TwoBytes(encoding);
     converter = encoder.convert.bind(encoder);
   }
-  text = text.replace(/[^\p{ASCII}]+/gu, converter);
-  const failed = text.includes(invalidChar);
-  const url = window.location.href;
-  node.textContent = text;
-  if (failed && url.startsWith("http") && !url.endsWith(".js")) {
-    fetch("")
-      .then((res) => res.text())
-      .then((t) => (node.textContent = t));
+  let failed, converted;
+  if (!tryPart && text.includes(invalidChar)) {
+    failed = true;
+  } else {
+    converted = text.replace(/[^\p{ASCII}]+/gu, converter);
+    failed = converted.includes(invalidChar);
+  }
+  if (!failed || tryPart) node.textContent = converted;
+  if (tryFetch && failed) {
+    try {
+      fetch("")
+        .then((res) => res.text())
+        .then((utf8) => {
+          if (useUTF8(text, utf8, encoding)) node.textContent = utf8;
+        });
+    } catch {}
   }
   return !failed;
 }

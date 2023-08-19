@@ -81,7 +81,7 @@ object ScriptDbManager {
               ?.readText()
       if (text != null) {
         val data = JSONObject(mapOf("utf-8" to text))
-        codes.add("window.encoding=${data};")
+        codes.add("window.content=${data};")
         codes.add(Local.encoding)
         codes.add("fixEncoding();")
       }

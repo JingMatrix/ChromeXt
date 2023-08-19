@@ -102,19 +102,21 @@ async function prepareDOM() {
   );
   style.textContent = _editor_style;
 
-  if (!document.head) {
+  const code = document.querySelector("body > pre");
+  if (!document.head || !code) {
     window.addEventListener("DOMContentLoaded", prepareDOM);
     return;
   }
   document.head.appendChild(meta);
   document.head.appendChild(style);
 
-  const code = document.querySelector("body > pre");
-  let checkEncoding = !fixEncoding();
+  const text = code.textContent;
+  let checkEncoding = !fixEncoding(true, false);
   if (checkEncoding) {
     try {
-      const text = await fetch("").then((res) => res.text());
-      code.textContent = text;
+      const utf8 = await fetch("").then((res) => res.text());
+      code.textContent = useUTF8(text, utf8) ? utf8 : text;
+      checkEncoding = false;
     } catch {
       checkEncoding = true;
     }
