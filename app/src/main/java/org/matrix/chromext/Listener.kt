@@ -25,6 +25,7 @@ import org.matrix.chromext.utils.isChromeXtFrontEnd
 import org.matrix.chromext.utils.isDevToolsFrontEnd
 import org.matrix.chromext.utils.isUserScript
 import org.matrix.chromext.utils.matching
+import org.matrix.chromext.utils.parseOrigin
 
 object Listener {
 
@@ -59,6 +60,7 @@ object Listener {
 
   private fun checkPermisson(action: String, key: Double, tab: Any?): Boolean {
     val url = Chrome.getUrl(tab)!!
+    if (parseOrigin(url) == null) return true
     if (!isChromeXtFrontEnd(url) &&
         !isDevToolsFrontEnd(url) &&
         !isUserScript(url) &&
@@ -114,7 +116,9 @@ object Listener {
         if (detail.optBoolean("broadcast")) {
           thread {
             detail.remove("broadcast")
-            Chrome.broadcast("scriptStorage", detail) { matching(script, it) }
+            Chrome.broadcast("scriptStorage", detail) {
+              matching(script, it) && parseOrigin(it) != null
+            }
           }
         }
         val data = detail.getJSONObject("data")

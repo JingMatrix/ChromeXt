@@ -168,7 +168,11 @@ if (typeof ChromeXt == "undefined") {
       }
     }
     unlock(key, apiOnly = true) {
-      if (!this.isLocked()) throw Error("ChromeXt is not locked");
+      if (!this.isLocked()) {
+        if (window.location.origin !== "content://")
+          throw Error("ChromeXt is not locked");
+        return this;
+      }
       if (this.#key == key) {
         const UnLocked = new ChromeXtTarget(this.#debug, this.#target);
         if (!apiOnly) {
@@ -271,7 +275,9 @@ if (ChromeXt.filters.length > 0) {
       });
     }
     document
-      .querySelectorAll("amp-ad,amp-embed,amp-sticky-ad,amp-analytics,amp-auto-ads")
+      .querySelectorAll(
+        "amp-ad,amp-embed,amp-sticky-ad,amp-analytics,amp-auto-ads"
+      )
       .forEach((node) => node.remove());
   });
 }

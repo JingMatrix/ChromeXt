@@ -40,10 +40,6 @@ private fun urlMatch(match: String, url: String, strict: Boolean): Boolean {
 }
 
 fun matching(script: Script, url: String): Boolean {
-  if (!url.startsWith("http")) {
-    return false
-  }
-
   script.exclude.forEach {
     if (urlMatch(it, url, true)) {
       return false

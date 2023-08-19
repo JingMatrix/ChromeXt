@@ -1,5 +1,10 @@
 const ChromeXt = globalThis.ChromeXt.unlock(ChromeXtUnlockKeyForEruda, false);
 
+eruda._inLocalPage =
+  ["content://", "file://"].includes(location.origin) ||
+  location.pathname.endsWith(".txt") ||
+  location.pathname.endsWith(".js");
+
 eruda._initDevTools = new Proxy(eruda._initDevTools, {
   getHeight(node, prop) {
     return Number(getComputedStyle(node)[prop].slice(0, -2));
@@ -17,6 +22,7 @@ eruda._initDevTools = new Proxy(eruda._initDevTools, {
   hookToggle(devTools) {
     const _show = devTools.show;
     devTools.show = (...args) => {
+      if (this.eruda_h == 5) return _show.apply(devTools, args);
       const el = devTools._$el[0];
       const resizer = devTools._$el.find(".eruda-resizer")[0];
       const top = this.fixTop();
@@ -62,22 +68,24 @@ eruda._initDevTools = new Proxy(eruda._initDevTools, {
     eruda._$el.__proto__.html = function (t) {
       return _html.apply(this, [stubHTMLPolicy.createHTML(t)]);
     };
-    const _enable = eruda.chobitsu.domain("Overlay").enable;
-    eruda.chobitsu.domain("Overlay").enable = function () {
-      if (_enable.enabled) return;
-      _enable.enabled = true;
-      _enable.apply(this, arguments);
-      const overlay =
-        eruda._container.parentNode.querySelector(
-          ".__chobitsu-hide__"
-        ).shadowRoot;
-      const tooltip = overlay.querySelector("div.luna-dom-highlighter > div");
-      Object.defineProperty(tooltip, "innerHTML", {
-        set(value) {
-          this.setHTML(value);
-        },
-      });
-    };
+    if (typeof Element.prototype.setHTML == "function") {
+      const _enable = eruda.chobitsu.domain("Overlay").enable;
+      eruda.chobitsu.domain("Overlay").enable = function () {
+        if (_enable.enabled) return;
+        _enable.enabled = true;
+        _enable.apply(this, arguments);
+        const overlay =
+          eruda._container.parentNode.querySelector(
+            ".__chobitsu-hide__"
+          ).shadowRoot;
+        const tooltip = overlay.querySelector("div.luna-dom-highlighter > div");
+        Object.defineProperty(tooltip, "innerHTML", {
+          set(value) {
+            this.setHTML(value);
+          },
+        });
+      };
+    }
     this.typesHooked = true;
   },
   apply(target, thisArg, args) {
@@ -99,6 +107,13 @@ eruda._initStyle = new Proxy(eruda._initStyle, {
     erudaRoot.append(style);
   },
   apply(target, thisArg, args) {
+    let meta = document.querySelector("meta[name='viewport']");
+    if (eruda._inLocalPage && !meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "viewport");
+      meta.setAttribute("content", "initial-scale=1");
+      document.head.prepend(meta);
+    }
     const result = target.apply(thisArg, args);
     this.addStyle("new_icons", eruda._styles[1]);
     this.addStyle("dom_fix", eruda._styles[2]);
@@ -195,6 +210,38 @@ eruda.Elements = class extends eruda.Elements {
         return this.getSelector(prev, false) + " + " + str;
     }
     return this.getSelector(el.parentNode, cont) + " > " + str;
+  }
+};
+
+eruda.Sources = class extends eruda.Sources {
+  _renderDef() {
+    if (this._html && this._data) {
+      return this._render();
+    }
+    if (eruda._inLocalPage) {
+      this._html = document.body.innerText;
+      this._data = { type: "raw", val: this._html };
+      return this._renderDef();
+    }
+    if (this._isGettingHtml) return;
+    this._isGettingHtml = true;
+
+    const setData = () => {
+      this._data = { type: "html", val: this._html };
+      this._isGettingHtml = false;
+      return this._renderDef();
+    };
+    fetch(location.href, { cache: "force-cache", mode: "same-origin" })
+      .then((res) => res.text())
+      .then((text) => {
+        this._html = text;
+        setData();
+      })
+      .catch((e) => {
+        console.error(e);
+        this._html = "Sorry, unable to fetch source code:(";
+        setData();
+      });
   }
 };
 
