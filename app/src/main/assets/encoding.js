@@ -32,14 +32,16 @@ class Encoding {
     const result = onAlloc(length);
     for (let i = 0; i < length; i++) {
       let charCode = input.charCodeAt(i);
+      if (0x00 <= charCode && charCode < 0x80) {
+        result[i] = charCode;
+        continue;
+      }
       if (charCode <= 0xdbff && charCode >= 0xd800) {
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String
         i++;
-        charCode += input.charCodeAt(i);
+        charCode = charCode.toString(16) + input.charCodeAt(i).toString(16);
       }
-      if (0x00 <= charCode && charCode < 0x80) {
-        result[i] = charCode;
-      } else if (this.table.has(charCode)) {
+      if (this.table.has(charCode)) {
         result[i] = this.table.get(charCode);
       } else if (input[i] == invalidChar) {
         const ret = onError(input, i, result);
@@ -82,7 +84,8 @@ class TwoBytes extends Encoding {
           if (str.includes(invalidChar)) continue;
           let charCode = str.charCodeAt(0);
           if (charCode <= 0xdbff && charCode >= 0xd800) {
-            map.push([charCode + str.charCodeAt(1), code]);
+            charCode = charCode.toString(16) + str.charCodeAt(1).toString(16);
+            map.push([charCode, code]);
           } else {
             map.push([charCode, code]);
           }
@@ -116,7 +119,6 @@ function fixEncoding() {
     window.encoding.fixed = true;
     return true;
   }
-
   let converter = () => invalidChar;
   const encoding = document.characterSet.toLowerCase();
   if (
