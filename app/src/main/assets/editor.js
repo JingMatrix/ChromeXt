@@ -110,17 +110,7 @@ async function prepareDOM() {
   document.head.appendChild(meta);
   document.head.appendChild(style);
 
-  const text = code.textContent;
-  let checkEncoding = !fixEncoding(true, false);
-  if (checkEncoding) {
-    try {
-      const utf8 = await fetch("").then((res) => res.text());
-      code.textContent = useUTF8(text, utf8) ? utf8 : text;
-      checkEncoding = false;
-    } catch {
-      checkEncoding = true;
-    }
-  }
+  const checkEncoding = !(await fixEncoding(true, true, code));
   renderEditor(code, checkEncoding);
 }
 

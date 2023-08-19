@@ -110,6 +110,7 @@ class SJIS extends TwoBytes {
 function useUTF8(text, utf8, encoding = document.characterSet.toLowerCase()) {
   // Check if text with given encoding is proper, utf8 is the same data encoded with utf8
   // Return true if we should discard given encoding and use UTF-8 insteadly
+  if (encoding == "utf-8") return false;
   const encoded = new TextDecoder(encoding).decode(
     new TextEncoder().encode(utf8)
   );
@@ -120,9 +121,9 @@ function useUTF8(text, utf8, encoding = document.characterSet.toLowerCase()) {
   return result;
 }
 
-function fixEncoding(tryPart = false, tryFetch = false) {
+function fixEncoding(tryPart = false, tryFetch = true, node) {
   // return false if failed
-  const node = document.querySelector("body > pre");
+  node = node || document.querySelector("body > pre");
   const url = window.location.href;
   if (!node) return false;
   const text = node.textContent;
@@ -170,13 +171,16 @@ function fixEncoding(tryPart = false, tryFetch = false) {
   }
   if (!failed || tryPart) node.textContent = converted;
   if (tryFetch && failed) {
-    try {
-      fetch("")
+    return new Promise((resolve, _reject) => {
+      fetch(url, { cache: "force-cache", mode: "same-origin" })
         .then((res) => res.text())
         .then((utf8) => {
-          if (useUTF8(text, utf8, encoding)) node.textContent = utf8;
-        });
-    } catch {}
+          node.textContent = useUTF8(text, utf8, encoding) ? utf8 : text;
+          resolve(true);
+        })
+        .catch((_e) => resolve(false));
+    });
+  } else {
+    return !failed;
   }
-  return !failed;
 }
