@@ -10,10 +10,10 @@ class Encoding {
   constructor(name = "utf-8") {
     this.#name = name.toLowerCase();
   }
-  defaultOnError(_input, index, result) {
-    result[index] = 0xff;
+  defaultOnError(_input, result) {
+    result.push(0xff);
   }
-  defaultOnAlloc = (len) => new Uint8Array(len);
+  defaultOnAlloc = (data) => new Uint8Array(data);
   static generateTable() {
     return new Map();
   }
@@ -28,31 +28,23 @@ class Encoding {
     if (this.encoding == "utf-8") return new TextEncoder().encode(input);
     const onError = opt.onError || this.defaultOnError.bind(this);
     const onAlloc = opt.onAlloc || this.defaultOnAlloc.bind(this);
-    const length = input.length;
-    const result = onAlloc(length);
-    for (let i = 0; i < length; i++) {
-      let charCode = input.charCodeAt(i);
-      if (0x00 <= charCode && charCode < 0x80) {
-        result[i] = charCode;
-        continue;
+    const result = [];
+    [...input].forEach((str) => {
+      let codePoint = str.codePointAt(0);
+      if (0x00 <= codePoint && codePoint < 0x80) {
+        result.push[codePoint];
+        return;
       }
-      if (charCode <= 0xdbff && charCode >= 0xd800) {
-        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String
-        i++;
-        charCode = charCode.toString(16) + input.charCodeAt(i).toString(16);
-      }
-      if (this.table.has(charCode)) {
-        result[i] = this.table.get(charCode);
-      } else if (input[i] == invalidChar) {
-        const ret = onError(input, i, result);
+      if (this.table.has(codePoint)) {
+        result.push(this.table.get(codePoint));
+      } else if (str == invalidChar) {
+        const ret = onError(input, result);
         if (ret === -1) {
-          break;
+          throw Error("Stop decoding", input);
         }
-        // } else {
-        // console.error("CharCode for", charCode > 0xffff ? input[i - 1] + input[i] : input[i], "not found in encoding", this.encoding);
       }
-    }
-    return new Uint8Array(result.buffer).filter((c) => c != 0x00);
+    });
+    return new Uint8Array(onAlloc(result).buffer).filter((c) => c != 0x00);
   }
   decode(uint8) {
     return new TextDecoder(this.#name).decode(uint8);
@@ -65,10 +57,10 @@ class Encoding {
 class SingleByte extends Encoding {
   static generateTable(decode, start = 0x80, end = 0xff) {
     const range = [...Array(end - start + 1).keys()];
-    const codePoints = new Uint8Array(range.map((x) => x + start));
-    const str = decode(codePoints);
-    console.assert(str.length == codePoints.length);
-    return new Map(range.map((i) => [str.charCodeAt(i), codePoints[i]]));
+    const charCodes = new Uint8Array(range.map((x) => x + start));
+    const str = decode(charCodes);
+    console.assert(str.length == charCodes.length);
+    return new Map(range.map((i) => [str.codePointAt(i), charCodes[i]]));
   }
 }
 
@@ -79,27 +71,20 @@ class TwoBytes extends Encoding {
     this.intervals.forEach(([b1Begin, b1End, b2Begin, b2End]) => {
       for (let b1 = b1Begin; b1 <= b1End; b1++) {
         for (let b2 = b2Begin; b2 <= b2End; b2++) {
-          const code = (b2 << 8) | b1;
-          const str = decode(new Uint16Array([code]));
-          if (str.includes(invalidChar)) continue;
-          let charCode = str.charCodeAt(0);
-          if (charCode <= 0xdbff && charCode >= 0xd800) {
-            charCode = charCode.toString(16) + str.charCodeAt(1).toString(16);
-            map.push([charCode, code]);
-          } else {
-            map.push([charCode, code]);
-          }
+          const charCode = (b2 << 8) | b1;
+          const str = decode(new Uint16Array([charCode]));
+          if (!str.includes(invalidChar)) map.push([str.codePointAt(0), charCode]);
         }
       }
     });
     return map;
   }
-  defaultOnAlloc = (len) => new Uint16Array(len);
+  defaultOnAlloc = (data) => new Uint16Array(data);
 }
 
 class GBK extends TwoBytes {
   // https://en.wikipedia.org/wiki/GBK_(character_encoding)
-  map = () => [["€".charCodeAt(0), 0x80]];
+  map = () => [["€".codePointAt(0), 0x80]];
 }
 
 class SJIS extends TwoBytes {
