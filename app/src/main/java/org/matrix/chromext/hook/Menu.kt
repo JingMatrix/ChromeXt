@@ -355,6 +355,23 @@ object MenuHook : BaseHook() {
             toggleGestureConflict(false)
           }
         }
+
+    findMethod(proxy.intentHandler, true) {
+          Modifier.isStatic(getModifiers()) &&
+              getParameterTypes() contentDeepEquals
+                  arrayOf(Context::class.java, Intent::class.java, String::class.java)
+        }
+        // private static void startActivityForTrustedIntentInternal(Context context,
+        // Intent intent, String componentClassName)
+        .hookBefore {
+          val intent = it.args[1] as Intent
+          if (intent.hasExtra("org.chromium.chrome.browser.customtabs.MEDIA_VIEWER_URL")) {
+            val fileurl = resolveContentUrl(intent.getData()!!.toString())
+            if (fileurl?.endsWith(".user.js") == true) {
+              intent.setData(Uri.parse("file://" + fileurl))
+            }
+          }
+        }
   }
 
   private fun toggleGestureConflict(excludeSystemGesture: Boolean) {

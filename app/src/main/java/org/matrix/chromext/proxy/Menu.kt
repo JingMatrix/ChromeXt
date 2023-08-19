@@ -1,8 +1,10 @@
 package org.matrix.chromext.proxy
 
+import android.app.Activity
 import android.content.Context
 import android.os.Build
 import android.os.Environment
+import android.util.Pair
 import android.view.View
 import android.view.View.OnClickListener
 import android.widget.FrameLayout
@@ -12,6 +14,7 @@ import java.io.FileReader
 import java.lang.ref.WeakReference
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 import java.lang.reflect.Proxy
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
@@ -54,6 +57,15 @@ object MenuProxy {
             type.declaredFields.size == 1 &&
                 (type.declaredFields[0].type == pageInfoController ||
                     type.declaredFields[0].type == WeakReference::class.java)
+          }
+          .type
+  val intentHandler =
+      // Grep 'Ignoring internal Chrome URL from untrustworthy source.' to get the class
+      // org/chromium/chrome/browser/IntentHandler.java
+      findField(Chrome.load("org.chromium.chrome.browser.app.ChromeActivity")) {
+            Modifier.isFinal(modifiers) &&
+                findFieldOrNull(type, true) { type == Pair::class.java } != null &&
+                findFieldOrNull(type, true) { type == Activity::class.java } != null
           }
           .type
 

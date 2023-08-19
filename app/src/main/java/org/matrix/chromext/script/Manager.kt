@@ -8,7 +8,6 @@ import android.os.Build
 import android.webkit.WebView
 import java.io.File
 import java.io.FileReader
-import kotlin.concurrent.thread
 import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
@@ -16,6 +15,7 @@ import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.isChromeXtFrontEnd
 import org.matrix.chromext.utils.isDevToolsFrontEnd
+import org.matrix.chromext.utils.isUserScript
 import org.matrix.chromext.utils.matching
 import org.matrix.chromext.utils.parseOrigin
 import org.matrix.chromext.utils.resolveContentUrl
@@ -80,16 +80,9 @@ object ScriptDbManager {
         }
     var runScripts = false
     var bypassSandbox = false
-    if (url.endsWith(".user.js")) {
+    if (isUserScript(url)) {
       codes.add(Local.promptInstallUserScript)
       bypassSandbox = shouldBypassSandbox(url)
-    } else if (url.startsWith("content://")) {
-      val path = resolveContentUrl(url)!!
-      if (path.endsWith(".js")) {
-        codes.add(Local.promptInstallUserScript)
-        val data = JSONObject(mapOf("code" to FileReader(File(path)).use { it.readText() }))
-        thread { Chrome.evaluateJavascript(listOf("ChromeXt.post('userscript', ${data})")) }
-      }
     } else if (isDevToolsFrontEnd(url)) {
       codes.add(Local.customizeDevTool)
       webSettings?.userAgentString = null
@@ -114,6 +107,13 @@ object ScriptDbManager {
           webSettings?.userAgentString = agent
         }
         runScripts = true
+      }
+    }
+    if (Chrome.isSamsung && url.startsWith("content://")) {
+      val path = resolveContentUrl(url)!!
+      if (path.endsWith(".js")) {
+        val data = JSONObject(mapOf("code" to FileReader(File(path)).use { it.readText() }))
+        codes.add("ChromeXt.post('userscript', ${data})")
       }
     }
     if (runScripts) codes.add("ChromeXt.lock(${Local.key});")
