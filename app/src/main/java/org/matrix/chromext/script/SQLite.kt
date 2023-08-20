@@ -10,7 +10,6 @@ data class Script(
     val match: Array<String>,
     val grant: Array<String>,
     val exclude: Array<String>,
-    val resource: Array<String>,
     var meta: String,
     val code: String,
     var storage: JSONObject?

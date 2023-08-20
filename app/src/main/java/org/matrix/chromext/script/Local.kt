@@ -9,7 +9,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Resource
-import org.matrix.chromext.utils.Log
 
 object GM {
   private val localScript: Map<String, String>
@@ -42,6 +41,7 @@ object GM {
 
     script.grant.forEach {
       when (it) {
+        "none" -> return@forEach
         "GM_info" -> return@forEach
         "GM.ChromeXt" -> return@forEach
         else ->
@@ -64,30 +64,6 @@ object GM {
               grants += "${it}={sync: ${name}};\n"
             }
       }
-    }
-
-    if (script.resource.size > 0) {
-      val Resources = JSONArray()
-      runCatching {
-            script.resource.forEach {
-              val content = it.split(" ")
-              if (content.size != 2) throw Exception("Invalid resource ${it}")
-              val name = content.first()
-              val url = content.last()
-              val resource = JSONObject()
-              resource.put("name", name)
-              resource.put("url", url.split("#").first())
-              val file =
-                  File(Chrome.getContext().getExternalFilesDir(null), resourcePath(script.id, name))
-              if (file.exists()) {
-                val text = FileReader(file).use { it.readText() }
-                resource.put("content", text)
-              }
-              Resources.put(resource)
-            }
-          }
-          .onFailure { Log.i("Fail to process resources for ${script.id}: " + it.message) }
-      grants += "GM_info.script.resources = ${Resources};"
     }
 
     grants += localScript.get("GM.bootstrap")!!

@@ -93,7 +93,7 @@ object Listener {
         if (activity is Activity) activity.window.decorView.requestFocus()
       }
       "installScript" -> {
-        val script = parseScript(payload, "", true)
+        val script = parseScript(payload)
         if (script == null) {
           callback = "alert('Invalid UserScript');"
         } else {

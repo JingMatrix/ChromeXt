@@ -222,13 +222,11 @@ function GM_xmlhttpRequest(details) {
 
   if (!details.url) {
     throw new Error("GM_xmlhttpRequest requires a URL.");
-  } else {
+  } else if (this.strict) {
     const domain = new URL(details.url).hostname;
     const connects = GM_info.script.connects;
-    let allowed = false;
-    if (location.hostname.endsWith(domain) && connects.includes("self"))
-      allowed = true;
-    if (connects.includes("*")) allowed = true;
+    let allowed = location.hostname == domain && connects.includes("self");
+    if (!allowed && connects.includes("*")) allowed = true;
     if (!allowed) {
       connects.forEach((it) => {
         if (domain.endsWith(it)) allowed = true;
@@ -384,7 +382,7 @@ function GM_xmlhttpRequest(details) {
     });
     console.log("GM_xmlhttpRequest aborted");
   };
-  if (details instanceof Request) {
+  if (details instanceof Request && details.signal) {
     details.signal.addEventListener("abort", promise.abort);
   }
 
@@ -417,13 +415,20 @@ GM.bootstrap = () => {
     "require",
     "grant",
     "connect",
+    "resource",
   ]) {
     const plural = it.endsWith("h") ? it + "es" : it + "s";
     meta[plural] = typeof meta[it] == "string" ? [meta[it]] : meta[it] || [];
-    Object.freeze(meta[plural]);
+    if (it != "resource") Object.freeze(meta[plural]);
     delete meta[it];
   }
-  delete meta.resource;
+  meta.resources = meta.resources.map((res) => {
+    const split = res.split(/\s+/).filter((it) => it.length > 0);
+    const data = { name: split[0], url: split[1] };
+    const integrity = data.url.split("#");
+    if (integrity.length > 1) data.url = integrity[0];
+    return data;
+  });
 
   meta["run-at"] = Array.isArray(meta["run-at"])
     ? meta["run-at"][0]
@@ -588,16 +593,23 @@ GM.bootstrap = () => {
   function runScript(meta) {
     Object.freeze(storageHandler);
     GM_info.storage = new Proxy(storageHandler.storage, storageHandler);
-    if (meta.requires.length > 0) {
+    if (
+      typeof GM_xmlhttpRequest == "function" &&
+      (meta.requires.length > 0 || meta.resources.length > 0)
+    ) {
       meta.sync_code = meta.code;
+      async function forceCache(url) {
+        try {
+          const res = await fetch(url, { cache: "force-cache" });
+          return await res.text();
+        } catch (_e) {
+          const res = await GM_xmlhttpRequest({ url });
+          return res.responseText;
+        }
+      }
       meta.code = async () => {
         for (const url of meta.requires) {
-          let script;
-          try {
-            script = await (await fetch(url)).text();
-          } catch {
-            script = (await GM_xmlhttpRequest({ url })).responseText;
-          }
+          const script = await forceCache(url);
           try {
             new Function(script)();
           } catch {
@@ -606,11 +618,17 @@ GM.bootstrap = () => {
               uuid,
               id: meta.id,
             });
-            script += `\nChromeXt.unlock(${GM.key}).post('unsafe_eval', ${detail});`;
-            ChromeXt.dispatch("unsafeEval", script);
-            await promiseListenerFactory("unsafe_eval", uuid);
+            ChromeXt.dispatch(
+              "unsafeEval",
+              `${script}\nChromeXt.unlock(${GM.key}).post('eval', ${detail});`
+            );
+            await promiseListenerFactory("eval", uuid);
           }
         }
+        for (const data of meta.resources) {
+          data.content = await forceCache(data.url);
+        }
+
         meta.sync_code();
       };
     }
@@ -638,6 +656,8 @@ GM.bootstrap = () => {
     GM_info.version = "3.6.0";
     Object.freeze(GM_info);
     ChromeXt.scripts.push(GM_info);
+    if (typeof GM_xmlhttpRequest == "function")
+      Object.defineProperty(GM_xmlhttpRequest, "strict", { value: true });
   }
 };
 
