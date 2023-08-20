@@ -332,7 +332,7 @@ eruda.Info = class extends eruda.Info {
     this._infos = {};
     this.add(
       "UserScripts",
-      '<input type="file" multiple id="new_script" accept="text/javascript" style="display:none"/>',
+      '<input type="file" multiple id="new_script" accept="text/javascript,application/javascript" style="display:none"/>',
       { li: "userscripts", span: ["add"] }
     );
     const spanScript = `span class="${c("script")}"`;
