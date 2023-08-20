@@ -1,6 +1,7 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
+import android.net.http.HttpResponseCache
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 import org.matrix.chromext.proxy.UserScriptProxy
@@ -71,6 +72,11 @@ object UserScriptHook : BaseHook() {
         .hookBefore { Chrome.init(it.thisObject as Context) }
 
     findMethod(proxy.chromeTabbedActivity) { name == "onStop" }
-        .hookBefore { ScriptDbManager.updateScriptStorage() }
+        .hookBefore {
+          ScriptDbManager.updateScriptStorage()
+          val cache = HttpResponseCache.getInstalled()
+          Log.d("HttpResponseCache: Hit ${cache.hitCount} / NetWork ${cache.networkCount}")
+          cache.flush()
+        }
   }
 }

@@ -2,7 +2,9 @@ package org.matrix.chromext
 
 import android.app.Application
 import android.content.Context
+import android.net.http.HttpResponseCache
 import android.os.Handler
+import java.io.File
 import java.lang.ref.WeakReference
 import kotlin.concurrent.thread
 import org.json.JSONObject
@@ -46,6 +48,13 @@ object Chrome {
     isVivaldi = packageName == "com.vivaldi.browser"
     @Suppress("DEPRECATION") val packageInfo = ctx.packageManager?.getPackageInfo(packageName, 0)
     Log.i("Package: ${packageName}, v${packageInfo?.versionName}")
+    setupHttpCache(ctx)
+  }
+
+  private fun setupHttpCache(context: Context) {
+    val httpCacheDir = File(context.getCacheDir(), "ChromeXt")
+    val httpCacheSize = 16 * 1024 * 1024L
+    HttpResponseCache.install(httpCacheDir, httpCacheSize)
   }
 
   fun wakeUpDevTools(limit: Int = 10) {

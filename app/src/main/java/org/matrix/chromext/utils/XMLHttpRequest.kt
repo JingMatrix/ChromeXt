@@ -42,10 +42,10 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
         setRequestProperty("Cookie", request.optString("cookie"))
       }
       if (request.has("user")) {
-        val user = request.optInt("user")
-        val password = request.optInt("password")
-        val encoding = Base64.encodeToString(("${user}:${password}").toByteArray(), Base64.DEFAULT)
-        setRequestProperty("Authorization", "Basic " + encoding)
+        val user = request.optString("user")
+        val password = request.optString("password")
+        val encoded = Base64.encodeToString(("${user}:${password}").toByteArray(), Base64.DEFAULT)
+        setRequestProperty("Authorization", "Basic " + encoded)
       }
       var data = JSONObject()
       runCatching {
@@ -63,10 +63,10 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
             data.put("headers", JSONObject(headers))
 
             val res =
-                if (responseType !in listOf("", "text", "document", "json")) {
-                  Base64.encodeToString(inputStream.readBytes(), Base64.DEFAULT)
-                } else {
+                if (responseType in listOf("", "text", "document", "json")) {
                   inputStream.bufferedReader().use { it.readText() }
+                } else {
+                  Base64.encodeToString(inputStream.readBytes(), Base64.DEFAULT)
                 }
 
             data.put("response", res)
