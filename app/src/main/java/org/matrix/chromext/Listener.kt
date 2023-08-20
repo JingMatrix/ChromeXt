@@ -2,8 +2,11 @@ package org.matrix.chromext
 
 import android.app.Activity
 import android.content.Context
+import android.os.Handler
 import java.io.File
 import java.io.FileReader
+import java.net.HttpURLConnection
+import java.net.URL
 import kotlin.concurrent.thread
 import org.json.JSONArray
 import org.json.JSONObject
@@ -17,7 +20,6 @@ import org.matrix.chromext.script.Local
 import org.matrix.chromext.script.ScriptDbHelper
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.script.parseScript
-import org.matrix.chromext.utils.Download
 import org.matrix.chromext.utils.ERUD_URL
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.XMLHttpRequest
@@ -69,6 +71,25 @@ object Listener {
     if (allowedActions.get("front-end")!!.contains(action) && !isChromeXtFrontEnd(url)) return false
     if (allowedActions.get("devtools")!!.contains(action) && !isDevToolsFrontEnd(url)) return false
     return true
+  }
+
+  private fun checkErudaVerison(ctx: Context, callback: (String?) -> Unit) {
+    val url = URL(ERUD_URL + "@latest/eruda.js")
+    val connection = url.openConnection() as HttpURLConnection
+    runCatching {
+          connection.inputStream.bufferedReader().use {
+            var firstLine = it.readLine()
+            val new_version = Local.getErudaVersion(ctx, firstLine)
+            if (new_version != Local.eruda_version) {
+              Local.eruda_version = new_version
+              callback(firstLine + "\n" + it.readText())
+            } else {
+              callback(null)
+            }
+            it.close()
+          }
+        }
+        .onFailure { Log.ex(it) }
   }
 
   fun startAction(text: String, currentTab: Any? = null) {
@@ -164,8 +185,7 @@ object Listener {
           val codes =
               mutableListOf(
                   FileReader(eruda).use { it.readText() } +
-                      "\n" +
-                      "//# sourceURL=${ERUD_URL}@${Local.eruda_version}/eruda.js")
+                      "\n//# sourceURL=${ERUD_URL}@${Local.eruda_version}/eruda.js")
           codes.add("{${Local.eruda}}\n//# sourceURL=local://ChromeXt/eruda")
           Chrome.evaluateJavascript(codes)
         } else {
@@ -175,16 +195,19 @@ object Listener {
       "updateEruda" -> {
         val ctx = Chrome.getContext()
         Log.toast(ctx, "Updating Eruda...")
-        Download.start(ERUD_URL + "@latest/eruda.js", "Download/Eruda.js", true) {
-          val new_version = Local.getErudaVersion(ctx, it.take(100))
-          if (new_version != Local.eruda_version) {
-            Local.eruda_version = new_version
-            Log.toast(ctx, "Updated to eruda v" + new_version)
-          } else {
-            Log.toast(ctx, "Eruda is already the lastest")
-          }
-          if (payload != "" && JSONObject(payload).optBoolean("load")) {
-            on("loadEruda")
+        thread {
+          checkErudaVerison(ctx) {
+            val msg =
+                if (it != null) "Updated to eruda v" + Local.eruda_version
+                else "Eruda is already the lastest"
+            Handler(ctx.mainLooper).post { Log.toast(ctx, msg) }
+            if (it != null) {
+              val file = File(Chrome.getContext().getExternalFilesDir(null), "Download/Eruda.js")
+              file.outputStream().write(it.toByteArray())
+            }
+            if (payload != "" && JSONObject(payload).optBoolean("load")) {
+              on("loadEruda")
+            }
           }
         }
       }
