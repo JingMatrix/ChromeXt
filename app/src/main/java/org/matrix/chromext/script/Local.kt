@@ -137,7 +137,7 @@ object Local {
   }
 
   fun getErudaVersion(ctx: Context = Chrome.getContext(), versionText: String? = null): String {
-    val eruda = File(ctx.getExternalFilesDir(null), "Download/Eruda.js")
+    val eruda = File(ctx.filesDir, "Eruda.js")
     if (eruda.exists() || versionText != null) {
       val verisonReg = Regex(" eruda v(?<version>[\\d\\.]+) https://")
       val firstLine = (versionText ?: FileReader(eruda).use { it.readText() }).lines()[0]

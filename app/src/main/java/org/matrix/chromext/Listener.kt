@@ -180,7 +180,7 @@ object Listener {
       }
       "loadEruda" -> {
         val ctx = Chrome.getContext()
-        val eruda = File(ctx.getExternalFilesDir(null), "Download/Eruda.js")
+        val eruda = File(ctx.filesDir, "Eruda.js")
         if (eruda.exists()) {
           val codes =
               mutableListOf(
@@ -189,12 +189,13 @@ object Listener {
           codes.add("{${Local.eruda}}\n//# sourceURL=local://ChromeXt/eruda")
           Chrome.evaluateJavascript(codes)
         } else {
+          eruda.createNewFile()
           on("updateEruda", JSONObject().put("load", true).toString())
         }
       }
       "updateEruda" -> {
         val ctx = Chrome.getContext()
-        Log.toast(ctx, "Updating Eruda...")
+        Handler(ctx.mainLooper).post { Log.toast(ctx, "Updating Eruda...") }
         thread {
           checkErudaVerison(ctx) {
             val msg =
@@ -202,7 +203,7 @@ object Listener {
                 else "Eruda is already the lastest"
             Handler(ctx.mainLooper).post { Log.toast(ctx, msg) }
             if (it != null) {
-              val file = File(Chrome.getContext().getExternalFilesDir(null), "Download/Eruda.js")
+              val file = File(ctx.filesDir, "Eruda.js")
               file.outputStream().write(it.toByteArray())
             }
             if (payload != "" && JSONObject(payload).optBoolean("load")) {
