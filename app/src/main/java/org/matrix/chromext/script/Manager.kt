@@ -102,9 +102,11 @@ object ScriptDbManager {
       if (codes.size == 1) codes.add(Local.encoding)
       codes.add(Local.promptInstallUserScript)
       bypassSandbox = shouldBypassSandbox(url)
+      webSettings?.javaScriptEnabled = true
     } else if (isDevToolsFrontEnd(url)) {
       codes.add(Local.customizeDevTool)
       webSettings?.userAgentString = null
+      webSettings?.javaScriptEnabled = true
     } else if (!isChromeXtFrontEnd(url)) {
       val origin = parseOrigin(url)
       if (origin != null) {
@@ -130,6 +132,7 @@ object ScriptDbManager {
     }
     if (runScripts) codes.add("ChromeXt.lock(${Local.key});")
     codes.add("//# sourceURL=local://ChromeXt")
+    webSettings?.javaScriptEnabled = true
     Chrome.evaluateJavascript(listOf(codes.joinToString("\n")), null, bypassSandbox, bypassSandbox)
     if (runScripts) {
       codes.clear()

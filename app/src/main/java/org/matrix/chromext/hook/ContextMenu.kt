@@ -4,6 +4,7 @@ import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.webkit.WebView
 import de.robv.android.xposed.XC_MethodHook.Unhook
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
@@ -37,6 +38,14 @@ object ContextMenuHook : BaseHook() {
                       }
                       erudaMenu.setOnMenuItemClickListener(
                           MenuItem.OnMenuItemClickListener {
+                            if (WebViewHook.isInit) {
+                              val webSettings = (Chrome.getTab() as WebView).settings
+                              val javaScriptEnabled = webSettings.javaScriptEnabled
+                              if (!javaScriptEnabled) {
+                                webSettings.javaScriptEnabled = true
+                                Chrome.evaluateJavascript(listOf(Local.initChromeXt))
+                              }
+                            }
                             if (isChromeXt) {
                               Listener.on("inspectPages")
                             } else {
