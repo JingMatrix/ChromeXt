@@ -48,13 +48,10 @@ object WebViewHook : BaseHook() {
         }
 
     fun onUpdateUrl(url: String, view: WebView) {
+      if (url.startsWith("javascript")) return
       Chrome.updateTab(view)
       ScriptDbManager.invokeScript(url)
     }
-
-    findMethod(WebView::class.java) { name == "loadUrl" }
-        // public void loadUrl (String url)
-        .hookAfter { onUpdateUrl(it.args[0] as String, it.thisObject as WebView) }
 
     findMethod(ViewClient!!, true) { name == "onPageStarted" }
         // public void onPageStarted (WebView view, String url, Bitmap favicon)
