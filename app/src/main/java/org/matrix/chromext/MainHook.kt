@@ -74,7 +74,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
       }
 
       WebChromeClient::class.java.declaredConstructors[0].hookAfter {
-        if (it.thisObject::class != WebViewClient::class) {
+        if (it.thisObject::class != WebChromeClient::class) {
           WebViewHook.ChromeClient = it.thisObject::class.java
           if (WebViewHook.ViewClient != null) {
             initHooks(WebViewHook, ContextMenuHook)
