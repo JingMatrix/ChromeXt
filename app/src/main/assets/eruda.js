@@ -193,23 +193,20 @@ eruda.Elements = class extends eruda.Elements {
       }
     };
   }
-  getSelector(el, cont = true) {
+  getSelector(el, useSilbling = true) {
     if (document.documentElement === el) return "html";
     let str = el.tagName.toLowerCase();
-    if (el.id != "") {
-      return str + "#" + el.id;
-    } else if (el.className != "") {
-      let classes = Array.from(el.classList);
-      str += "." + classes.join(".");
-      if (classes.length > 1 || !cont) return str;
-      let prev = el.previousSibling;
-      while (prev instanceof Text) {
-        prev = prev.previousSibling;
-      }
-      if (prev && prev.tagName)
+    if (el.id != "") return str + "#" + el.id;
+    let classes = Array.from(el.classList);
+    if (classes.length > 0) str += "." + classes.join(".");
+    if (classes.length > 1) return str;
+    let prev = el.previousSibling;
+    if (useSilbling) {
+      while (prev instanceof Text) prev = prev.previousSibling;
+      if (prev.tagName && (prev.classList.length > 0 || prev.id != ""))
         return this.getSelector(prev, false) + " + " + str;
     }
-    return this.getSelector(el.parentNode, cont) + " > " + str;
+    return this.getSelector(el.parentNode, useSilbling) + " > " + str;
   }
 };
 
