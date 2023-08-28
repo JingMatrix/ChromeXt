@@ -202,7 +202,7 @@ if (typeof ChromeXt == "undefined") {
   });
   Object.freeze(ChromeXt);
 } else {
-  throw Error("ChromeXt is already defined");
+  throw Error("ChromeXt is already defined, cancel initialization");
 }
 
 trustedTypes.polices = new Set();
@@ -257,27 +257,22 @@ if (ChromeXt.cspRules.length > 0) {
 
 if (ChromeXt.filters.length > 0) {
   const filter = ChromeXt.filters.join(", ");
-  window.addEventListener("DOMContentLoaded", () => {
-    function GM_addStyle(css) {
-      const style = document.createElement("style");
-      style.setAttribute("type", "text/css");
-      style.textContent = css;
+  function GM_addStyle(css) {
+    const style = document.createElement("style");
+    style.textContent = css;
+    if (document.head) {
       document.head.appendChild(style);
+    } else {
+      setTimeout(() => document.head.appendChild(style));
     }
-    try {
-      GM_addStyle(filter + " {display: none !important;}");
-    } finally {
-      window.addEventListener("load", () => {
-        document.querySelectorAll(filter).forEach((node) => {
-          node.hidden = true;
-          node.style.display = "none";
-        });
-      });
-    }
-    document
-      .querySelectorAll(
-        "amp-ad,amp-embed,amp-sticky-ad,amp-analytics,amp-auto-ads"
-      )
-      .forEach((node) => node.remove());
+  }
+  GM_addStyle(filter + " {display: none !important;}");
+  window.addEventListener("load", () => {
+    document.querySelectorAll(filter).forEach((node) => {
+      node.hidden = true;
+      node.style.display = "none";
+    });
   });
+  const amp = "amp-ad,amp-embed,amp-sticky-ad,amp-analytics,amp-auto-ads";
+  document.querySelectorAll(amp).forEach((node) => node.remove());
 }
