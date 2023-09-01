@@ -29,6 +29,7 @@ val supportedPackages =
         "com.microsoft.emmx.canary",
         "com.microsoft.emmx.dev",
         "com.sec.android.app.sbrowser",
+        "com.sec.android.app.sbrowser.beta",
         "com.vivaldi.browser",
         "com.vivaldi.browser.snapshot",
         "org.bromite.bromite",

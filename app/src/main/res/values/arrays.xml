@@ -13,6 +13,7 @@
 		<item>com.microsoft.emmx.canary</item>
 		<item>com.microsoft.emmx.dev</item>
 		<item>com.sec.android.app.sbrowser</item>
+		<item>com.sec.android.app.sbrowser.beta</item>
 		<item>com.vivaldi.browser</item>
 		<item>com.vivaldi.browser.snapshot</item>
 		<item>org.bromite.bromite</item>
