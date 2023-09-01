@@ -48,7 +48,9 @@ object readerMode {
         readerModeManager!!.declaredFields.filter { it.type == UserScriptProxy.gURL }.last()!!
     val activateReaderMode =
         // There exist other methods with the same signatures
-        findMethod(readerModeManager!!) { parameterTypes.size == 0 && returnType == Void.TYPE }
+        findMethod(readerModeManager!!) {
+          parameterTypes.size == 0 && returnType == Void.TYPE && name != "destroy"
+        }
 
     val manager = readerModeManager!!.declaredConstructors[0].newInstance(Chrome.getTab(), null)
 
