@@ -40,7 +40,7 @@ function GM_addStyle(css) {
   } catch {
     setTimeout(() => {
       document.head.appendChild(style);
-    }, 0);
+    });
   }
   return style;
 }
@@ -60,7 +60,7 @@ function GM_setClipboard(data, info = "text/plain") {
   return new Promise((resolve) => {
     window.addEventListener(
       "focus",
-      (_) => navigator.clipboard.write(data).then(() => resolve()),
+      () => navigator.clipboard.write(data).then(() => resolve()),
       { once: true }
     );
     LockedChromeXt.unlock(key).dispatch("focus");
@@ -182,7 +182,7 @@ function GM_setValue(key, value) {
 // Kotlin separator
 
 function GM_deleteValue(key) {
-  if (key in GM_info.storage) delete GM_info.storage[key];
+  delete GM_info.storage[key];
 }
 // Kotlin separator
 
@@ -253,14 +253,17 @@ function GM_xmlhttpRequest(details) {
       details.binary = true;
     }
     if ("binary" in details && "data" in details && details.binary) {
+      if (Array.isArray(details.data)) details.data = new Blob(details.data);
       switch (details.data.constructor) {
+        case DataView:
+          details.data = new Blob([details.data]);
         case File:
         case Blob:
           details.data = await details.data.arrayBuffer();
         case ArrayBuffer:
           details.data = new Uint8Array(details.data);
         case Uint8Array:
-          data = btoa(
+          details.data = btoa(
             Array.from(details.data, (x) => String.fromCodePoint(x)).join("")
           );
           break;
@@ -292,7 +295,6 @@ function GM_xmlhttpRequest(details) {
       uuid,
       abort: true,
     });
-    console.log("GM_xmlhttpRequest aborted");
   }
   function revoke(listener) {
     ChromeXt.removeEventListener("xmlhttpRequest", listener);
@@ -338,7 +340,7 @@ function GM_xmlhttpRequest(details) {
       request,
       uuid,
     });
-    sink.xhr.readyState = 1;
+    xhr.readyState = 1;
     ChromeXt.addEventListener("xmlhttpRequest", listener);
   });
 
@@ -432,10 +434,10 @@ class ResponseSink {
   }
   parse(data) {
     if (typeof data != "object") return;
-    if (this.xhr.readyState > 1) delete data.headers;
+    if (this.xhr.readyState != 1) delete data.headers;
     Object.entries(data).forEach(([key, val]) => (this.xhr[key] = val));
     const headers = data.headers;
-    if (this.xhr.readyState != 1 || !headers) return;
+    if (!headers) return;
     this.xhr.readyState = 2;
     this.xhr.headers = new Headers(headers);
     this.xhr.responseHeaders = Object.entries(
