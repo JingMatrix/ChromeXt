@@ -45,7 +45,7 @@ object UserScriptHook : BaseHook() {
           val lineNumber = it.args[2] as Int
           val sourceId = it.args[3] as String
           if (it.args[0] as Int == 0 &&
-              sourceId == "local://ChromeXt" &&
+              sourceId == "local://ChromeXt/init" &&
               lineNumber == Local.anchorInChromeXt) {
             Listener.startAction(it.args[1] as String, proxy.getTab(it.thisObject))
           } else {
