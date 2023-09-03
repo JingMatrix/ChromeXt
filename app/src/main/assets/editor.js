@@ -41,9 +41,10 @@ function renderEditor(code, checkEncoding) {
   code.setAttribute("contenteditable", true);
   scriptMeta.setAttribute("spellcheck", false);
   code.setAttribute("spellcheck", false);
+  // Too many nodes heavily slow down the event-loop, should be improved
   import("https://unpkg.com/@speed-highlight/core/dist/index.js").then(
     (imports) => {
-      imports.highlightElement(document.querySelector("#code"), "js", {
+      imports.highlightElement(code, "js", "multiline", {
         hideLineNumbers: true,
       });
     }

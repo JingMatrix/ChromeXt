@@ -29,7 +29,7 @@ dialog#confirm > p#alert {
 dialog#confirm > div#interaction {
   display: flex;
   justify-content: space-around;
-  padding-top: 1em;
+  margin-top: 2em;
 }
 [class*="shj-lang-"] {
   border-radius: 0;
