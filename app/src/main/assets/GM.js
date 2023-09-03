@@ -743,7 +743,7 @@ GM.bootstrap = () => {
     }
 
     GM_info.scriptHandler = "ChromeXt";
-    GM_info.version = "3.6.0";
+    GM_info.version = "3.7.0";
     Object.freeze(GM_info);
     ChromeXt.scripts.push(GM_info);
     if (typeof GM_xmlhttpRequest == "function")
