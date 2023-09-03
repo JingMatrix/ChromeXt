@@ -19,13 +19,10 @@ GM_info.script.grants.forEach((p) => {
   const sync = GM[name].sync;
   if (typeof sync == "function") {
     GM[name] = function () {
-      return new Promise(async (resolve, reject) => {
-        try {
-          const result = await sync.apply(null, arguments);
-          resolve(result);
-        } catch (e) {
-          reject(e);
-        }
+      const result = sync.apply(null, arguments);
+      if (result instanceof Promise) return result;
+      return new Promise(async (resolve) => {
+        resolve(await result);
       });
     };
   } else if ("sync" in GM[name]) {
@@ -281,6 +278,12 @@ function GM_xmlhttpRequest(details) {
     if (!hasUserAgent) {
       details.headers["User-Agent"] = window.navigator.userAgent;
     }
+    const buffersize = details.buffersize;
+    if (Number.isInteger(buffersize) && buffersize > 0 && buffersize < 256) {
+      details.buffersize = buffersize;
+    } else {
+      details.buffersize = 8;
+    }
   }
 
   const ChromeXt = LockedChromeXt.unlock(key);
@@ -310,7 +313,12 @@ function GM_xmlhttpRequest(details) {
           sink.writer.close().then(() => resolve(xhr.response));
         } else if (["timeout", "error"].includes(type)) {
           sink.writer.abort(type);
-          reject(sink.xhr);
+          const error = new Error(data.message, {
+            cause: data.error || type.toUpperCase(),
+            fileName: xhr.url,
+          });
+          error.name = data.type;
+          reject(error);
           revoke(listener);
         }
       }
@@ -342,7 +350,7 @@ function GM_xmlhttpRequest(details) {
         return this.target[prop].bind(this.target);
       } else if (
         prop.startsWith("on") ||
-        ["responseType", "overrideMimeType", "url"].includes(prop)
+        ["responseType", "overrideMimeType", "url", "timeout"].includes(prop)
       ) {
         return details[prop];
       } else if (prop in Promise.prototype) {
@@ -380,11 +388,11 @@ class ResponseSink {
     // this.xhr.readyState = 0;
     this.xhr.status = 0;
   }
-  dispatch(type) {
+  dispatch(type, data) {
     const event = new ProgressEvent(type, this.xhr);
     this.xhr.dispatchEvent(event);
     if (typeof this.xhr["on" + type] == "function") {
-      this.xhr["on" + type](this.xhr);
+      this.xhr["on" + type](data || this.xhr);
     }
   }
   static async prepare(type, data) {
@@ -414,8 +422,9 @@ class ResponseSink {
           const parser = new DOMParser();
           data.response = parser.parseFromString(
             data.responseText,
-            type || "text/html"
+            type == "text/xml" ? "text/xml" : "text/html"
           );
+          data.responseXML = data.response;
           break;
       }
     }
@@ -432,9 +441,13 @@ class ResponseSink {
     this.xhr.responseHeaders = Object.entries(
       Object.fromEntries(this.xhr.headers)
     )
-      .map(([k, v]) => k + ": " + v)
+      .map(([k, v]) => k.toLowerCase() + ": " + v)
       .join("\r\n");
+    this.xhr.getAllResponseHeaders = () => this.xhr.responseHeaders;
+    this.xhr.getResponseHeader = (headerName) =>
+      this.xhr.headers.get(headerName);
     this.xhr.finalUrl = this.xhr.headers.get("Location") || this.xhr.url;
+    this.xhr.responseURL = this.xhr.finalUrl;
     this.xhr.total = this.xhr.headers.get("Content-Length");
     this.xhr.lengthComputable = this.xhr.total != undefined;
   }
@@ -466,6 +479,7 @@ class ResponseSink {
   }
   abort(reason) {
     this.dispatch(reason);
+    this.dispatch("loadend");
   }
 }
 // Kotlin separator

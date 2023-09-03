@@ -24,6 +24,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
   val binary = request.optBoolean("binary")
   val nocache = request.optBoolean("nocache")
   val timeout = request.optInt("timeout")
+  val buffersize = request.optInt("buffersize", 8)
   val responseType = request.optString("responseType")
 
   fun abort() {
@@ -65,10 +66,15 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
             val headers = headerFields.filter { it.key != null }.mapValues { JSONArray(it.value) }
             data.put("headers", JSONObject(headers))
 
-            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            val buffer = ByteArray(buffersize * DEFAULT_BUFFER_SIZE)
             while (true) {
-              val bytes = inputStream.read(buffer, 0, buffer.size)
-              if (bytes <= 0) break
+              var bytes = 0
+              while (buffer.size > bytes) {
+                val b = inputStream.read(buffer, bytes, buffer.size - bytes)
+                if (b == 0 || b == -1) break
+                bytes += b
+              }
+              if (bytes == 0) break
               val chunk =
                   if (binary) {
                     Base64.encodeToString(buffer, 0, bytes, Base64.DEFAULT)
@@ -79,7 +85,6 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
               data.put("bytes", bytes)
               response("progress", data, false)
             }
-
             response("load", data, false)
           }
           .onFailure {
@@ -87,7 +92,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
               data.put("type", it::class.java.name)
               data.put("message", it.message)
               errorStream?.bufferedReader()?.use { it.readText() }?.let { data.put("error", it) }
-              Log.d("XMLHttpRequest failed with ${url}: " + it.toString())
+              // Log.d("XMLHttpRequest failed with ${url}: " + it.toString())
               if (it is SocketTimeoutException) {
                 response("timeout", data.put("bytesTransferred", it.bytesTransferred))
               } else {
