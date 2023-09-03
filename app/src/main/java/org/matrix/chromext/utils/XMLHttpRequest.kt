@@ -49,8 +49,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
       }
       var data = JSONObject()
       runCatching {
-            response("loadstart", disconnect = false)
-            if (method == "POST" && request.has("data")) {
+            if (method != "GET" && request.has("data")) {
               val input = request.optString("data")
               if (binary) {
                 outputStream.write(Base64.decode(input, Base64.DEFAULT))
@@ -58,18 +57,28 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
                 outputStream.write(input.toByteArray())
               }
             }
-            data = JSONObject(mapOf("status" to responseCode, "statusText" to responseMessage))
+
+            val binary = responseType !in listOf("", "text", "document", "json")
+            data.put("binary", binary)
+            data.put("status", responseCode)
+            data.put("statusText", responseMessage)
             val headers = headerFields.filter { it.key != null }.mapValues { JSONArray(it.value) }
             data.put("headers", JSONObject(headers))
 
-            val res =
-                if (responseType in listOf("", "text", "document", "json")) {
-                  inputStream.bufferedReader().use { it.readText() }
-                } else {
-                  Base64.encodeToString(inputStream.readBytes(), Base64.DEFAULT)
-                }
-
-            data.put("response", res)
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            while (true) {
+              val bytes = inputStream.read(buffer, 0, buffer.size)
+              if (bytes <= 0) break
+              val chunk =
+                  if (binary) {
+                    Base64.encodeToString(buffer, 0, bytes, Base64.DEFAULT)
+                  } else {
+                    String(buffer, 0, bytes)
+                  }
+              data.put("chunk", chunk)
+              data.put("bytes", bytes)
+              response("progress", data, false)
+            }
 
             response("load", data, false)
           }

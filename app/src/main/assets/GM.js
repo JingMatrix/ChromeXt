@@ -19,9 +19,13 @@ GM_info.script.grants.forEach((p) => {
   const sync = GM[name].sync;
   if (typeof sync == "function") {
     GM[name] = function () {
-      return new Promise(async (resolve) => {
-        const result = await sync.apply(null, arguments);
-        resolve(result);
+      return new Promise(async (resolve, reject) => {
+        try {
+          const result = await sync.apply(null, arguments);
+          resolve(result);
+        } catch (e) {
+          reject(e);
+        }
       });
     };
   } else if ("sync" in GM[name]) {
@@ -240,7 +244,7 @@ function GM_xmlhttpRequest(details) {
   const uuid = Math.random();
   details.method = details.method ? details.method.toUpperCase() : "GET";
 
-  async function prepareRequest(details) {
+  async function prepare(details) {
     if (details instanceof Request && details.method != "GET") {
       details.data = details.data || (await details.blob());
     }
@@ -255,7 +259,7 @@ function GM_xmlhttpRequest(details) {
       switch (details.data.constructor) {
         case File:
         case Blob:
-          details.data = details.data.arrayBuffer();
+          details.data = await details.data.arrayBuffer();
         case ArrayBuffer:
           details.data = new Uint8Array(details.data);
         case Uint8Array:
@@ -279,21 +283,119 @@ function GM_xmlhttpRequest(details) {
     }
   }
 
-  function prepareResponse(type, data) {
-    data.readyState = 4;
-    details.responseType = details.responseType || "";
+  const ChromeXt = LockedChromeXt.unlock(key);
+  function abort() {
+    ChromeXt.dispatch("xmlhttpRequest", {
+      uuid,
+      abort: true,
+    });
+    console.log("GM_xmlhttpRequest aborted");
+  }
+  function revoke(listener) {
+    ChromeXt.removeEventListener("xmlhttpRequest", listener);
+  }
+
+  const promise = new Promise(async (resolve, reject) => {
+    await prepare(details);
+    // Variable xhr should be defined in current context
+    const sink = new ResponseSink(xhr);
+    function listener(e) {
+      if (e.detail.id == GM_info.script.id && e.detail.uuid == uuid) {
+        const data = e.detail.data;
+        const type = e.detail.type;
+        sink.parse(data);
+        if (type == "progress") {
+          sink.writer.write(data);
+        } else if (type == "load") {
+          sink.writer.close().then(() => resolve(xhr.response));
+        } else if (["timeout", "error"].includes(type)) {
+          sink.writer.abort(type);
+          reject(sink.xhr);
+          revoke(listener);
+        }
+      }
+    }
+    xhr.abort = () => {
+      abort();
+      revoke(listener);
+      sink.writer.abort("abort");
+    };
+    let request = details;
+    if (details instanceof Request) {
+      request = {};
+      for (const key in details) request[key] = details[key];
+    }
+    ChromeXt.dispatch("xmlhttpRequest", {
+      id: GM_info.script.id,
+      request,
+      uuid,
+    });
+    sink.xhr.readyState = 1;
+    ChromeXt.addEventListener("xmlhttpRequest", listener);
+  });
+
+  const xhr = new Proxy(promise, {
+    target: new EventTarget(),
+    get() {
+      const prop = arguments[1];
+      if (prop in EventTarget.prototype) {
+        return this.target[prop].bind(this.target);
+      } else if (
+        prop.startsWith("on") ||
+        ["responseType", "overrideMimeType", "url"].includes(prop)
+      ) {
+        return details[prop];
+      } else if (prop in Promise.prototype) {
+        return promise[prop].bind(promise);
+      } else {
+        return Reflect.get(...arguments);
+      }
+    },
+    set(target, prop, value) {
+      if (prop in Promise.prototype || prop in EventTarget.prototype)
+        return false;
+      target[prop] = value;
+      if (prop == "readyState")
+        this.target.dispatchEvent(new Event("readystatechange"));
+      return true;
+    },
+  });
+
+  if (details instanceof Request && details.signal) {
+    details.signal.addEventListener("abort", xhr.abort);
+  }
+
+  return xhr;
+}
+
+class ResponseSink {
+  #writer;
+  xhr;
+  get writer() {
+    if (!this.#writer) this.#writer = new WritableStream(this).getWriter();
+    return this.#writer;
+  }
+  constructor(xhr) {
+    this.xhr = xhr;
+    // this.xhr.readyState = 0;
+    this.xhr.status = 0;
+  }
+  dispatch(type) {
+    const event = new ProgressEvent(type, this.xhr);
+    this.xhr.dispatchEvent(event);
+    if (typeof this.xhr["on" + type] == "function") {
+      this.xhr["on" + type](this.xhr);
+    }
+  }
+  static async prepare(type, data) {
+    const responseType = data.responseType || "";
     if ([101, 204, 205, 304].includes(data.status)) {
       data.response = null;
-    } else if (
-      ["arraybuffer", "blob", "stream"].includes(details.responseType)
-    ) {
-      const arraybuffer = Uint8Array.from(atob(data.response), (m) =>
-        m.codePointAt(0)
-      ).buffer;
-      const blob = new Blob([arraybuffer], { type });
-      switch (details.responseType) {
+    } else if (data.binary) {
+      const blob = new Blob(data.response, { type });
+      switch (responseType) {
         case "arraybuffer":
-          data.response = arraybuffer;
+          data.response = await blob.arraybuffer();
           break;
         case "blob":
           data.response = blob;
@@ -304,7 +406,7 @@ function GM_xmlhttpRequest(details) {
       }
     } else {
       data.responseText = data.response;
-      switch (details.responseType) {
+      switch (responseType) {
         case "json":
           data.response = JSON.parse(data.responseText);
           break;
@@ -317,76 +419,54 @@ function GM_xmlhttpRequest(details) {
           break;
       }
     }
+    if (data.fetch) data = new Response(data.response, data);
   }
-
-  const ChromeXt = LockedChromeXt.unlock(key);
-
-  const promise = new Promise(async (resolve, reject) => {
-    await prepareRequest(details);
-    let request = details;
-    if (details instanceof Request) {
-      request = {};
-      for (const key in details) request[key] = details[key];
+  parse(data) {
+    if (typeof data != "object") return;
+    if (this.xhr.readyState > 1) delete data.headers;
+    Object.entries(data).forEach(([key, val]) => (this.xhr[key] = val));
+    const headers = data.headers;
+    if (this.xhr.readyState != 1 || !headers) return;
+    this.xhr.readyState = 2;
+    this.xhr.headers = new Headers(headers);
+    this.xhr.responseHeaders = Object.entries(
+      Object.fromEntries(this.xhr.headers)
+    )
+      .map(([k, v]) => k + ": " + v)
+      .join("\r\n");
+    this.xhr.finalUrl = this.xhr.headers.get("Location") || this.xhr.url;
+    this.xhr.total = this.xhr.headers.get("Content-Length");
+    this.xhr.lengthComputable = this.xhr.total != undefined;
+  }
+  start(_controller) {
+    this.dispatch("loadstart");
+    if (this.xhr.readyState == 2) this.xhr.readyState = 3;
+    this.xhr.response = this.xhr.binary ? [] : "";
+    this.xhr.loaded = 0;
+  }
+  write(data, _controller) {
+    let chunk = data.chunk;
+    if (typeof chunk != "string") return;
+    if (this.xhr.binary) {
+      chunk = Uint8Array.from(atob(chunk), (m) => m.codePointAt(0));
+      this.xhr.response.push(chunk);
+    } else {
+      this.xhr.response += chunk;
     }
-    ChromeXt.dispatch("xmlhttpRequest", {
-      id: GM_info.script.id,
-      request,
-      uuid,
-    });
-    const tmpListener = (e) => {
-      if (e.detail.id == GM_info.script.id && e.detail.uuid == uuid) {
-        e.stopImmediatePropagation();
-        let data = e.detail.data;
-        data.context = details.context;
-        if (data.headers) {
-          data.headers = new Headers(data.headers);
-          data.responseHeaders = Object.entries(
-            Object.fromEntries(data.headers)
-          )
-            .map(([k, v]) => k + ": " + v)
-            .join("\r\n");
-          data.finalUrl = data.headers.get("Location") || details.url;
-          data.total = data.headers.get("Content-Length");
-        }
-        switch (e.detail.type) {
-          case "load":
-            const type =
-              details.overrideMimeType ||
-              data.headers.get("Content-Type") ||
-              "";
-            prepareResponse(type, data);
-            if (typeof details.onload == "function") details.onload(data);
-            if (details.fetch) data = new Response(data.response, data);
-            resolve(data);
-            e.detail.type = "loadend";
-          default:
-            if (typeof details["on" + e.detail.type] == "function") {
-              details["on" + e.detail.type](data);
-            }
-            if (["loadend", "error"].includes(e.detail.type)) {
-              ChromeXt.removeEventListener("xmlhttpRequest", tmpListener);
-            }
-            if (["timeout", "error"].includes(e.detail.type)) {
-              reject(data);
-            }
-        }
-      }
-    };
-    ChromeXt.addEventListener("xmlhttpRequest", tmpListener);
-  });
-
-  promise.abort = () => {
-    ChromeXt.dispatch("xmlhttpRequest", {
-      uuid,
-      abort: true,
-    });
-    console.log("GM_xmlhttpRequest aborted");
-  };
-  if (details instanceof Request && details.signal) {
-    details.signal.addEventListener("abort", promise.abort);
+    this.xhr.loaded += data.bytes;
+    this.dispatch("progress");
   }
-
-  return promise;
+  async close(_controller) {
+    this.xhr.readyState = 4;
+    const type =
+      this.xhr.overrideMimeType || this.xhr.headers.get("Content-Type") || "";
+    await ResponseSink.prepare(type, this.xhr);
+    this.dispatch("load");
+    this.dispatch("loadend");
+  }
+  abort(reason) {
+    this.dispatch(reason);
+  }
 }
 // Kotlin separator
 
@@ -598,15 +678,11 @@ GM.bootstrap = () => {
       (meta.requires.length > 0 || meta.resources.length > 0)
     ) {
       meta.sync_code = meta.code;
-      async function forceCache(url) {
-        try {
-          const res = await fetch(url, { cache: "force-cache" });
-          return await res.text();
-        } catch (_e) {
-          const res = await GM_xmlhttpRequest({ url });
-          return res.responseText;
-        }
-      }
+      const forceCache = (url) =>
+        fetch(url, { cache: "force-cache" }).then(
+          (res) => res.text(),
+          (_err) => GM_xmlhttpRequest({ url })
+        );
       meta.code = async () => {
         for (const url of meta.requires) {
           const script = await forceCache(url);
