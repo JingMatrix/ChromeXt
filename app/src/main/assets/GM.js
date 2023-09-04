@@ -25,8 +25,10 @@ GM_info.script.grants.forEach((p) => {
         resolve(await result);
       });
     };
-  } else if ("sync" in GM[name]) {
+  } else if (typeof sync == "undefined") {
     delete GM[name];
+  } else {
+    GM[name] = sync;
   }
 });
 // Kotlin separator

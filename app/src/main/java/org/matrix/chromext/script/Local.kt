@@ -59,8 +59,8 @@ object GM {
                       } else {
                         func
                       }
-              if (localScript.containsKey(name))
-                  if (!script.grant.contains(name)) grants += localScript.get(name)
+              if (localScript.containsKey(name) && !script.grant.contains(name))
+                  grants += localScript.get(name)
               grants += "${it}={sync: ${name}};\n"
             }
       }
