@@ -14,13 +14,15 @@ import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
 import org.matrix.chromext.utils.isChromeXtFrontEnd
+import org.matrix.chromext.utils.isUserScript
+import org.matrix.chromext.utils.shouldBypassSandbox
 
 object ContextMenuHook : BaseHook() {
 
   override fun init() {
 
     val erudaMenuId = 31415926
-    val clickListnerFactory = { mode: ActionMode, showConsole: Boolean ->
+    val clickListnerFactory = { mode: ActionMode, url: String ->
       MenuItem.OnMenuItemClickListener {
         if (WebViewHook.isInit) {
           val webSettings = (Chrome.getTab() as WebView).settings
@@ -30,10 +32,13 @@ object ContextMenuHook : BaseHook() {
             Chrome.evaluateJavascript(listOf(Local.initChromeXt))
           }
         }
-        if (showConsole) {
-          Chrome.evaluateJavascript(listOf(Local.openEruda))
-        } else {
+        if (isChromeXtFrontEnd(url)) {
           Listener.on("inspectPages")
+        } else if (isUserScript(url)) {
+          val sandBoxed = shouldBypassSandbox(url)
+          Chrome.evaluateJavascript(listOf("installScript(true);"), null, sandBoxed)
+        } else {
+          Chrome.evaluateJavascript(listOf(Local.openEruda))
         }
         mode.finish()
         true
@@ -50,18 +55,19 @@ object ContextMenuHook : BaseHook() {
               findMethod(it.args[0]::class.java) { name == "onCreateActionMode" }
                   // public abstract boolean onCreateActionMode (ActionMode mode, Menu menu)
                   .hookAfter {
-                    val showConsole = !isChromeXtFrontEnd(Chrome.getUrl())
+                    val url = Chrome.getUrl()
                     val mode = it.args[0] as ActionMode
                     val menu = it.args[1] as Menu
                     if (menu.findItem(erudaMenuId) != null) return@hookAfter
                     val titleId =
-                        if (showConsole) R.string.main_menu_eruda_console
-                        else R.string.main_menu_developer_tools
+                        if (isChromeXtFrontEnd(url)) R.string.main_menu_developer_tools
+                        else if (isUserScript(url)) R.string.main_menu_install_script
+                        else R.string.main_menu_eruda_console
                     val erudaMenu = menu.add(titleId)
                     val mId = erudaMenu::class.java.getDeclaredField("mId")
                     mId.setAccessible(true)
                     mId.set(erudaMenu, erudaMenuId)
-                    erudaMenu.setOnMenuItemClickListener(clickListnerFactory(mode, showConsole))
+                    erudaMenu.setOnMenuItemClickListener(clickListnerFactory(mode, url!!))
                   }
             }
   }

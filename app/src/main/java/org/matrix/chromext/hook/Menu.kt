@@ -95,13 +95,20 @@ object MenuHook : BaseHook() {
           (subTitle.getParent() as? ViewGroup)?.removeView(subTitle)
           val title = proxy.mTitle.get(erudaRow) as TextView
           if (isChromeXtFrontEnd(url)) {
-            title.setText("Open developer tools")
+            title.setText(R.string.main_menu_developer_tools)
             erudaRow.setOnClickListener {
               Listener.on("inspectPages")
               pageInfoController!!.invokeMethod() { name == "destroy" }
             }
+          } else if (isUserScript(url)) {
+            title.setText(R.string.main_menu_install_script)
+            erudaRow.setOnClickListener {
+              val sandBoxed = shouldBypassSandbox(url)
+              Chrome.evaluateJavascript(listOf("installScript(true);"), null, sandBoxed)
+              pageInfoController!!.invokeMethod() { name == "destroy" }
+            }
           } else {
-            title.setText("Open eruda console")
+            title.setText(R.string.main_menu_eruda_console)
             erudaRow.setOnClickListener {
               UserScriptProxy.evaluateJavascript(Local.openEruda)
               pageInfoController!!.invokeMethod() { name == "destroy" }
