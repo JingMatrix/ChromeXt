@@ -12,7 +12,8 @@ data class Script(
     val exclude: Array<String>,
     var meta: String,
     val code: String,
-    var storage: JSONObject?
+    var storage: JSONObject?,
+    val lib: MutableList<String> = mutableListOf<String>(),
 )
 
 private const val SQL_CREATE_ENTRIES =

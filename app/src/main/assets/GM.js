@@ -517,25 +517,7 @@ GM.bootstrap = () => {
     : meta["run-at"] || "document-idle";
 
   const grants = meta.grants;
-  grants.forEach((p) => {
-    if (!p.startsWith("GM.")) return;
-    const name = p.substring(3);
-    if (typeof GM[name] != "object") return;
-    const sync = GM[name].sync;
-    if (typeof sync == "function") {
-      GM[name] = function () {
-        const result = sync.apply(null, arguments);
-        if (result instanceof Promise) return result;
-        return new Promise(async (resolve) => {
-          resolve(await result);
-        });
-      };
-    } else if (typeof sync == "undefined") {
-      delete GM[name];
-    } else {
-      GM[name] = sync;
-    }
-  });
+
   if (meta["inject-into"] == "page" || grants.includes("none")) {
     GM.globalThis = window;
   } else {
@@ -587,8 +569,7 @@ GM.bootstrap = () => {
 
   GM_info.uuid = Math.random();
   const storageHandler = {
-    inited: false,
-    storage: {},
+    storage: GM_info.storage || {},
     broadcast: grants.includes("GM_addValueChangeListener"),
     payload: {
       id: meta.id,
@@ -596,7 +577,6 @@ GM.bootstrap = () => {
     },
     cache: new Set(),
     sync(data) {
-      if (!this.inited) return;
       let broadcast = this.broadcast;
       if ("broadcast" in data && !data.broadcast) {
         broadcast = false;
@@ -649,6 +629,7 @@ GM.bootstrap = () => {
         runScript(meta);
         return;
       }
+
       if ("key" in data && data.key in GM_info.storage) {
         if (e.detail.uuid == GM_info.uuid && e.detail.broadcast !== true)
           return;
@@ -665,9 +646,29 @@ GM.bootstrap = () => {
       storageHandler.storage[data.key] = data.value;
     });
     GM_info.valueListener = [];
-  } else {
-    runScript(meta);
   }
+
+  grants.forEach((p) => {
+    if (!p.startsWith("GM.")) return;
+    const name = p.substring(3);
+    if (typeof GM[name] != "object") return;
+    const sync = GM[name].sync;
+    if (typeof sync == "function") {
+      GM[name] = function () {
+        const result = sync.apply(null, arguments);
+        if (result instanceof Promise) return result;
+        return new Promise(async (resolve) => {
+          resolve(await result);
+        });
+      };
+    } else if (typeof sync == "undefined") {
+      delete GM[name];
+    } else {
+      GM[name] = sync;
+    }
+  });
+
+  runScript(meta);
 
   function promiseListenerFactory(
     event,
@@ -708,42 +709,7 @@ GM.bootstrap = () => {
         for (const data of meta.resources) {
           data.content = await forceCache(data.url);
         }
-        let unsafeEval = false;
-        try {
-          Function("unsafeEval = true")();
-        } catch {
-          console.debug("JavaScript unsafeEval is blocked");
-        }
-        libs = [];
-        for (const url of meta.requires) libs.push(await forceCache(url));
-        if (libs.length == 0) {
-          return meta.sync_code();
-        } else {
-          libs.push("meta.sync_code();");
-        }
-        if (unsafeEval) {
-          new Function(libs.join("\n"))();
-        } else {
-          let script = `const ChromeXtUnlocked = ChromeXt.unlock(${GM.key}, false);\n`;
-          script += `const meta = ChromeXtUnlocked.scripts.find(i => i.script.unsafeEval === true).script;\n`;
-          script += `delete meta.unsafeEval;\n`;
-          script += `meta.code = (ChromeXtUnlocked) => {${libs.join("\n")}};\n`;
-          const uuid = Math.random();
-          const detail = JSON.stringify({
-            uuid,
-            id: meta.id,
-          });
-          meta.unsafeEval = true;
-          script += `ChromeXtUnlocked.post('eval', ${detail});\n`;
-          script =
-            `{${script}}\n//# sourceURL=local://unsafeEval/` +
-            encodeURIComponent(meta.id);
-          ChromeXt.dispatch("unsafeEval", script);
-          await promiseListenerFactory("eval", uuid);
-          if (typeof GM_xmlhttpRequest == "function")
-            Object.defineProperty(GM_xmlhttpRequest, "strict", { value: true });
-          meta.code();
-        }
+        return meta.sync_code();
       };
     }
 

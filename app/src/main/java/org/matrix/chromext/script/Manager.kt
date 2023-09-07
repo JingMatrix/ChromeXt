@@ -136,7 +136,7 @@ object ScriptDbManager {
     Chrome.evaluateJavascript(listOf(codes.joinToString("\n")), null, bypassSandbox, bypassSandbox)
     if (runScripts) {
       codes.clear()
-      scripts.filter { matching(it, url) }.forEach { codes.addAll(GM.bootstrap(it)) }
+      scripts.filter { matching(it, url) }.forEach { GM.bootstrap(it, codes) }
       Chrome.evaluateJavascript(codes)
     }
   }

@@ -31,13 +31,17 @@ object GM {
                 { it })
   }
 
-  fun bootstrap(script: Script): List<String> {
+  fun bootstrap(
+      script: Script,
+      codes: MutableList<String> = mutableListOf<String>()
+  ): MutableList<String> {
     var code = script.code
     var grants = ""
 
     if (!script.meta.startsWith("// ==UserScript==")) {
       code = script.meta + code
     }
+    code = script.lib.joinToString("\n") + "\n" + code
 
     script.grant.forEach {
       when (it) {
@@ -72,14 +76,9 @@ object GM {
     val GM_info =
         JSONObject(
             mapOf("scriptMetaStr" to script.meta, "script" to JSONObject().put("id", script.id)))
-    val codes =
-        mutableListOf(
-            "(() => { const GM = {key:${Local.key}}; const GM_info = ${GM_info}; GM_info.script.code = () => {${code}};\n${grants}GM.bootstrap();})();\n//# sourceURL=local://ChromeXt/${Uri.encode(script.id)}")
-    if (script.storage != null) {
-      val storage_info =
-          JSONObject(mapOf("id" to script.id, "data" to JSONObject().put("init", script.storage!!)))
-      codes.add("ChromeXt.unlock(${Local.key}).post('scriptStorage', ${storage_info});")
-    }
+    if (script.storage != null) GM_info.put("storage", script.storage)
+    codes.add(
+        "(() => { const GM = {key:${Local.key}}; const GM_info = ${GM_info}; GM_info.script.code = () => {${code}};\n${grants}GM.bootstrap();})();\n//# sourceURL=local://ChromeXt/${Uri.encode(script.id)}")
 
     return codes
   }

@@ -1,5 +1,8 @@
 package org.matrix.chromext.script
 
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlin.concurrent.thread
 import kotlin.text.Regex
 import org.json.JSONObject
 
@@ -44,8 +47,7 @@ fun parseScript(input: String, storage: String? = null): Script? {
   }
 
   if (!script.grant.contains("GM_xmlhttpRequest") &&
-      (script.require.size > 0 ||
-          script.grant.contains("GM_download") ||
+      (script.grant.contains("GM_download") ||
           script.grant.contains("GM.xmlHttpRequest") ||
           script.grant.contains("GM_getResourceText"))) {
     script.grant.add("GM_xmlhttpRequest")
@@ -59,6 +61,8 @@ fun parseScript(input: String, storage: String? = null): Script? {
   if (script.match.size == 0) {
     return null
   } else {
+    val lib = mutableListOf<String>()
+    thread { script.require.forEach { runCatching { lib.add(downloadLib(it)) } } }
     val parsed =
         Script(
             script.namespace + ":" + script.name,
@@ -67,7 +71,14 @@ fun parseScript(input: String, storage: String? = null): Script? {
             script.exclude.toTypedArray(),
             script.meta,
             script.code,
-            script.storage)
+            script.storage,
+            lib)
     return parsed
   }
+}
+
+private fun downloadLib(libUrl: String): String {
+  val url = URL(libUrl)
+  val connection = url.openConnection() as HttpURLConnection
+  return connection.inputStream.bufferedReader().use { it.readText() }
 }

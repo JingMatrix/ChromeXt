@@ -84,12 +84,12 @@ object UserScriptProxy {
       (tab ?: Chrome.getTab())?.invokeMethod(script, null) { name == "evaluateJavaScriptForTests" }
       return true
     }
+    if (script.length > kMaxURLChars - 20000) return false
     val code = Uri.encode(script)
     if (code.length < kMaxURLChars - 200) {
       loadUrl("javascript:${code}", tab ?: Chrome.getTab())
       return true
     } else {
-      Log.d("evaluateJavascript fails with loadUrl")
       return false
     }
   }
