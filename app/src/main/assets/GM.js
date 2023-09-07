@@ -291,29 +291,37 @@ function GM_xmlhttpRequest(details) {
     // Variable xhr should be defined in current context
     const sink = new ResponseSink(xhr);
     function listener(e) {
-      if (e.detail.id == GM_info.script.id && e.detail.uuid == uuid) {
-        const data = e.detail.data;
-        const type = e.detail.type;
-        sink.parse(data);
-        if (type == "progress") {
-          sink.writer.write(data);
-        } else if (type == "load") {
-          sink.writer.close().then(() => resolve(xhr.response));
-        } else if (["timeout", "error"].includes(type)) {
-          sink.writer.abort(type);
-          const error = new Error(data.message, {
-            cause: data.error || type.toUpperCase(),
-            fileName: xhr.url,
-          });
-          error.name = data.type;
-          reject(error);
-          revoke(listener);
-        }
+      let data, type;
+      let nativeFetch = false;
+      if (arguments.length > 1) {
+        data = arguments[0];
+        type = arguments[1];
+        nativeFetch = true;
+      } else if (e.detail.id == GM_info.script.id && e.detail.uuid == uuid) {
+        data = e.detail.data;
+        type = e.detail.type;
+      } else {
+        return;
+      }
+      sink.parse(data);
+      if (type == "progress") {
+        sink.writer.write(data);
+      } else if (type == "load") {
+        sink.writer.close().then(() => resolve(xhr.response));
+      } else if (["timeout", "error"].includes(type)) {
+        sink.writer.abort(type);
+        const error = new Error(data.message, {
+          cause: data.error || type.toUpperCase(),
+          fileName: xhr.url,
+        });
+        error.name = data.type;
+        reject(error);
+        if (!nativeFetch) revoke(listener);
       }
     }
     xhr.abort = () => {
       abort();
-      revoke(listener);
+      if (!nativeFetch) revoke(listener);
       sink.writer.abort("abort");
     };
     let request = details;
@@ -321,13 +329,40 @@ function GM_xmlhttpRequest(details) {
       request = {};
       for (const key in details) request[key] = details[key];
     }
-    ChromeXt.dispatch("xmlhttpRequest", {
-      id: GM_info.script.id,
-      request,
-      uuid,
-    });
     xhr.readyState = 1;
-    ChromeXt.addEventListener("xmlhttpRequest", listener);
+    fetch(details.url, { ...details, cache: "force-cache" })
+      .then(async (res) => {
+        const responseType = details.responseType || "";
+        const binaryType = ["arraybuffer", "blob", "stream"].includes(
+          responseType
+        );
+        if (!binaryType) {
+          res.chunk = await res.text();
+          listener(res, "progress");
+        } else {
+          const reader = res.body.getReader();
+          while (true) {
+            const result = await reader.read();
+            if (result.done) {
+              reader.cancel();
+              break;
+            } else {
+              res.chunk = result.value;
+              res.binary = true;
+              listener(res, "progress");
+            }
+          }
+        }
+        listener(res, "load");
+      })
+      .catch(() => {
+        ChromeXt.dispatch("xmlhttpRequest", {
+          id: GM_info.script.id,
+          request,
+          uuid,
+        });
+        ChromeXt.addEventListener("xmlhttpRequest", listener);
+      });
   });
 
   const xhr = new Proxy(promise, {
@@ -428,11 +463,15 @@ class ResponseSink {
   }
   parse(data) {
     if (typeof data != "object") return;
-    if (this.xhr.readyState != 1) delete data.headers;
-    Object.entries(data).forEach(([key, val]) => (this.xhr[key] = val));
-    const headers = data.headers;
-    if (!headers) return;
+    for (const prop in data) {
+      if (prop == "header" && this.xhr.headers instanceof Headers) continue;
+      let val = data[prop];
+      if (typeof val == "function") val = val.bind(data);
+      this.xhr[prop] = val;
+    }
+    if (this.xhr.readyState != 1) return;
     this.xhr.readyState = 2;
+    const headers = data.headers;
     this.xhr.headers = new Headers(headers);
     this.xhr.responseHeaders = Object.entries(
       Object.fromEntries(this.xhr.headers)
@@ -446,6 +485,7 @@ class ResponseSink {
     this.xhr.responseURL = this.xhr.finalUrl;
     this.xhr.total = this.xhr.headers.get("Content-Length");
     this.xhr.lengthComputable = this.xhr.total != undefined;
+    if (data instanceof Response) return;
     this.xhr.encoding = this.xhr.headers.get("Content-Encoding");
     if (this.xhr.encoding != null) {
       try {
@@ -463,20 +503,23 @@ class ResponseSink {
   }
   write(data, _controller) {
     let chunk = data.chunk;
-    if (typeof chunk != "string") return;
     if (this.xhr.binary) {
-      chunk = Uint8Array.from(atob(chunk), (m) => m.codePointAt(0));
+      if (!(data instanceof Response) && typeof chunk == "string")
+        chunk = Uint8Array.from(atob(chunk), (m) => m.codePointAt(0));
       this.xhr.response.push(chunk);
     } else {
       this.xhr.response += chunk;
     }
-    this.xhr.loaded += data.bytes;
+    this.xhr.loaded += data.bytes || chunk.length;
     this.dispatch("progress");
   }
   async close(_controller) {
     const type =
       this.xhr.overrideMimeType || this.xhr.headers.get("Content-Type") || "";
-    if (this.ds instanceof DecompressionStream) {
+    if (
+      Array.isArray(this.xhr.response) &&
+      this.ds instanceof DecompressionStream
+    ) {
       const stream = new Blob(this.xhr.response, { type })
         .stream()
         .pipeThrough(this.ds);

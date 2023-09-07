@@ -86,6 +86,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
               data.put("chunk", chunk)
               data.put("bytes", bytes)
               response("progress", data, false)
+              data.remove("headers")
             }
             response("load", data, false)
           }
