@@ -9,28 +9,12 @@ delete GM.globalThis;
 // Note that from the DevTools console, these objects are undefined if they are not used in the script debugging context.
 // However, one can break this jail using setTimeout or Function.
 delete GM_info.script.code;
+delete GM_info.script.sync_code;
 delete GM.key;
 Object.freeze(GM_info.script);
 const ChromeXt = GM.ChromeXt;
-GM_info.script.grants.forEach((p) => {
-  if (!p.startsWith("GM.")) return;
-  const name = p.substring(3);
-  if (typeof GM[name] != "object") return;
-  const sync = GM[name].sync;
-  if (typeof sync == "function") {
-    GM[name] = function () {
-      const result = sync.apply(null, arguments);
-      if (result instanceof Promise) return result;
-      return new Promise(async (resolve) => {
-        resolve(await result);
-      });
-    };
-  } else if (typeof sync == "undefined") {
-    delete GM[name];
-  } else {
-    GM[name] = sync;
-  }
-});
+if (typeof GM_xmlhttpRequest == "function" && !GM_xmlhttpRequest.strict)
+  Object.defineProperty(GM_xmlhttpRequest, "strict", { value: true });
 // Kotlin separator
 
 function GM_addStyle(css) {
@@ -533,6 +517,25 @@ GM.bootstrap = () => {
     : meta["run-at"] || "document-idle";
 
   const grants = meta.grants;
+  grants.forEach((p) => {
+    if (!p.startsWith("GM.")) return;
+    const name = p.substring(3);
+    if (typeof GM[name] != "object") return;
+    const sync = GM[name].sync;
+    if (typeof sync == "function") {
+      GM[name] = function () {
+        const result = sync.apply(null, arguments);
+        if (result instanceof Promise) return result;
+        return new Promise(async (resolve) => {
+          resolve(await result);
+        });
+      };
+    } else if (typeof sync == "undefined") {
+      delete GM[name];
+    } else {
+      GM[name] = sync;
+    }
+  });
   if (meta["inject-into"] == "page" || grants.includes("none")) {
     GM.globalThis = window;
   } else {
@@ -702,28 +705,45 @@ GM.bootstrap = () => {
           (_err) => GM_xmlhttpRequest({ url })
         );
       meta.code = async () => {
-        for (const url of meta.requires) {
-          const script = await forceCache(url);
-          try {
-            new Function(script)();
-          } catch {
-            const uuid = Math.random();
-            const detail = JSON.stringify({
-              uuid,
-              id: meta.id,
-            });
-            ChromeXt.dispatch(
-              "unsafeEval",
-              `${script}\nChromeXt.unlock(${GM.key}).post('eval', ${detail});`
-            );
-            await promiseListenerFactory("eval", uuid);
-          }
-        }
         for (const data of meta.resources) {
           data.content = await forceCache(data.url);
         }
-
-        meta.sync_code();
+        let unsafeEval = false;
+        try {
+          Function("unsafeEval = true")();
+        } catch {
+          console.debug("JavaScript unsafeEval is blocked");
+        }
+        libs = [];
+        for (const url of meta.requires) libs.push(await forceCache(url));
+        if (libs.length == 0) {
+          return meta.sync_code();
+        } else {
+          libs.push("meta.sync_code();");
+        }
+        if (unsafeEval) {
+          new Function(libs.join("\n"))();
+        } else {
+          let script = `const ChromeXtUnlocked = ChromeXt.unlock(${GM.key}, false);\n`;
+          script += `const meta = ChromeXtUnlocked.scripts.find(i => i.script.unsafeEval === true).script;\n`;
+          script += `delete meta.unsafeEval;\n`;
+          script += `meta.code = (ChromeXtUnlocked) => {${libs.join("\n")}};\n`;
+          const uuid = Math.random();
+          const detail = JSON.stringify({
+            uuid,
+            id: meta.id,
+          });
+          meta.unsafeEval = true;
+          script += `ChromeXtUnlocked.post('eval', ${detail});\n`;
+          script =
+            `{${script}}\n//# sourceURL=local://unsafeEval/` +
+            encodeURIComponent(meta.id);
+          ChromeXt.dispatch("unsafeEval", script);
+          await promiseListenerFactory("eval", uuid);
+          if (typeof GM_xmlhttpRequest == "function")
+            Object.defineProperty(GM_xmlhttpRequest, "strict", { value: true });
+          meta.code();
+        }
       };
     }
 
@@ -750,8 +770,6 @@ GM.bootstrap = () => {
     GM_info.version = "3.7.0";
     Object.freeze(GM_info);
     ChromeXt.scripts.push(GM_info);
-    if (typeof GM_xmlhttpRequest == "function")
-      Object.defineProperty(GM_xmlhttpRequest, "strict", { value: true });
   }
 };
 
