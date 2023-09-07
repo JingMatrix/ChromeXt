@@ -15,6 +15,8 @@ private fun urlMatch(match: String, url: String, strict: Boolean): Boolean {
 
   if (regexPattern) {
     pattern = pattern.removeSurrounding("/", "/")
+    pattern = pattern.replace("\\/", "/")
+    pattern = pattern.replace("\\://", "://")
   } else if ("*" !in pattern) {
     if (strict) {
       return pattern == url
@@ -31,8 +33,12 @@ private fun urlMatch(match: String, url: String, strict: Boolean): Boolean {
   }
 
   runCatching {
-        val result = Regex(pattern).matches(url)
-        // Log.d("Matching ${pattern} against ${url}: ${result}")
+        val result =
+            if (regexPattern) {
+              Regex(pattern).containsMatchIn(url)
+            } else {
+              Regex(pattern).matches(url)
+            }
         return result
       }
       .onFailure { Log.i("Invaid matching rule: ${match}, error: " + it.message) }
