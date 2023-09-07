@@ -59,12 +59,14 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
               }
             }
 
-            val binary = responseType !in listOf("", "text", "document", "json")
-            data.put("binary", binary)
             data.put("status", responseCode)
             data.put("statusText", responseMessage)
             val headers = headerFields.filter { it.key != null }.mapValues { JSONArray(it.value) }
             data.put("headers", JSONObject(headers))
+            val binary =
+                responseType !in listOf("", "text", "document", "json") ||
+                    headers.containsKey("Content-Encoding")
+            data.put("binary", binary)
 
             val buffer = ByteArray(buffersize * DEFAULT_BUFFER_SIZE)
             while (true) {

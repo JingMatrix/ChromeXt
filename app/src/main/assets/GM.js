@@ -385,13 +385,16 @@ class ResponseSink {
   }
   static async prepare(type, data) {
     const responseType = data.responseType || "";
+    const binaryType = ["arraybuffer", "blob", "stream"].includes(responseType);
     if ([101, 204, 205, 304].includes(data.status)) {
       data.response = null;
-    } else if (data.binary) {
+    }
+    if (binaryType) {
+      if (typeof data.response == "string") data.response = [data.response];
       const blob = new Blob(data.response, { type });
       switch (responseType) {
         case "arraybuffer":
-          data.response = await blob.arraybuffer();
+          data.response = await blob.arrayBuffer();
           break;
         case "blob":
           data.response = blob;
@@ -401,6 +404,11 @@ class ResponseSink {
           break;
       }
     } else {
+      if (Array.isArray(data.response)) {
+        const utf8 = new TextDecoder();
+        const blob = new Blob(data.response);
+        data.response = utf8.decode(await blob.arrayBuffer());
+      }
       data.responseText = data.response;
       switch (responseType) {
         case "json":
@@ -438,6 +446,14 @@ class ResponseSink {
     this.xhr.responseURL = this.xhr.finalUrl;
     this.xhr.total = this.xhr.headers.get("Content-Length");
     this.xhr.lengthComputable = this.xhr.total != undefined;
+    this.xhr.encoding = this.xhr.headers.get("Content-Encoding");
+    if (this.xhr.encoding != null) {
+      try {
+        this.ds = new DecompressionStream(this.xhr.encoding.toLowerCase());
+      } catch {
+        this.xhr.abort();
+      }
+    }
   }
   start(_controller) {
     this.dispatch("loadstart");
@@ -458,9 +474,25 @@ class ResponseSink {
     this.dispatch("progress");
   }
   async close(_controller) {
-    this.xhr.readyState = 4;
     const type =
       this.xhr.overrideMimeType || this.xhr.headers.get("Content-Type") || "";
+    if (this.ds instanceof DecompressionStream) {
+      const stream = new Blob(this.xhr.response, { type })
+        .stream()
+        .pipeThrough(this.ds);
+      this.xhr.response = [];
+      const reader = stream.getReader();
+      while (true) {
+        const result = await reader.read();
+        if (result.value instanceof Uint8Array)
+          this.xhr.response.push(result.value);
+        if (result.done) {
+          reader.cancel();
+          break;
+        }
+      }
+    }
+    this.xhr.readyState = 4;
     await ResponseSink.prepare(type, this.xhr);
     this.dispatch("load");
     this.dispatch("loadend");
@@ -518,7 +550,11 @@ GM.bootstrap = () => {
 
   const grants = meta.grants;
 
-  if (meta["inject-into"] == "page" || grants.includes("none")) {
+  if (
+    meta["inject-into"] == "page" ||
+    grants.includes("none") ||
+    meta.requires.length > 0
+  ) {
     GM.globalThis = window;
   } else {
     const handler = {
