@@ -13,7 +13,7 @@ data class Script(
     var meta: String,
     val code: String,
     var storage: JSONObject?,
-    val lib: MutableList<String> = mutableListOf<String>(),
+    val lib: List<String> = mutableListOf<String>(),
 )
 
 private const val SQL_CREATE_ENTRIES =

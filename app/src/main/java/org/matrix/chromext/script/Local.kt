@@ -41,7 +41,6 @@ object GM {
     if (!script.meta.startsWith("// ==UserScript==")) {
       code = script.meta + code
     }
-    code = script.lib.joinToString("\n") + "\n" + code
 
     script.grant.forEach {
       when (it) {
@@ -71,15 +70,13 @@ object GM {
     }
 
     grants += localScript.get("GM.bootstrap")!!
-    code = localScript.get("globalThis")!! + "((key) => {${code}})(null);"
-
-    val GM_info =
-        JSONObject(
-            mapOf("scriptMetaStr" to script.meta, "script" to JSONObject().put("id", script.id)))
+    val GM_info = JSONObject(mapOf("scriptMetaStr" to script.meta))
+    GM_info.put("script", JSONObject().put("id", script.id))
     if (script.storage != null) GM_info.put("storage", script.storage)
+    code = "\n{const window=globalThis;\n${code}};"
+    code = localScript.get("globalThis")!! + script.lib.joinToString("\n") + code
     codes.add(
-        "(() => { const GM = {key:${Local.key}}; const GM_info = ${GM_info}; GM_info.script.code = () => {${code}};\n${grants}GM.bootstrap();})();\n//# sourceURL=local://ChromeXt/${Uri.encode(script.id)}")
-
+        "(()=>{ const GM = {key:${Local.key}}; const GM_info = ${GM_info}; GM_info.script.code = (key=null) => {${code}};\n${grants}GM.bootstrap();})();\n//# sourceURL=local://ChromeXt/${Uri.encode(script.id)}")
     return codes
   }
 }

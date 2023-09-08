@@ -1,5 +1,4 @@
 const globalThis = GM.globalThis;
-const window = GM.globalThis;
 const self = GM.globalThis;
 const parent = GM.globalThis;
 const frames = GM.globalThis;
@@ -8,6 +7,7 @@ delete GM.globalThis;
 // Override possible references to the original window object.
 // Note that from the DevTools console, these objects are undefined if they are not used in the script debugging context.
 // However, one can break this jail using setTimeout or Function.
+// In case that some libraries export names globally, blocking of window is postoned.
 delete GM_info.script.code;
 delete GM_info.script.sync_code;
 delete GM.key;
@@ -641,11 +641,7 @@ GM.bootstrap = () => {
 
   const grants = meta.grants;
 
-  if (
-    meta["inject-into"] == "page" ||
-    grants.includes("none") ||
-    meta.requires.length > 0
-  ) {
+  if (meta["inject-into"] == "page" || grants.includes("none")) {
     GM.globalThis = window;
   } else {
     const handler = {
