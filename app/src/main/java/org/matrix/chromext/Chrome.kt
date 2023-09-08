@@ -78,6 +78,15 @@ object Chrome {
     return activity ?: mContext!!.get()!!
   }
 
+  fun checkTab(tab: Any?): Boolean {
+    if (tab == null) return false
+    if (UserScriptHook.isInit) {
+      return UserScriptProxy.mNativeAndroid.get(tab) != 0L
+    } else {
+      return tab == getTab()
+    }
+  }
+
   fun load(className: String): Class<*> {
     return getContext().classLoader.loadClass(className)
   }

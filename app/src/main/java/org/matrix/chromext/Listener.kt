@@ -282,7 +282,12 @@ object Listener {
               message.getInt("id"), message.getString("method"), message.getJSONObject("params"))
         } else {
           fun response(res: JSONObject) {
-            Chrome.evaluateJavascript(listOf("ChromeXt.post('websocket', ${res})"), currentTab)
+            if (Chrome.checkTab(currentTab)) {
+              Chrome.evaluateJavascript(listOf("ChromeXt.post('websocket', ${res})"), currentTab)
+            } else {
+              Log.d("Tab closed")
+              target?.close()
+            }
           }
           Chrome.IO.submit {
             target?.close()

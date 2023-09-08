@@ -39,7 +39,7 @@ object WebViewHook : BaseHook() {
           if (consoleMessage.messageLevel() == ConsoleMessage.MessageLevel.TIP &&
               consoleMessage.sourceId() == "local://ChromeXt/init" &&
               consoleMessage.lineNumber() == Local.anchorInChromeXt) {
-            Listener.startAction(consoleMessage.message())
+            Listener.startAction(consoleMessage.message(), Chrome.getTab())
           } else {
             Log.d(
                 consoleMessage.messageLevel().toString() +

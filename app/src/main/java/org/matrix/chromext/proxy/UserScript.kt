@@ -4,6 +4,7 @@ import android.net.Uri
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.invokeMethod
 import org.matrix.chromext.utils.parseOrigin
@@ -41,6 +42,7 @@ object UserScriptProxy {
       } else {
         Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
       }
+  val mNativeAndroid = findField(tabImpl) { type == Long::class.java }
   val mIsLoading =
       tabImpl.declaredFields
           .run {
