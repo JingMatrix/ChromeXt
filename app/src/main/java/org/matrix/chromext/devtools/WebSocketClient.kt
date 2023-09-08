@@ -16,6 +16,7 @@ import org.matrix.chromext.utils.Log
 class DevToolClient(tabId: String) : LocalSocket() {
 
   val tabId = tabId
+  private var cspBypassed = false
   private var id = 1
   private var mClosed = false
 
@@ -63,6 +64,14 @@ class DevToolClient(tabId: String) : LocalSocket() {
     }
 
     WebSocketFrame(msg.toString()).write(outputStream)
+  }
+
+  fun bypassCSP(bypass: Boolean) {
+    if (cspBypassed == bypass) return
+    command(null, "Page.enable", JSONObject())
+    command(null, "Page.setBypassCSP", JSONObject().put("enabled", bypass))
+    cspBypassed = bypass
+    if (bypass) DevSessions.add(this)
   }
 
   fun evaluateJavascript(script: String) {

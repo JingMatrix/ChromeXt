@@ -8,6 +8,7 @@ import java.io.File
 import java.lang.ref.WeakReference
 import java.util.concurrent.Executors
 import org.json.JSONObject
+import org.matrix.chromext.devtools.DevSessions
 import org.matrix.chromext.devtools.DevToolClient
 import org.matrix.chromext.devtools.getInspectPages
 import org.matrix.chromext.devtools.hitDevTools
@@ -31,7 +32,6 @@ object Chrome {
   var isVivaldi = false
 
   val IO = Executors.newCachedThreadPool()
-  val cspBypassed = mutableSetOf<DevToolClient>()
 
   fun init(ctx: Context, packageName: String? = null) {
     val initialized = mContext != null
@@ -116,25 +116,15 @@ object Chrome {
 
   private fun evaluateJavascriptDevTools(codes: List<String>, tabId: String, bypassCSP: Boolean) {
     wakeUpDevTools()
-    val lastClient = cspBypassed.find { it.tabId == tabId }
-    var client = lastClient ?: DevToolClient(tabId)
+    var client = DevSessions.get(tabId) ?: DevToolClient(tabId)
     if (client.isClosed()) {
-      cspBypassed.remove(client)
       hitDevTools().close()
       client = DevToolClient(tabId)
     }
     codes.forEach { client.evaluateJavascript(it) }
     // Bypass CSP is only effective after reloading
+    client.bypassCSP(bypassCSP)
 
-    if ((lastClient == client) != bypassCSP) {
-      client.command(null, "Page.enable", JSONObject())
-      client.command(null, "Page.setBypassCSP", JSONObject().put("enabled", bypassCSP))
-      if (bypassCSP) {
-        cspBypassed.add(client)
-      } else {
-        cspBypassed.remove(client)
-      }
-    }
     if (!bypassCSP) client.close()
   }
 
@@ -145,7 +135,7 @@ object Chrome {
       bypassCSP: Boolean = false,
   ) {
     if (forceDevTools) {
-      this.IO.submit {
+      IO.submit {
         val tabId =
             if (WebViewHook.isInit) {
               val url = getUrl(currentTab)

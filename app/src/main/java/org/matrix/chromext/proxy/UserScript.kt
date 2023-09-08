@@ -65,7 +65,8 @@ object UserScriptProxy {
   val kMaxURLChars = 2097152
 
   private fun loadUrl(url: String, tab: Any? = Chrome.getTab()) {
-    runCatching { loadUrl.invoke(tab, newLoadUrlParams(url)) }.onFailure { Log.ex(it) }
+    if (!Chrome.checkTab(tab)) return
+    loadUrl.invoke(tab, newLoadUrlParams(url))
   }
 
   fun newLoadUrlParams(url: String): Any {

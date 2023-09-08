@@ -9,6 +9,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import org.json.JSONArray
 import org.json.JSONObject
+import org.matrix.chromext.devtools.DevSessions
 import org.matrix.chromext.devtools.DevToolClient
 import org.matrix.chromext.devtools.getInspectPages
 import org.matrix.chromext.devtools.hitDevTools
@@ -31,7 +32,6 @@ import org.matrix.chromext.utils.parseOrigin
 object Listener {
 
   val xmlhttpRequests = mutableMapOf<Double, XMLHttpRequest>()
-  val devSessions = mutableSetOf<DevToolClient>()
   val allowedActions =
       mapOf(
           "front-end" to listOf("inspect_pages", "userscript", "extension"),
@@ -275,7 +275,7 @@ object Listener {
       "websocket" -> {
         val detail = JSONObject(payload)
         val targetTabId = detail.getString("targetTabId")
-        var target = devSessions.find { it.tabId == targetTabId }
+        var target = DevSessions.get(targetTabId)
         if (detail.has("message")) {
           val message = JSONObject(detail.getString("message"))
           target?.command(
@@ -285,17 +285,15 @@ object Listener {
             if (Chrome.checkTab(currentTab)) {
               Chrome.evaluateJavascript(listOf("ChromeXt.post('websocket', ${res})"), currentTab)
             } else {
-              Log.d("Tab closed")
               target?.close()
             }
           }
           Chrome.IO.submit {
             target?.close()
-            devSessions.remove(target)
             hitDevTools().close()
             target = DevToolClient(targetTabId)
             if (!target!!.isClosed()) {
-              devSessions.add(target!!)
+              DevSessions.add(target!!)
               response(JSONObject(mapOf("open" to true)))
               target!!.listen { response(JSONObject(mapOf("message" to it))) }
             }

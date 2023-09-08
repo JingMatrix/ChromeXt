@@ -40,3 +40,21 @@ fun hitDevTools(): LocalSocket {
   client.outputStream.write("GET /json HTTP/1.1\r\n\r\n".toByteArray())
   return client
 }
+
+object DevSessions {
+  private val clients = mutableSetOf<DevToolClient>()
+  fun get(tabId: String): DevToolClient? {
+    var cached = clients.find { it.tabId == tabId }
+    if (cached?.isClosed() == true) {
+      clients.remove(cached)
+      cached = null
+    }
+    return cached
+  }
+  fun add(client: DevToolClient?) {
+    if (client == null) return
+    val cached = clients.find { it.tabId == client.tabId }
+    if (cached != null) clients.remove(cached)
+    clients.add(client)
+  }
+}
