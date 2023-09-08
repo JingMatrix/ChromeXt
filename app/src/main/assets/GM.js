@@ -209,7 +209,7 @@ function GM_xmlhttpRequest(details) {
 
   if (!details.url) {
     throw new Error("GM_xmlhttpRequest requires a URL.");
-  } else if (this.strict) {
+  } else if (GM_xmlhttpRequest.strict) {
     const domain = new URL(details.url).hostname;
     const connects = GM_info.script.connects;
     let allowed = location.hostname == domain && connects.includes("self");
@@ -276,28 +276,69 @@ function GM_xmlhttpRequest(details) {
   }
 
   const ChromeXt = LockedChromeXt.unlock(key);
-  function abort() {
-    ChromeXt.dispatch("xmlhttpRequest", {
-      uuid,
-      abort: true,
-    });
-  }
   function revoke(listener) {
     ChromeXt.removeEventListener("xmlhttpRequest", listener);
   }
 
-  const promise = new Promise(async (resolve, reject) => {
-    await prepare(details);
-    // Variable xhr should be defined in current context
+  const xhrHandler = {
+    target: new EventTarget(),
+    promise: null,
+    get() {
+      const prop = arguments[1];
+      if (prop in EventTarget.prototype) {
+        return this.target[prop].bind(this.target);
+      } else if (
+        prop.startsWith("on") ||
+        [
+          "responseType",
+          "overrideMimeType",
+          "url",
+          "timeout",
+          "fetch",
+        ].includes(prop)
+      ) {
+        return details[prop];
+      } else if (prop in Promise.prototype) {
+        return this.promise[prop].bind(this.promise);
+      } else {
+        return Reflect.get(...arguments);
+      }
+    },
+    set(target, prop, value) {
+      if (
+        prop == "responseHandler" &&
+        this.promise == null &&
+        typeof value == "function"
+      ) {
+        this.promise = target;
+        value(this.resolve, this.reject);
+        return true;
+      }
+      if (prop in Promise.prototype || prop in EventTarget.prototype)
+        return false;
+      target[prop] = value;
+      if (prop == "readyState")
+        this.target.dispatchEvent(new Event("readystatechange"));
+      return true;
+    },
+  };
+  const xhr = new Proxy(
+    new Promise((resolve, reject) => {
+      xhrHandler.resolve = resolve;
+      xhrHandler.reject = reject;
+    }),
+    xhrHandler
+  );
+
+  xhr.responseHandler = (resolve, reject) => {
     const sink = new ResponseSink(xhr);
     function listener(e) {
       let data, type;
-      let nativeFetch = false;
       if (arguments.length > 1) {
         data = arguments[0];
         type = arguments[1];
-        nativeFetch = true;
       } else if (e.detail.id == GM_info.script.id && e.detail.uuid == uuid) {
+        e.stopImmediatePropagation();
         data = e.detail.data;
         type = e.detail.type;
       } else {
@@ -316,46 +357,84 @@ function GM_xmlhttpRequest(details) {
         });
         error.name = data.type;
         reject(error);
-        if (!nativeFetch) revoke(listener);
+        revoke(listener);
       }
     }
     xhr.abort = () => {
-      abort();
-      if (!nativeFetch) revoke(listener);
+      ChromeXt.dispatch("xmlhttpRequest", {
+        uuid,
+        abort: true,
+      });
+      revoke(listener);
       sink.writer.abort("abort");
     };
     let request = details;
-    if (details instanceof Request) {
-      request = {};
-      for (const key in details) request[key] = details[key];
+    if (
+      !details.signal &&
+      Number.isInteger(details.timeout) &&
+      details.timeout > 0
+    ) {
+      details.signal = AbortSignal.timeout(details.timeout);
     }
+    if (details instanceof Request) {
+      request = details;
+    } else {
+      request = new Request(details.url, {
+        ...details,
+        cache: "force-cache",
+        body: details.data,
+      });
+    }
+    request.signal.addEventListener("abort", xhr.abort);
+    const responseType = details.responseType || "";
+    xhr.binaryType = ["arraybuffer", "blob", "stream"].includes(responseType);
     xhr.readyState = 1;
-    fetch(details.url, { ...details, cache: "force-cache" })
-      .then(async (res) => {
-        const responseType = details.responseType || "";
-        const binaryType = ["arraybuffer", "blob", "stream"].includes(
-          responseType
-        );
-        if (!binaryType) {
-          res.chunk = await res.text();
+    fetch(request)
+      .then(async (response) => {
+        const teedOff = response.body.tee();
+        const res = new Response(teedOff[0], response);
+        const stream = teedOff[1];
+        if (xhr.fetch) {
+          sink.dispatch("loadstart", res);
+          sink.dispatch("progress", res);
+          if (!xhr.binaryType) {
+            resolve(await new Response(stream, response).text());
+          } else {
+            resolve(res);
+          }
+          sink.dispatch("load", res);
+          sink.dispatch("loadend", res);
+          return;
+        }
+        if (!xhr.binaryType) {
+          res.chunk = await new Response(stream, response).text();
           listener(res, "progress");
         } else {
-          const reader = res.body.getReader();
-          while (true) {
-            const result = await reader.read();
-            if (result.done) {
-              reader.cancel();
-              break;
-            } else {
-              res.chunk = result.value;
-              res.binary = true;
-              listener(res, "progress");
-            }
+          const reader = stream.getReader();
+          let result = { done: false };
+          while (!result.done) {
+            result = await reader.read();
+            res.chunk = result.value;
+            res.binary = true;
+            listener(res, "progress");
           }
+          reader.cancel();
         }
         listener(res, "load");
       })
-      .catch(() => {
+      .catch(async (e) => {
+        if (!(e instanceof TypeError)) {
+          sink.writer.abort("error");
+          reject(e);
+          return;
+        }
+        await prepare(details);
+        if (details instanceof Request) {
+          request = {};
+          for (const key in details) request[key] = details[key];
+        } else {
+          request = details;
+        }
         ChromeXt.dispatch("xmlhttpRequest", {
           id: GM_info.script.id,
           request,
@@ -363,38 +442,7 @@ function GM_xmlhttpRequest(details) {
         });
         ChromeXt.addEventListener("xmlhttpRequest", listener);
       });
-  });
-
-  const xhr = new Proxy(promise, {
-    target: new EventTarget(),
-    get() {
-      const prop = arguments[1];
-      if (prop in EventTarget.prototype) {
-        return this.target[prop].bind(this.target);
-      } else if (
-        prop.startsWith("on") ||
-        ["responseType", "overrideMimeType", "url", "timeout"].includes(prop)
-      ) {
-        return details[prop];
-      } else if (prop in Promise.prototype) {
-        return promise[prop].bind(promise);
-      } else {
-        return Reflect.get(...arguments);
-      }
-    },
-    set(target, prop, value) {
-      if (prop in Promise.prototype || prop in EventTarget.prototype)
-        return false;
-      target[prop] = value;
-      if (prop == "readyState")
-        this.target.dispatchEvent(new Event("readystatechange"));
-      return true;
-    },
-  });
-
-  if (details instanceof Request && details.signal) {
-    details.signal.addEventListener("abort", xhr.abort);
-  }
+  };
 
   return xhr;
 }
@@ -419,12 +467,10 @@ class ResponseSink {
     }
   }
   static async prepare(type, data) {
-    const responseType = data.responseType || "";
-    const binaryType = ["arraybuffer", "blob", "stream"].includes(responseType);
     if ([101, 204, 205, 304].includes(data.status)) {
       data.response = null;
     }
-    if (binaryType) {
+    if (data.binaryType) {
       if (typeof data.response == "string") data.response = [data.response];
       const blob = new Blob(data.response, { type });
       switch (responseType) {
@@ -445,18 +491,15 @@ class ResponseSink {
         data.response = utf8.decode(await blob.arrayBuffer());
       }
       data.responseText = data.response;
-      switch (responseType) {
-        case "json":
-          data.response = JSON.parse(data.responseText);
-          break;
-        case "document":
-          const parser = new DOMParser();
-          data.response = parser.parseFromString(
-            data.responseText,
-            type == "text/xml" ? "text/xml" : "text/html"
-          );
-          data.responseXML = data.response;
-          break;
+      if (data.responseType == "json") {
+        data.response = JSON.parse(data.responseText);
+      } else if (data.responseType == "document") {
+        const parser = new DOMParser();
+        data.response = parser.parseFromString(
+          data.responseText,
+          type == "text/xml" ? "text/xml" : "text/html"
+        );
+        data.responseXML = data.response;
       }
     }
     if (data.fetch) data = new Response(data.response, data);
@@ -466,7 +509,7 @@ class ResponseSink {
     for (const prop in data) {
       if (prop == "header" && this.xhr.headers instanceof Headers) continue;
       let val = data[prop];
-      if (typeof val == "function") val = val.bind(data);
+      if (typeof val == "function") continue;
       this.xhr[prop] = val;
     }
     if (this.xhr.readyState != 1) return;
@@ -484,7 +527,10 @@ class ResponseSink {
     this.xhr.finalUrl = this.xhr.headers.get("Location") || this.xhr.url;
     this.xhr.responseURL = this.xhr.finalUrl;
     this.xhr.total = this.xhr.headers.get("Content-Length");
-    this.xhr.lengthComputable = this.xhr.total != undefined;
+    if (this.xhr.total !== null) {
+      this.xhr.lengthComputable = true;
+      this.xhr.total = Number(this.xhr.total);
+    }
     if (data instanceof Response) return;
     this.xhr.encoding = this.xhr.headers.get("Content-Encoding");
     if (this.xhr.encoding != null) {
@@ -525,15 +571,12 @@ class ResponseSink {
         .pipeThrough(this.ds);
       this.xhr.response = [];
       const reader = stream.getReader();
-      while (true) {
-        const result = await reader.read();
-        if (result.value instanceof Uint8Array)
-          this.xhr.response.push(result.value);
-        if (result.done) {
-          reader.cancel();
-          break;
-        }
+      let result = { done: true };
+      while (result.done) {
+        result = await reader.read();
+        this.xhr.response.push(result.value);
       }
+      reader.cancel();
     }
     this.xhr.readyState = 4;
     await ResponseSink.prepare(type, this.xhr);
@@ -642,10 +685,6 @@ GM.bootstrap = () => {
     GM.globalThis = new Proxy(window, handler);
   }
 
-  if (grants.includes("GM.ChromeXt")) {
-    GM.ChromeXt = ChromeXt;
-  }
-
   GM_info.uuid = Math.random();
   const storageHandler = {
     storage: GM_info.storage || {},
@@ -746,6 +785,10 @@ GM.bootstrap = () => {
       GM[name] = sync;
     }
   });
+
+  if (grants.includes("GM.ChromeXt")) {
+    GM.ChromeXt = ChromeXt;
+  }
 
   runScript(meta);
 
