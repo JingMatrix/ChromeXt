@@ -120,6 +120,7 @@ function GM_openInTab(url, options = true) {
   }
   if (options.setParent) target = "_self";
   const gm_window = window.open(url, target);
+  if (!gm_window) return window;
   if (options.active) {
     gm_window.focus();
   } else {
@@ -386,19 +387,22 @@ function GM_xmlhttpRequest(details) {
       });
     }
     request.signal.addEventListener("abort", xhr.abort);
-    const responseType = details.responseType || "";
-    xhr.binaryType = ["arraybuffer", "blob", "stream"].includes(responseType);
+    xhr.binaryType = ["arraybuffer", "blob", "stream"].includes(
+      xhr.responseType
+    );
     xhr.readyState = 1;
     fetch(request)
       .then(async (response) => {
         const teedOff = response.body.tee();
         const res = new Response(teedOff[0], response);
-        const stream = teedOff[1];
+        const localRes = new Response(teedOff[1], response);
         if (xhr.fetch) {
           sink.dispatch("loadstart", res);
           sink.dispatch("progress", res);
-          if (!xhr.binaryType) {
-            resolve(await new Response(stream, response).text());
+          let type = xhr.responseType || "text";
+          if (type == "arraybuffer") type = "arrayBuffer";
+          if (type in localRes) {
+            resolve(await localRes[type]());
           } else {
             resolve(res);
           }
@@ -406,16 +410,16 @@ function GM_xmlhttpRequest(details) {
           sink.dispatch("loadend", res);
           return;
         }
-        if (!xhr.binaryType) {
-          res.chunk = await new Response(stream, response).text();
+        res.binary = xhr.binaryType;
+        if (!res.binary) {
+          res.chunk = await localRes.text();
           listener(res, "progress");
         } else {
-          const reader = stream.getReader();
-          let result = { done: false };
-          while (!result.done) {
-            result = await reader.read();
+          const reader = localRes.body.getReader();
+          while (true) {
+            const result = await reader.read();
+            if (result.done) break;
             res.chunk = result.value;
-            res.binary = true;
             listener(res, "progress");
           }
           reader.cancel();
@@ -473,7 +477,7 @@ class ResponseSink {
     if (data.binaryType) {
       if (typeof data.response == "string") data.response = [data.response];
       const blob = new Blob(data.response, { type });
-      switch (responseType) {
+      switch (data.responseType) {
         case "arraybuffer":
           data.response = await blob.arrayBuffer();
           break;
@@ -549,6 +553,7 @@ class ResponseSink {
   }
   write(data, _controller) {
     let chunk = data.chunk;
+    if (chunk == undefined) return;
     if (this.xhr.binary) {
       if (!(data instanceof Response) && typeof chunk == "string")
         chunk = Uint8Array.from(atob(chunk), (m) => m.codePointAt(0));
@@ -571,9 +576,9 @@ class ResponseSink {
         .pipeThrough(this.ds);
       this.xhr.response = [];
       const reader = stream.getReader();
-      let result = { done: true };
-      while (result.done) {
-        result = await reader.read();
+      while (true) {
+        const result = await reader.read();
+        if (result.done) break;
         this.xhr.response.push(result.value);
       }
       reader.cancel();
@@ -817,19 +822,11 @@ GM.bootstrap = () => {
   function runScript(meta) {
     Object.freeze(storageHandler);
     GM_info.storage = new Proxy(storageHandler.storage, storageHandler);
-    if (
-      typeof GM_xmlhttpRequest == "function" &&
-      (meta.requires.length > 0 || meta.resources.length > 0)
-    ) {
+    if (typeof GM_xmlhttpRequest == "function" && meta.resources.length > 0) {
       meta.sync_code = meta.code;
-      const forceCache = (url) =>
-        fetch(url, { cache: "force-cache" }).then(
-          (res) => res.text(),
-          (_err) => GM_xmlhttpRequest({ url })
-        );
       meta.code = async () => {
         for (const data of meta.resources) {
-          data.content = await forceCache(data.url);
+          data.content = await GM_xmlhttpRequest(data.url);
         }
         return meta.sync_code();
       };
