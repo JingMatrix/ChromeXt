@@ -7,7 +7,6 @@ import java.io.File
 import java.io.FileReader
 import java.net.HttpURLConnection
 import java.net.URL
-import kotlin.concurrent.thread
 import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.devtools.DevToolClient
@@ -135,7 +134,7 @@ object Listener {
         val script = ScriptDbManager.scripts.find { it.id == id }
         if (script?.storage == null) return callback
         if (detail.optBoolean("broadcast")) {
-          thread {
+          Chrome.IO.submit {
             detail.remove("broadcast")
             Chrome.broadcast("scriptStorage", detail) {
               matching(script, it) && parseOrigin(it) != null
@@ -166,7 +165,7 @@ object Listener {
               XMLHttpRequest(
                   detail.getString("id"), detail.getJSONObject("request"), uuid, currentTab)
           xmlhttpRequests.put(uuid, request)
-          thread { request.send() }
+          Chrome.IO.submit { request.send() }
         }
       }
       "userAgentSpoof" -> {
@@ -196,7 +195,7 @@ object Listener {
       "updateEruda" -> {
         val ctx = Chrome.getContext()
         Handler(ctx.mainLooper).post { Log.toast(ctx, "Updating Eruda...") }
-        thread {
+        Chrome.IO.submit {
           checkErudaVerison(ctx) {
             val msg =
                 if (it != null) "Updated to eruda v" + Local.eruda_version
@@ -224,7 +223,7 @@ object Listener {
             }
       }
       "inspectPages" -> {
-        thread {
+        Chrome.IO.submit {
           val code = "ChromeXt.post('inspect_pages', ${getInspectPages()});"
           Chrome.evaluateJavascript(listOf(code), currentTab)
         }
@@ -285,7 +284,7 @@ object Listener {
           fun response(res: JSONObject) {
             Chrome.evaluateJavascript(listOf("ChromeXt.post('websocket', ${res})"), currentTab)
           }
-          thread {
+          Chrome.IO.submit {
             target?.close()
             devSessions.remove(target)
             hitDevTools().close()

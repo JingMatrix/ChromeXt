@@ -6,7 +6,7 @@ import android.net.http.HttpResponseCache
 import android.os.Handler
 import java.io.File
 import java.lang.ref.WeakReference
-import kotlin.concurrent.thread
+import java.util.concurrent.Executors
 import org.json.JSONObject
 import org.matrix.chromext.devtools.DevToolClient
 import org.matrix.chromext.devtools.getInspectPages
@@ -30,6 +30,7 @@ object Chrome {
   var isSamsung = false
   var isVivaldi = false
 
+  val IO = Executors.newCachedThreadPool()
   val cspBypassed = mutableSetOf<DevToolClient>()
 
   fun init(ctx: Context, packageName: String? = null) {
@@ -135,7 +136,7 @@ object Chrome {
       bypassCSP: Boolean = false,
   ) {
     if (forceDevTools) {
-      thread {
+      this.IO.submit {
         val tabId =
             if (WebViewHook.isInit) {
               val url = getUrl(currentTab)

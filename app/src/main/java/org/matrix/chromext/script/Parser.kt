@@ -2,9 +2,9 @@ package org.matrix.chromext.script
 
 import java.net.HttpURLConnection
 import java.net.URL
-import kotlin.concurrent.thread
 import kotlin.text.Regex
 import org.json.JSONObject
+import org.matrix.chromext.Chrome
 
 private val blocksReg =
     Regex(
@@ -62,7 +62,7 @@ fun parseScript(input: String, storage: String? = null): Script? {
     return null
   } else {
     val lib = mutableListOf<String>()
-    thread { script.require.forEach { runCatching { lib.add(downloadLib(it)) } } }
+    Chrome.IO.submit { script.require.forEach { runCatching { lib.add(downloadLib(it)) } } }
     val parsed =
         Script(
             script.namespace + ":" + script.name,

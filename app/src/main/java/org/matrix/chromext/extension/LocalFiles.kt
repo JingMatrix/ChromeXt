@@ -5,7 +5,6 @@ import java.io.FileReader
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.URLConnection
-import kotlin.concurrent.thread
 import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
@@ -84,11 +83,11 @@ object LocalFiles {
       server.bind(null)
       val port = server.getLocalPort()
       Log.d("Listening at port ${port} for ${id}")
-      thread {
+      Chrome.IO.submit {
         runCatching {
               while (true) {
                 val socket = server.accept()
-                thread { serveFiles(id, socket) }
+                Chrome.IO.submit { serveFiles(id, socket) }
               }
             }
             .onFailure {
