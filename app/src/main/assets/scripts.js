@@ -220,7 +220,11 @@ if (typeof ChromeXt == "undefined") {
         Object.defineProperty(globalThis, name, {
           value: ChromeXt,
         });
-        delete globalThis.ChromeXt;
+        if (typeof userDefinedChromeXt !== undefined) {
+          globalThis.ChromeXt = userDefinedChromeXt;
+        } else {
+          delete globalThis.ChromeXt;
+        }
       }
     }
     unlock(key, apiOnly = true) {
@@ -253,6 +257,7 @@ if (typeof ChromeXt == "undefined") {
     }
   }
   const ChromeXt = new ChromeXtTarget();
+  const userDefinedChromeXt = globalThis.ChromeXt;
   globalThis.ChromeXt = ChromeXt;
   Object.freeze(ChromeXt);
 } else {
