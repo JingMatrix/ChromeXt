@@ -279,7 +279,7 @@ object Listener {
         if (detail.has("message")) {
           val message = JSONObject(detail.getString("message"))
           target?.command(
-              message.getInt("id"), message.getString("method"), message.getJSONObject("params"))
+              message.getInt("id"), message.getString("method"), message.optJSONObject("params"))
         } else {
           fun response(res: JSONObject) {
             if (Chrome.checkTab(currentTab)) {

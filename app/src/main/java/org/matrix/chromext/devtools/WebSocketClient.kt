@@ -50,11 +50,12 @@ class DevToolClient(tabId: String) : LocalSocket() {
     return mClosed
   }
 
-  fun command(id: Int?, method: String, params: JSONObject) {
+  fun command(id: Int?, method: String, params: JSONObject?) {
     if (isClosed()) {
       return
     }
-    val msg = JSONObject(mapOf("method" to method, "params" to params))
+    val msg = JSONObject(mapOf("method" to method))
+    if (params != null) msg.put("params", params)
 
     if (id == null) {
       msg.put("id", this.id)
