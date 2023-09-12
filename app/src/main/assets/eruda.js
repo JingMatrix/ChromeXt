@@ -57,8 +57,8 @@ eruda._initDevTools = new Proxy(eruda._initDevTools, {
         createHTML: (s) => s,
       });
     } catch {
-      stubHTMLPolicy = trustedTypes.polices.values().next().value;
-      stubHTMLPolicy.bypass = true;
+      stubHTMLPolicy = ChromeXt.trustedTypes.polices.values().next().value;
+      ChromeXt.trustedTypes.bypass = true;
     }
     const _insertAdjacentHTML = HTMLElement.prototype.insertAdjacentHTML;
     HTMLDivElement.prototype.insertAdjacentHTML = function (p, t) {

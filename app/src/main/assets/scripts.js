@@ -4,6 +4,47 @@ if (typeof ChromeXt == "undefined") {
   const ChromeXtTargetKeys = ["scripts", "commands", "cspRules", "filters"];
   let unlock;
 
+  const cachedTypes = {
+    polices: new Set(),
+    bypass: false,
+  };
+
+  trustedTypes.createPolicy = new Proxy(trustedTypes.createPolicy, {
+    apply(target, thisArg, args) {
+      const policyOptions = args[1] || {};
+      const original = policyOptions.createHTML;
+      function createHTML() {
+        if (cachedTypes.bypass) {
+          return arguments[0];
+        } else {
+          if (typeof original == "function") {
+            return original.apply(policyOptions, arguments);
+          } else {
+            const error = TypeError(
+              `Failed to execute 'createHTML' on 'TrustedTypePolicy': Policy ${args[0]}'s TrustedTypePolicyOptions did not specify a 'createHTML' member.`
+            );
+            const stack = error.stack.split("\n");
+            if (stack.length > 1) stack.splice(1, 1);
+            error.stack = stack.join("\n");
+            throw error;
+          }
+        }
+      }
+
+      args[1] = new Proxy(policyOptions, {
+        get(target, prop) {
+          if (prop == "createHTML") return createHTML;
+          let val = target[prop];
+          if (typeof val == "function") val = val.bind(target);
+          return val;
+        },
+      });
+      const result = target.apply(thisArg, args);
+      cachedTypes.polices.add(result);
+      return result;
+    },
+  });
+
   class SyncArray extends Array {
     #name;
     #sync;
@@ -84,6 +125,9 @@ if (typeof ChromeXt == "undefined") {
     #commands;
     #cspRules;
     #filters;
+    get trustedTypes() {
+      return cachedTypes;
+    }
     constructor(debug, target) {
       if (typeof debug == "function" && target instanceof EventTarget) {
         this.#debug = debug;
@@ -204,23 +248,6 @@ if (typeof ChromeXt == "undefined") {
 } else {
   throw Error("ChromeXt is already defined, cancel initialization");
 }
-
-trustedTypes.polices = new Set();
-trustedTypes.createPolicy = new Proxy(trustedTypes.createPolicy, {
-  apply(target, thisArg, args) {
-    const createHTML = args[1].createHTML;
-    args[1].createHTML = function () {
-      if (this.bypass == true) {
-        return arguments[0];
-      } else {
-        return createHTML.apply(this, arguments);
-      }
-    };
-    const result = target.apply(thisArg, args);
-    trustedTypes.polices.add(result);
-    return result;
-  },
-});
 // Kotlin separator
 
 try {
