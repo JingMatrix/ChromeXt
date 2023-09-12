@@ -7,11 +7,8 @@ import android.os.Environment
 import android.util.Pair
 import android.view.View
 import android.view.View.OnClickListener
-import android.widget.FrameLayout
-import android.widget.LinearLayout
 import java.io.File
 import java.io.FileReader
-import java.lang.ref.WeakReference
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
@@ -25,40 +22,17 @@ import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.findFieldOrNull
 import org.matrix.chromext.utils.findMethod
 
-object MenuProxy {
+object PreferenceProxy {
   private var clickHooked: Boolean = false
 
   val developerSettings =
       Chrome.load("org.chromium.chrome.browser.tracing.settings.DeveloperSettings")
   val chromeTabbedActivity = UserScriptProxy.chromeTabbedActivity
-  val propertyModel = Chrome.load("org.chromium.ui.modelutil.PropertyModel")
-  val tab = Chrome.load("org.chromium.chrome.browser.tab.Tab")
 
   // val tabWebContentsUserData =
   //     Chrome.load("org.chromium.chrome.browser.tab.TabFavicon").superclass as Class<*>
   // val overscrollRefreshHandler = Chrome.load("org.chromium.ui.OverscrollRefreshHandler")
 
-  private val pageInfoController =
-      Chrome.load("org.chromium.components.page_info.PageInfoController")
-  val pageInfoRowView = Chrome.load("org.chromium.components.page_info.PageInfoRowView")
-  val mIcon = pageInfoRowView.declaredFields[0]
-  val mTitle = pageInfoRowView.declaredFields[1]
-  val mSubtitle = pageInfoRowView.declaredFields[2]
-  val pageInfoView =
-      if (Chrome.isEdge) {
-        Chrome.load("org.chromium.components.page_info.PageInfoView")
-      } else {
-        findField(pageInfoController) { type.superclass == FrameLayout::class.java }.type
-      }
-  val mRowWrapper = findFieldOrNull(pageInfoView) { type == LinearLayout::class.java }
-  val pageInfoControllerRef =
-      // A particular WebContentsObserver designed for PageInfoController
-      findField(pageInfoController) {
-            type.declaredFields.size == 1 &&
-                (type.declaredFields[0].type == pageInfoController ||
-                    type.declaredFields[0].type == WeakReference::class.java)
-          }
-          .type
   val intentHandler =
       // Grep 'Ignoring internal Chrome URL from untrustworthy source.' to get the class
       // org/chromium/chrome/browser/IntentHandler.java
@@ -71,8 +45,6 @@ object MenuProxy {
 
   val emptyTabObserver =
       Chrome.load("org.chromium.chrome.browser.login.ChromeHttpAuthHandler").superclass as Class<*>
-  val tabImpl = UserScriptProxy.tabImpl
-  val mIsLoading = UserScriptProxy.mIsLoading
 
   private val preference = Chrome.load("androidx.preference.Preference")
   private val mClickListener =
@@ -93,12 +65,8 @@ object MenuProxy {
       }
 
   private val preferenceFragmentCompat =
-      if (Chrome.isBrave) {
-        developerSettings.superclass.superclass
-      } else {
-        developerSettings.superclass
-      }
-          as Class<*>
+      if (Chrome.isBrave) developerSettings.superclass.superclass
+      else developerSettings.superclass as Class<*>
   val findPreference =
       findMethod(preferenceFragmentCompat) {
         parameterTypes contentDeepEquals arrayOf(CharSequence::class.java) &&
@@ -111,7 +79,7 @@ object MenuProxy {
                 it.returnType == Void.TYPE
             // There exist other methods with the same signatures
           }
-          .last()
+          .first()
 
   fun setClickListener(preferences: Map<String, Any>) {
     val ctx = Chrome.getContext()
