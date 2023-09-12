@@ -12,6 +12,7 @@
 		<package android:name="com.microsoft.emmx.beta"/>
 		<package android:name="com.microsoft.emmx.canary"/>
 		<package android:name="com.microsoft.emmx.dev"/>
+		<package android:name="com.naver.whale"/>
 		<package android:name="com.sec.android.app.sbrowser"/>
 		<package android:name="com.sec.android.app.sbrowser.beta"/>
 		<package android:name="com.vivaldi.browser"/>

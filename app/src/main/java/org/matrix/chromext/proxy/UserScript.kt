@@ -5,6 +5,7 @@ import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findField
+import org.matrix.chromext.utils.findFieldOrNull
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.invokeMethod
 import org.matrix.chromext.utils.parseOrigin
@@ -43,6 +44,7 @@ object UserScriptProxy {
         Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
       }
   val mNativeAndroid = findField(tabImpl) { type == Long::class.java }
+  val mTab = findFieldOrNull(tabWebContentsDelegateAndroidImpl) { type == tabImpl }
   val mIsLoading =
       tabImpl.declaredFields
           .run {
@@ -101,8 +103,7 @@ object UserScriptProxy {
     if (Chrome.isSamsung) {
       return delegate
     } else {
-      val mTab = tabWebContentsDelegateAndroidImpl.getDeclaredField("a")
-      return mTab.get(delegate)
+      return mTab?.get(delegate)
     }
   }
 

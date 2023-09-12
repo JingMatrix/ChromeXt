@@ -28,6 +28,7 @@ val supportedPackages =
         "com.microsoft.emmx.beta",
         "com.microsoft.emmx.canary",
         "com.microsoft.emmx.dev",
+        "com.naver.whale",
         "com.sec.android.app.sbrowser",
         "com.sec.android.app.sbrowser.beta",
         "com.vivaldi.browser",
@@ -51,11 +52,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
           .declaredConstructors[1]
           .hookAfter {
             Chrome.init(it.args[0] as Context, lpparam.packageName)
-            if (Chrome.isSamsung) {
-              initHooks(UserScriptHook, ContextMenuHook)
-            } else {
-              initHooks(UserScriptHook, MenuHook)
-            }
+            runCatching { initHooks(UserScriptHook, MenuHook) }
+                .onFailure { initHooks(UserScriptHook, ContextMenuHook) }
           }
     } else {
       val ctx = AndroidAppHelper.currentApplication()
@@ -91,13 +89,10 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
   private fun initHooks(vararg hook: BaseHook) {
     hook.forEach {
-      runCatching {
-            if (it.isInit) return@forEach
-            it.init()
-            it.isInit = true
-            Log.d("${it.javaClass.simpleName} hooked")
-          }
-          .onFailure { Log.ex(it) }
+      if (it.isInit) return@forEach
+      it.init()
+      it.isInit = true
+      Log.d("${it.javaClass.simpleName} hooked")
     }
   }
 }
