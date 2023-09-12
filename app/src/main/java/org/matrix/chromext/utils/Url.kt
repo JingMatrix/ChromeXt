@@ -66,7 +66,7 @@ fun isDevToolsFrontEnd(url: String?): Boolean {
 }
 
 fun isUserScript(url: String?): Boolean {
-  if (url == null) return false
+  if (url == null || url.startsWith("https://github.com/")) return false
   if (url.endsWith(".user.js")) {
     return true
   } else {
