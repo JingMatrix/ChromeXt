@@ -130,7 +130,7 @@ object ScriptDbManager {
         runScripts = true
       }
     }
-    if (runScripts) codes.add("ChromeXt.lock(${Local.key});")
+    if (runScripts) codes.add("ChromeXt.lock(${Local.key}, '${Local.name}');")
     codes.add("//# sourceURL=local://ChromeXt/init")
     webSettings?.javaScriptEnabled = true
     Chrome.evaluateJavascript(listOf(codes.joinToString("\n")), null, bypassSandbox, bypassSandbox)

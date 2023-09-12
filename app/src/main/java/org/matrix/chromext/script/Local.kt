@@ -76,7 +76,7 @@ object GM {
     code = "\n{const window=globalThis;\n${code}};"
     code = localScript.get("globalThis")!! + script.lib.joinToString("\n") + code
     codes.add(
-        "(()=>{ const GM = {key:${Local.key}}; const GM_info = ${GM_info}; GM_info.script.code = (key=null) => {${code}};\n${grants}GM.bootstrap();})();\n//# sourceURL=local://ChromeXt/${Uri.encode(script.id)}")
+        "(()=>{ const GM = {key:${Local.key}, name:'${Local.name}'}; const GM_info = ${GM_info}; GM_info.script.code = (key=null) => {${code}};\n${grants}GM.bootstrap();})();\n//# sourceURL=local://ChromeXt/${Uri.encode(script.id)}")
     return codes
   }
 }
@@ -92,6 +92,7 @@ object Local {
   val cspRule: String
   val cosmeticFilter: String
   val key = Random.nextDouble()
+  val name = getRandomString(25)
 
   var eruda_version: String
 
@@ -116,6 +117,7 @@ object Local {
                 .open("eruda.js")
                 .bufferedReader()
                 .use { it.readText() }
+                .replaceFirst("globalThis.ChromeXt", "globalThis." + name)
                 .replaceFirst("ChromeXtUnlockKeyForEruda", key.toString())
     encoding = ctx.assets.open("encoding.js").bufferedReader().use { it.readText() }
     eruda_version = getErudaVersion()
@@ -125,9 +127,12 @@ object Local {
             .bufferedReader()
             .use { it.readText() }
             .split("// Kotlin separator\n\n")
-    initChromeXt = localScript[0]
+    initChromeXt = localScript[0].replaceFirst("ChromeXt", name)
     anchorInChromeXt = initChromeXt.split("\n").indexOfFirst { it.endsWith("// Kotlin anchor") } + 2
-    openEruda = localScript[1].replaceFirst("ChromeXtUnlockKeyForEruda", key.toString())
+    openEruda =
+        localScript[1]
+            .replaceFirst("ChromeXt", name)
+            .replaceFirst("ChromeXtUnlockKeyForEruda", key.toString())
     cspRule = localScript[2]
     cosmeticFilter = localScript[3]
   }
@@ -143,5 +148,10 @@ object Local {
       }
     }
     return "latest"
+  }
+
+  fun getRandomString(length: Int): String {
+    val allowedChars = ('A'..'Z') + ('a'..'z')
+    return (1..length).map { allowedChars.random() }.joinToString("")
   }
 }

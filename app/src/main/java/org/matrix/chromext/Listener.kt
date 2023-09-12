@@ -150,7 +150,8 @@ object Listener {
             data.put("value", script.storage!!.get(key))
           }
           detail.put("data", data)
-          callback = "ChromeXt.unlock(${Local.key}).post('scriptSyncValue', ${detail});"
+          callback =
+              "globalThis.${Local.name}.unlock(${Local.key}).post('scriptSyncValue', ${detail});"
         } else {
           script.storage!!.remove(key)
         }

@@ -1,4 +1,8 @@
 if (typeof ChromeXt == "undefined") {
+  const globalKeys = Object.keys(window);
+  // Drop user-defined keys in the global context
+  globalKeys.push(...Object.keys(EventTarget.prototype));
+
   const ArrayKeys = Object.getOwnPropertyNames(Array.prototype);
   const EventTargetKeys = Object.getOwnPropertyNames(EventTarget.prototype);
   const ChromeXtTargetKeys = ["scripts", "commands", "cspRules", "filters"];
@@ -67,7 +71,7 @@ if (typeof ChromeXt == "undefined") {
       });
 
       Object.defineProperty(this, "sync", {
-        value: (data = this, ChromeXt = this.#key || globalThis.ChromeXt) => {
+        value: (data = this, ChromeXt = this.#key || ChromeXt) => {
           this.#key = null;
           if (this.#sync && typeof this.#name == "string") {
             const payload = {
@@ -127,6 +131,9 @@ if (typeof ChromeXt == "undefined") {
     #filters;
     get trustedTypes() {
       return cachedTypes;
+    }
+    get globalKeys() {
+      return globalKeys;
     }
     constructor(debug, target) {
       if (typeof debug == "function" && target instanceof EventTarget) {
@@ -201,14 +208,19 @@ if (typeof ChromeXt == "undefined") {
     isLocked() {
       return this.#key != null;
     }
-    lock(key) {
+    lock(key, name) {
       if (
         !this.isLocked() &&
+        name.length > 20 &&
         typeof key == "number" &&
         typeof unlock != "symbol"
       ) {
         this.#key = key;
         unlock = Symbol(key);
+        Object.defineProperty(globalThis, name, {
+          value: ChromeXt,
+        });
+        delete globalThis.ChromeXt;
       }
     }
     unlock(key, apiOnly = true) {
@@ -240,10 +252,8 @@ if (typeof ChromeXt == "undefined") {
       }
     }
   }
-  Object.defineProperty(globalThis, "ChromeXt", {
-    value: new ChromeXtTarget(),
-    enumerable: true,
-  });
+  const ChromeXt = new ChromeXtTarget();
+  globalThis.ChromeXt = ChromeXt;
   Object.freeze(ChromeXt);
 } else {
   throw Error("ChromeXt is already defined, cancel initialization");
@@ -284,7 +294,7 @@ if (ChromeXt.cspRules.length > 0) {
 
 if (ChromeXt.filters.length > 0) {
   const filter = ChromeXt.filters.join(", ");
-  function GM_addStyle(css) {
+  let GM_addStyle = (css) => {
     const style = document.createElement("style");
     style.textContent = css;
     if (document.head) {
@@ -292,7 +302,7 @@ if (ChromeXt.filters.length > 0) {
     } else {
       setTimeout(() => document.head.appendChild(style));
     }
-  }
+  };
   GM_addStyle(filter + " {display: none !important;}");
   window.addEventListener("load", () => {
     document.querySelectorAll(filter).forEach((node) => {

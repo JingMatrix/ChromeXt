@@ -169,7 +169,7 @@ object Chrome {
       excludeSelf: Boolean = true,
       matching: (String) -> Boolean
   ) {
-    val code = "ChromeXt.unlock(${Local.key}).post('${event}', ${data});"
+    val code = "globalThis.${Local.name}.unlock(${Local.key}).post('${event}', ${data});"
     Log.d("broadcasting ${event}")
 
     val tabs = filterTabs {

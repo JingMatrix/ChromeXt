@@ -11,6 +11,7 @@ delete GM.globalThis;
 delete GM_info.script.code;
 delete GM_info.script.sync_code;
 delete GM.key;
+delete GM.name;
 Object.freeze(GM_info.script);
 const ChromeXt = GM.ChromeXt;
 if (typeof GM_xmlhttpRequest == "function" && !GM_xmlhttpRequest.strict)
@@ -646,8 +647,8 @@ GM.bootstrap = () => {
   } else {
     const handler = {
       // A handler to block access to globalThis
-      window: { GM },
-      keys: Object.keys(window),
+      window: { GM, ChromeXt: globalThis[GM.name] },
+      keys: Array.from(ChromeXt.globalKeys),
       // These keys will be accessible to the getter but not to the setter
       set(target, prop, value) {
         if (target[prop] != value || target.propertyIsEnumerable(prop)) {
@@ -678,9 +679,6 @@ GM.bootstrap = () => {
         }
       },
     };
-    handler.keys.splice(handler.keys.findIndex((e) => e == "ChromeXt") + 1);
-    // Drop user-defined keys in the global context
-    handler.keys.push(...Object.keys(EventTarget.prototype));
     if (grants.includes("unsafeWindow"))
       handler.window.unsafeWindow = unsafeWindow;
     GM.globalThis = new Proxy(window, handler);
@@ -859,8 +857,12 @@ GM.ChromeXtLock = class {
   #key = key;
   #ChromeXt;
   constructor(GM) {
-    if (typeof GM.key == "number" && ChromeXt.isLocked()) {
-      this.#ChromeXt = ChromeXt.unlock(GM.key, false);
+    if (
+      typeof GM.key == "number" &&
+      typeof GM.name == "string" &&
+      globalThis[GM.name].isLocked()
+    ) {
+      this.#ChromeXt = globalThis[GM.name].unlock(GM.key, false);
     } else {
       throw new Error("Invalid key to construct a lock");
     }
