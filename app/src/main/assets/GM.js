@@ -379,9 +379,9 @@ function GM_xmlhttpRequest(details) {
       request = details;
     } else {
       request = new Request(details.url, {
-        ...details,
         cache: "force-cache",
         body: details.data,
+        ...details,
       });
     }
     request.signal.addEventListener("abort", xhr.abort);
