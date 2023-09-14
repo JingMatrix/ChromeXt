@@ -17,6 +17,7 @@ import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 import org.matrix.chromext.script.Local
+import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.findFieldOrNull
@@ -95,6 +96,7 @@ object PreferenceProxy {
         preferences["gesture_mod"],
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
             sharedPref.getBoolean("gesture_mod", true))
+    setChecked.invoke(preferences["keep_storage"], ScriptDbManager.keepStorage)
 
     var reset_confirming = 1
     val listeners =
@@ -186,6 +188,16 @@ object PreferenceProxy {
                   } else {
                     setChecked.invoke(obj, false)
                     Log.toast(ctx, "Feature unavaible for your Chrome or Android versions")
+                  }
+                },
+            "keep_storage" to
+                fun(obj: Any) {
+                  val enabled = sharedPref.getBoolean("keep_storage", true)
+                  setChecked.invoke(obj, !enabled)
+                  ScriptDbManager.keepStorage = !enabled
+                  with(sharedPref.edit()) {
+                    putBoolean("keep_storage", !enabled)
+                    apply()
                   }
                 },
             "reset" to

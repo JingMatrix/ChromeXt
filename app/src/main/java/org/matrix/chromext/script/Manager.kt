@@ -26,6 +26,7 @@ object ScriptDbManager {
   val cosmeticFilters: MutableMap<String, String>
   val userAgents: MutableMap<String, String>
   val cspRules: MutableMap<String, String>
+  var keepStorage: Boolean
 
   init {
     val ctx = Chrome.getContext()
@@ -41,6 +42,9 @@ object ScriptDbManager {
     cspRules =
         ctx.getSharedPreferences("CSPRule", Context.MODE_PRIVATE).getAll()
             as MutableMap<String, String>
+
+    keepStorage =
+        ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE).getBoolean("keep_storage", true)
   }
 
   fun insert(vararg script: Script) {
@@ -49,7 +53,9 @@ object ScriptDbManager {
     script.forEach {
       val lines = db.delete("script", "id = ?", arrayOf(it.id))
       if (lines > 0) {
-        Log.d("Update ${lines.toString()} rows with id ${it.id}")
+        val id = it.id
+        Log.d("Update ${lines} rows with id ${id}")
+        if (keepStorage) it.storage = scripts.find { it.id == id }?.storage
       }
       val values =
           ContentValues().apply {
@@ -57,7 +63,7 @@ object ScriptDbManager {
             put("code", it.code)
             put("meta", it.meta)
             if (it.storage != null) {
-              put("storage", it.storage!!.toString())
+              put("storage", it.storage.toString())
             }
           }
       runCatching { db.insertOrThrow("script", null, values) }
