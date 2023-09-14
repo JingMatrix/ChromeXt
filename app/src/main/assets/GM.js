@@ -639,7 +639,11 @@ GM.bootstrap = () => {
 
   const grants = meta.grants;
 
-  if (meta["inject-into"] == "page" || grants.includes("none")) {
+  if (
+    meta["inject-into"] == "page" ||
+    grants.includes("none") ||
+    grants.includes("unsafeWindow")
+  ) {
     GM.globalThis = window;
   } else {
     const handler = {
