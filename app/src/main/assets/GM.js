@@ -175,7 +175,7 @@ function GM_deleteValue(key) {
 // Kotlin separator
 
 function GM_getValue(key, default_value) {
-  return GM_info.storage[key] || default_value;
+  return key in GM_info.storage ? GM_info.storage[key] : default_value;
 }
 // Kotlin separator
 
@@ -740,13 +740,6 @@ GM.bootstrap = () => {
       if (e.detail.id != GM_info.script.id) return;
       e.stopImmediatePropagation();
       const data = e.detail.data;
-      if ("init" in data && !storageHandler.inited) {
-        storageHandler.inited = true;
-        storageHandler.storage = data.init;
-        runScript(meta);
-        return;
-      }
-
       if ("key" in data && data.key in GM_info.storage) {
         if (e.detail.uuid == GM_info.uuid && e.detail.broadcast !== true)
           return;
