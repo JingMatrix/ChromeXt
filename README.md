@@ -14,7 +14,7 @@ such as [Egde](https://www.microsoft.com/en-us/edge/download),
 and [Brave](https://github.com/brave/brave-browser), are fully supported.
 
 Most WebView based browsers are also supported, if not, please report it.
-Note for WebView based browsers users: you _only_ need to enable this module for the browser application you wish to use, _not_ for any possible WebView applications, _neither_ for Android system.
+Note for WebView based browsers users: you _only_ need to enable this module for the browser application you wish to use, _not_ for any possible WebView applications, _neither_ for the Android system.
 
 ## Usage
 
@@ -23,15 +23,15 @@ Note for WebView based browsers users: you _only_ need to enable this module for
 ChromeXt requires **Xposed framework**.
 
 For root users, install [LSPosed](https://github.com/LSPosed/LSPosed) first,
-pick up the latest built APK from my repo's [GitHub Action](https://github.com/JingMatrix/ChromeXt/actions) and install it.
+pick up the latest built APK from my repo's [GitHub Actions](https://github.com/JingMatrix/ChromeXt/actions) and install it.
 
 For non-root users,
 I modify a bit [LSPatch](https://github.com/JingMatrix/LSPatch) to support `ChromeXt`; here is how to use it:
 1. Download the latest `lspatch-release` from my [GitHub Actions](https://github.com/JingMatrix/LSPatch/actions).
 2. Download the latest `ChromeXt.apk` from my [GitHub Actions](https://github.com/JingMatrix/ChromeXt/actions).
 3. Extract previously downloaded files to get files `lspatch.jar` (with some suffix) and `ChromeXt-signed.apk`.
-4. Patch your APK (taking `arm64_ChromePublic.apk` as example) using the following command: `java -jar lspatch.jar arm64_ChromePublic.apk -d -v -m ChromeXt-signed.apk --force`. If `java` environment is not available, consider using the provided `manager` APK.
-5. Install the patched APK, which might require you to first uninstall the one on your phone.
+4. Patch your APK (taking `arm64_ChromePublic.apk` as example) using the following command: `java -jar lspatch.jar arm64_ChromePublic.apk -d -v -m ChromeXt-signed.apk --force`. If `java` environment is not available, please consider using the provided `manager` APK.
+5. Install the patched APK, which might require you to first uninstall the one on your devices.
 
 Notes: currently _to download_ files from `GitHub Actions`, one needs to log in GitHub.
 
@@ -44,18 +44,18 @@ You can then install UserScripts from popular sources: URLs that ends with `.use
 Currently, ChromeXt supports almost all [Tampermonkey APIs](https://www.tampermonkey.net/documentation.php?locale=en):
 
 1. @name (colons not allowed), @namespace, @description and so on
-2. @match (use the [Chrome Standard](https://developer.chrome.com/docs/extensions/mv2/match_patterns/), supports regular expressions)
+2. @match (conform to the [Chrome Standard](https://developer.chrome.com/docs/extensions/mv2/match_patterns/), supports [regular expressions](https://developer.android.com/reference/java/util/regex/Pattern))
 3. @include = @match, @exclude
 4. @run-at: document-start, document-end, document-idle (the default and fallback value)
-5. @grant GM_addStyle, GM_addElement, GM_xmlhttpRequest, GM_openInTab, GM_registerMenuCommand (shown in the `Resources` panel of eruda), GM_unregisterMenuCommand, GM_download, unsafeWindow (= window)
-6. @grant GM_setValue, GM_getValue (less powerful than GM.getValue), GM_listValues, GM_addValueChangeListener, GM_removeValueChangeListener, GM_setClipboard
-7. @require, @resource (Without [Subresource Integrity](https://www.tampermonkey.net/documentation.php#api:Subresource_Integrity))
+5. @grant: GM_addStyle, GM_addElement, GM_xmlhttpRequest, GM_openInTab, GM_registerMenuCommand (shown in the `Resources` panel of eruda), GM_unregisterMenuCommand, GM_download, unsafeWindow (= window)
+6. @grant: GM_setValue, GM_getValue (less powerful than GM.getValue), GM_listValues, GM_addValueChangeListener, GM_removeValueChangeListener, GM_setClipboard
+7. @require, @resource (without [Subresource Integrity](https://www.tampermonkey.net/documentation.php#api:Subresource_Integrity))
 
-These APIs are implemented differently from the official ones, refer to the source files
+These APIs are implemented differently from the official ones, please refer to the source files
 [Local.kt](app/src/main/java/org/matrix/chromext/script/Local.kt) and
 [GM.js](app/src/main/assets/GM.js) if you have doubts or questions.
 
-Moreover, there is the powerful (dangerous) `GM.ChromeXt` API, which must be declared by `@grant GM.ChromeXt` to _unlock_ its usage.
+Moreover, there is the powerful (also dangerous) `GM.ChromeXt` API, which must be declared by `@grant GM.ChromeXt` to _unlock_ its usage.
 It is locked by default so that the users are protected from malicious UserScripts exploiting ChromeXt.
 This API allows scripts to use the JavaScript method `ChromeXt.dispatch(action, payload)`, which is fundamental to implement other APIs. (Hence, one can find usage examples in [GM.js](app/src/main/assets/GM.js)).
 Dispatched `action` and `payload` are handled by [Listener.kt](app/src/main/java/org/matrix/chromext/Listener.kt).
@@ -71,9 +71,9 @@ Use the `Install UserScript` page menu to install your modified UserScript.
 
 ### DevTools for developers
 
-From the three dots page menu, ChromeXt offers you
-1. `Developer tools` in the UserScript manager front end,
-2. `Eruda console` in other pages.
+From the three dots page menu, ChromeXt offers you the
+1. `Developer tools` menu for the UserScript manager front end,
+2. `Eruda console` menu for other pages.
 
 For `Edge` browser, these menus are moved to the page info menu,
 which locates at the left corner inside the URL input bar.
@@ -84,23 +84,23 @@ For WebView based browsers and _Samsung Internet_, these menu items are presente
 
 Since WebView based browsers have no unified designs, the following
 first four features are not supported for them.
-(Unfortunately, they are neither supported for _Samsung Internet_.)
+(By the same reason, they are neither supported for _Samsung Internet_.)
 
 ### Open in Chrome
 
 The application `ChromeXt` is able to
-1. received shared texts to search them online,
+1. received shared texts to search them using `Google`,
 2. open JavaScript files to install them as UserScripts.
 
 The reversed priority order of opening which Chromium based browsers is given in [AndroidManifest.xml](app/src/main/AndroidManifest.xml).
 
 ### Solution of system gesture conflicts
 
-The history forward gesture of Chrome is now available near the vertical center of screen.
+By default, the history forward gesture of Chrome is available near the vertical center of screen.
 On other areas, only the system gesture is available.
-One can disable it through the `Developer options` menu.
+One can disable this behavior through the `Developer options` menu.
 (Tap seven times on the Chrome version from the Chrome settings, you will see the `Developer options` menu.)
-(In [Vivaldi](https://vivaldi.com/en/android/) browsers, `Developer options` menu is removed by its authors.)
+(In [Vivaldi](https://vivaldi.com/en/android/) browsers, `Developer options` menu is removed by its developers.)
 
 ### Enable reader mode manually
 
@@ -115,7 +115,7 @@ Bookmarks can be exported in HTML format through the `Developer options` menu.
 For blocking network requests, I recommend to use `AdAway` or any proxy AD Blocker such as `clash`.
 
 A content cosmetic blocker is embedded into ChromeXt with the help of eruda.
-Open the `Eruda console`.
+To use it, first open the `Eruda console`.
 In the `Elements` panel, one can use the `pointer` icon to select elements on the page.
 After clicking the `delete` icon for a selected element, a corresponding filter will be saved to the `Resources` panel,
 where one can manage previous added filters.
@@ -187,6 +187,7 @@ and [GM.js](app/src/main/assets/GM.js)
 - [x] Show executed scripts on current page
 - [x] Make a YouTube presentation video
 - [x] Support Samsung Internet browser
+- [ ] Improve valid UserScripts Url detection
 - [ ] Use `iframe` and local server to run general [WebExtensions](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions)
 - [ ] Support importing UserScripts from Tampermonkey exports
 - [ ] Support backup and restore
