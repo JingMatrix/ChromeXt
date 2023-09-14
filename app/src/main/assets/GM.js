@@ -284,7 +284,6 @@ function GM_xmlhttpRequest(details) {
 
   const xhrHandler = {
     target: new EventTarget(),
-    promise: null,
     get() {
       const prop = arguments[1];
       if (prop in EventTarget.prototype) {
@@ -300,8 +299,6 @@ function GM_xmlhttpRequest(details) {
         ].includes(prop)
       ) {
         return details[prop];
-      } else if (prop in Promise.prototype) {
-        return this.promise[prop].bind(this.promise);
       } else {
         return Reflect.get(...arguments);
       }
@@ -666,12 +663,7 @@ GM.bootstrap = () => {
             !target.propertyIsEnumerable(prop))
           // Simulate an isolated window object, where common functions are available
         ) {
-          const v = target[prop];
-          return prop != "ChromeXt" &&
-            this.keys.includes(prop) &&
-            typeof v == "function"
-            ? v.bind(target)
-            : v;
+          return Reflect.get(...arguments);
           // Avoid changing the binding property of global non-enumerable classes
           // ChromeXt is non-configurable, and thus should not be bound
         } else {

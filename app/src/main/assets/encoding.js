@@ -73,7 +73,8 @@ class TwoBytes extends Encoding {
         for (let b2 = b2Begin; b2 <= b2End; b2++) {
           const charCode = (b2 << 8) | b1;
           const str = decode(new Uint16Array([charCode]));
-          if (!str.includes(invalidChar)) map.push([str.codePointAt(0), charCode]);
+          if (!str.includes(invalidChar))
+            map.push([str.codePointAt(0), charCode]);
         }
       }
     });
@@ -128,6 +129,7 @@ function fixEncoding(tryPart = false, tryFetch = true, node) {
     return true;
   }
   let converter = () => invalidChar;
+  let encoder = null;
   if (
     encoding.startsWith("windows") ||
     encoding.startsWith("iso-8859") ||
@@ -135,18 +137,15 @@ function fixEncoding(tryPart = false, tryFetch = true, node) {
     encoding.startsWith("ibm") ||
     encoding.includes("mac")
   ) {
-    const encoder = new SingleByte(encoding);
-    converter = encoder.convert.bind(encoder);
+    encoder = new SingleByte(encoding);
   } else if (encoding.startsWith("gb")) {
-    const encoder = new GBK(encoding);
-    converter = encoder.convert.bind(encoder);
+    encoder = new GBK(encoding);
   } else if (encoding == "shift_jis") {
-    const encoder = new SJIS(encoding);
-    converter = encoder.convert.bind(encoder);
+    encoder = new SJIS(encoding);
   } else {
-    const encoder = new TwoBytes(encoding);
-    converter = encoder.convert.bind(encoder);
+    encoder = new TwoBytes(encoding);
   }
+  if (encoder !== null) converter = encoder.convert.bind(encoder);
   let failed, converted;
   if (!tryPart && text.includes(invalidChar)) {
     failed = true;

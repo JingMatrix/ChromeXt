@@ -36,11 +36,9 @@ if (typeof Object.ChromeXt == "undefined") {
       }
 
       args[1] = new Proxy(policyOptions, {
-        get(target, prop) {
+        get(_target, prop) {
           if (prop == "createHTML") return createHTML;
-          let val = target[prop];
-          if (typeof val == "function") val = val.bind(target);
-          return val;
+          return Reflect.get(...arguments);
         },
       });
       const result = target.apply(thisArg, args);
