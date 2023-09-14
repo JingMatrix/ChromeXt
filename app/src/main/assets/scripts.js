@@ -1,4 +1,4 @@
-if (typeof ChromeXt == "undefined") {
+if (typeof Object.ChromeXt == "undefined") {
   const globalKeys = Object.keys(window);
   // Drop user-defined keys in the global context
   globalKeys.push(...Object.keys(EventTarget.prototype));
@@ -217,13 +217,18 @@ if (typeof ChromeXt == "undefined") {
       ) {
         this.#key = key;
         unlock = Symbol(key);
-        Object.defineProperty(globalThis, name, {
-          value: ChromeXt,
+        delete Object.ChromeXt;
+        Object = new Proxy(Object, {
+          get(_target, prop) {
+            if (prop == name) {
+              return ChromeXt;
+            } else {
+              return Reflect.get(...arguments);
+            }
+          },
         });
-        if (typeof userDefinedChromeXt !== undefined) {
-          globalThis.ChromeXt = userDefinedChromeXt;
-        } else {
-          delete globalThis.ChromeXt;
+        if (typeof userDefinedChromeXt != "undefined") {
+          Object.ChromeXt = userDefinedChromeXt;
         }
       }
     }
@@ -257,9 +262,9 @@ if (typeof ChromeXt == "undefined") {
     }
   }
   const ChromeXt = new ChromeXtTarget();
-  const userDefinedChromeXt = globalThis.ChromeXt;
-  globalThis.ChromeXt = ChromeXt;
+  const userDefinedChromeXt = Object.ChromeXt;
   Object.freeze(ChromeXt);
+  Object.ChromeXt = ChromeXt;
 } else {
   throw Error("ChromeXt is already defined, cancel initialization");
 }
@@ -275,12 +280,12 @@ try {
   }
 } catch (e) {
   if (typeof define == "function") define.amd = false;
-  ChromeXt.unlock(ChromeXtUnlockKeyForEruda).dispatch("loadEruda");
+  Object.ChromeXt.unlock(ChromeXtUnlockKeyForEruda).dispatch("loadEruda");
 }
 // Kotlin separator
 
-if (ChromeXt.cspRules.length > 0) {
-  ChromeXt.cspRules.forEach((rule) => {
+if (Object.ChromeXt.cspRules.length > 0) {
+  Object.ChromeXt.cspRules.forEach((rule) => {
     if (rule.length == 0) return;
     // Skip empty cspRules
     const meta = document.createElement("meta");
@@ -297,8 +302,8 @@ if (ChromeXt.cspRules.length > 0) {
 }
 // Kotlin separator
 
-if (ChromeXt.filters.length > 0) {
-  const filter = ChromeXt.filters.join(", ");
+if (Object.ChromeXt.filters.length > 0) {
+  const filter = Object.ChromeXt.filters.join(", ");
   let GM_addStyle = (css) => {
     const style = document.createElement("style");
     style.textContent = css;

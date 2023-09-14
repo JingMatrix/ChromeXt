@@ -1,4 +1,4 @@
-const ChromeXt = globalThis.ChromeXt.unlock(ChromeXtUnlockKeyForEruda, false);
+const ChromeXt = Object.ChromeXt.unlock(ChromeXtUnlockKeyForEruda, false);
 
 eruda._inLocalPage =
   ["content://", "file://"].includes(location.origin) ||

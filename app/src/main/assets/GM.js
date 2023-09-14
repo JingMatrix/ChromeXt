@@ -647,7 +647,7 @@ GM.bootstrap = () => {
   } else {
     const handler = {
       // A handler to block access to globalThis
-      window: { GM, ChromeXt: globalThis[GM.name] },
+      window: { GM, ChromeXt: Object[GM.name] },
       keys: Array.from(ChromeXt.globalKeys),
       // These keys will be accessible to the getter but not to the setter
       set(target, prop, value) {
@@ -853,9 +853,9 @@ GM.ChromeXtLock = class {
     if (
       typeof GM.key == "number" &&
       typeof GM.name == "string" &&
-      globalThis[GM.name].isLocked()
+      Object[GM.name].isLocked()
     ) {
-      this.#ChromeXt = globalThis[GM.name].unlock(GM.key, false);
+      this.#ChromeXt = Object[GM.name].unlock(GM.key, false);
     } else {
       throw new Error("Invalid key to construct a lock");
     }

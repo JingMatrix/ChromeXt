@@ -117,7 +117,7 @@ object Local {
                 .open("eruda.js")
                 .bufferedReader()
                 .use { it.readText() }
-                .replaceFirst("globalThis.ChromeXt", "globalThis." + name)
+                .replaceFirst("Object.ChromeXt", "Object." + name)
                 .replaceFirst("ChromeXtUnlockKeyForEruda", key.toString())
     encoding = ctx.assets.open("encoding.js").bufferedReader().use { it.readText() }
     eruda_version = getErudaVersion()
