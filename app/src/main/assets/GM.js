@@ -650,10 +650,9 @@ GM.bootstrap = () => {
       // A handler to block access to globalThis
       window: { GM, ChromeXt: Object[GM.name] },
       keys: Array.from(ChromeXt.globalKeys),
-      // These keys will be accessible to the getter but not to the setter
       set(target, prop, value) {
         if (target[prop] != value || target.propertyIsEnumerable(prop)) {
-          // Avoid redefining global non-enumerable classes, such as Object and Proxy, which are accessible to the getter
+          // Avoid redefining global non-enumerable classes, though they are accessible to the getter
           this.window[prop] = value;
         }
         return true;
@@ -661,15 +660,15 @@ GM.bootstrap = () => {
       get(target, prop, receiver) {
         if (target[prop] == target) return receiver;
         // Block possible jail break
-        if (
-          this.keys.includes(prop) ||
-          (typeof target[prop] != "undefined" &&
-            !target.propertyIsEnumerable(prop))
-          // Simulate an isolated window object, where common functions are available
+        if (this.keys.includes(prop)) {
+          const val = target[prop];
+          return typeof val == "function" ? val.bind(target) : val;
+        } else if (
+          typeof target[prop] != "undefined" &&
+          !target.propertyIsEnumerable(prop)
         ) {
+          // Should never change the binding property of global non-enumerable classes
           return Reflect.get(...arguments);
-          // Avoid changing the binding property of global non-enumerable classes
-          // ChromeXt is non-configurable, and thus should not be bound
         } else {
           return this.window[prop];
         }
