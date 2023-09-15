@@ -235,42 +235,6 @@ function GM_xmlhttpRequest(details) {
   let useJSFetch = true;
   if (typeof details.forceCORS == "boolean") useJSFetch = !details.forceCORS;
   details.headers = new Headers(details.headers || {});
-  if (!details.headers.has("User-Agent")) {
-    details.headers.set("User-Agent", window.navigator.userAgent);
-  }
-  const forbidden_headers = [
-    "User-Agent",
-    // User-Agent is still a forbidden header name in chromium
-    "Cookie",
-    "Host",
-    "Origin",
-    "Referer",
-    // Consider frequent headers first
-    "Accept-Charset",
-    "Accept-Encoding",
-    "Access-Control-Request-Headers",
-    "Access-Control-Request-Method",
-    "Connection",
-    "Content-Length",
-    "Date",
-    "DNT",
-    "Expect",
-    "Keep-Alive",
-    "Permissions-Policy",
-    "TE",
-    "Trailer",
-    "Transfer-Encoding",
-    "Upgrade",
-    "Via",
-  ];
-  if (useJSFetch) {
-    for (const name of forbidden_headers) {
-      if (details.headers.has(name)) {
-        useJSFetch = false;
-        break;
-      }
-    }
-  }
 
   async function prepare(details) {
     if (details instanceof Request && details.method != "GET") {
@@ -301,6 +265,10 @@ function GM_xmlhttpRequest(details) {
         default:
           details.binary = false;
       }
+    }
+
+    if (details.headers instanceof Headers && !details.headers.has("User-Agent")) {
+      details.headers.set("User-Agent", window.navigator.userAgent);
     }
 
     const buffersize = details.buffersize;
@@ -416,19 +384,27 @@ function GM_xmlhttpRequest(details) {
     }
     if (details instanceof Request) {
       request = details;
-    } else {
+    } else if (useJSFetch) {
       request = new Request(details.url, {
         cache: "force-cache",
         body: details.data,
         ...details,
+        headers: {},
       });
+      for (const p of details.headers) {
+        request.headers.set(...p);
+        if (request.headers.get(p[0]) !== p[1]) {
+          useJSFetch = false;
+          break;
+        }
+      }
     }
-    request.signal.addEventListener("abort", xhr.abort);
     xhr.binaryType = ["arraybuffer", "blob", "stream"].includes(
       xhr.responseType
     );
     xhr.readyState = 1;
     if (useJSFetch) {
+      request.signal.addEventListener("abort", xhr.abort);
       await fetch(request)
         .then(async (response) => {
           const teedOff = response.body.tee();
