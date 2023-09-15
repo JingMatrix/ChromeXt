@@ -233,11 +233,43 @@ function GM_xmlhttpRequest(details) {
     : fallback_method;
 
   let useJSFetch = true;
+  if (typeof details.forceCORS == "boolean") useJSFetch = !details.forceCORS;
   details.headers = new Headers(details.headers || {});
   if (!details.headers.has("User-Agent")) {
     details.headers.set("User-Agent", window.navigator.userAgent);
-  } else if (details.headers.get("User-Agent") != window.navigator.userAgent) {
-    useJSFetch = false;
+  }
+  const forbidden_headers = [
+    "User-Agent",
+    // User-Agent is still a forbidden header name in chromium
+    "Cookie",
+    "Host",
+    "Origin",
+    "Referer",
+    // Consider frequent headers first
+    "Accept-Charset",
+    "Accept-Encoding",
+    "Access-Control-Request-Headers",
+    "Access-Control-Request-Method",
+    "Connection",
+    "Content-Length",
+    "Date",
+    "DNT",
+    "Expect",
+    "Keep-Alive",
+    "Permissions-Policy",
+    "TE",
+    "Trailer",
+    "Transfer-Encoding",
+    "Upgrade",
+    "Via",
+  ];
+  if (useJSFetch) {
+    for (const name of forbidden_headers) {
+      if (details.headers.has(name)) {
+        useJSFetch = false;
+        break;
+      }
+    }
   }
 
   async function prepare(details) {
