@@ -227,7 +227,18 @@ function GM_xmlhttpRequest(details) {
     }
   }
   const uuid = Math.random();
-  details.method = details.method ? details.method.toUpperCase() : "GET";
+  const fallback_method = typeof details.data == "undefined" ? "GET" : "POST";
+  details.method = details.method
+    ? details.method.toUpperCase()
+    : fallback_method;
+
+  let useJSFetch = true;
+  details.headers = new Headers(details.headers || {});
+  if (!details.headers.has("User-Agent")) {
+    details.headers.set("User-Agent", window.navigator.userAgent);
+  } else if (details.headers.get("User-Agent") != window.navigator.userAgent) {
+    useJSFetch = false;
+  }
 
   async function prepare(details) {
     if (details instanceof Request && details.method != "GET") {
@@ -259,16 +270,7 @@ function GM_xmlhttpRequest(details) {
           details.binary = false;
       }
     }
-    details.headers = details.headers || {};
-    if (details.headers instanceof Headers)
-      Object.defineProperty(details, "headers", {
-        value: Object.fromEntries(details.headers),
-      });
-    const hasUserAgent =
-      "User-Agent" in details.headers || "user-agent" in details.headers;
-    if (!hasUserAgent) {
-      details.headers["User-Agent"] = window.navigator.userAgent;
-    }
+
     const buffersize = details.buffersize;
     if (Number.isInteger(buffersize) && buffersize > 0 && buffersize < 256) {
       details.buffersize = buffersize;
@@ -329,7 +331,7 @@ function GM_xmlhttpRequest(details) {
     xhrHandler
   );
 
-  xhr.responseHandler = (resolve, reject) => {
+  xhr.responseHandler = async (resolve, reject) => {
     const sink = new ResponseSink(xhr);
     function listener(e) {
       let data, type;
@@ -350,10 +352,15 @@ function GM_xmlhttpRequest(details) {
         sink.writer.close().then(() => resolve(xhr.response));
       } else if (["timeout", "error"].includes(type)) {
         sink.writer.abort(type);
-        const error = new Error(data.message, {
-          cause: data.error || type.toUpperCase(),
-          fileName: xhr.url,
-        });
+        const error = new Error(
+          [data.status, data.statusText, data.message]
+            .filter((e) => e)
+            .join(", "),
+          {
+            cause: data.error || type.toUpperCase(),
+            fileName: xhr.url,
+          }
+        );
         error.name = data.type;
         reject(error);
         revoke(listener);
@@ -389,61 +396,68 @@ function GM_xmlhttpRequest(details) {
       xhr.responseType
     );
     xhr.readyState = 1;
-    fetch(request)
-      .then(async (response) => {
-        const teedOff = response.body.tee();
-        const res = new Response(teedOff[0], response);
-        const localRes = new Response(teedOff[1], response);
-        if (xhr.fetch) {
-          sink.dispatch("loadstart", res);
-          sink.dispatch("progress", res);
-          let type = xhr.responseType || "text";
-          if (type == "arraybuffer") type = "arrayBuffer";
-          if (type in localRes) {
-            resolve(await localRes[type]());
-          } else {
-            resolve(res);
+    if (useJSFetch) {
+      await fetch(request)
+        .then(async (response) => {
+          const teedOff = response.body.tee();
+          const res = new Response(teedOff[0], response);
+          const localRes = new Response(teedOff[1], response);
+          if (xhr.fetch) {
+            sink.dispatch("loadstart", res);
+            sink.dispatch("progress", res);
+            let type = xhr.responseType || "text";
+            if (type == "arraybuffer") type = "arrayBuffer";
+            if (type in localRes) {
+              resolve(await localRes[type]());
+            } else {
+              resolve(res);
+            }
+            sink.dispatch("load", res);
+            sink.dispatch("loadend", res);
+            return;
           }
-          sink.dispatch("load", res);
-          sink.dispatch("loadend", res);
-          return;
-        }
-        res.binary = xhr.binaryType;
-        if (!res.binary) {
-          res.chunk = await localRes.text();
-          listener(res, "progress");
-        } else {
-          const reader = localRes.body.getReader();
-          while (true) {
-            const result = await reader.read();
-            if (result.done) break;
-            res.chunk = result.value;
+          res.binary = xhr.binaryType;
+          if (!res.binary) {
+            res.chunk = await localRes.text();
             listener(res, "progress");
+          } else {
+            const reader = localRes.body.getReader();
+            while (true) {
+              const result = await reader.read();
+              if (result.done) break;
+              res.chunk = result.value;
+              listener(res, "progress");
+            }
+            reader.cancel();
           }
-          reader.cancel();
-        }
-        listener(res, "load");
-      })
-      .catch(async (e) => {
-        if (!(e instanceof TypeError)) {
-          sink.writer.abort("error");
-          reject(e);
-          return;
-        }
-        await prepare(details);
-        if (details instanceof Request) {
-          request = {};
-          for (const key in details) request[key] = details[key];
-        } else {
-          request = details;
-        }
-        ChromeXt.dispatch("xmlhttpRequest", {
-          id: GM_info.script.id,
-          request,
-          uuid,
+          listener(res, "load");
+        })
+        .catch((e) => {
+          if (!(e instanceof TypeError)) {
+            sink.writer.abort("error");
+            reject(e);
+          } else {
+            useJSFetch = false;
+          }
         });
-        ChromeXt.addEventListener("xmlhttpRequest", listener);
+    }
+    if (!useJSFetch) {
+      await prepare(details);
+      if (details instanceof Request) {
+        request = {};
+        for (const key in details) request[key] = details[key];
+      } else {
+        request = details;
+      }
+      if (details.headers instanceof Headers)
+        request.headers = Object.fromEntries(details.headers);
+      ChromeXt.dispatch("xmlhttpRequest", {
+        id: GM_info.script.id,
+        request,
+        uuid,
       });
+      ChromeXt.addEventListener("xmlhttpRequest", listener);
+    }
   };
 
   return xhr;
