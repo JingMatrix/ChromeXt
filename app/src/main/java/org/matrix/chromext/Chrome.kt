@@ -6,6 +6,9 @@ import android.net.http.HttpResponseCache
 import android.os.Handler
 import java.io.File
 import java.lang.ref.WeakReference
+import java.net.CookieHandler
+import java.net.CookieManager
+import java.net.CookieStore
 import java.util.concurrent.Executors
 import org.json.JSONObject
 import org.matrix.chromext.devtools.DevSessions
@@ -32,6 +35,14 @@ object Chrome {
   var isVivaldi = false
 
   val IO = Executors.newCachedThreadPool()
+  val cookieStore: CookieStore =
+      CookieManager().let {
+        CookieHandler.setDefault(it)
+        val cookieJar =
+            CookieManager::class.java.declaredFields.find { it.type == CookieStore::class.java }!!
+        cookieJar.isAccessible = true
+        cookieJar.get(it) as CookieStore
+      }
 
   fun init(ctx: Context, packageName: String? = null) {
     val initialized = mContext != null

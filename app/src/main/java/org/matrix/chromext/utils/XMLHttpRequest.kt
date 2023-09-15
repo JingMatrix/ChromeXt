@@ -2,6 +2,9 @@ package org.matrix.chromext.utils
 
 import android.util.Base64
 import java.io.IOException
+import java.net.CookieHandler
+import java.net.CookieManager
+import java.net.CookiePolicy
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
@@ -22,10 +25,23 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
   val headers = request.optJSONObject("headers")
   val followRedirects = request.optString("redirect") != "error"
   val binary = request.optBoolean("binary")
+  val anonymous = request.optBoolean("anonymous")
   val nocache = request.optBoolean("nocache")
   val timeout = request.optInt("timeout")
   val buffersize = request.optInt("buffersize", 8)
   val responseType = request.optString("responseType")
+
+  init {
+    val manager = CookieHandler.getDefault() as CookieManager
+    if (anonymous) {
+      manager.setCookiePolicy(CookiePolicy.ACCEPT_NONE)
+      val uri = url.toURI()
+      val cookieStore = Chrome.cookieStore
+      cookieStore.get(uri).forEach { cookieStore.remove(uri, it) }
+    } else {
+      manager.setCookiePolicy(CookiePolicy.ACCEPT_ORIGINAL_SERVER)
+    }
+  }
 
   fun abort() {
     response("abort", JSONObject().put("abort", "Abort on request"))
@@ -39,15 +55,16 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
       setInstanceFollowRedirects(followRedirects)
       setUseCaches(!nocache)
       setConnectTimeout(timeout)
-      if (request.has("cookie")) {
-        setRequestProperty("Cookie", request.optString("cookie"))
-      }
+      if (request.has("cookie") && !anonymous)
+          addRequestProperty("Cookie", request.optString("cookie"))
+
       if (request.has("user")) {
         val user = request.optString("user")
         val password = request.optString("password")
         val encoded = Base64.encodeToString(("${user}:${password}").toByteArray(), Base64.DEFAULT)
         setRequestProperty("Authorization", "Basic " + encoded)
       }
+
       var data = JSONObject()
       runCatching {
             if (method != "GET" && request.has("data")) {
