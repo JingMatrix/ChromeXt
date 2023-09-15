@@ -735,7 +735,7 @@ class ResponseSink {
 GM.bootstrap = () => {
   delete GM.bootstrap;
   const ChromeXt = LockedChromeXt.unlock(key);
-  if (ChromeXt.scripts.findIndex((e) => e.id == GM_info.script.id) != -1)
+  if (ChromeXt.scripts.findIndex((e) => e.script.id == GM_info.script.id) != -1)
     return;
 
   const row = /\/\/\s+@(\S+)\s+(.+)/g;
