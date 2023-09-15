@@ -9,6 +9,7 @@ import de.robv.android.xposed.XC_MethodHook.Unhook
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 import org.matrix.chromext.R
+import org.matrix.chromext.Resource
 import org.matrix.chromext.script.Local
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
@@ -59,6 +60,7 @@ object ContextMenuHook : BaseHook() {
                     val mode = it.args[0] as ActionMode
                     val menu = it.args[1] as Menu
                     if (menu.findItem(erudaMenuId) != null) return@hookAfter
+                    Resource.enrich(Chrome.getContext())
                     val titleId =
                         if (isChromeXtFrontEnd(url)) R.string.main_menu_developer_tools
                         else if (isUserScript(url)) R.string.main_menu_install_script

@@ -49,8 +49,14 @@ object UserScriptProxy {
       tabImpl.declaredFields
           .run {
             val target = find { it.name == "mIsLoading" }
-            val anchorIndex = indexOfFirst { it.type == loadUrlParams }
-            target ?: slice(anchorIndex..size - 1).find { it.type == Boolean::class.java }!!
+            if (target == null) {
+              val webContents = Chrome.load("org.chromium.content_public.browser.WebContents")
+              val anchorIndex =
+                  maxOf(
+                      indexOfFirst { it.type == loadUrlParams },
+                      indexOfFirst { it.type == webContents })
+              slice(anchorIndex..size - 1).find { it.type == Boolean::class.java }!!
+            } else target
           }
           .also { it.isAccessible = true }
   val loadUrl =
