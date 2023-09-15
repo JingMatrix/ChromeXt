@@ -460,7 +460,14 @@ function GM_xmlhttpRequest(details) {
       if (type == "progress") {
         sink.writer.write(data);
       } else if (type == "load") {
-        sink.writer.close().then(() => resolve(xhr.response));
+        sink.writer
+          .close()
+          .then(() => resolve(xhr.response))
+          .catch((error) => {
+            reject(
+              new TypeError("Fail to parse response data", { cause: error })
+            );
+          });
       } else if (["timeout", "error"].includes(type)) {
         sink.writer.abort(type);
         const error = new Error(
@@ -469,7 +476,6 @@ function GM_xmlhttpRequest(details) {
             .join(", "),
           {
             cause: data.error || type.toUpperCase(),
-            fileName: xhr.url,
           }
         );
         error.name = data.type;
