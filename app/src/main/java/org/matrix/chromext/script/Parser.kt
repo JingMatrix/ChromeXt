@@ -53,7 +53,9 @@ fun parseScript(input: String, storage: String? = null): Script? {
     script.grant.add("GM_xmlhttpRequest")
   }
 
-  if (script.grant.contains("GM.getValue") || script.grant.contains("GM_getValue")) {
+  if (script.grant.contains("GM.getValue") ||
+      script.grant.contains("GM_getValue") ||
+      script.grant.contains("GM_cookie")) {
     runCatching { script.storage = JSONObject(storage!!) }
         .onFailure { script.storage = JSONObject() }
   }

@@ -36,7 +36,113 @@ function GM_addStyle(css) {
 const unsafeWindow = window;
 // Kotlin separator
 
-const GM_log = console.log.bind(console);
+const GM_log = console.info.bind(console, GM_info.script.name + ":");
+// Kotlin separator
+
+const GM_cookie = new (class {
+  #store;
+  #key = "__ChromeXt_cookieStore__";
+  #cookie = cookieStore;
+  onchange = cookieStore.onchange;
+  get store() {
+    if (typeof this.#store != "object")
+      this.#store = GM_info.storage[this.#key];
+    if (this.#store === undefined) this.#store = {};
+    return this.#store;
+  }
+  constructor() {
+    if (location.origin in this.store) {
+      for (const item of this.store[location.origin]) {
+        try {
+          this.#cookie.set(item);
+        } catch {
+          console.error("Failed to set cookie", item);
+        }
+      }
+    }
+    this.#store = undefined;
+    // GM_info.storage might not be a Proxy object yet
+  }
+  #sync() {
+    GM_info.storage[this.#key] = this.store;
+    this.#store = GM_info.storage[this.#key];
+  }
+  parseUrl(details) {
+    let url = details.url || window.location.href;
+    return new URL(url).origin;
+  }
+  async list(details, callback) {
+    let cookies, error;
+    try {
+      const url = this.parseUrl(details);
+      if (url == location.origin) {
+        cookies = await this.#cookie.getAll();
+        this.store[url] = cookies;
+        this.#sync();
+      } else {
+        cookies = this.store[url];
+      }
+      if (Array.isArray(cookies)) {
+        cookies = cookies.filter((item) => {
+          for (const key of ["domain", "name", "path", "firstPartyDomain"]) {
+            if (key in details && details[key] != item[key]) return false;
+          }
+          return true;
+        });
+      } else {
+        cookies = [];
+      }
+    } catch (e) {
+      error = e;
+    }
+    if (typeof callback == "function") {
+      return callback(cookies, error?.message);
+    } else {
+      return cookies;
+    }
+  }
+  async set(details, callback) {
+    let error;
+    try {
+      ["name", "value"].forEach((k) => {
+        if (!(k in details))
+          throw new TypeError(`Required field ${k} for GM_cookie not found`);
+      });
+      const url = this.parseUrl(details);
+      if (url == location.origin) await this.#cookie.set(details);
+      let cookies = this.store[url];
+      if (Array.isArray(cookies)) {
+        const index = cookies.findIndex((it) => it.name == details.name);
+        cookies.splice(index, 1);
+        cookies.push({ ...details, url: undefined });
+      } else {
+        cookies = [{ ...details, url: undefined }];
+      }
+      this.store[url] = cookies;
+      this.#sync();
+    } catch (e) {
+      error = e;
+    }
+    if (typeof callback == "function") callback(error?.message);
+    return error == undefined;
+  }
+  async delete(details, callback) {
+    const handler = async (cookies, error) => {
+      if (typeof error == "string") return callback(error);
+      if (cookies.length == 0) return;
+      const url = this.parseUrl(details);
+      if (url == location.origin) {
+        for (const item in cookies) await this.#cookie.delete(item);
+      }
+      this.store[url] = this.store[url].filter(
+        (item) => !cookies.includes(item)
+      );
+      this.#sync();
+      callback(error);
+    };
+    await list(details, handler);
+  }
+})();
 // Kotlin separator
 
 function GM_setClipboard(data, info = "text/plain") {
@@ -267,7 +373,10 @@ function GM_xmlhttpRequest(details) {
       }
     }
 
-    if (details.headers instanceof Headers && !details.headers.has("User-Agent")) {
+    if (
+      details.headers instanceof Headers &&
+      !details.headers.has("User-Agent")
+    ) {
       details.headers.set("User-Agent", window.navigator.userAgent);
     }
 
