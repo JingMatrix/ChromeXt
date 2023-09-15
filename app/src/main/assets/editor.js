@@ -104,10 +104,6 @@ async function prepareDOM() {
   style.textContent = _editor_style;
 
   const code = document.querySelector("body > pre");
-  if (!document.head || !code) {
-    window.addEventListener("DOMContentLoaded", prepareDOM);
-    return;
-  }
   document.head.appendChild(meta);
   document.head.appendChild(style);
 
@@ -115,4 +111,4 @@ async function prepareDOM() {
   renderEditor(code, checkEncoding);
 }
 
-prepareDOM();
+window.addEventListener("DOMContentLoaded", prepareDOM);
