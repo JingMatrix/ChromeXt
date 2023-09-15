@@ -9,6 +9,11 @@ import org.matrix.chromext.script.Script
 const val ERUD_URL = "https://cdn.jsdelivr.net/npm/eruda"
 private const val DEV_FRONT_END = "https://chrome-devtools-frontend.appspot.com"
 
+fun randomString(length: Int): String {
+  val alphabet: List<Char> = ('a'..'z') + ('A'..'Z')
+  return List(length) { alphabet.random() }.joinToString("")
+}
+
 private fun urlMatch(match: String, url: String, strict: Boolean): Boolean {
   var pattern = match
   val regexPattern = pattern.startsWith("/") && pattern.endsWith("/")

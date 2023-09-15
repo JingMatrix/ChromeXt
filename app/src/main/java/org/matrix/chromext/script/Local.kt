@@ -9,6 +9,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Resource
+import org.matrix.chromext.utils.randomString
 
 object GM {
   private val localScript: Map<String, String>
@@ -92,7 +93,7 @@ object Local {
   val cspRule: String
   val cosmeticFilter: String
   val key = Random.nextDouble()
-  val name = getRandomString(25)
+  val name = randomString(25)
 
   var eruda_version: String
 
@@ -148,10 +149,5 @@ object Local {
       }
     }
     return "latest"
-  }
-
-  fun getRandomString(length: Int): String {
-    val allowedChars = ('A'..'Z') + ('a'..'z')
-    return (1..length).map { allowedChars.random() }.joinToString("")
   }
 }

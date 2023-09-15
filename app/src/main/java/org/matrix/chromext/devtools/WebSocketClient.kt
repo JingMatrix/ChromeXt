@@ -12,6 +12,7 @@ import org.matrix.chromext.Chrome
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.randomString
 
 class DevToolClient(tabId: String) : LocalSocket() {
 
@@ -22,15 +23,13 @@ class DevToolClient(tabId: String) : LocalSocket() {
 
   init {
     connectDevTools(this)
-    val alphabet: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
-    val randomString = List(16) { alphabet.random() }.joinToString("")
     val request =
         arrayOf(
             "GET /devtools/page/${tabId} HTTP/1.1",
             "Connection: Upgrade",
             "Upgrade: websocket",
             "Sec-WebSocket-Version: 13",
-            "Sec-WebSocket-Key: ${Base64.encodeToString(randomString.toByteArray(), Base64.DEFAULT).trim()}")
+            "Sec-WebSocket-Key: ${Base64.encodeToString(randomString(16).toByteArray(), Base64.DEFAULT).trim()}")
     Log.d("Start inspecting tab ${tabId}")
     outputStream.write((request.joinToString("\r\n") + "\r\n\r\n").toByteArray())
     val buffer = ByteArray(DEFAULT_BUFFER_SIZE / 8)
