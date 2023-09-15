@@ -397,7 +397,9 @@ function GM_xmlhttpRequest(details) {
     target: new EventTarget(),
     get() {
       const prop = arguments[1];
-      if (prop in EventTarget.prototype) {
+      if (prop in Promise.prototype && this.promise instanceof Promise) {
+        return this.promise[prop].bind(this.promise);
+      } else if (prop in EventTarget.prototype) {
         return this.target[prop].bind(this.target);
       } else if (
         prop.startsWith("on") ||
@@ -417,7 +419,7 @@ function GM_xmlhttpRequest(details) {
     set(target, prop, value) {
       if (
         prop == "responseHandler" &&
-        this.promise == null &&
+        !(this.promise instanceof Promise) &&
         typeof value == "function"
       ) {
         this.promise = target;
