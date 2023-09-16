@@ -743,6 +743,7 @@ class ResponseSink {
       this.xhr.overrideMimeType || this.xhr.headers.get("Content-Type") || "";
     if (
       Array.isArray(this.xhr.response) &&
+      this.xhr.response.length != 0 &&
       this.ds instanceof DecompressionStream
     ) {
       const stream = new Blob(this.xhr.response, { type })
