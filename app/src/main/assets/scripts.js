@@ -1,4 +1,4 @@
-if (typeof Object.ChromeXt == "undefined") {
+if (typeof Symbol.ChromeXt == "undefined") {
   const globalKeys = Object.keys(window);
   // Drop user-defined keys in the global context
   globalKeys.push(...Object.keys(EventTarget.prototype));
@@ -215,8 +215,8 @@ if (typeof Object.ChromeXt == "undefined") {
       ) {
         this.#key = key;
         unlock = Symbol(key);
-        delete Object.ChromeXt;
-        Object = new Proxy(Object, {
+        delete Symbol.ChromeXt;
+        Symbol = new Proxy(Symbol, {
           get(_target, prop) {
             if (prop == name) {
               return ChromeXt;
@@ -226,7 +226,7 @@ if (typeof Object.ChromeXt == "undefined") {
           },
         });
         if (typeof userDefinedChromeXt != "undefined") {
-          Object.ChromeXt = userDefinedChromeXt;
+          Symbol.ChromeXt = userDefinedChromeXt;
         }
       }
     }
@@ -260,9 +260,9 @@ if (typeof Object.ChromeXt == "undefined") {
     }
   }
   const ChromeXt = new ChromeXtTarget();
-  const userDefinedChromeXt = Object.ChromeXt;
+  const userDefinedChromeXt = Symbol.ChromeXt;
   Object.freeze(ChromeXt);
-  Object.ChromeXt = ChromeXt;
+  Symbol.ChromeXt = ChromeXt;
 } else {
   throw Error("ChromeXt is already defined, cancel initialization");
 }
@@ -278,12 +278,12 @@ try {
   }
 } catch (e) {
   if (typeof define == "function") define.amd = false;
-  Object.ChromeXt.unlock(ChromeXtUnlockKeyForEruda).dispatch("loadEruda");
+  Symbol.ChromeXt.unlock(ChromeXtUnlockKeyForEruda).dispatch("loadEruda");
 }
 // Kotlin separator
 
-if (Object.ChromeXt.cspRules.length > 0) {
-  Object.ChromeXt.cspRules.forEach((rule) => {
+if (Symbol.ChromeXt.cspRules.length > 0) {
+  Symbol.ChromeXt.cspRules.forEach((rule) => {
     if (rule.length == 0) return;
     // Skip empty cspRules
     const meta = document.createElement("meta");
@@ -300,8 +300,8 @@ if (Object.ChromeXt.cspRules.length > 0) {
 }
 // Kotlin separator
 
-if (Object.ChromeXt.filters.length > 0) {
-  const filter = Object.ChromeXt.filters.join(", ");
+if (Symbol.ChromeXt.filters.length > 0) {
+  const filter = Symbol.ChromeXt.filters.join(", ");
   let GM_addStyle = (css) => {
     const style = document.createElement("style");
     style.textContent = css;

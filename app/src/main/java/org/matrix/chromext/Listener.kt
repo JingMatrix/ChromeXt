@@ -150,7 +150,7 @@ object Listener {
             data.put("value", script.storage!!.get(key))
           }
           detail.put("data", data)
-          callback = "Object.${Local.name}.unlock(${Local.key}).post('scriptSyncValue', ${detail});"
+          callback = "Symbol.${Local.name}.unlock(${Local.key}).post('scriptSyncValue', ${detail});"
         } else {
           script.storage!!.remove(key)
         }

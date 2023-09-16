@@ -133,7 +133,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
   ) {
     response.put("type", type)
     response.put("data", data)
-    val code = "Object.${Local.name}.unlock(${Local.key}).post('xmlhttpRequest', ${response});"
+    val code = "Symbol.${Local.name}.unlock(${Local.key}).post('xmlhttpRequest', ${response});"
     Chrome.evaluateJavascript(listOf(code), currentTab)
     if (disconnect) {
       Listener.xmlhttpRequests.remove(response.getDouble("uuid"))

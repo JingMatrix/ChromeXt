@@ -119,13 +119,13 @@ object ScriptDbManager {
         if (cspRules.contains(origin)) {
           runCatching {
             val rule = JSONArray(cspRules.get(origin))
-            codes.add("Object.ChromeXt.cspRules.push(...${rule});${Local.cspRule}")
+            codes.add("Symbol.ChromeXt.cspRules.push(...${rule});${Local.cspRule}")
           }
         }
         if (cosmeticFilters.contains(origin)) {
           runCatching {
             val filter = JSONArray(cosmeticFilters.get(origin))
-            codes.add("Object.ChromeXt.filters.push(...${filter});${Local.cosmeticFilter}")
+            codes.add("Symbol.ChromeXt.filters.push(...${filter});${Local.cosmeticFilter}")
           }
         }
         if (userAgents.contains(origin)) {
@@ -137,8 +137,8 @@ object ScriptDbManager {
       }
     }
     codes.add(
-        if (runScripts) "Object.ChromeXt.lock(${Local.key}, '${Local.name}');"
-        else "globalThis.ChromeXt = Object.ChromeXt;")
+        if (runScripts) "Symbol.ChromeXt.lock(${Local.key}, '${Local.name}');"
+        else "globalThis.ChromeXt = Symbol.ChromeXt;")
     codes.add("//# sourceURL=local://ChromeXt/init")
     webSettings?.javaScriptEnabled = true
     Chrome.evaluateJavascript(listOf(codes.joinToString("\n")), null, bypassSandbox, bypassSandbox)

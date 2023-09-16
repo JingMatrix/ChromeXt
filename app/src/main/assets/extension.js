@@ -87,7 +87,7 @@ chrome.i18n.getMessage = (name) => chrome.i18n.messages[name] || "";
 // Restore the original HTML elements
 const parser = new DOMParser();
 const doc = parser.parseFromString(extension.html, "text/html");
-const inFrame = typeof Object.ChromeXt == "undefined";
+const inFrame = typeof Symbol.ChromeXt == "undefined";
 document.head.remove();
 document.documentElement.prepend(doc.head);
 doc.querySelectorAll("script").forEach((node) => {
