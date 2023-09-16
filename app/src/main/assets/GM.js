@@ -658,9 +658,15 @@ class ResponseSink {
       }
     } else {
       if (Array.isArray(data.response)) {
-        const utf8 = new TextDecoder();
+        let charset = type.split(";").filter((it) => it.includes("charset="));
+        if (charset.length != 0) {
+          charset = charset[0].trim().substring(8).toLowerCase();
+        } else {
+          charset = "utf-8";
+        }
+        const decoder = new TextDecoder(charset);
         const blob = new Blob(data.response);
-        data.response = utf8.decode(await blob.arrayBuffer());
+        data.response = decoder.decode(await blob.arrayBuffer());
       }
       data.responseText = data.response;
       if (data.responseType == "json") {
