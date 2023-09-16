@@ -465,7 +465,9 @@ function GM_xmlhttpRequest(details) {
           .then(() => resolve(xhr.response))
           .catch((error) => {
             reject(
-              new TypeError("Fail to parse response data", { cause: error })
+              new TypeError("Fail to parse response data: " + error.message, {
+                cause: error,
+              })
             );
           });
       } else if (["timeout", "error"].includes(type)) {
@@ -643,7 +645,7 @@ class ResponseSink {
         data.responseXML = data.response;
       }
     }
-    if (data.fetch) data = new Response(data.response, data);
+    if (data.fetch) data.response = new Response(data.response, data);
   }
   parse(data) {
     if (typeof data != "object") return;
@@ -947,7 +949,7 @@ GM.bootstrap = () => {
       meta.sync_code = meta.code;
       meta.code = async () => {
         for (const data of meta.resources) {
-          data.content = await GM_xmlhttpRequest(data.url);
+          data.content = await GM_xmlhttpRequest({ url: data.url });
         }
         return meta.sync_code();
       };
