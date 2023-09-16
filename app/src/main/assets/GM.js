@@ -71,6 +71,21 @@ const GM_cookie = new (class {
     let url = details.url || window.location.href;
     return new URL(url).origin;
   }
+  export(url) {
+    const origin = new URL(url).origin;
+    if (origin == location.origin) return document.cookie;
+    if (origin in this.store) {
+      return this.store[origin]
+        .filter((item) => {
+          if (!("name" in item && "value" in item)) return false;
+          const expires = item.expirationDate || item.expires;
+          if (expires) return expires > new Date().getTime();
+          return true;
+        })
+        .map((item) => item.name + "=" + item.value)
+        .join("; ");
+    }
+  }
   async list(details, callback) {
     let cookies, error;
     try {
@@ -86,6 +101,10 @@ const GM_cookie = new (class {
         cookies = cookies.filter((item) => {
           for (const key of ["domain", "name", "path", "firstPartyDomain"]) {
             if (key in details && details[key] != item[key]) return false;
+          }
+          if (item.expires) {
+            item.expirationDate = item.expires;
+            delete item.expires;
           }
           return true;
         });
@@ -109,7 +128,8 @@ const GM_cookie = new (class {
           throw new TypeError(`Required field ${k} for GM_cookie not found`);
       });
       const url = this.parseUrl(details);
-      if (url == location.origin) await this.#cookie.set(details);
+      if (url == location.origin)
+        await this.#cookie.set({ ...details, expires: details.expirationDate });
       let cookies = this.store[url];
       if (Array.isArray(cookies)) {
         const index = cookies.findIndex((it) => it.name == details.name);
@@ -578,6 +598,15 @@ function GM_xmlhttpRequest(details) {
       }
       if (details.headers instanceof Headers)
         request.headers = Object.fromEntries(details.headers);
+      const origin = new URL(details.url).origin;
+
+      if (!("cookie" in details) && details.anonymous !== true) {
+        if (location.origin == origin) {
+          details.cookie = document.cookie;
+        } else if (GM_info.script.grants.includes("GM_cookie")) {
+          details.cookie = GM_cookie.export(origin);
+        }
+      }
       ChromeXt.dispatch("xmlhttpRequest", {
         id: GM_info.script.id,
         request,
