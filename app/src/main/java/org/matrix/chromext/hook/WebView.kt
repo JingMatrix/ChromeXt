@@ -1,5 +1,6 @@
 package org.matrix.chromext.hook
 
+import android.app.Activity
 import android.os.Handler
 import android.webkit.ConsoleMessage
 import android.webkit.WebView
@@ -57,7 +58,7 @@ object WebViewHook : BaseHook() {
         // public void onPageStarted (WebView view, String url, Bitmap favicon)
         .hookAfter { onUpdateUrl(it.args[1] as String, it.args[0] as WebView) }
 
-    findMethod(Chrome.load("android.app.Activity")) { name == "onStop" }
+    findMethod(Activity::class.java) { name == "onStop" }
         .hookBefore { ScriptDbManager.updateScriptStorage() }
   }
 }

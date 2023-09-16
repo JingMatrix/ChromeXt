@@ -1,6 +1,5 @@
 package org.matrix.chromext
 
-import android.app.Application
 import android.content.Context
 import android.net.http.HttpResponseCache
 import android.os.Handler
@@ -50,9 +49,6 @@ object Chrome {
 
     if (initialized || packageName == null) return
 
-    if (ctx is Application) {
-      Log.d("Started a WebView based browser")
-    }
     isBrave = packageName.startsWith("com.brave.browser")
     isDev = packageName.endsWith("canary") || packageName.endsWith("dev")
     isEdge = packageName.startsWith("com.microsoft.emmx")
@@ -86,6 +82,7 @@ object Chrome {
   fun getContext(): Context {
     if (Chrome.isSamsung) return mContext!!.get()!!
     val activity = getTab()?.invokeMethod { name == "getContext" } as Context?
+    if (activity != null && mContext == null) init(activity, activity.packageName)
     return activity ?: mContext!!.get()!!
   }
 

@@ -64,8 +64,6 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
       val ctx = AndroidAppHelper.currentApplication()
       if (ctx != null && lpparam.packageName != "android") {
         Chrome.init(ctx, ctx.packageName)
-      } else {
-        return
       }
 
       WebViewClient::class.java.declaredConstructors[0].hookAfter {
