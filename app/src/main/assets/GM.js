@@ -752,9 +752,15 @@ class ResponseSink {
       reader.cancel();
     }
     this.xhr.readyState = 4;
-    await ResponseSink.prepare(type, this.xhr);
+    let parseError;
+    try {
+      await ResponseSink.prepare(type, this.xhr);
+    } catch (e) {
+      parseError = e;
+    }
     this.dispatch("load");
     this.dispatch("loadend");
+    if (parseError instanceof Error) throw parseError;
   }
   abort(reason) {
     this.dispatch(reason);
