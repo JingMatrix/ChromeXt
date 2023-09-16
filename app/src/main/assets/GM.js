@@ -883,8 +883,9 @@ GM.bootstrap = () => {
       ChromeXt.dispatch("scriptStorage", payload);
     },
     deleteProperty(target, key) {
-      delete target.key;
+      const result = Reflect.deleteProperty(target, key);
       this.sync({ key });
+      return result;
     },
     set(target, key, value) {
       target[key] = value;
