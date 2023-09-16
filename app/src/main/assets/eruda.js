@@ -203,7 +203,11 @@ eruda.Elements = class extends eruda.Elements {
     let prev = el.previousSibling;
     if (useSilbling) {
       while (prev instanceof Text) prev = prev.previousSibling;
-      if (prev.tagName && (prev.classList.length > 0 || prev.id != ""))
+      if (
+        prev instanceof HTMLElement &&
+        prev.tagName &&
+        (prev.classList.length > 0 || prev.id != "")
+      )
         return this.getSelector(prev, false) + " + " + str;
     }
     return this.getSelector(el.parentNode, useSilbling) + " > " + str;
