@@ -1,8 +1,17 @@
 package org.matrix.chromext
 
+import android.app.Activity
+import android.app.Notification
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.graphics.BitmapFactory
+import android.graphics.drawable.Icon
 import android.os.Handler
 import java.io.File
 import java.io.FileReader
@@ -37,6 +46,7 @@ object Listener {
       mapOf(
           "front-end" to listOf("inspect_pages", "userscript", "extension"),
           "devtools" to listOf("websocket"))
+  val tabNotification = mutableMapOf<Int, Any>()
 
   private fun syncSharedPreference(
       payload: String,
@@ -136,8 +146,51 @@ object Listener {
           }
         }
       }
-      "unsafeEval" -> {
-        callback = payload
+      "notification" -> {
+        val detail = JSONObject(payload)
+        val id = detail.getString("id")
+        val uuid = detail.getInt("uuid")
+        val title = detail.getString("title")
+        val text = detail.getString("text")
+        val timeout = detail.getLong("timeout")
+        val ctx = Chrome.getContext()
+        val builder =
+            Notification.Builder(ctx, "ChromeXt")
+                .setContentTitle(title)
+                .setContentText(text)
+                .setSmallIcon(
+                    Icon.createWithResource("org.matrix.chromext", R.drawable.ic_extension))
+                .setTimeoutAfter(timeout)
+                .setCategory(Notification.CATEGORY_MESSAGE)
+                .setAutoCancel(true)
+                .setLocalOnly(true)
+                .setOnlyAlertOnce(true)
+        if (detail.optBoolean("silent")) {
+          Chrome.channel.setImportance(NotificationManager.IMPORTANCE_LOW)
+        } else {
+          Chrome.channel.setImportance(NotificationManager.IMPORTANCE_DEFAULT)
+        }
+        if (detail.optBoolean("onclick")) {
+          builder.setContentIntent(ScriptNotification.newIntent(id, uuid))
+          tabNotification.put(uuid, currentTab!!)
+        }
+        val notificationManager =
+            ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (detail.has("image")) {
+          Chrome.IO.submit {
+            runCatching {
+                  val url = URL(detail.getString("image"))
+                  val connection = url.openConnection() as HttpURLConnection
+                  val bitmap = BitmapFactory.decodeStream(connection.inputStream)
+                  builder.setLargeIcon(Icon.createWithBitmap(bitmap))
+                }
+                .onFailure { Log.d("Fail to set notification image: ${it.message}") }
+            notificationManager.notify(id, uuid, builder.build())
+          }
+        } else {
+          notificationManager.notify(id, uuid, builder.build())
+        }
+        if (detail.optBoolean("highlight")) (ctx as Activity).getWindow().decorView.requestFocus()
       }
       "scriptStorage" -> {
         val detail = JSONObject(payload)
@@ -338,5 +391,36 @@ object Listener {
       }
     }
     return callback
+  }
+}
+
+private class ScriptNotification(detail: JSONObject) : BroadcastReceiver() {
+  private val detail = detail
+  companion object {
+    const val ACTION_USERSCRIPT = "ChromeXt"
+    const val UUID = "GM_notification"
+    fun newIntent(id: String, uuid: Int): PendingIntent {
+      val ctx = Chrome.getContext()
+      val detail = JSONObject(mapOf("id" to id, "uuid" to uuid))
+      ctx.registerReceiver(ScriptNotification(detail), IntentFilter(ACTION_USERSCRIPT))
+      val intent =
+          Intent().apply {
+            setAction(ACTION_USERSCRIPT)
+            putExtra(UUID, uuid)
+          }
+      return PendingIntent.getBroadcast(ctx, uuid, intent, PendingIntent.FLAG_IMMUTABLE)
+    }
+  }
+  override fun onReceive(ctx: Context, intent: Intent) {
+    if (intent.getAction() == ACTION_USERSCRIPT) {
+      val uuid = intent.getIntExtra(UUID, 0)
+      if (uuid == detail.getInt("uuid")) {
+        val tab = Listener.tabNotification.get(detail.getInt("uuid"))!!
+        val code = "Symbol.${Local.name}.unlock(${Local.key}).post('notification', ${detail});"
+        Chrome.evaluateJavascript(listOf(code), tab)
+        ctx.unregisterReceiver(this)
+        Listener.tabNotification.remove(uuid)
+      }
+    }
   }
 }

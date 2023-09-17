@@ -39,6 +39,58 @@ const unsafeWindow = window;
 const GM_log = console.info.bind(console, GM_info.script.name + ":");
 // Kotlin separator
 
+function GM_notification(details, ondone) {
+  let payload = {};
+  if (typeof details == "object") {
+    payload = { ...details, ondone };
+  } else {
+    const props = ["text", "title", "image", "onclick", "timeout", "ondone"];
+    props.splice(arguments.length, props.length);
+    props.forEach((prop, index) => (payload[prop] = arguments[index]));
+  }
+  const ChromeXt = LockedChromeXt.unlock(key);
+  if (Number.isInteger(payload.timeout)) {
+    setTimeout(() => {
+      if (typeof payload.ondone == "function") payload.ondone("timeout");
+      if (typeof listener == "function")
+        ChromeXt.removeEventListener("notification", listener);
+    }, payload.timeout);
+  } else {
+    payload.timeout = 10000;
+  }
+  if (!("text" in payload || payload.highlight))
+    throw TypeError("Parameter text not given");
+  let onclick;
+  if (typeof payload.onclick == "function") {
+    onclick = payload.onclick.bind(
+      typeof details == "object" ? details : payload
+    );
+    payload.onclick = true;
+  } else {
+    delete payload.onclick;
+  }
+  payload.id = GM_info.script.id;
+  payload.uuid = Math.floor(Math.random() * 2 ** 16);
+  if (payload.onclick || typeof payload.ondone == "function") {
+    function listener(e) {
+      const data = e.detail;
+      if (!(e.type == "notification" && data.id == payload.id)) return;
+      if (data.uuid == payload.uuid) {
+        e.stopImmediatePropagation();
+        ChromeXt.removeEventListener("notification", listener);
+        if (payload.onclick) onclick();
+        if (typeof payload.ondone == "function") {
+          payload.ondone("click");
+          delete payload.ondone;
+        }
+      }
+    }
+    ChromeXt.addEventListener("notification", listener);
+  }
+  ChromeXt.dispatch("notification", payload);
+}
+// Kotlin separator
+
 const GM_cookie = new (class {
   #cache = [];
   get store() {
