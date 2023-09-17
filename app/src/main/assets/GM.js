@@ -40,127 +40,92 @@ const GM_log = console.info.bind(console, GM_info.script.name + ":");
 // Kotlin separator
 
 const GM_cookie = new (class {
-  #store;
-  #key = "__ChromeXt_cookieStore__";
-  #cookie = cookieStore;
-  onchange = cookieStore.onchange;
+  #cache = [];
   get store() {
-    if (typeof this.#store != "object")
-      this.#store = GM_info.storage[this.#key];
-    if (this.#store === undefined) this.#store = {};
-    return this.#store;
+    return this.#cache;
   }
-  constructor() {
-    if (location.origin in this.store) {
-      for (const item of this.store[location.origin]) {
-        try {
-          this.#cookie.set(item);
-        } catch {
-          console.error("Failed to set cookie", item);
+  #command(method, params) {
+    const uuid = Math.random();
+    const payload = { method, params, uuid, id: GM_info.script.id };
+    const ChromeXt = LockedChromeXt.unlock(key);
+    const self = this;
+    return new Promise((resolve, reject) => {
+      function listener(e) {
+        const data = e.detail;
+        if (!(e.type == "cookie" && data.id == payload.id)) return;
+        const response = data.response.find((r) => r.id === 2);
+        if (data.method == "Network.getCookies" && "result" in response)
+          self.#cache = response.result.cookies;
+        if (data.uuid == uuid) {
+          if (typeof response != "object")
+            reject(new TypeError(`Response not found for ${data.method}`));
+          if ("error" in response)
+            reject(new TypeError("CDP Error: " + response.error.message));
+          ChromeXt.removeEventListener("cookie", listener);
+          resolve(response.result);
         }
       }
-    }
-    this.#store = undefined;
-    // GM_info.storage might not be a Proxy object yet
-  }
-  #sync() {
-    GM_info.storage[this.#key] = this.store;
-    this.#store = GM_info.storage[this.#key];
-  }
-  parseUrl(details) {
-    let url = details.url || window.location.href;
-    return new URL(url).origin;
+      ChromeXt.addEventListener("cookie", listener);
+      ChromeXt.dispatch("cookie", payload);
+    });
   }
   export(url) {
-    const origin = new URL(url).origin;
-    if (origin == location.origin) return document.cookie;
-    if (origin in this.store) {
-      return this.store[origin]
+    if (typeof url == "string") url = new URL(url);
+    if (url.origin == location.origin) {
+      return this.store
         .filter((item) => {
           if (!("name" in item && "value" in item)) return false;
+          if (item.httpOnly !== true) return false;
+          if ("path" in item && !url.pathname.startsWith(item.path))
+            return false;
           const expires = item.expirationDate || item.expires;
-          if (expires) return expires > new Date().getTime();
+          if (expires) return expires * 1000 > new Date().getTime();
           return true;
         })
         .map((item) => item.name + "=" + item.value)
         .join("; ");
     }
   }
-  async list(details, callback) {
+  async list(details = { url: window.origin }, callback) {
     let cookies, error;
     try {
-      const url = this.parseUrl(details);
-      if (url == location.origin) {
-        cookies = await this.#cookie.getAll();
-        this.store[url] = cookies;
-        this.#sync();
+      if (typeof details != "object") throw TypeError("Invalid parameters");
+      const result = await this.#command("Network.getCookies", [
+        details.url || location.origin,
+      ]);
+      const props = ["domain", "name", "path"].filter((key) => key in details);
+      if (props.length == 0) {
+        cookies = result.cookies;
       } else {
-        cookies = this.store[url];
-      }
-      if (Array.isArray(cookies)) {
-        cookies = cookies.filter((item) => {
-          for (const key of ["domain", "name", "path", "firstPartyDomain"]) {
-            if (key in details && details[key] != item[key]) return false;
-          }
-          if (item.expires) {
-            item.expirationDate = item.expires;
-            delete item.expires;
+        cookies = result.cookies.filter((item) => {
+          for (const prop of props) {
+            if (item[prop] !== details[prop]) return false;
           }
           return true;
         });
-      } else {
-        cookies = [];
       }
     } catch (e) {
       error = e;
     }
-    if (typeof callback == "function") {
-      return callback(cookies, error?.message);
-    } else {
-      return cookies;
-    }
+    if (typeof callback == "function") callback(cookies, error?.message);
+    if (error instanceof Error) throw error;
+    return cookies;
   }
-  async set(details, callback) {
+  async #dispatch(method, details, callback) {
     let error;
     try {
-      ["name", "value"].forEach((k) => {
-        if (!(k in details))
-          throw new TypeError(`Required field ${k} for GM_cookie not found`);
-      });
-      const url = this.parseUrl(details);
-      if (url == location.origin)
-        await this.#cookie.set({ ...details, expires: details.expirationDate });
-      let cookies = this.store[url];
-      if (Array.isArray(cookies)) {
-        const index = cookies.findIndex((it) => it.name == details.name);
-        cookies.splice(index, 1);
-        cookies.push({ ...details, url: undefined });
-      } else {
-        cookies = [{ ...details, url: undefined }];
-      }
-      this.store[url] = cookies;
-      this.#sync();
+      return await this.#command(method, details);
     } catch (e) {
       error = e;
     }
-    if (typeof callback == "function") callback(error?.message);
-    return error == undefined;
+    if (typeof callback == "function") callback(e.message);
+    if (error instanceof Error) throw error;
+  }
+  async set(details, callback) {
+    return await this.#dispatch("Network.setCookie", details, callback);
   }
   async delete(details, callback) {
-    const handler = async (cookies, error) => {
-      if (typeof error == "string") return callback(error);
-      if (cookies.length == 0) return;
-      const url = this.parseUrl(details);
-      if (url == location.origin) {
-        for (const item in cookies) await this.#cookie.delete(item);
-      }
-      this.store[url] = this.store[url].filter(
-        (item) => !cookies.includes(item)
-      );
-      this.#sync();
-      callback(error);
-    };
-    await list(details, handler);
+    return await this.#dispatch("Network.deleteCookies", details, callback);
   }
 })();
 // Kotlin separator
@@ -525,6 +490,7 @@ function GM_xmlhttpRequest(details) {
         cache: "force-cache",
         body: details.data,
         ...details,
+        credentials: details.anonymous == true ? "omit" : "include",
         headers: {},
       });
       for (const p of details.headers) {
@@ -595,15 +561,20 @@ function GM_xmlhttpRequest(details) {
       }
       if (details.headers instanceof Headers)
         request.headers = Object.fromEntries(details.headers);
-      const origin = new URL(details.url).origin;
 
-      if (!("cookie" in details) && details.anonymous !== true) {
-        if (location.origin == origin) {
-          details.cookie = document.cookie;
-        } else if (GM_info.script.grants.includes("GM_cookie")) {
-          details.cookie = GM_cookie.export(origin);
+      const origin = new URL(details.url).origin;
+      if (
+        location.origin == origin &&
+        GM_info.script.grants.includes("GM_cookie") &&
+        !("cookie" in details) &&
+        details.anonymous !== true
+      ) {
+        if (GM_cookie.store.length == 0) {
+          await GM_cookie.list();
         }
+        request.cookie = GM_cookie.export(details.url);
       }
+
       ChromeXt.dispatch("xmlhttpRequest", {
         id: GM_info.script.id,
         request,

@@ -179,6 +179,30 @@ object Listener {
           Chrome.IO.submit { request.send() }
         }
       }
+      "cookie" -> {
+        val detail = JSONObject(payload)
+        val method = detail.getString("method")
+        val params = detail.optJSONObject("params")
+        val data = JSONArray()
+        fun checkResult(result: JSONObject): Boolean {
+          data.put(result)
+          if (result.getInt("id") == 2) {
+            detail.put("response", data)
+            detail.remove("params")
+            val code = "Symbol.${Local.name}.unlock(${Local.key}).post('cookie', ${detail});"
+            Chrome.evaluateJavascript(listOf(code), currentTab)
+            return false
+          }
+          return true
+        }
+        Chrome.IO.submit {
+          val tabId = Chrome.getTabId(currentTab)
+          val client = DevSessions.new(tabId)
+          Chrome.IO.submit { client.listen { if (!checkResult(it)) client.close() } }
+          client.command(null, "Network.enable", JSONObject())
+          client.command(null, method, params)
+        }
+      }
       "userAgentSpoof" -> {
         if (UserScriptHook.isInit) {
           val loadUrlParams = UserScriptProxy.newLoadUrlParams(payload)

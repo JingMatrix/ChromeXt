@@ -187,7 +187,7 @@ and [GM.js](app/src/main/assets/GM.js)
 - [x] Show executed scripts on current page
 - [x] Make a YouTube presentation video
 - [x] Support Samsung Internet browser
-- [ ] Implement GM_cookie
+- [x] Implement GM_cookie
 - [ ] Improve valid UserScripts Url detection
 - [ ] Use `iframe` and local server to run general [WebExtensions](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions)
 - [ ] Support importing UserScripts from Tampermonkey exports

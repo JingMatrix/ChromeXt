@@ -11,7 +11,6 @@ import java.net.CookieStore
 import java.util.concurrent.Executors
 import org.json.JSONObject
 import org.matrix.chromext.devtools.DevSessions
-import org.matrix.chromext.devtools.DevToolClient
 import org.matrix.chromext.devtools.getInspectPages
 import org.matrix.chromext.devtools.hitDevTools
 import org.matrix.chromext.hook.UserScriptHook
@@ -122,13 +121,24 @@ object Chrome {
     }
   }
 
+  fun getTabId(currentTab: Any?): String {
+    if (WebViewHook.isInit) {
+      val url = getUrl(currentTab)
+      val ids = filterTabs {
+        optString("type") == "page" &&
+            optString("url") == url &&
+            !JSONObject(getString("description")).optBoolean("never_attached")
+      }
+      if (ids.size > 1) Log.i("Multiple possible tabIds matched with url ${url}")
+      return ids.first()
+    } else {
+      return getTab(currentTab)!!.invokeMethod() { name == "getId" }.toString()
+    }
+  }
+
   private fun evaluateJavascriptDevTools(codes: List<String>, tabId: String, bypassCSP: Boolean) {
     wakeUpDevTools()
-    var client = DevSessions.get(tabId) ?: DevToolClient(tabId)
-    if (client.isClosed()) {
-      hitDevTools().close()
-      client = DevToolClient(tabId)
-    }
+    var client = DevSessions.new(tabId)
     codes.forEach { client.evaluateJavascript(it) }
     // Bypass CSP is only effective after reloading
     client.bypassCSP(bypassCSP)
@@ -144,18 +154,7 @@ object Chrome {
   ) {
     if (forceDevTools) {
       IO.submit {
-        val tabId =
-            if (WebViewHook.isInit) {
-              val url = getUrl(currentTab)
-              filterTabs {
-                    optString("type") == "page" &&
-                        optString("url") == url &&
-                        !JSONObject(getString("description")).optBoolean("never_attached")
-                  }
-                  .first()
-            } else {
-              getTab(currentTab)!!.invokeMethod() { name == "getId" }.toString()
-            }
+        val tabId = getTabId(currentTab)
         evaluateJavascriptDevTools(codes, tabId, bypassCSP)
       }
     } else {

@@ -51,6 +51,14 @@ object DevSessions {
     }
     return cached
   }
+  fun new(tabId: String): DevToolClient {
+    var client = get(tabId) ?: DevToolClient(tabId)
+    if (client.isClosed()) {
+      hitDevTools().close()
+      client = DevToolClient(tabId)
+    }
+    return client
+  }
   fun add(client: DevToolClient?) {
     if (client == null) return
     val cached = clients.find { it.tabId == client.tabId }
