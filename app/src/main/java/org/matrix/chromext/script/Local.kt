@@ -60,6 +60,8 @@ object GM {
                   "GM_" +
                       if (func == "xmlHttpRequest") {
                         "xmlhttpRequest"
+                      } else if (func == "getResourceUrl") {
+                        "getResourceURL"
                       } else {
                         func
                       }
