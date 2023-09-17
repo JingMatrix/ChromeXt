@@ -111,4 +111,8 @@ async function prepareDOM() {
   renderEditor(code, checkEncoding);
 }
 
-window.addEventListener("DOMContentLoaded", prepareDOM);
+if (document.readyState != "loading") {
+  prepareDOM();
+} else {
+  window.addEventListener("DOMContentLoaded", prepareDOM);
+}
