@@ -165,19 +165,14 @@ const GM_cookie = new (class {
 })();
 // Kotlin separator
 
-function GM_setClipboard(data, info = "text/plain") {
-  let type = info.mimetype || info;
-  if (!type.includes("/")) type = type == "html" ? "text/html" : "text/plain";
-  const blob = new Blob([data], { type });
-  data = [new ClipboardItem({ [type]: blob })];
-  return new Promise((resolve) => {
-    window.addEventListener(
-      "focus",
-      () => navigator.clipboard.write(data).then(() => resolve()),
-      { once: true }
-    );
-    LockedChromeXt.unlock(key).dispatch("focus");
-  });
+function GM_setClipboard(text, info = { type: "text" }) {
+  const type = info?.mimetype || info?.type || info;
+  if (typeof info != "object" && typeof type == "string") info = { type };
+  info.type = info.type || info.mimetype;
+  info.text = text;
+  info.label = `GM_setClipboard by ${GM_info.script.id}`;
+  if (info.type == "html" && !("htmlText" in info)) info.htmlText = info.text;
+  LockedChromeXt.unlock(key).dispatch("copy", info);
 }
 // Kotlin separator
 

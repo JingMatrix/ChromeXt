@@ -1,6 +1,7 @@
 package org.matrix.chromext
 
-import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.os.Handler
 import java.io.File
@@ -108,9 +109,19 @@ object Listener {
   fun on(action: String, payload: String = "", currentTab: Any? = null): String? {
     var callback: String? = null
     when (action) {
-      "focus" -> {
-        val activity = Chrome.getContext()
-        if (activity is Activity) activity.window.decorView.requestFocus()
+      "copy" -> {
+        val data = JSONObject(payload)
+        val type = data.getString("type")
+        val text = data.getString("text")
+        val label = data.optString("label")
+        val clipData =
+            when (type) {
+              "html" -> ClipData.newHtmlText(label, text, data.optString("htmlText"))
+              else -> ClipData.newPlainText(label, text)
+            }
+        val context = Chrome.getContext()
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(clipData)
       }
       "installScript" -> {
         val script = parseScript(payload)
