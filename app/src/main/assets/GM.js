@@ -464,6 +464,7 @@ function GM_xmlhttpRequest(details) {
 
   xhr.responseHandler = async (resolve, reject) => {
     const sink = new ResponseSink(xhr);
+
     function listener(e) {
       let data, type;
       if (arguments.length > 1) {
@@ -491,7 +492,6 @@ function GM_xmlhttpRequest(details) {
             );
           });
       } else if (["timeout", "error"].includes(type)) {
-        sink.writer.abort(type);
         const error = new Error(
           [data.status, data.statusText, data.message]
             .filter((e) => e)
@@ -501,17 +501,19 @@ function GM_xmlhttpRequest(details) {
           }
         );
         error.name = data.type;
-        reject(error);
-        revoke(listener);
+        xhr.error = error;
+        xhr.abort(type);
       }
     }
-    xhr.abort = () => {
+
+    xhr.abort = (type = "abort") => {
       ChromeXt.dispatch("xmlhttpRequest", {
         uuid,
         abort: true,
       });
+      if (xhr.error instanceof Error) reject(xhr.error);
       revoke(listener);
-      sink.writer.abort("abort");
+      sink.writer.abort(type);
     };
     let request = details;
     if (
@@ -704,6 +706,10 @@ class ResponseSink {
       this.xhr.headers.get(headerName);
     this.xhr.finalUrl = this.xhr.headers.get("Location") || this.xhr.url;
     this.xhr.responseURL = this.xhr.finalUrl;
+    if (this.xhr.finalUrl != this.xhr.url && this.xhr.redirect == "error") {
+      this.xhr.error = new Error("Redirection not allowed");
+      this.xhr.abort();
+    }
     this.xhr.total = this.xhr.headers.get("Content-Length");
     if (this.xhr.total !== null) {
       this.xhr.lengthComputable = true;
@@ -763,6 +769,7 @@ class ResponseSink {
     try {
       await ResponseSink.prepare(type, this.xhr);
     } catch (e) {
+      this.xhr.error = e;
       parseError = e;
     }
     this.dispatch("load");
