@@ -12,6 +12,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.BitmapFactory
 import android.graphics.drawable.Icon
+import android.os.Build
 import android.os.Handler
 import java.io.File
 import java.io.FileReader
@@ -147,6 +148,10 @@ object Listener {
         }
       }
       "notification" -> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || Chrome.channel == null) {
+          callback = "console.error('notification API requires Android Oreo')"
+          return callback
+        }
         val detail = JSONObject(payload)
         val id = detail.getString("id")
         val uuid = detail.getInt("uuid")

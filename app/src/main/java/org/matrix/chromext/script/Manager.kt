@@ -79,18 +79,15 @@ object ScriptDbManager {
     val codes = mutableListOf<String>(Local.initChromeXt)
     val path = resolveContentUrl(url)
     if (path != null && (Chrome.isSamsung || !path.startsWith("/"))) {
-      val text =
-          Chrome.getContext()
-              .contentResolver
-              .openInputStream(Uri.parse(url))
-              ?.bufferedReader()
-              ?.readText()
+      val inputStream = Chrome.getContext().contentResolver.openInputStream(Uri.parse(url))
+      val text = inputStream?.bufferedReader()?.readText()
       if (text != null) {
         val data = JSONObject(mapOf("utf-8" to text))
         codes.add("window.content=${data};")
         codes.add(Local.encoding)
         codes.add("fixEncoding();")
       }
+      inputStream?.close()
     }
     if (url.endsWith(".txt") && codes.size == 1) {
       codes.add(Local.encoding)

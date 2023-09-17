@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.net.http.HttpResponseCache
+import android.os.Build
 import android.os.Handler
 import java.io.File
 import java.lang.ref.WeakReference
@@ -44,9 +45,11 @@ object Chrome {
         cookieJar.get(it) as CookieStore
       }
   val channel =
-      NotificationChannel(
-              "ChromeXt", "UserScript Notifications", NotificationManager.IMPORTANCE_DEFAULT)
-          .apply { description = "Notifications created by GM_notification API" }
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        NotificationChannel(
+                "ChromeXt", "UserScript Notifications", NotificationManager.IMPORTANCE_DEFAULT)
+            .apply { description = "Notifications created by GM_notification API" }
+      } else null
 
   fun init(ctx: Context, packageName: String? = null) {
     val initialized = mContext != null
@@ -62,9 +65,11 @@ object Chrome {
     @Suppress("DEPRECATION") val packageInfo = ctx.packageManager?.getPackageInfo(packageName, 0)
     Log.i("Package: ${packageName}, v${packageInfo?.versionName}")
     setupHttpCache(ctx)
-    val notificationManager =
-        ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    notificationManager.createNotificationChannel(channel)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      val notificationManager =
+          ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+      notificationManager.createNotificationChannel(channel!!)
+    }
   }
 
   private fun setupHttpCache(context: Context) {
