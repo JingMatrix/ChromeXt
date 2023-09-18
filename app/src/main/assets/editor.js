@@ -5,7 +5,7 @@ async function installScript(force = false) {
   } else {
     dialog.close();
     const script = document.body.innerText;
-    ChromeXt.dispatch("installScript", script);
+    Symbol.ChromeXt.dispatch("installScript", script);
   }
 }
 
@@ -92,6 +92,14 @@ function fixDialog() {
 }
 
 async function prepareDOM() {
+  const tags = Array.from(document.querySelectorAll("*")).map((e) => e.tagName);
+  if (
+    JSON.stringify(tags) !==
+    JSON.stringify(["HTML", "HEAD", "META", "BODY", "PRE"])
+  ) {
+    Symbol.ChromeXt.lock(Math.random(), Math.random().toString());
+    throw new Error("Insecure environment for ChromeXt");
+  }
   const meta = document.createElement("meta");
   const style = document.createElement("style");
 

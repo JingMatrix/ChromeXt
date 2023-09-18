@@ -209,7 +209,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
     lock(key, name) {
       if (
         !this.isLocked() &&
-        name.length > 20 &&
+        name.length > 16 &&
         typeof key == "number" &&
         typeof unlock != "symbol"
       ) {

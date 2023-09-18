@@ -78,6 +78,7 @@ object ScriptDbManager {
   fun invokeScript(url: String) {
     val codes = mutableListOf<String>(Local.initChromeXt)
     val path = resolveContentUrl(url)
+    var trustedPage = true
     if (path != null && (Chrome.isSamsung || !path.startsWith("/"))) {
       val inputStream = Chrome.getContext().contentResolver.openInputStream(Uri.parse(url))
       val text = inputStream?.bufferedReader()?.readText()
@@ -90,18 +91,18 @@ object ScriptDbManager {
       inputStream?.close()
     }
     if (url.endsWith(".txt") && codes.size == 1) {
+      trustedPage = false
       codes.add(Local.encoding)
       codes.add("fixEncoding();")
     }
     val webSettings =
         if (WebViewHook.isInit) {
           (Chrome.getTab() as WebView?)?.settings
-        } else {
-          null
-        }
+        } else null
     var runScripts = false
     var bypassSandbox = false
     if (isUserScript(url)) {
+      trustedPage = false
       if (codes.size == 1) codes.add(Local.encoding)
       codes.add(Local.promptInstallUserScript)
       bypassSandbox = shouldBypassSandbox(url)
@@ -133,9 +134,11 @@ object ScriptDbManager {
         runScripts = true
       }
     }
-    codes.add(
-        if (runScripts) "Symbol.ChromeXt.lock(${Local.key}, '${Local.name}');"
-        else "globalThis.ChromeXt = Symbol.ChromeXt;")
+    if (runScripts) {
+      codes.add("Symbol.ChromeXt.lock(${Local.key}, '${Local.name}');")
+    } else if (trustedPage) {
+      codes.add("globalThis.ChromeXt = Symbol.ChromeXt;")
+    }
     codes.add("//# sourceURL=local://ChromeXt/init")
     webSettings?.javaScriptEnabled = true
     Chrome.evaluateJavascript(listOf(codes.joinToString("\n")), null, bypassSandbox, bypassSandbox)

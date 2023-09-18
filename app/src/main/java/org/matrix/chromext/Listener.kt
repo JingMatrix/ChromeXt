@@ -45,8 +45,10 @@ object Listener {
   val xmlhttpRequests = mutableMapOf<Double, XMLHttpRequest>()
   val allowedActions =
       mapOf(
+          "userscript" to listOf("installScript"),
           "front-end" to listOf("inspect_pages", "userscript", "extension"),
-          "devtools" to listOf("websocket"))
+          "devtools" to listOf("websocket"),
+      )
   val tabNotification = mutableMapOf<Int, Any>()
 
   private fun syncSharedPreference(
@@ -73,12 +75,14 @@ object Listener {
 
   private fun checkPermisson(action: String, key: Double, tab: Any?): Boolean {
     val url = Chrome.getUrl(tab)!!
+    if (url.endsWith(".txt")) return false
     if (parseOrigin(url) == null) return true
     if (!isChromeXtFrontEnd(url) &&
         !isDevToolsFrontEnd(url) &&
         !isUserScript(url) &&
         key != Local.key)
         return false
+    if (isUserScript(url) && !allowedActions.get("userscript")!!.contains(action)) return false
     if (allowedActions.get("front-end")!!.contains(action) && !isChromeXtFrontEnd(url)) return false
     if (allowedActions.get("devtools")!!.contains(action) && !isDevToolsFrontEnd(url)) return false
     return true
