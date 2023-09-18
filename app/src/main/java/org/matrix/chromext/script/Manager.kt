@@ -10,7 +10,6 @@ import android.webkit.WebView
 import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
-import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.isChromeXtFrontEnd
 import org.matrix.chromext.utils.isDevToolsFrontEnd
@@ -75,7 +74,7 @@ object ScriptDbManager {
     dbHelper.close()
   }
 
-  fun invokeScript(url: String) {
+  fun invokeScript(url: String, webView: WebView? = null) {
     val codes = mutableListOf<String>(Local.initChromeXt)
     val path = resolveContentUrl(url)
     var trustedPage = true
@@ -95,10 +94,7 @@ object ScriptDbManager {
       codes.add(Local.encoding)
       codes.add("fixEncoding();")
     }
-    val webSettings =
-        if (WebViewHook.isInit) {
-          (Chrome.getTab() as WebView?)?.settings
-        } else null
+    val webSettings = webView?.settings
     var runScripts = false
     var bypassSandbox = false
     if (isUserScript(url)) {
@@ -106,11 +102,9 @@ object ScriptDbManager {
       if (codes.size == 1) codes.add(Local.encoding)
       codes.add(Local.promptInstallUserScript)
       bypassSandbox = shouldBypassSandbox(url)
-      webSettings?.javaScriptEnabled = true
     } else if (isDevToolsFrontEnd(url)) {
       codes.add(Local.customizeDevTool)
       webSettings?.userAgentString = null
-      webSettings?.javaScriptEnabled = true
     } else if (!isChromeXtFrontEnd(url)) {
       val origin = parseOrigin(url)
       if (origin != null) {
@@ -147,7 +141,7 @@ object ScriptDbManager {
           val source = codes.removeLast()
           "\"use strict\";{" + codes.joinToString("\n") + "}\n" + source
         }
-    Chrome.evaluateJavascript(listOf(code), null, bypassSandbox, bypassSandbox)
+    Chrome.evaluateJavascript(listOf(code), webView, bypassSandbox, bypassSandbox)
     if (runScripts) {
       codes.clear()
       scripts.filter { matching(it, url) }.forEach { GM.bootstrap(it, codes) }

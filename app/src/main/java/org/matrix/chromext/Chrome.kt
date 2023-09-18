@@ -178,7 +178,7 @@ object Chrome {
       if (codes.size == 0) return
       Handler(getContext().mainLooper).post {
         if (WebViewHook.isInit) {
-          codes.forEach { WebViewHook.evaluateJavascript(it) }
+          codes.forEach { WebViewHook.evaluateJavascript(it, currentTab) }
         } else if (UserScriptHook.isInit) {
           val failed = codes.filter { !UserScriptProxy.evaluateJavascript(it, currentTab) }
           if (failed.size > 0) evaluateJavascript(failed, currentTab, true)
@@ -191,20 +191,26 @@ object Chrome {
       event: String,
       data: JSONObject,
       excludeSelf: Boolean = true,
-      matching: (String) -> Boolean
+      matching: (String?) -> Boolean
   ) {
     val code = "Symbol.${Local.name}.unlock(${Local.key}).post('${event}', ${data});"
     Log.d("broadcasting ${event}")
-
-    val tabs = filterTabs {
-      optString("type") == "page" &&
-          matching(optString("url")) &&
-          (optString("description") == "" ||
-              !JSONObject(getString("description")).optBoolean("never_attached"))
+    if (WebViewHook.isInit) {
+      val tabs = WebViewHook.records.filter { matching(it.get()?.getUrl()) }
+      if (tabs.size > 1 || !excludeSelf)
+          tabs.forEach { WebViewHook.evaluateJavascript(code, it.get()) }
+      return
     }
+    IO.submit {
+      val tabs = filterTabs {
+        optString("type") == "page" &&
+            matching(optString("url")) &&
+            (optString("description") == "" ||
+                !JSONObject(getString("description")).optBoolean("never_attached"))
+      }
 
-    if (tabs.size > 1 || !excludeSelf) {
-      tabs.forEach { evaluateJavascript(listOf(code), it) }
+      if (tabs.size > 1 || !excludeSelf)
+          tabs.forEach { evaluateJavascriptDevTools(listOf(code), it, false) }
     }
   }
 

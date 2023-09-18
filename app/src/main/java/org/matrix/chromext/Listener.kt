@@ -207,11 +207,9 @@ object Listener {
         val script = ScriptDbManager.scripts.find { it.id == id }
         if (script?.storage == null) return callback
         if (detail.optBoolean("broadcast")) {
-          Chrome.IO.submit {
-            detail.remove("broadcast")
-            Chrome.broadcast("scriptStorage", detail) {
-              matching(script, it) && parseOrigin(it) != null
-            }
+          detail.remove("broadcast")
+          Chrome.broadcast("scriptStorage", detail) {
+            it != null && matching(script, it) && parseOrigin(it) != null
           }
         }
         val data = detail.getJSONObject("data")
