@@ -14,6 +14,7 @@ import android.graphics.BitmapFactory
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Handler
+import android.webkit.WebView
 import java.io.File
 import java.io.FileReader
 import java.net.HttpURLConnection
@@ -26,6 +27,7 @@ import org.matrix.chromext.devtools.getInspectPages
 import org.matrix.chromext.devtools.hitDevTools
 import org.matrix.chromext.extension.LocalFiles
 import org.matrix.chromext.hook.UserScriptHook
+import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.Local
 import org.matrix.chromext.script.ScriptDbHelper
@@ -318,6 +320,7 @@ object Listener {
             }
       }
       "inspectPages" -> {
+        if (WebViewHook.isInit) WebView.setWebContentsDebuggingEnabled(true)
         Chrome.IO.submit {
           val code = "ChromeXt.post('inspect_pages', ${getInspectPages()});"
           Chrome.evaluateJavascript(listOf(code), currentTab)

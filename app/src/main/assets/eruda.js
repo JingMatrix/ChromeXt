@@ -334,7 +334,7 @@ eruda.Info = class extends eruda.Info {
     this.add(
       "UserScripts",
       '<input type="file" multiple id="new_script" accept="text/javascript,application/javascript" style="display:none"/>',
-      { li: "userscripts", span: ["add"] }
+      { li: "userscripts", span: ["add", "eye"] }
     );
     const spanScript = `span class="${c("script")}"`;
     this._infos["UserScripts"].val += ChromeXt.scripts
@@ -428,6 +428,9 @@ eruda.Info = class extends eruda.Info {
       })
       .on("click", ".eruda-userscripts .eruda-add", (_e) => {
         this._$el.find("#new_script")[0].click();
+      })
+      .on("click", ".eruda-userscripts .eruda-icon-eye", (_e) => {
+        window.open("https://jingmatrix.github.io/ChromeXt/");
       })
       .on("click", ".eruda-check-update", (_e) => {
         ChromeXt.dispatch("updateEruda");
