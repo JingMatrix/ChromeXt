@@ -135,18 +135,21 @@ object Chrome {
     }
   }
 
-  fun getTabId(currentTab: Any?): String {
+  fun getTabId(tab: Any?): String {
     if (WebViewHook.isInit) {
-      val url = getUrl(currentTab)
+      val url = getUrl(tab)
+      val attached = tab == Chrome.getTab()
       val ids = filterTabs {
+        val description = JSONObject(getString("description"))
         optString("type") == "page" &&
             optString("url") == url &&
-            !JSONObject(getString("description")).optBoolean("never_attached")
+            !description.optBoolean("never_attached") &&
+            !(attached && !description.optBoolean("attached"))
       }
       if (ids.size > 1) Log.i("Multiple possible tabIds matched with url ${url}")
       return ids.first()
     } else {
-      return getTab(currentTab)!!.invokeMethod() { name == "getId" }.toString()
+      return getTab(tab)!!.invokeMethod() { name == "getId" }.toString()
     }
   }
 
