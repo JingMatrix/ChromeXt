@@ -37,7 +37,7 @@ object ContextMenuHook : BaseHook() {
           Listener.on("inspectPages")
         } else if (isUserScript(url)) {
           val sandBoxed = shouldBypassSandbox(url)
-          Chrome.evaluateJavascript(listOf("installScript(true);"), null, sandBoxed)
+          Chrome.evaluateJavascript(listOf("Symbol.installScript(true);"), null, sandBoxed)
         } else {
           Chrome.evaluateJavascript(listOf(Local.openEruda))
         }

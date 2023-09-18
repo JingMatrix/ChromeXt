@@ -141,7 +141,13 @@ object ScriptDbManager {
     }
     codes.add("//# sourceURL=local://ChromeXt/init")
     webSettings?.javaScriptEnabled = true
-    Chrome.evaluateJavascript(listOf(codes.joinToString("\n")), null, bypassSandbox, bypassSandbox)
+    val code =
+        if (trustedPage) codes.joinToString("\n")
+        else {
+          val source = codes.removeLast()
+          "\"use strict\";{" + codes.joinToString("\n") + "}\n" + source
+        }
+    Chrome.evaluateJavascript(listOf(code), null, bypassSandbox, bypassSandbox)
     if (runScripts) {
       codes.clear()
       scripts.filter { matching(it, url) }.forEach { GM.bootstrap(it, codes) }

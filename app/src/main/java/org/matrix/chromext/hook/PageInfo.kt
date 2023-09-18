@@ -49,7 +49,7 @@ object PageInfoHook : BaseHook() {
           title.setText(R.string.main_menu_install_script)
           erudaRow.setOnClickListener {
             val sandBoxed = shouldBypassSandbox(url)
-            Chrome.evaluateJavascript(listOf("installScript(true);"), null, sandBoxed)
+            Chrome.evaluateJavascript(listOf("Symbol.installScript(true);"), null, sandBoxed)
             pageInfoController!!.invokeMethod() { name == "destroy" }
           }
         } else {

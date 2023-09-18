@@ -73,7 +73,7 @@ object PageMenuHook : BaseHook() {
         }
         "org.matrix.chromext:id/install_script_id" -> {
           val sandBoxed = shouldBypassSandbox(getUrl())
-          Chrome.evaluateJavascript(listOf("installScript(true);"), null, sandBoxed)
+          Chrome.evaluateJavascript(listOf("Symbol.installScript(true);"), null, sandBoxed)
         }
         "org.matrix.chromext:id/developer_tools_id" -> Listener.on("inspectPages")
         "org.matrix.chromext:id/eruda_console_id" ->

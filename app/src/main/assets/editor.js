@@ -99,6 +99,8 @@ async function prepareDOM() {
   ) {
     Symbol.ChromeXt.lock(Math.random(), Math.random().toString());
     throw new Error("Insecure environment for ChromeXt");
+  } else {
+    Symbol.installScript = installScript;
   }
   const meta = document.createElement("meta");
   const style = document.createElement("style");
