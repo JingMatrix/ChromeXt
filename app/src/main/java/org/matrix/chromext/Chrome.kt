@@ -116,8 +116,8 @@ object Chrome {
     return referTab ?: mTab?.get()
   }
 
-  fun getUrl(currentTab: Any? = null): String? {
-    val url = getTab(currentTab)?.invokeMethod { name == "getUrl" }
+  fun getUrl(tab: Any? = null): String? {
+    val url = getTab(tab)?.invokeMethod { name == "getUrl" }
     return if (UserScriptHook.isInit) {
       UserScriptProxy.parseUrl(url)
     } else {
@@ -135,14 +135,13 @@ object Chrome {
     }
   }
 
-  fun getTabId(tab: Any?): String {
+  fun getTabId(tab: Any?, url: String? = null): String {
     if (WebViewHook.isInit) {
-      val url = getUrl(tab)
       val attached = tab == Chrome.getTab()
       val ids = filterTabs {
         val description = JSONObject(getString("description"))
         optString("type") == "page" &&
-            optString("url") == url &&
+            optString("url") == url!! &&
             !description.optBoolean("never_attached") &&
             !(attached && !description.optBoolean("attached"))
       }

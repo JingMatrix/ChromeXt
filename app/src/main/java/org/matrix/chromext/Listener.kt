@@ -242,6 +242,7 @@ object Listener {
         }
       }
       "cookie" -> {
+        if (WebViewHook.isInit) WebView.setWebContentsDebuggingEnabled(true)
         val detail = JSONObject(payload)
         val method = detail.getString("method")
         val params = detail.optJSONObject("params")
@@ -257,8 +258,9 @@ object Listener {
           }
           return true
         }
+        val url = Chrome.getUrl(currentTab)
         Chrome.IO.submit {
-          val tabId = Chrome.getTabId(currentTab)
+          val tabId = Chrome.getTabId(currentTab, url)
           val client = DevSessions.new(tabId)
           Chrome.IO.submit { client.listen { if (!checkResult(it)) client.close() } }
           client.command(null, "Network.enable", JSONObject())
