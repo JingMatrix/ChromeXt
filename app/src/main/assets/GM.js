@@ -164,17 +164,39 @@ const GM_cookie = new (class {
     return cookies;
   }
   async #dispatch(method, details, callback) {
-    let error;
-    try {
-      return await this.#command(method, details);
-    } catch (e) {
-      error = e;
+    if (typeof callback == "function") {
+      let error;
+      try {
+        return await this.#command(method, details);
+      } catch (e) {
+        error = e;
+      }
+      callback(e.message);
+      if (error instanceof Error) throw error;
+    } else {
+      return this.#command(method, details);
     }
-    if (typeof callback == "function") callback(e.message);
-    if (error instanceof Error) throw error;
   }
-  async set(details, callback) {
-    return await this.#dispatch("Network.setCookie", details, callback);
+  async set(details, callback, updateStore = false) {
+    let cookies = details;
+    if (!Array.isArray(cookies)) cookies = [details];
+    if (updateStore) {
+      cookies.forEach((cookie) => {
+        if (!("name" in cookie && "value" in cookie)) return;
+        cookie.domain =
+          cookie.domain || new URL(cookie.url || location.origin).host;
+        delete cookie.url;
+        const index = this.#cache.findIndex(
+          (it) => it.name == cookie.name && it.domain == cookie.domain
+        );
+        if (index == -1) {
+          this.#cache.push(cookie);
+        } else {
+          Object.assign(this.#cache[index], cookie);
+        }
+      });
+    }
+    return await this.#dispatch("Network.setCookies", { cookies }, callback);
   }
   async delete(details, callback) {
     return await this.#dispatch("Network.deleteCookies", details, callback);
@@ -704,6 +726,8 @@ class ResponseSink {
     if (data.fetch) data.response = new Response(data.response, data);
   }
   async parseCookie(cookies, url, sync = true) {
+    if (!Array.isArray(cookies)) return [];
+    if (cookies.length == 0) return cookies;
     cookies = cookies
       .map((str) => {
         const props = str
@@ -715,7 +739,15 @@ class ResponseSink {
         const cookie = {
           name: defn.shift(),
           value: defn.join("="),
+          httpOnly: false,
+          path: "/",
+          secure: false,
+          session: true,
+          sourceScheme: "NonSecure",
+          expires: -1,
+          priority: "Medium",
         };
+        if (typeof url == "string") cookie.url = url;
         props.forEach((prop) => {
           const parts = prop.split("=");
           const key = parts.shift().toLowerCase();
@@ -735,23 +767,17 @@ class ResponseSink {
             cookie[key] = value;
           }
         });
-        if (!("expires" in cookie)) cookie.session = true;
+        if (!cookie.session) cookie.session = cookie.cookie == -1;
         return cookie;
       })
       .filter((cookie) => typeof cookie == "object");
-    if (sync && GM_info.script.includes("GM_cookie")) {
-      for (const cookie of cookies) {
-        GM_cookie.set({ ...cookie, url });
-      }
-    }
+    if (sync && GM_info.script.includes("GM_cookie"))
+      GM_cookie.set(cookies, undefined, true);
+    return cookies;
   }
   parse(data) {
     if (typeof data != "object") return;
-    for (const prop in data) {
-      let val = data[prop];
-      if (typeof val == "function") continue;
-      this.xhr[prop] = val;
-    }
+    Object.assign(this.xhr, data);
     if (this.xhr.readyState != 1) return;
     this.xhr.readyState = 2;
     const headers = data.headers;
