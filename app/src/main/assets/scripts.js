@@ -129,6 +129,8 @@ if (typeof Symbol.ChromeXt == "undefined") {
     #filters;
     #security;
     #confirm = confirm.bind(window);
+    #stringify = JSON.stringify.bind(JSON);
+    #parse = JSON.parse.bind(JSON);
     get trustedTypes() {
       return cachedTypes;
     }
@@ -185,7 +187,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
         });
       });
       if (this.#security != "secure") {
-        const parse = JSON.parse.bind(JSON);
+        const parse = this.#parse;
         console.debug = new Proxy(this.#debug, {
           apply(_target, _this, argumentsList) {
             try {
@@ -250,7 +252,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
         throw new Error("ChromeXt locked");
       if (typeof unlock == "symbol") key = Number(unlock.description);
       // Kotlin anchor
-      this.#debug(JSON.stringify({ action, payload, key }));
+      this.#debug(this.#stringify({ action, payload, key }));
     }
     isLocked() {
       return this.#key != null;
