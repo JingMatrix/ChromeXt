@@ -121,17 +121,17 @@ const GM_cookie = new (class {
       ChromeXt.dispatch("cookie", payload);
     });
   }
-  export(url) {
+  export(url, httpOnly = false) {
     if (typeof url == "string") url = new URL(url);
     if (url.origin == location.origin) {
       return this.store
         .filter((item) => {
           if (!("name" in item && "value" in item)) return false;
-          if (item.httpOnly !== true) return false;
+          if (httpOnly && item.httpOnly !== true) return false;
           if ("path" in item && !url.pathname.startsWith(item.path))
             return false;
           const expires = item.expirationDate || item.expires;
-          if (expires) return expires * 1000 > new Date().getTime();
+          if (expires > 0) return expires * 1000 > new Date().getTime();
           return true;
         })
         .map((item) => item.name + "=" + item.value)
@@ -616,6 +616,7 @@ function GM_xmlhttpRequest(details) {
 
       const origin = new URL(details.url).origin;
       if (
+        !("permission" in navigator) &&
         location.origin == origin &&
         GM_info.script.grants.includes("GM_cookie") &&
         !("cookie" in details) &&

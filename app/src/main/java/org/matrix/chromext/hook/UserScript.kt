@@ -2,6 +2,8 @@ package org.matrix.chromext.hook
 
 import android.content.Context
 import android.net.http.HttpResponseCache
+import java.net.CookieHandler
+import java.net.CookieManager
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 import org.matrix.chromext.proxy.UserScriptProxy
@@ -17,6 +19,7 @@ object UserScriptHook : BaseHook() {
   override fun init() {
 
     val proxy = UserScriptProxy
+    CookieHandler.setDefault(CookieManager())
 
     // proxy.tabModelJniBridge.declaredConstructors[0].hookAfter {
     //   Chrome.addTabModel(it.thisObject)

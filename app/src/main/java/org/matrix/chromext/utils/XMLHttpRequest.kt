@@ -12,6 +12,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
+import org.matrix.chromext.hook.UserScriptHook
+import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.script.Local
 
 class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: Any?) {
@@ -32,14 +34,16 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
   val responseType = request.optString("responseType")
 
   init {
-    val manager = CookieHandler.getDefault() as CookieManager
-    if (anonymous) {
-      manager.setCookiePolicy(CookiePolicy.ACCEPT_NONE)
-      val uri = url.toURI()
-      val cookieStore = Chrome.cookieStore
-      cookieStore.get(uri).forEach { cookieStore.remove(uri, it) }
-    } else {
-      manager.setCookiePolicy(CookiePolicy.ACCEPT_ORIGINAL_SERVER)
+    if (UserScriptHook.isInit) {
+      val manager = CookieHandler.getDefault() as CookieManager
+      if (anonymous || request.has("cookie")) {
+        if (anonymous) manager.setCookiePolicy(CookiePolicy.ACCEPT_NONE)
+        val uri = url.toURI()
+        val cookieStore = manager.getCookieStore()
+        cookieStore.get(uri).forEach { cookieStore.remove(uri, it) }
+      } else {
+        manager.setCookiePolicy(CookiePolicy.ACCEPT_ALL)
+      }
     }
   }
 
@@ -56,7 +60,11 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
       setUseCaches(!nocache)
       setConnectTimeout(timeout)
       if (request.has("cookie") && !anonymous)
-          addRequestProperty("Cookie", request.optString("cookie"))
+          setRequestProperty("Cookie", request.optString("cookie"))
+      if (WebViewHook.isInit && !anonymous) {
+        val manger = android.webkit.CookieManager.getInstance()
+        addRequestProperty("Cookie", manger.getCookie(url.toString()))
+      }
 
       if (request.has("user")) {
         val user = request.optString("user")
@@ -85,6 +93,12 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
                     headers.containsKey("Content-Encoding") ||
                     (headers.get("Content-Type")?.optString(0, "")?.contains("charset") == true)
             data.put("binary", binary)
+            if (WebViewHook.isInit && !anonymous) {
+              val manger = android.webkit.CookieManager.getInstance()
+              headerFields
+                  .filter { it.key.startsWith("Set-Cookie") }
+                  .forEach { it.value.forEach { manger.setCookie(url.toString(), it) } }
+            }
 
             val buffer = ByteArray(buffersize * DEFAULT_BUFFER_SIZE)
             while (true) {
