@@ -100,9 +100,8 @@ async function prepareDOM() {
       JSON.stringify(["HTML", "HEAD", "META", "BODY", "PRE"])
   ) {
     Symbol.ChromeXt.protect();
-  } else {
-    Symbol.installScript = installScript;
   }
+  Symbol.installScript = installScript;
   const meta = document.createElement("meta");
   const style = document.createElement("style");
 

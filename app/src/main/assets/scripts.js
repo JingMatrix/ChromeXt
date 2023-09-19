@@ -232,7 +232,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
       const msg = [
         "Current environment is insecure for ChromeXt.",
         `Please confirm (each time) to trust current page for the action: ${action}.`,
-        "\n\n",
+        "\n",
         "See details in https://github.com/JingMatrix/ChromeXt/issues/100.",
       ];
       return this.#confirm(msg.join("\n"));

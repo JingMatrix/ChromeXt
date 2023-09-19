@@ -96,7 +96,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
             if (WebViewHook.isInit && !anonymous) {
               val manger = android.webkit.CookieManager.getInstance()
               headerFields
-                  .filter { it.key.startsWith("Set-Cookie") }
+                  .filter { it.key != null && it.key.startsWith("Set-Cookie") }
                   .forEach { it.value.forEach { manger.setCookie(url.toString(), it) } }
             }
 
