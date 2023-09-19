@@ -703,10 +703,51 @@ class ResponseSink {
     }
     if (data.fetch) data.response = new Response(data.response, data);
   }
+  async parseCookie(cookies, url, sync = true) {
+    cookies = cookies
+      .map((str) => {
+        const props = str
+          .split(";")
+          .map((it) => it.trim())
+          .filter((it) => it.length > 0);
+        const defn = props.shift().split("=");
+        if (defn.length < 2) return;
+        const cookie = {
+          name: defn.shift(),
+          value: defn.join("="),
+        };
+        props.forEach((prop) => {
+          const parts = prop.split("=");
+          const key = parts.shift().toLowerCase();
+          var value = parts.join("=");
+          if (key === "expires") {
+            cookie.expires = new Date(value).getTime() / 1000;
+          } else if (key === "max-age") {
+            cookie.maxAge = Number(value);
+            cookie.expires = cookie.maxAge + new Date().getTime() / 1000;
+          } else if (key === "secure") {
+            cookie.secure = true;
+          } else if (key === "httponly") {
+            cookie.httpOnly = true;
+          } else if (key === "samesite") {
+            cookie.sameSite = value;
+          } else {
+            cookie[key] = value;
+          }
+        });
+        if (!("expires" in cookie)) cookie.session = true;
+        return cookie;
+      })
+      .filter((cookie) => typeof cookie == "object");
+    if (sync && GM_info.script.includes("GM_cookie")) {
+      for (const cookie of cookies) {
+        GM_cookie.set({ ...cookie, url });
+      }
+    }
+  }
   parse(data) {
     if (typeof data != "object") return;
     for (const prop in data) {
-      if (prop == "header" && this.xhr.headers instanceof Headers) continue;
       let val = data[prop];
       if (typeof val == "function") continue;
       this.xhr[prop] = val;
@@ -714,12 +755,17 @@ class ResponseSink {
     if (this.xhr.readyState != 1) return;
     this.xhr.readyState = 2;
     const headers = data.headers;
-    this.xhr.headers = new Headers(headers);
-    this.xhr.responseHeaders = Object.entries(
-      Object.fromEntries(this.xhr.headers)
-    )
-      .map(([k, v]) => k.toLowerCase() + ": " + v)
-      .join("\r\n");
+    if (typeof headers != "object" || this.xhr.headers instanceof Headers)
+      return;
+    Object.defineProperty(this.xhr, "headers", { value: new Headers() });
+    let responseHeaders = "";
+    Object.entries(headers).forEach(([k, vs]) => {
+      for (const v of vs) {
+        this.xhr.headers.append(k, v);
+        responseHeaders += k.toLowerCase() + ": " + v + "\r\n";
+      }
+    });
+    this.xhr.responseHeaders = responseHeaders.slice(0, -2);
     this.xhr.getAllResponseHeaders = () => this.xhr.responseHeaders;
     this.xhr.getResponseHeader = (headerName) =>
       this.xhr.headers.get(headerName);
@@ -728,6 +774,13 @@ class ResponseSink {
     if (this.xhr.finalUrl != this.xhr.url && this.xhr.redirect == "error") {
       this.xhr.error = new Error("Redirection not allowed");
       this.xhr.abort();
+    }
+    if (
+      "permission" in navigator &&
+      GM_info.script.includes("GM_cookie") &&
+      new URL(this.xhr.finalUrl).origin == location.origin
+    ) {
+      this.parseCookie(this.xhr.headers.getSetCookie(), this.xhr.finalUrl);
     }
     this.xhr.total = this.xhr.headers.get("Content-Length");
     if (this.xhr.total !== null) {
