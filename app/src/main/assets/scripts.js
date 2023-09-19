@@ -127,6 +127,8 @@ if (typeof Symbol.ChromeXt == "undefined") {
     #commands;
     #cspRules;
     #filters;
+    #security;
+    #confirm = confirm.bind(window);
     get trustedTypes() {
       return cachedTypes;
     }
@@ -134,6 +136,14 @@ if (typeof Symbol.ChromeXt == "undefined") {
       return globalKeys;
     }
     constructor(debug, target) {
+      if (
+        location.protocol.startsWith("http") &&
+        location.pathname.endsWith(".user.js")
+      ) {
+        this.#security = "userscript";
+      } else {
+        this.#security = "secure";
+      }
       if (typeof debug == "function" && target instanceof EventTarget) {
         this.#debug = debug;
         this.#target = target;
@@ -174,6 +184,28 @@ if (typeof Symbol.ChromeXt == "undefined") {
           },
         });
       });
+      if (this.#security != "secure") {
+        const parse = JSON.parse.bind(JSON);
+        console.debug = new Proxy(this.#debug, {
+          apply(_target, _this, argumentsList) {
+            try {
+              const data = parse(argumentsList.join(""));
+              if ("action" in data) {
+                console.error("ChromeXt is under attack");
+              } else {
+                throw Error("Valid call to console.debug");
+              }
+            } catch {
+              Reflect.apply(...arguments);
+            }
+          },
+        });
+        Object.defineProperty(this, "protect", {
+          value: () => {
+            this.#security = "insecure";
+          },
+        });
+      }
     }
     #factory(p, v) {
       // Set or get private properties
@@ -196,7 +228,24 @@ if (typeof Symbol.ChromeXt == "undefined") {
     post(event, detail) {
       this.dispatchEvent(new CustomEvent(event, { detail }));
     }
+    #confirmAction(action) {
+      const msg = [
+        "Current environment is insecure for ChromeXt.",
+        `Please confirm (each time) to trust current page for the action: ${action}.`,
+        "\n\n",
+        "See details in https://github.com/JingMatrix/ChromeXt/issues/100.",
+      ];
+      return this.#confirm(msg.join("\n"));
+    }
     dispatch(action, payload, key) {
+      let allowed = false;
+      if (this.#security == "userscript" && action == "installScript") {
+        allowed = document.querySelector("script,iframe,embed,object") === null;
+      }
+      if (!allowed && this.#security != "secure") {
+        allowed = this.#confirmAction(action);
+        if (!allowed) throw Error("Insecure environment for ChromeXt");
+      }
       if (this.isLocked() && key != this.#key)
         throw new Error("ChromeXt locked");
       if (typeof unlock == "symbol") key = Number(unlock.description);
@@ -228,6 +277,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
         if (typeof userDefinedChromeXt != "undefined") {
           Symbol.ChromeXt = userDefinedChromeXt;
         }
+        this.#security = "secure";
       }
     }
     unlock(key, apiOnly = true) {

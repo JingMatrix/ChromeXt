@@ -91,14 +91,15 @@ function fixDialog() {
   installScript();
 }
 
+const trustedDomain = ["https://greasyfork.org"];
 async function prepareDOM() {
   const tags = Array.from(document.querySelectorAll("*")).map((e) => e.tagName);
   if (
+    !trustedDomain.includes(location.origin) &&
     JSON.stringify(tags) !==
-    JSON.stringify(["HTML", "HEAD", "META", "BODY", "PRE"])
+      JSON.stringify(["HTML", "HEAD", "META", "BODY", "PRE"])
   ) {
-    Symbol.ChromeXt.lock(Math.random(), Math.random().toString());
-    throw new Error("Insecure environment for ChromeXt");
+    Symbol.ChromeXt.protect();
   } else {
     Symbol.installScript = installScript;
   }
