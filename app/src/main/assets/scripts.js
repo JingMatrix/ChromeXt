@@ -24,7 +24,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
           if (typeof original == "function") {
             return original.apply(policyOptions, arguments);
           } else {
-            const error = TypeError(
+            const error = new TypeError(
               `Failed to execute 'createHTML' on 'TrustedTypePolicy': Policy ${args[0]}'s TrustedTypePolicyOptions did not specify a 'createHTML' member.`
             );
             const stack = error.stack.split("\n");
@@ -137,15 +137,62 @@ if (typeof Symbol.ChromeXt == "undefined") {
     get globalKeys() {
       return globalKeys;
     }
-    constructor(debug, target) {
+    #blockAPI() {
+      if (this.#security == "secure" || this.#parse == null) return;
+      const parse = this.#parse;
+      console.debug = new Proxy(this.#debug, {
+        apply(_target, _this, argumentsList) {
+          try {
+            const data = parse(argumentsList.join(""));
+            if ("action" in data) {
+              console.warn("ChromeXt is under attack");
+            } else {
+              throw Error("Valid arguments");
+            }
+          } catch {
+            Reflect.apply(...arguments);
+          }
+        },
+      });
+      this.#parse = null;
+    }
+    #setDanger() {
+      if (this.#security == "secure") return;
+      console.warn(
+        "Domain",
+        location.host,
+        "is dangerous for ChromeXt with security level",
+        this.#security
+      );
+      this.#security = "danger";
+    }
+    #check(security) {
+      this.#security = security || "secure";
+      if (this.#security == "secure") return;
       if (
         location.protocol.startsWith("http") &&
         location.pathname.endsWith(".user.js")
       ) {
         this.#security = "userscript";
-      } else {
-        this.#security = "secure";
+        this.#blockAPI();
+        fetch(location.href, { cache: "only-if-cached", mode: "same-origin" })
+          .then((res) => {
+            if (res.headers.get("Content-Type").startsWith("text/javascript")) {
+              this.#security = "secure";
+            } else {
+              this.#setDanger();
+            }
+          })
+          .catch(() => this.#setDanger());
       }
+    }
+    protect() {
+      if (this.#security != "secure" && this.#security != "danger") {
+        this.#security = "insecure";
+      }
+    }
+    constructor(debug, target, security) {
+      this.#check(security);
       if (typeof debug == "function" && target instanceof EventTarget) {
         this.#debug = debug;
         this.#target = target;
@@ -153,6 +200,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
         this.#target = new EventTarget();
         this.#debug = console.debug.bind(console);
       }
+
       EventTargetKeys.forEach((m) => {
         Object.defineProperty(this, m, {
           value: (...args) => {
@@ -186,28 +234,6 @@ if (typeof Symbol.ChromeXt == "undefined") {
           },
         });
       });
-      if (this.#security != "secure") {
-        const parse = this.#parse;
-        console.debug = new Proxy(this.#debug, {
-          apply(_target, _this, argumentsList) {
-            try {
-              const data = parse(argumentsList.join(""));
-              if ("action" in data) {
-                console.error("ChromeXt is under attack");
-              } else {
-                throw Error("Valid call to console.debug");
-              }
-            } catch {
-              Reflect.apply(...arguments);
-            }
-          },
-        });
-        Object.defineProperty(this, "protect", {
-          value: () => {
-            this.#security = "insecure";
-          },
-        });
-      }
     }
     #factory(p, v) {
       // Set or get private properties
@@ -240,13 +266,13 @@ if (typeof Symbol.ChromeXt == "undefined") {
       return this.#confirm(msg.join("\n"));
     }
     dispatch(action, payload, key) {
+      if (this.#security == "danger")
+        throw Error(`ChromeXt called with security: ${this.#security}`);
       let allowed = false;
-      if (this.#security == "userscript" && action == "installScript") {
-        allowed = document.querySelector("script,iframe,embed,object") === null;
-      }
-      if (!allowed && this.#security != "secure") {
+      if (this.#security != "secure") {
         allowed = this.#confirmAction(action);
-        if (!allowed) throw Error("Insecure environment for ChromeXt");
+        if (!allowed)
+          throw Error(`ChromeXt called with security: ${this.#security}`);
       }
       if (this.isLocked() && key != this.#key)
         throw new Error("ChromeXt locked");
@@ -284,7 +310,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
     }
     unlock(key, apiOnly = true) {
       if (!this.isLocked()) {
-        if (window.location.origin !== "content://")
+        if (!["content://", "file://"].includes(location.origin))
           throw Error("ChromeXt is not locked");
         return this;
       }
