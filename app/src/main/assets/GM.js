@@ -93,7 +93,7 @@ function GM_notification(details, ondone) {
 }
 // Kotlin separator
 
-const GM_cookie = new (class {
+const GM_cookie = new (class CookieManager {
   #cache = [];
   get store() {
     return this.#cache;
@@ -109,7 +109,9 @@ const GM_cookie = new (class {
         if (!(e.type == "cookie" && data.id == payload.id)) return;
         const response = data.response.find((r) => r.id === 2);
         if (data.method == "Network.getCookies" && "result" in response)
-          self.#cache = response.result.cookies;
+          self.#cache = response.result.cookies.map(
+            (it) => new CookieParam(it)
+          );
         if (data.uuid == uuid) {
           if (typeof response != "object")
             reject(new TypeError(`Response not found for ${data.method}`));
@@ -123,7 +125,7 @@ const GM_cookie = new (class {
       ChromeXt.dispatch("cookie", payload);
     });
   }
-  export(url, store, httpOnly = false) {
+  export(url = location.origin, store, httpOnly = false) {
     const cookies = store || this.store;
     if (!Array.isArray(cookies)) return;
     if (typeof url == "string") {
@@ -132,54 +134,23 @@ const GM_cookie = new (class {
       return;
     }
     if (cookies == this.store && url.origin != location.origin) return;
-    const capitalize = (s) => s && s[0].toUpperCase() + s.slice(1);
     return cookies
-      .filter((item) => {
-        if (!("name" in item && "value" in item)) return false;
-        if (httpOnly && item.httpOnly !== true) return false;
-        if ("path" in item && !url.pathname.startsWith(item.path)) return false;
-        if ("domain" in item) {
-          let domain = item.domain;
-          if (domain.startsWith(".")) domain = domain.slice(1);
-          if (!url.hostname.endsWith(domain)) return false;
-        }
-        const expires = item.expirationDate || item.expires;
-        if (expires > 0) return expires * 1000 > new Date().getTime();
-        return true;
-      })
-      .map((item) => {
-        let header = [item.name + "=" + item.value];
-        header.push(`Domain=${item.domain}`);
-        if (Number.isFinite(item.expires) && item.expires != -1) {
-          const date = new Date();
-          date.setTime(item.expires * 1000);
-          header.push(`expires=${date.toUTCString()}`);
-        }
-        const props = ["path", "sameSite", "httpOnly", "secure"];
-        for (const prop of props) {
-          if (!(prop in item)) continue;
-          const val = item[prop];
-          if (typeof val == "string" && val.length != 0) {
-            header.push(capitalize(prop) + `=${capitalize(val)}`);
-          } else if (val === true) {
-            header.push(capitalize(prop));
-          }
-        }
-        return header.join("; ");
-      });
+      .map((it) => (it instanceof CookieParam ? it : new CookieParam(it)))
+      .filter((it) => it.match(url, httpOnly))
+      .map((cookie) => cookie.toHeader());
   }
   async list(details = { url: window.origin }, callback) {
     let cookies, error;
     try {
       if (typeof details != "object") throw TypeError("Invalid parameters");
-      const result = await this.#command("Network.getCookies", [
+      await this.#command("Network.getCookies", [
         details.url || location.origin,
       ]);
       const props = ["domain", "name", "path"].filter((key) => key in details);
       if (props.length == 0) {
-        cookies = result.cookies;
+        cookies = this.#cache;
       } else {
-        cookies = result.cookies.filter((item) => {
+        cookies = this.#cache.filter((item) => {
           for (const prop of props) {
             if (item[prop] !== details[prop]) return false;
           }
@@ -207,31 +178,126 @@ const GM_cookie = new (class {
       return this.#command(method, details);
     }
   }
-  async set(details, callback, updateStore = false) {
+  set(details, callback) {
     let cookies = details;
     if (!Array.isArray(cookies)) cookies = [details];
-    if (updateStore) {
-      cookies.forEach((cookie) => {
-        if (!("name" in cookie && "value" in cookie)) return;
-        cookie.domain =
-          cookie.domain || new URL(cookie.url || location.origin).host;
-        delete cookie.url;
-        const index = this.#cache.findIndex(
-          (it) => it.name == cookie.name && it.domain == cookie.domain
-        );
-        if (index == -1) {
-          this.#cache.push(cookie);
-        } else {
-          Object.assign(this.#cache[index], cookie);
-        }
-      });
-    }
-    return await this.#dispatch("Network.setCookies", { cookies }, callback);
+    return this.#dispatch("Network.setCookies", { cookies }, callback);
   }
-  async delete(details, callback) {
-    return await this.#dispatch("Network.deleteCookies", details, callback);
+  delete(details, callback) {
+    return this.#dispatch("Network.deleteCookies", details, callback);
   }
 })();
+
+class CookieParam {
+  #header;
+  constructor(data) {
+    if (
+      typeof data == "object" &&
+      typeof data.name == "string" &&
+      "value" in data
+    ) {
+      Object.assign(this, data);
+      if (typeof this.header == "string") {
+        this.#header = this.header;
+        delete this.header;
+      }
+    } else {
+      throw TypeError("Invalid parameters for cookie");
+    }
+  }
+  static fromHeader(str, url) {
+    const props = str
+      .split(";")
+      .map((it) => it.trim())
+      .filter((it) => it.length > 0);
+    const defn = props.shift().split("=");
+    if (defn.length < 2) return;
+    const cookie = new CookieParam({
+      name: defn.shift(),
+      value: defn.join("="),
+      header: str,
+    });
+    props.forEach((prop) => {
+      const parts = prop.split("=");
+      const key = parts.shift().toLowerCase();
+      var value = parts.join("=");
+      if (key === "expires") {
+        cookie.expires = new Date(value).getTime() / 1000;
+      } else if (key === "max-age") {
+        cookie.maxAge = Number(value);
+        cookie.expires = cookie.maxAge + new Date().getTime() / 1000;
+      } else if (key === "secure") {
+        cookie.secure = true;
+      } else if (key === "httponly") {
+        cookie.httpOnly = true;
+      } else {
+        cookie[key] = value;
+      }
+    });
+    cookie.url = url;
+    cookie.session = cookie.expires == -1;
+    return cookie;
+  }
+  /** @param {URL} url */
+  set url(url) {
+    if (!(url instanceof URL)) url = new URL(url || location.origin);
+    this.domain = this.domain || url.hostname;
+    if (url.port.length != 0) {
+      this.sourcePort = Number(url.port);
+    } else if (url.protocol == "https:") {
+      this.sourcePort = 443;
+    } else if (url.protocol == "http:") {
+      this.sourcePort = 80;
+    }
+    if (url.protocol.endsWith("s:")) this.sourceScheme = "Secure";
+  }
+  httpOnly = false;
+  path = "/";
+  secure = false;
+  expires = -1;
+  priority = "Medium";
+  sourceScheme = "NonSecure";
+  capitalize(s) {
+    return s && s[0].toUpperCase() + s.slice(1);
+  }
+  toHeader() {
+    if (typeof this.#header == "string") return this.#header;
+    let header = [this.name + "=" + this.value];
+    header.push(`Domain=${this.domain}`);
+    if (Number.isFinite(this.maxAge) && this.maxAge > 0) {
+      header.push(`Max-Age=${this.maxAge}`);
+    }
+    if (Number.isFinite(this.expires) && this.expires != -1) {
+      const date = new Date();
+      date.setTime(this.expires * 1000);
+      header.push(`expires=${date.toUTCString()}`);
+    }
+    const props = ["path", "sameSite", "httpOnly", "secure"];
+    for (const prop of props) {
+      if (!(prop in this)) continue;
+      const val = this[prop];
+      if (typeof val == "string" && val.length != 0) {
+        header.push(this.capitalize(prop) + `=${this.capitalize(val)}`);
+      } else if (val === true) {
+        header.push(this.capitalize(prop));
+      }
+    }
+    return header.join("; ");
+  }
+  match(url, httpOnly) {
+    if (!(url instanceof URL)) url = new URL(url);
+    if (httpOnly && this.httpOnly !== true) return false;
+    if ("path" in this && !url.pathname.startsWith(this.path)) return false;
+    if ("domain" in this) {
+      let domain = this.domain;
+      if (domain.startsWith(".")) domain = domain.slice(1);
+      if (!url.hostname.endsWith(domain)) return false;
+    }
+    const expires = this.expirationDate || this.expires;
+    if (expires > 0) return expires * 1000 > new Date().getTime();
+    return true;
+  }
+}
 // Kotlin separator
 
 function GM_setClipboard(text, info = { type: "text" }) {
@@ -757,55 +823,6 @@ class ResponseSink {
       }
     }
     if (data.fetch) data.response = new Response(data.response, data);
-  }
-  static parseCookie(data, url) {
-    let cookies = data;
-    if (data instanceof Headers && typeof data.getSetCookie == "function")
-      cookies = data.getSetCookie();
-    if (!Array.isArray(cookies) || cookies.length == 0) return [];
-    cookies = cookies
-      .map((str) => {
-        const props = str
-          .split(";")
-          .map((it) => it.trim())
-          .filter((it) => it.length > 0);
-        const defn = props.shift().split("=");
-        if (defn.length < 2) return;
-        const cookie = {
-          name: defn.shift(),
-          value: defn.join("="),
-          httpOnly: false,
-          path: "/",
-          secure: false,
-          sourceScheme: "NonSecure",
-          expires: -1,
-          priority: "Medium",
-        };
-        if (typeof url == "string") cookie.url = url;
-        props.forEach((prop) => {
-          const parts = prop.split("=");
-          const key = parts.shift().toLowerCase();
-          var value = parts.join("=");
-          if (key === "expires") {
-            cookie.expires = Date.parse(value).getTime() / 1000;
-          } else if (key === "max-age") {
-            cookie.maxAge = Number(value);
-            cookie.expires = cookie.maxAge + new Date().getTime() / 1000;
-          } else if (key === "secure") {
-            cookie.secure = true;
-          } else if (key === "httponly") {
-            cookie.httpOnly = true;
-          } else if (key === "samesite") {
-            cookie.sameSite = value;
-          } else {
-            cookie[key] = value;
-          }
-        });
-        cookie.session = cookie.expires == -1;
-        return cookie;
-      })
-      .filter((cookie) => typeof cookie == "object");
-    return cookies;
   }
   parse(data) {
     if (typeof data != "object") return;
