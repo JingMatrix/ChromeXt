@@ -121,22 +121,31 @@ const GM_cookie = new (class {
       ChromeXt.dispatch("cookie", payload);
     });
   }
-  export(url, httpOnly = false) {
-    if (typeof url == "string") url = new URL(url);
-    if (url.origin == location.origin) {
-      return this.store
-        .filter((item) => {
-          if (!("name" in item && "value" in item)) return false;
-          if (httpOnly && item.httpOnly !== true) return false;
-          if ("path" in item && !url.pathname.startsWith(item.path))
-            return false;
-          const expires = item.expirationDate || item.expires;
-          if (expires > 0) return expires * 1000 > new Date().getTime();
-          return true;
-        })
-        .map((item) => item.name + "=" + item.value)
-        .join("; ");
+  export(url, store, httpOnly = false) {
+    const cookies = store || this.store;
+    if (!Array.isArray(cookies)) return;
+    if (typeof url == "string") {
+      url = new URL(url);
+    } else if (!(url instanceof URL)) {
+      return;
     }
+    if (cookies == this.store && url.origin != location.origin) return;
+    return cookies
+      .filter((item) => {
+        if (!("name" in item && "value" in item)) return false;
+        if (httpOnly && item.httpOnly !== true) return false;
+        if ("path" in item && !url.pathname.startsWith(item.path)) return false;
+        if ("domain" in item) {
+          let domain = item.domain;
+          if (domain.startsWith(".")) domain = domain.slice(1);
+          if (!url.hostname.endsWith(item.domain)) return false;
+        }
+        const expires = item.expirationDate || item.expires;
+        if (expires > 0) return expires * 1000 > new Date().getTime();
+        return true;
+      })
+      .map((item) => item.name + "=" + item.value)
+      .join("; ");
   }
   async list(details = { url: window.origin }, callback) {
     let cookies, error;
@@ -725,9 +734,11 @@ class ResponseSink {
     }
     if (data.fetch) data.response = new Response(data.response, data);
   }
-  async parseCookie(cookies, url, sync = true) {
-    if (!Array.isArray(cookies)) return [];
-    if (cookies.length == 0) return cookies;
+  static parseCookie(data, url) {
+    let cookies = data;
+    if (data instanceof Headers && typeof data.getSetCookie == "function")
+      cookies = data.getSetCookie();
+    if (!Array.isArray(cookies) || cookies.length == 0) return [];
     cookies = cookies
       .map((str) => {
         const props = str
@@ -742,7 +753,6 @@ class ResponseSink {
           httpOnly: false,
           path: "/",
           secure: false,
-          session: true,
           sourceScheme: "NonSecure",
           expires: -1,
           priority: "Medium",
@@ -767,12 +777,10 @@ class ResponseSink {
             cookie[key] = value;
           }
         });
-        if (!cookie.session) cookie.session = cookie.cookie == -1;
+        cookie.session = cookie.expires == -1;
         return cookie;
       })
       .filter((cookie) => typeof cookie == "object");
-    if (sync && GM_info.script.includes("GM_cookie"))
-      GM_cookie.set(cookies, undefined, true);
     return cookies;
   }
   parse(data) {
@@ -806,7 +814,11 @@ class ResponseSink {
       GM_info.script.includes("GM_cookie") &&
       new URL(this.xhr.finalUrl).origin == location.origin
     ) {
-      this.parseCookie(this.xhr.headers.getSetCookie(), this.xhr.finalUrl);
+      const cookies = ResponseSink.parseCookie(
+        this.xhr.headers.getSetCookie(),
+        this.xhr.finalUrl
+      );
+      GM_cookie.set(cookies, undefined, true);
     }
     this.xhr.total = this.xhr.headers.get("Content-Length");
     if (this.xhr.total !== null) {

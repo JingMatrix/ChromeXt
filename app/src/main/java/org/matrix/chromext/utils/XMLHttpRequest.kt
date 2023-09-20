@@ -94,10 +94,11 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
                     (headers.get("Content-Type")?.optString(0, "")?.contains("charset") == true)
             data.put("binary", binary)
             if (WebViewHook.isInit && !anonymous) {
-              val manger = android.webkit.CookieManager.getInstance()
+              val manager = android.webkit.CookieManager.getInstance()
               headerFields
                   .filter { it.key != null && it.key.startsWith("Set-Cookie") }
-                  .forEach { it.value.forEach { manger.setCookie(url.toString(), it) } }
+                  .forEach { it.value.forEach { manager.setCookie(url.toString(), it) } }
+              manager.flush()
             }
 
             val buffer = ByteArray(buffersize * DEFAULT_BUFFER_SIZE)
