@@ -1,12 +1,12 @@
 if (typeof Symbol.ChromeXt == "undefined") {
-  const globalKeys = Object.keys(window);
-  // Drop user-defined keys in the global context
-  globalKeys.push(...Object.keys(EventTarget.prototype));
-
-  const ArrayKeys = Object.getOwnPropertyNames(Array.prototype);
-  const EventTargetKeys = Object.getOwnPropertyNames(EventTarget.prototype);
-  const ChromeXtTargetKeys = ["commands", "cspRules", "filters", "scripts"];
-  let unlock;
+  const keys = {
+    Array: Object.getOwnPropertyNames(Array.prototype),
+    ChromeXt: ["commands", "cspRules", "filters", "scripts"],
+    EventTarget: Object.getOwnPropertyNames(EventTarget.prototype),
+    global: Object.keys(window),
+    // Drop user-defined keys in the global context
+  };
+  keys.global.push(...keys.EventTarget);
 
   const backup = {
     // Store some variables to avoid being hooked
@@ -20,7 +20,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
   };
 
   const cachedTypes = {
-	// Caching polices created by trustedTypes
+    // Caching polices created by trustedTypes
     polices: new Set(),
     bypass: false,
     Error: class extends TypeError {
@@ -74,7 +74,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
       this.#sync = sync;
       this.#freeze = freeze;
 
-      ArrayKeys.forEach((m) => {
+      keys.Array.forEach((m) => {
         if (typeof this[m] != "function") return;
         Object.defineProperty(this, m, {
           value: (...args) => {
@@ -134,6 +134,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
     }
   }
 
+  let unlock;
   class ChromeXtTarget {
     #debug;
     #key = null;
@@ -155,7 +156,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
         this.#debug = console.debug.bind(console);
       }
 
-      EventTargetKeys.forEach((m) => {
+      keys.EventTarget.forEach((m) => {
         Object.defineProperty(this, m, {
           value: (...args) => {
             if (this.isLocked()) throw new Error("ChromeXt locked");
@@ -163,7 +164,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
           },
         });
       });
-      ChromeXtTargetKeys.forEach((p) => {
+      keys.ChromeXt.forEach((p) => {
         const v = new SyncArray(
           p,
           p != "scripts" && p != "commands",
@@ -191,7 +192,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
     }
 
     get globalKeys() {
-      return globalKeys;
+      return keys.global;
     }
     get trustedTypes() {
       return cachedTypes;
@@ -337,7 +338,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
         const UnLocked = new ChromeXtTarget(this.#debug, this.#target);
         if (!apiOnly) {
           UnLocked[unlock] = ChromeXt;
-          ChromeXtTargetKeys.forEach((k) => {
+          keys.ChromeXt.forEach((k) => {
             UnLocked[k] = new Proxy(this.#factory(k), {
               get(target, prop) {
                 if (prop == "ChromeXt") return UnLocked;
