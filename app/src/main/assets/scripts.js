@@ -5,12 +5,33 @@ if (typeof Symbol.ChromeXt == "undefined") {
 
   const ArrayKeys = Object.getOwnPropertyNames(Array.prototype);
   const EventTargetKeys = Object.getOwnPropertyNames(EventTarget.prototype);
-  const ChromeXtTargetKeys = ["scripts", "commands", "cspRules", "filters"];
+  const ChromeXtTargetKeys = ["commands", "cspRules", "filters", "scripts"];
   let unlock;
 
+  const backup = {
+    // Store some variables to avoid being hooked
+    Error: TypeError,
+    Event: CustomEvent,
+    confirm: confirm.bind(window),
+    parse: JSON.parse.bind(JSON),
+    replace: String.prototype.replace,
+    stringify: JSON.stringify.bind(JSON),
+    REGEX: /\n {4}[^\n]+/,
+  };
+
   const cachedTypes = {
+	// Caching polices created by trustedTypes
     polices: new Set(),
     bypass: false,
+    Error: class extends TypeError {
+      constructor(name) {
+        const msg =
+          "Failed to execute 'createHTML' on 'TrustedTypePolicy': " +
+          `Policy ${name}'s TrustedTypePolicyOptions did not specify a 'createHTML' member.`;
+        super(msg);
+        this.stack = backup.replace.apply(this.stack, [backup.REGEX, ""]);
+      }
+    },
   };
 
   trustedTypes.createPolicy = new Proxy(trustedTypes.createPolicy, {
@@ -24,13 +45,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
           if (typeof original == "function") {
             return original.apply(policyOptions, arguments);
           } else {
-            const error = new TypeError(
-              `Failed to execute 'createHTML' on 'TrustedTypePolicy': Policy ${args[0]}'s TrustedTypePolicyOptions did not specify a 'createHTML' member.`
-            );
-            const stack = error.stack.split("\n");
-            if (stack.length > 1) stack.splice(1, 1);
-            error.stack = stack.join("\n");
-            throw error;
+            throw new cachedTypes.Error(args[0]);
           }
         }
       }
@@ -48,10 +63,10 @@ if (typeof Symbol.ChromeXt == "undefined") {
   });
 
   class SyncArray extends Array {
-    #name;
-    #sync;
     #freeze;
     #key = null;
+    #name;
+    #sync;
 
     constructor(name, sync = true, freeze = false) {
       super();
@@ -122,75 +137,14 @@ if (typeof Symbol.ChromeXt == "undefined") {
   class ChromeXtTarget {
     #debug;
     #key = null;
+    #security;
     #target;
-    #scripts;
+
     #commands;
     #cspRules;
     #filters;
-    #security;
-    #confirm = confirm.bind(window);
-    #stringify = JSON.stringify.bind(JSON);
-    #parse = JSON.parse.bind(JSON);
-    get trustedTypes() {
-      return cachedTypes;
-    }
-    get globalKeys() {
-      return globalKeys;
-    }
-    #blockAPI() {
-      if (this.#security == "secure" || this.#parse == null) return;
-      const parse = this.#parse;
-      console.debug = new Proxy(this.#debug, {
-        apply(_target, _this, argumentsList) {
-          try {
-            const data = parse(argumentsList.join(""));
-            if ("action" in data) {
-              console.warn("ChromeXt is under attack");
-            } else {
-              throw Error("Valid arguments");
-            }
-          } catch {
-            Reflect.apply(...arguments);
-          }
-        },
-      });
-      this.#parse = null;
-    }
-    #setDanger() {
-      if (this.#security == "secure") return;
-      console.warn(
-        "Domain",
-        location.host,
-        "is dangerous for ChromeXt with security level",
-        this.#security
-      );
-      this.#security = "danger";
-    }
-    #check(security) {
-      this.#security = security || "secure";
-      if (this.#security == "secure") return;
-      if (
-        location.protocol.startsWith("http") &&
-        location.pathname.endsWith(".user.js")
-      ) {
-        this.#security = "userscript";
-        this.#blockAPI();
-        fetch(location.href, { cache: "only-if-cached", mode: "same-origin" })
-          .then((res) => {
-            if (res.headers.get("Content-Type").startsWith("text/javascript")) {
-              this.#security = "secure";
-            } else {
-              this.#setDanger();
-            }
-          })
-          .catch(() => this.#setDanger());
-      }
-    }
-    protect() {
-      if (this.#security != "secure" && this.#security != "danger") {
-        this.#security = "insecure";
-      }
-    }
+    #scripts;
+
     constructor(debug, target, security) {
       this.#check(security);
       if (typeof debug == "function" && target instanceof EventTarget) {
@@ -235,12 +189,65 @@ if (typeof Symbol.ChromeXt == "undefined") {
         });
       });
     }
+
+    get globalKeys() {
+      return globalKeys;
+    }
+    get trustedTypes() {
+      return cachedTypes;
+    }
+
+    #blockConsole() {
+      if (this.#security == "secure" || backup.debug !== undefined) return;
+      const parse = backup.parse;
+      backup.debug = console.debug;
+      console.debug = new Proxy(this.#debug, {
+        apply(_target, _this, argumentsList) {
+          try {
+            const data = parse(argumentsList.join(""));
+            if ("action" in data) {
+              console.warn("ChromeXt is under attack");
+            } else {
+              throw Error("Valid arguments");
+            }
+          } catch {
+            Reflect.apply(...arguments);
+          }
+        },
+      });
+    }
+    #check(security) {
+      this.#security = security || "secure";
+      if (this.#security == "secure") return;
+      if (
+        location.protocol.startsWith("http") &&
+        location.pathname.endsWith(".user.js")
+      ) {
+        this.#security = "userscript";
+        this.#blockConsole();
+        fetch(location.href, { cache: "only-if-cached", mode: "same-origin" })
+          .then((res) => {
+            if (res.headers.get("Content-Type").startsWith("text/javascript")) {
+              this.#security = "secure";
+            } else {
+              this.#setDanger();
+            }
+          })
+          .catch(() => this.#setDanger());
+      }
+    }
+    #confirmAction(action) {
+      const msg = [
+        "Current environment is insecure for ChromeXt.",
+        `Please confirm (each time) to trust current page for the action: ${action}.`,
+        "\n",
+        "See details in https://github.com/JingMatrix/ChromeXt/issues/100.",
+      ];
+      return this.backup.confirm(msg.join("\n"));
+    }
     #factory(p, v) {
       // Set or get private properties
       switch (p) {
-        case "scripts":
-          if (v) this.#scripts = v;
-          return this.#scripts;
         case "commands":
           if (v) this.#commands = v;
           return this.#commands;
@@ -250,35 +257,38 @@ if (typeof Symbol.ChromeXt == "undefined") {
         case "filters":
           if (v) this.#filters = v;
           return this.#filters;
+        case "scripts":
+          if (v) this.#scripts = v;
+          return this.#scripts;
       }
       throw new Error(`Invalid field #${key}`);
     }
-    post(event, detail) {
-      this.dispatchEvent(new CustomEvent(event, { detail }));
+    #setDanger() {
+      if (this.#security == "secure") return;
+      console.warn(
+        "Domain",
+        location.host,
+        "is dangerous for ChromeXt with security level",
+        this.#security
+      );
+      this.#security = "danger";
     }
-    #confirmAction(action) {
-      const msg = [
-        "Current environment is insecure for ChromeXt.",
-        `Please confirm (each time) to trust current page for the action: ${action}.`,
-        "\n",
-        "See details in https://github.com/JingMatrix/ChromeXt/issues/100.",
-      ];
-      return this.#confirm(msg.join("\n"));
-    }
+
     dispatch(action, payload, key) {
-      if (this.#security == "danger")
-        throw Error(`ChromeXt called with security: ${this.#security}`);
+      const error = new backup.Error(
+        `ChromeXt called with security: ${this.#security}`
+      );
+      if (this.#security == "danger") throw error;
       let allowed = false;
       if (this.#security != "secure") {
         allowed = this.#confirmAction(action);
-        if (!allowed)
-          throw Error(`ChromeXt called with security: ${this.#security}`);
+        if (!allowed) throw error;
       }
       if (this.isLocked() && key != this.#key)
         throw new Error("ChromeXt locked");
       if (typeof unlock == "symbol") key = Number(unlock.description);
       // Kotlin anchor
-      this.#debug(this.#stringify({ action, payload, key }));
+      this.#debug(backup.stringify({ action, payload, key }));
     }
     isLocked() {
       return this.#key != null;
@@ -306,7 +316,16 @@ if (typeof Symbol.ChromeXt == "undefined") {
           Symbol.ChromeXt = userDefinedChromeXt;
         }
         this.#security = "secure";
+        if (typeof backup.debug == "function") console.debug = backup.debug;
       }
+    }
+    protect() {
+      if (this.#security != "secure" && this.#security != "danger") {
+        this.#security = "insecure";
+      }
+    }
+    post(event, detail) {
+      this.dispatchEvent(new backup.Event(event, { detail }));
     }
     unlock(key, apiOnly = true) {
       if (!this.isLocked()) {
@@ -337,6 +356,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
       }
     }
   }
+
   const ChromeXt = new ChromeXtTarget();
   const userDefinedChromeXt = Symbol.ChromeXt;
   Object.freeze(ChromeXt);
