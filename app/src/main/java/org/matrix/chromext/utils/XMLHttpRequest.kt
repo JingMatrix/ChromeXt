@@ -2,9 +2,7 @@ package org.matrix.chromext.utils
 
 import android.util.Base64
 import java.io.IOException
-import java.net.CookieHandler
-import java.net.CookieManager
-import java.net.CookiePolicy
+import java.net.HttpCookie
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
@@ -12,39 +10,38 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
-import org.matrix.chromext.hook.UserScriptHook
-import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.script.Local
 
 class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: Any?) {
-  val response = JSONObject(mapOf("id" to id, "uuid" to uuid))
-  val request = request
   val currentTab = currentTab
-  var connection: HttpURLConnection? = null
+  val request = request
+  val response = JSONObject(mapOf("id" to id, "uuid" to uuid))
 
-  val url = URL(request.optString("url"))
-  val method = request.optString("method")
-  val headers = request.optJSONObject("headers")
-  val followRedirects = request.optString("redirect") != "error"
-  val binary = request.optBoolean("binary")
+  var connection: HttpURLConnection? = null
+  var cookies: List<HttpCookie>
+
   val anonymous = request.optBoolean("anonymous")
+  val binary = request.optBoolean("binary")
+  val buffersize = request.optInt("buffersize", 8)
+  val cookie = request.optJSONArray("cookie")
+  val followRedirects = request.optString("redirect") != "error"
+  val headers = request.optJSONObject("headers")
+  val method = request.optString("method")
   val nocache = request.optBoolean("nocache")
   val timeout = request.optInt("timeout")
-  val buffersize = request.optInt("buffersize", 8)
   val responseType = request.optString("responseType")
+  val url = URL(request.optString("url"))
+  val uri = url.toURI()
 
   init {
-    if (UserScriptHook.isInit) {
-      val manager = CookieHandler.getDefault() as CookieManager
-      if (anonymous || request.has("cookie")) {
-        if (anonymous) manager.setCookiePolicy(CookiePolicy.ACCEPT_NONE)
-        val uri = url.toURI()
-        val cookieStore = manager.getCookieStore()
-        cookieStore.get(uri).forEach { cookieStore.remove(uri, it) }
-      } else {
-        manager.setCookiePolicy(CookiePolicy.ACCEPT_ALL)
+    if (cookie != null && !anonymous) {
+      for (i in 0 until cookie.length()) {
+        runCatching {
+          HttpCookie.parse(cookie!!.getString(i)).forEach { Chrome.cookieStore.add(uri, it) }
+        }
       }
     }
+    cookies = Chrome.cookieStore.get(uri)
   }
 
   fun abort() {
@@ -59,12 +56,9 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
       setInstanceFollowRedirects(followRedirects)
       setUseCaches(!nocache)
       setConnectTimeout(timeout)
-      if (request.has("cookie") && !anonymous)
-          setRequestProperty("Cookie", request.optString("cookie"))
-      if (WebViewHook.isInit && !anonymous) {
-        val manger = android.webkit.CookieManager.getInstance()
-        addRequestProperty("Cookie", manger.getCookie(url.toString()))
-      }
+
+      if (!anonymous && cookies.size > 0)
+          setRequestProperty("Cookie", cookies.map { it.toString() }.joinToString("; "))
 
       if (request.has("user")) {
         val user = request.optString("user")
@@ -93,12 +87,15 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
                     headers.containsKey("Content-Encoding") ||
                     (headers.get("Content-Type")?.optString(0, "")?.contains("charset") == true)
             data.put("binary", binary)
-            if (WebViewHook.isInit && !anonymous) {
-              val manager = android.webkit.CookieManager.getInstance()
+
+            if (!anonymous) {
               headerFields
                   .filter { it.key != null && it.key.startsWith("Set-Cookie") }
-                  .forEach { it.value.forEach { manager.setCookie(url.toString(), it) } }
-              manager.flush()
+                  .forEach {
+                    it.value.forEach {
+                      HttpCookie.parse(it).forEach { Chrome.cookieStore.add(uri, it) }
+                    }
+                  }
             }
 
             val buffer = ByteArray(buffersize * DEFAULT_BUFFER_SIZE)

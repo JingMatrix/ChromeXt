@@ -130,6 +130,7 @@ const GM_cookie = new (class {
       return;
     }
     if (cookies == this.store && url.origin != location.origin) return;
+    const capitalize = (s) => s && s[0].toUpperCase() + s.slice(1);
     return cookies
       .filter((item) => {
         if (!("name" in item && "value" in item)) return false;
@@ -138,14 +139,32 @@ const GM_cookie = new (class {
         if ("domain" in item) {
           let domain = item.domain;
           if (domain.startsWith(".")) domain = domain.slice(1);
-          if (!url.hostname.endsWith(item.domain)) return false;
+          if (!url.hostname.endsWith(domain)) return false;
         }
         const expires = item.expirationDate || item.expires;
         if (expires > 0) return expires * 1000 > new Date().getTime();
         return true;
       })
-      .map((item) => item.name + "=" + item.value)
-      .join("; ");
+      .map((item) => {
+        let header = [item.name + "=" + item.value];
+        header.push(`Domain=${item.domain}`);
+        if (Number.isFinite(item.expires) && item.expires != -1) {
+          const date = new Date();
+          date.setTime(item.expires * 1000);
+          header.push(`expires=${date.toUTCString()}`);
+        }
+        const props = ["path", "sameSite", "httpOnly", "secure"];
+        for (const prop of props) {
+          if (!(prop in item)) continue;
+          const val = item[prop];
+          if (typeof val == "string" && val.length != 0) {
+            header.push(capitalize(prop) + `=${capitalize(val)}`);
+          } else if (val === true) {
+            header.push(capitalize(prop));
+          }
+        }
+        return header.join("; ");
+      });
   }
   async list(details = { url: window.origin }, callback) {
     let cookies, error;
@@ -647,7 +666,6 @@ function GM_xmlhttpRequest(details) {
 
       const origin = new URL(details.url).origin;
       if (
-        !("permission" in navigator) &&
         location.origin == origin &&
         GM_info.script.grants.includes("GM_cookie") &&
         !("cookie" in details) &&
@@ -658,7 +676,10 @@ function GM_xmlhttpRequest(details) {
         }
         request.cookie = GM_cookie.export(details.url);
       }
-
+      if (typeof request.cookie == "string") {
+        request.cookie = request.cookie.split("; ");
+      }
+      if (!Array.isArray(request.cookie)) delete request.cookie;
       ChromeXt.dispatch("xmlhttpRequest", {
         id: GM_info.script.id,
         request,
@@ -763,7 +784,7 @@ class ResponseSink {
           const key = parts.shift().toLowerCase();
           var value = parts.join("=");
           if (key === "expires") {
-            cookie.expires = new Date(value).getTime() / 1000;
+            cookie.expires = Date.parse(value).getTime() / 1000;
           } else if (key === "max-age") {
             cookie.maxAge = Number(value);
             cookie.expires = cookie.maxAge + new Date().getTime() / 1000;
@@ -808,17 +829,6 @@ class ResponseSink {
     if (this.xhr.finalUrl != this.xhr.url && this.xhr.redirect == "error") {
       this.xhr.error = new Error("Redirection not allowed");
       this.xhr.abort();
-    }
-    if (
-      "permission" in navigator &&
-      GM_info.script.includes("GM_cookie") &&
-      new URL(this.xhr.finalUrl).origin == location.origin
-    ) {
-      const cookies = ResponseSink.parseCookie(
-        this.xhr.headers.getSetCookie(),
-        this.xhr.finalUrl
-      );
-      GM_cookie.set(cookies, undefined, true);
     }
     this.xhr.total = this.xhr.headers.get("Content-Length");
     if (this.xhr.total !== null) {

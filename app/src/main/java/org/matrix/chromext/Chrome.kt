@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Handler
 import java.io.File
 import java.lang.ref.WeakReference
+import java.net.CookieManager
 import java.util.concurrent.Executors
 import org.json.JSONObject
 import org.matrix.chromext.devtools.DevSessions
@@ -39,6 +40,7 @@ object Chrome {
                 "ChromeXt", "UserScript Notifications", NotificationManager.IMPORTANCE_DEFAULT)
             .apply { description = "Notifications created by GM_notification API" }
       } else null
+  val cookieStore = CookieManager().getCookieStore()
 
   fun init(ctx: Context, packageName: String? = null) {
     val initialized = mContext != null
