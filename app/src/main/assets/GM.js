@@ -14,8 +14,10 @@ delete GM.key;
 delete GM.name;
 Object.freeze(GM_info.script);
 const ChromeXt = GM.ChromeXt;
-if (typeof GM_xmlhttpRequest == "function" && !GM_xmlhttpRequest.strict)
+if (typeof GM_xmlhttpRequest == "function" && !GM_xmlhttpRequest.strict) {
+  GM_xmlhttpRequest.addCookie = GM_info.script.grants.includes("GM_cookie");
   Object.defineProperty(GM_xmlhttpRequest, "strict", { value: true });
+}
 // Kotlin separator
 
 function GM_addStyle(css) {
@@ -667,7 +669,7 @@ function GM_xmlhttpRequest(details) {
       const origin = new URL(details.url).origin;
       if (
         location.origin == origin &&
-        GM_info.script.grants.includes("GM_cookie") &&
+        GM_xmlhttpRequest.addCookie &&
         !("cookie" in details) &&
         details.anonymous !== true
       ) {
@@ -675,6 +677,7 @@ function GM_xmlhttpRequest(details) {
           await GM_cookie.list();
         }
         request.cookie = GM_cookie.export(details.url);
+        GM_xmlhttpRequest.addCookie = false;
       }
       if (typeof request.cookie == "string") {
         request.cookie = request.cookie.split("; ");
