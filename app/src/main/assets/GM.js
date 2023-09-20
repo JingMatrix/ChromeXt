@@ -806,21 +806,32 @@ class ResponseSink {
   }
   parse(data) {
     if (typeof data != "object") return;
-    Object.assign(this.xhr, data);
+    for (const prop in data) {
+      if (prop == "headers") continue;
+      const val = data[prop];
+      if (typeof val == "function") continue;
+      this.xhr[prop] = val;
+    }
     if (this.xhr.readyState != 1) return;
-    this.xhr.readyState = 2;
     const headers = data.headers;
     if (typeof headers != "object" || this.xhr.headers instanceof Headers)
       return;
-    Object.defineProperty(this.xhr, "headers", { value: new Headers() });
-    let responseHeaders = "";
-    Object.entries(headers).forEach(([k, vs]) => {
-      for (const v of vs) {
-        this.xhr.headers.append(k, v);
-        responseHeaders += k.toLowerCase() + ": " + v + "\r\n";
-      }
-    });
-    this.xhr.responseHeaders = responseHeaders.slice(0, -2);
+    if (headers instanceof Headers) {
+      this.xhr.headers = headers;
+    } else {
+      Object.defineProperty(this.xhr, "headers", { value: new Headers() });
+      Object.entries(headers).forEach(([k, vs]) => {
+        for (const v of vs) {
+          this.xhr.headers.append(k, v);
+        }
+      });
+    }
+    this.xhr.readyState = 2;
+    this.xhr.responseHeaders = Object.entries(
+      Object.fromEntries(this.xhr.headers)
+    )
+      .map(([k, v]) => k.toLowerCase() + ": " + v)
+      .join("\r\n");
     this.xhr.getAllResponseHeaders = () => this.xhr.responseHeaders;
     this.xhr.getResponseHeader = (headerName) =>
       this.xhr.headers.get(headerName);
