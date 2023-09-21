@@ -9,6 +9,10 @@ pre > em {
   font-weight: bold;
   color: yellow;
 }
+pre > span {
+  font-weight: bold;
+  color: red;
+}
 body {
   margin: 0;
 }

@@ -15,11 +15,15 @@ function renderEditor(code, checkEncoding) {
   const separator = "==/UserScript==\n";
   const script = code.innerHTML.split(separator);
   if (separator.length == 1) return;
-  scriptMeta = document.createElement("pre");
-  scriptMeta.innerHTML = (script.shift() + separator).replace(
+  let html = (script.shift() + separator).replace(
     "GM.ChromeXt",
     "<em>GM.ChromeXt</em>"
   );
+  for (const api of ["GM_notification", "GM_setClipboard", "GM_cookie"]) {
+    html = html.replace(api, `<span>${api}</span>`);
+  }
+  scriptMeta = document.createElement("pre");
+  scriptMeta.innerHTML = html;
   code.innerHTML = script.join(separator);
   code.id = "code";
   code.removeAttribute("style");
