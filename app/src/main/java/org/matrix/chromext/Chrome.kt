@@ -1,6 +1,7 @@
 package org.matrix.chromext
 
 import android.app.NotificationChannel
+import android.app.NotificationChannelGroup
 import android.app.NotificationManager
 import android.content.Context
 import android.net.http.HttpResponseCache
@@ -34,12 +35,6 @@ object Chrome {
   var isVivaldi = false
 
   val IO = Executors.newCachedThreadPool()
-  val channel =
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        NotificationChannel(
-                "ChromeXt", "UserScript Notifications", NotificationManager.IMPORTANCE_DEFAULT)
-            .apply { description = "Notifications created by GM_notification API" }
-      } else null
   val cookieStore = CookieManager().getCookieStore()
 
   fun init(ctx: Context, packageName: String? = null) {
@@ -57,9 +52,27 @@ object Chrome {
     Log.i("Package: ${packageName}, v${packageInfo?.versionName}")
     setupHttpCache(ctx)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      val groupId = "org.matrix.chromext"
+      val group = NotificationChannelGroup(groupId, "ChromeXt")
       val notificationManager =
           ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-      notificationManager.createNotificationChannel(channel!!)
+      notificationManager.createNotificationChannelGroup(group)
+      val id = "xposed_notification"
+      val name = "UserScript Notifications"
+      val desc = "Notifications created by the GM_notification API"
+      val default_channel =
+          NotificationChannel(id, name, NotificationManager.IMPORTANCE_HIGH).apply {
+            description = desc
+            setGroup(groupId)
+          }
+      val silent_channel =
+          NotificationChannel(id + "_slient", "Silent " + name, NotificationManager.IMPORTANCE_LOW)
+              .apply {
+                description = desc
+                setGroup(groupId)
+              }
+      notificationManager.createNotificationChannel(default_channel)
+      notificationManager.createNotificationChannel(silent_channel)
     }
   }
 

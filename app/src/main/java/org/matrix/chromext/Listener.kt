@@ -161,7 +161,7 @@ object Listener {
         }
       }
       "notification" -> {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || Chrome.channel == null) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
           callback = "console.error('notification API requires Android Oreo')"
           return callback
         }
@@ -172,8 +172,10 @@ object Listener {
         val text = detail.getString("text")
         val timeout = detail.getLong("timeout")
         val ctx = Chrome.getContext()
+        var channel = "xposed_notification"
+        if (detail.optBoolean("silent")) channel += "_slient"
         val builder =
-            Notification.Builder(ctx, "ChromeXt")
+            Notification.Builder(ctx, channel)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setSmallIcon(
@@ -183,11 +185,6 @@ object Listener {
                 .setAutoCancel(true)
                 .setLocalOnly(true)
                 .setOnlyAlertOnce(true)
-        if (detail.optBoolean("silent")) {
-          Chrome.channel.setImportance(NotificationManager.IMPORTANCE_LOW)
-        } else {
-          Chrome.channel.setImportance(NotificationManager.IMPORTANCE_DEFAULT)
-        }
         if (detail.optBoolean("onclick")) {
           builder.setContentIntent(ScriptNotification.newIntent(id, uuid))
           tabNotification.put(uuid, currentTab!!)
