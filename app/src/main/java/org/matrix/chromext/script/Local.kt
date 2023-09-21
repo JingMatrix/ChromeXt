@@ -130,8 +130,15 @@ object Local {
             .bufferedReader()
             .use { it.readText() }
             .split("// Kotlin separator\n\n")
-    initChromeXt = localScript[0].replaceFirst("ChromeXt", name)
-    anchorInChromeXt = initChromeXt.split("\n").indexOfFirst { it.endsWith("// Kotlin anchor") } + 2
+
+    val seed = Random.nextDouble()
+    // Use empty lines to randomize anchorInChromeXt
+    val parts =
+        localScript[0].replaceFirst("ChromeXt", name).split("\n").filter {
+          if (it.length != 0) true else Random.nextDouble() > seed
+        }
+    anchorInChromeXt = parts.indexOfFirst { it.endsWith("// Kotlin anchor") } + 2
+    initChromeXt = parts.joinToString("\n")
     openEruda =
         localScript[1]
             .replaceFirst("ChromeXt", name)

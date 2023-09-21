@@ -6,6 +6,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
     global: Object.keys(window),
     // Drop user-defined keys in the global context
   };
+
   keys.global.push(...keys.EventTarget);
 
   const backup = {
@@ -14,6 +15,8 @@ if (typeof Symbol.ChromeXt == "undefined") {
     Event: CustomEvent,
     confirm: confirm.bind(window),
     parse: JSON.parse.bind(JSON),
+    push: Array.prototype.push,
+    querySelectorAll: document.querySelectorAll.bind(document),
     replace: String.prototype.replace,
     stringify: JSON.stringify.bind(JSON),
     REGEX: /\n {4}[^\n]+/,
@@ -33,6 +36,9 @@ if (typeof Symbol.ChromeXt == "undefined") {
       }
     },
   };
+
+  const trustedDomains = ["greasyfork.org"];
+  // Verified sources of UserScripts
 
   trustedTypes.createPolicy = new Proxy(trustedTypes.createPolicy, {
     apply(target, thisArg, args) {
@@ -135,6 +141,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
   }
 
   let unlock;
+
   class ChromeXtTarget {
     #debug;
     #key = null;
@@ -147,7 +154,6 @@ if (typeof Symbol.ChromeXt == "undefined") {
     #scripts;
 
     constructor(debug, target, security) {
-      this.#check(security);
       if (typeof debug == "function" && target instanceof EventTarget) {
         this.#debug = debug;
         this.#target = target;
@@ -155,6 +161,8 @@ if (typeof Symbol.ChromeXt == "undefined") {
         this.#target = new EventTarget();
         this.#debug = console.debug.bind(console);
       }
+
+      this.#check(security);
 
       keys.EventTarget.forEach((m) => {
         Object.defineProperty(this, m, {
@@ -164,6 +172,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
           },
         });
       });
+
       keys.ChromeXt.forEach((p) => {
         const v = new SyncArray(
           p,
@@ -198,7 +207,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
       return cachedTypes;
     }
 
-    #blockConsole() {
+    #patchConsole() {
       if (this.#security == "secure" || backup.debug !== undefined) return;
       const parse = backup.parse;
       backup.debug = console.debug;
@@ -217,15 +226,20 @@ if (typeof Symbol.ChromeXt == "undefined") {
         },
       });
     }
+
     #check(security) {
       this.#security = security || "secure";
-      if (this.#security == "secure") return;
+      if (security == "secure") return;
+
       if (
         location.protocol.startsWith("http") &&
-        location.pathname.endsWith(".user.js")
+        location.pathname.endsWith(".user.js") &&
+        typeof installScript == "function" &&
+        !trustedDomains.includes(location.hostname)
       ) {
         this.#security = "userscript";
-        this.#blockConsole();
+        this.#patchConsole();
+
         fetch(location.href, { cache: "only-if-cached", mode: "same-origin" })
           .then((res) => {
             if (res.headers.get("Content-Type").startsWith("text/javascript")) {
@@ -234,18 +248,24 @@ if (typeof Symbol.ChromeXt == "undefined") {
               this.#setDanger();
             }
           })
-          .catch(() => this.#setDanger());
+          .catch(() => {
+            const selector = "script,iframe,embed,object";
+            const elements = backup.querySelectorAll(selector);
+            elements.length != 0 && this.#setDanger();
+          });
       }
     }
+
     #confirmAction(action) {
       const msg = [
-        "Current environment is insecure for ChromeXt.",
+        "Current environment is not verified by ChromeXt.",
         `Please confirm (each time) to trust current page for the action: ${action}.`,
-        "\n",
+        "",
         "See details in https://github.com/JingMatrix/ChromeXt/issues/100.",
       ];
-      return this.backup.confirm(msg.join("\n"));
+      return backup.confirm(msg.join("\n"));
     }
+
     #factory(p, v) {
       // Set or get private properties
       switch (p) {
@@ -264,26 +284,62 @@ if (typeof Symbol.ChromeXt == "undefined") {
       }
       throw new Error(`Invalid field #${key}`);
     }
+
     #setDanger() {
       if (this.#security == "secure") return;
+      this.dispatch("block");
       console.warn(
         "Domain",
         location.host,
-        "is dangerous for ChromeXt with security level",
+        "is not verified for ChromeXt with security level",
         this.#security
       );
       this.#security = "danger";
+      delete Symbol.ChromeXt;
     }
 
+    verifyDOMSecurity() {
+      if (this.#security != "userscript") return;
+      const tags = [];
+      const elements = backup.querySelectorAll("*");
+      if (elements.length > 20) {
+        this.#setDanger();
+        return;
+      } else if (elements.length < 3) {
+        return;
+      }
+      for (const e of elements) {
+        if (typeof e.onload == "function") {
+          this.#setDanger();
+          return;
+        }
+        backup.push.apply(tags, [e.tagName]);
+      }
+      const TAGS = ["HTML", "HEAD", "META", "BODY", "PRE"];
+      if (
+        elements.length != 5 ||
+        backup.stringify(tags) !== backup.stringify(TAGS)
+      ) {
+        const bodyIndex = tags.findIndex((it) => it == "BODY");
+        const bodyTags = tags.slice(bodyIndex + 1);
+        if (bodyTags.length > 1 || bodyTags[0] != "PRE") {
+          this.#setDanger();
+        }
+      } else {
+        this.#security = "secure";
+      }
+    }
     dispatch(action, payload, key) {
-      const error = new backup.Error(
-        `ChromeXt called with security: ${this.#security}`
-      );
-      if (this.#security == "danger") throw error;
-      let allowed = false;
-      if (this.#security != "secure") {
-        allowed = this.#confirmAction(action);
-        if (!allowed) throw error;
+      if (action != "block") {
+        const error = new backup.Error(
+          `ChromeXt called with security level: ${this.#security}`
+        );
+        if (this.#security == "danger") throw error;
+        let allowed = false;
+        if (this.#security != "secure") {
+          allowed = this.#confirmAction(action);
+          if (!allowed) throw error;
+        }
       }
       if (this.isLocked() && key != this.#key)
         throw new Error("ChromeXt locked");
@@ -318,11 +374,6 @@ if (typeof Symbol.ChromeXt == "undefined") {
         }
         this.#security = "secure";
         if (typeof backup.debug == "function") console.debug = backup.debug;
-      }
-    }
-    protect() {
-      if (this.#security != "secure" && this.#security != "danger") {
-        this.#security = "insecure";
       }
     }
     post(event, detail) {

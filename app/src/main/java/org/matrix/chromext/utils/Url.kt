@@ -2,6 +2,7 @@ package org.matrix.chromext.utils
 
 import android.net.Uri
 import android.provider.OpenableColumns
+import java.net.URL
 import kotlin.text.Regex
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.Script
@@ -70,10 +71,12 @@ fun isDevToolsFrontEnd(url: String?): Boolean {
   return url.startsWith(DEV_FRONT_END)
 }
 
+val invalidUserScriptDomains = mutableListOf("github.com")
+
 fun isUserScript(url: String?): Boolean {
-  if (url == null || url.startsWith("https://github.com/")) return false
+  if (url == null) return false
   if (url.endsWith(".user.js")) {
-    return true
+    return !(invalidUserScriptDomains.contains(URL(url).getAuthority()))
   } else {
     return resolveContentUrl(url)?.endsWith(".js") == true
   }

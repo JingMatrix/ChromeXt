@@ -92,13 +92,9 @@ function fixDialog() {
 }
 
 async function prepareDOM() {
-  const tags = Array.from(document.querySelectorAll("*")).map((e) => e.tagName);
-  if (
-    JSON.stringify(tags) !==
-      JSON.stringify(["HTML", "HEAD", "META", "BODY", "PRE"])
-  ) {
-    Symbol.ChromeXt.protect();
-  }
+  if (typeof Symbol.ChromeXt?.verifyDOMSecurity == "function")
+    Symbol.ChromeXt.verifyDOMSecurity();
+  if (Symbol.ChromeXt == undefined) return;
   Symbol.installScript = installScript;
   const meta = document.createElement("meta");
   const style = document.createElement("style");

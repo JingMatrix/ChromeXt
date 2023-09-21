@@ -36,6 +36,7 @@ import org.matrix.chromext.script.parseScript
 import org.matrix.chromext.utils.ERUD_URL
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.XMLHttpRequest
+import org.matrix.chromext.utils.invalidUserScriptDomains
 import org.matrix.chromext.utils.isChromeXtFrontEnd
 import org.matrix.chromext.utils.isDevToolsFrontEnd
 import org.matrix.chromext.utils.isUserScript
@@ -47,7 +48,7 @@ object Listener {
   val xmlhttpRequests = mutableMapOf<Double, XMLHttpRequest>()
   val allowedActions =
       mapOf(
-          "userscript" to listOf("installScript"),
+          "userscript" to listOf("block", "installScript"),
           "front-end" to listOf("inspect_pages", "userscript", "extension"),
           "devtools" to listOf("websocket"),
       )
@@ -139,6 +140,12 @@ object Listener {
         val context = Chrome.getContext()
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(clipData)
+      }
+      "block" -> {
+        val url = Chrome.getUrl(currentTab)
+        if (isUserScript(url)) {
+          invalidUserScriptDomains.add(URL(url).getAuthority())
+        }
       }
       "installScript" -> {
         val script = parseScript(payload)
