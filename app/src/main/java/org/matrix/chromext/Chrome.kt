@@ -128,6 +128,8 @@ object Chrome {
 
   fun getTabId(tab: Any?, url: String? = null): String {
     if (WebViewHook.isInit) {
+      if (url == null && getContext().mainLooper.getThread() != Thread.currentThread())
+          Log.w("Url parameter is missing in a non-UI thread")
       val attached = tab == Chrome.getTab()
       val ids = filterTabs {
         val description = JSONObject(getString("description"))
@@ -155,23 +157,24 @@ object Chrome {
 
   fun evaluateJavascript(
       codes: List<String>,
-      currentTab: Any? = null,
+      tab: Any? = null,
       forceDevTools: Boolean = false,
       bypassCSP: Boolean = false,
   ) {
     if (forceDevTools) {
+      val url = getUrl(tab)
       IO.submit {
-        val tabId = getTabId(currentTab)
+        val tabId = getTabId(tab, url)
         evaluateJavascriptDevTools(codes, tabId, bypassCSP)
       }
     } else {
       if (codes.size == 0) return
       Handler(getContext().mainLooper).post {
         if (WebViewHook.isInit) {
-          codes.forEach { WebViewHook.evaluateJavascript(it, currentTab) }
+          codes.forEach { WebViewHook.evaluateJavascript(it, tab) }
         } else if (UserScriptHook.isInit) {
-          val failed = codes.filter { !UserScriptProxy.evaluateJavascript(it, currentTab) }
-          if (failed.size > 0) evaluateJavascript(failed, currentTab, true)
+          val failed = codes.filter { !UserScriptProxy.evaluateJavascript(it, tab) }
+          if (failed.size > 0) evaluateJavascript(failed, tab, true)
         }
       }
     }

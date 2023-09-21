@@ -37,7 +37,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
     },
   };
 
-  const trustedDomains = ["greasyfork.org"];
+  const trustedDomains = ["greasyfork.org", "raw.githubusercontent.com"];
   // Verified sources of UserScripts
 
   trustedTypes.createPolicy = new Proxy(trustedTypes.createPolicy, {
@@ -298,37 +298,6 @@ if (typeof Symbol.ChromeXt == "undefined") {
       delete Symbol.ChromeXt;
     }
 
-    verifyDOMSecurity() {
-      if (this.#security != "userscript") return;
-      const tags = [];
-      const elements = backup.querySelectorAll("*");
-      if (elements.length > 20) {
-        this.#setDanger();
-        return;
-      } else if (elements.length < 3) {
-        return;
-      }
-      for (const e of elements) {
-        if (typeof e.onload == "function") {
-          this.#setDanger();
-          return;
-        }
-        backup.push.apply(tags, [e.tagName]);
-      }
-      const TAGS = ["HTML", "HEAD", "META", "BODY", "PRE"];
-      if (
-        elements.length != 5 ||
-        backup.stringify(tags) !== backup.stringify(TAGS)
-      ) {
-        const bodyIndex = tags.findIndex((it) => it == "BODY");
-        const bodyTags = tags.slice(bodyIndex + 1);
-        if (bodyTags.length > 1 || bodyTags[0] != "PRE") {
-          this.#setDanger();
-        }
-      } else {
-        this.#security = "secure";
-      }
-    }
     dispatch(action, payload, key) {
       if (action != "block") {
         const error = new backup.Error(
@@ -405,6 +374,37 @@ if (typeof Symbol.ChromeXt == "undefined") {
         return UnLocked;
       } else {
         throw new Error("Fail to unlock ChromeXtTarget");
+      }
+    }
+    verifyDOMSecurity() {
+      if (this.#security != "userscript") return;
+      const tags = [];
+      const elements = backup.querySelectorAll("*");
+      if (elements.length > 20) {
+        this.#setDanger();
+        return;
+      } else if (elements.length < 3) {
+        return;
+      }
+      for (const e of elements) {
+        if (typeof e.onload == "function") {
+          this.#setDanger();
+          return;
+        }
+        backup.push.apply(tags, [e.tagName]);
+      }
+      const TAGS = ["HTML", "HEAD", "META", "BODY", "PRE"];
+      if (
+        elements.length != 5 ||
+        backup.stringify(tags) !== backup.stringify(TAGS)
+      ) {
+        const bodyIndex = tags.findIndex((it) => it == "BODY");
+        const bodyTags = tags.slice(bodyIndex + 1);
+        if (bodyTags.length > 1 || bodyTags[0] != "PRE") {
+          this.#setDanger();
+        }
+      } else {
+        this.#security = "secure";
       }
     }
   }
