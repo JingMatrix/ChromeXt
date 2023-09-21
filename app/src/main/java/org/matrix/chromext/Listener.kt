@@ -144,6 +144,7 @@ object Listener {
       "block" -> {
         val url = Chrome.getUrl(currentTab)
         if (isUserScript(url)) invalidUserScriptUrls.add(url!!)
+        callback = "if (Symbol.ChromeXt) Symbol.ChromeXt.lock(${Local.key},'${Local.name}');"
       }
       "installScript" -> {
         val script = parseScript(payload)

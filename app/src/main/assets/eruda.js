@@ -2,8 +2,7 @@ const ChromeXt = Symbol.ChromeXt.unlock(ChromeXtUnlockKeyForEruda, false);
 
 eruda._inLocalPage =
   ["content://", "file://"].includes(location.origin) ||
-  location.pathname.endsWith(".txt") ||
-  location.pathname.endsWith(".js");
+  location.pathname.endsWith(".txt");
 
 eruda._initDevTools = new Proxy(eruda._initDevTools, {
   getHeight(node, prop) {
