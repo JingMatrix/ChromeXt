@@ -71,12 +71,15 @@ fun isDevToolsFrontEnd(url: String?): Boolean {
   return url.startsWith(DEV_FRONT_END)
 }
 
-val invalidUserScriptDomains = mutableListOf("github.com")
+private val invalidUserScriptDomains = listOf("github.com")
+val invalidUserScriptUrls = mutableListOf<String>()
 
 fun isUserScript(url: String?): Boolean {
   if (url == null) return false
   if (url.endsWith(".user.js")) {
-    return !(invalidUserScriptDomains.contains(URL(url).getAuthority()))
+    if (invalidUserScriptUrls.contains(url)) return false
+    if (invalidUserScriptDomains.contains(URL(url).getAuthority())) return false
+    return true
   } else {
     return resolveContentUrl(url)?.endsWith(".js") == true
   }

@@ -36,7 +36,7 @@ import org.matrix.chromext.script.parseScript
 import org.matrix.chromext.utils.ERUD_URL
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.XMLHttpRequest
-import org.matrix.chromext.utils.invalidUserScriptDomains
+import org.matrix.chromext.utils.invalidUserScriptUrls
 import org.matrix.chromext.utils.isChromeXtFrontEnd
 import org.matrix.chromext.utils.isDevToolsFrontEnd
 import org.matrix.chromext.utils.isUserScript
@@ -143,9 +143,7 @@ object Listener {
       }
       "block" -> {
         val url = Chrome.getUrl(currentTab)
-        if (isUserScript(url)) {
-          invalidUserScriptDomains.add(URL(url).getAuthority())
-        }
+        if (isUserScript(url)) invalidUserScriptUrls.add(url!!)
       }
       "installScript" -> {
         val script = parseScript(payload)

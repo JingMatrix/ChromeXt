@@ -15,8 +15,6 @@ if (typeof Symbol.ChromeXt == "undefined") {
     Event: CustomEvent,
     confirm: confirm.bind(window),
     parse: JSON.parse.bind(JSON),
-    push: Array.prototype.push,
-    querySelectorAll: document.querySelectorAll.bind(document),
     replace: String.prototype.replace,
     stringify: JSON.stringify.bind(JSON),
     REGEX: /\n {4}[^\n]+/,
@@ -36,9 +34,6 @@ if (typeof Symbol.ChromeXt == "undefined") {
       }
     },
   };
-
-  const trustedDomains = ["greasyfork.org", "raw.githubusercontent.com"];
-  // Verified sources of UserScripts
 
   trustedTypes.createPolicy = new Proxy(trustedTypes.createPolicy, {
     apply(target, thisArg, args) {
@@ -141,6 +136,8 @@ if (typeof Symbol.ChromeXt == "undefined") {
   }
 
   let unlock;
+  const trustedDomains = ["greasyfork.org", "raw.githubusercontent.com"];
+  // Verified sources of UserScripts
 
   class ChromeXtTarget {
     #debug;
@@ -207,26 +204,6 @@ if (typeof Symbol.ChromeXt == "undefined") {
       return cachedTypes;
     }
 
-    #patchConsole() {
-      if (this.#security == "secure" || backup.debug !== undefined) return;
-      const parse = backup.parse;
-      backup.debug = console.debug;
-      console.debug = new Proxy(this.#debug, {
-        apply(_target, _this, argumentsList) {
-          try {
-            const data = parse(argumentsList.join(""));
-            if ("action" in data) {
-              console.warn("ChromeXt is under attack");
-            } else {
-              throw Error("Valid arguments");
-            }
-          } catch {
-            Reflect.apply(...arguments);
-          }
-        },
-      });
-    }
-
     #check(security) {
       this.#security = security || "secure";
       if (security == "secure") return;
@@ -242,17 +219,18 @@ if (typeof Symbol.ChromeXt == "undefined") {
 
         fetch(location.href, { cache: "only-if-cached", mode: "same-origin" })
           .then((res) => {
-            if (res.headers.get("Content-Type").startsWith("text/javascript")) {
+            const type = res.headers.get("Content-Type").trim();
+            if (
+              type.startsWith("text/javascript") ||
+              type.startsWith("text/plain")
+            ) {
               this.#security = "secure";
             } else {
-              this.#setDanger();
+              const e = new TypeError(`Incompatible content-type: ${type}`);
+              this.#setDanger(e);
             }
           })
-          .catch(() => {
-            const selector = "script,iframe,embed,object";
-            const elements = backup.querySelectorAll(selector);
-            elements.length != 0 && this.#setDanger();
-          });
+          .catch((e) => this.#setDanger(e));
       }
     }
 
@@ -285,14 +263,33 @@ if (typeof Symbol.ChromeXt == "undefined") {
       throw new Error(`Invalid field #${key}`);
     }
 
-    #setDanger() {
+    #patchConsole() {
+      if (this.#security == "secure" || backup.debug !== undefined) return;
+      const parse = backup.parse;
+      backup.debug = console.debug;
+      console.debug = new Proxy(this.#debug, {
+        apply(_target, _this, argumentsList) {
+          try {
+            const data = parse(argumentsList.join(""));
+            if ("action" in data) {
+              console.warn("ChromeXt is under attack");
+            } else {
+              throw Error("Valid arguments");
+            }
+          } catch {
+            Reflect.apply(...arguments);
+          }
+        },
+      });
+    }
+
+    #setDanger(reason) {
       if (this.#security == "secure") return;
       this.dispatch("block");
       console.warn(
-        "Domain",
-        location.host,
-        "is not verified for ChromeXt with security level",
-        this.#security
+        `Url ${location.href}`,
+        `is not verified for ChromeXt security level ${this.#security} due to`,
+        reason
       );
       this.#security = "danger";
       delete Symbol.ChromeXt;
@@ -374,37 +371,6 @@ if (typeof Symbol.ChromeXt == "undefined") {
         return UnLocked;
       } else {
         throw new Error("Fail to unlock ChromeXtTarget");
-      }
-    }
-    verifyDOMSecurity() {
-      if (this.#security != "userscript") return;
-      const tags = [];
-      const elements = backup.querySelectorAll("*");
-      if (elements.length > 20) {
-        this.#setDanger();
-        return;
-      } else if (elements.length < 3) {
-        return;
-      }
-      for (const e of elements) {
-        if (typeof e.onload == "function") {
-          this.#setDanger();
-          return;
-        }
-        backup.push.apply(tags, [e.tagName]);
-      }
-      const TAGS = ["HTML", "HEAD", "META", "BODY", "PRE"];
-      if (
-        elements.length != 5 ||
-        backup.stringify(tags) !== backup.stringify(TAGS)
-      ) {
-        const bodyIndex = tags.findIndex((it) => it == "BODY");
-        const bodyTags = tags.slice(bodyIndex + 1);
-        if (bodyTags.length > 1 || bodyTags[0] != "PRE") {
-          this.#setDanger();
-        }
-      } else {
-        this.#security = "secure";
       }
     }
   }

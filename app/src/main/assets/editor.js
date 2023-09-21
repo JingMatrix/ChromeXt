@@ -96,10 +96,8 @@ function fixDialog() {
 }
 
 async function prepareDOM() {
-  if (typeof Symbol.ChromeXt?.verifyDOMSecurity == "function")
-    Symbol.ChromeXt.verifyDOMSecurity();
   if (Symbol.ChromeXt == undefined) return;
-  Symbol.installScript = installScript;
+  if (document.querySelector("script,div,p") != null) return;
   const meta = document.createElement("meta");
   const style = document.createElement("style");
 
@@ -113,6 +111,7 @@ async function prepareDOM() {
 
   const code = document.querySelector("body > pre");
   if (code == null) return prepareDOM();
+  Symbol.installScript = installScript;
   document.head.appendChild(meta);
   document.head.appendChild(style);
 
