@@ -499,7 +499,9 @@ function GM_xmlhttpRequest(details) {
     if (
       "data" in details &&
       details.data != null &&
-      typeof details.data != "string"
+      typeof details.data != "string" &&
+      details.method != "GET" &&
+      details.binary == false
     ) {
       details.binary = true;
     }
@@ -518,8 +520,6 @@ function GM_xmlhttpRequest(details) {
             Array.from(details.data, (x) => String.fromCodePoint(x)).join("")
           );
           break;
-        default:
-          details.binary = false;
       }
     }
 
@@ -609,7 +609,16 @@ function GM_xmlhttpRequest(details) {
       }
       sink.parse(data);
       if (type == "progress") {
-        sink.writer.write(data);
+        sink.writer.write(data).catch((error) => {
+          if (error == "redirect") {
+            details.url = xhr.finalUrl;
+            GM_xmlhttpRequest(details)
+              .then((res) => resolve(res))
+              .catch((e) => reject(e));
+          } else {
+            reject(error);
+          }
+        });
       } else if (type == "load") {
         sink.writer
           .close()
@@ -645,6 +654,7 @@ function GM_xmlhttpRequest(details) {
       revoke(listener);
       sink.writer.abort(type);
     };
+
     let request = details;
     if (
       !details.signal &&
@@ -671,10 +681,13 @@ function GM_xmlhttpRequest(details) {
         }
       }
     }
+
     xhr.binaryType = ["arraybuffer", "blob", "stream"].includes(
       xhr.responseType
     );
     xhr.readyState = 1;
+    xhr.redirect = details.redirect || "manual";
+
     if (useJSFetch) {
       request.signal.addEventListener("abort", xhr.abort);
       await fetch(request)
@@ -721,6 +734,7 @@ function GM_xmlhttpRequest(details) {
           }
         });
     }
+
     if (!useJSFetch) {
       await prepare(details);
       if (details instanceof Request) {
@@ -748,6 +762,7 @@ function GM_xmlhttpRequest(details) {
       if (typeof request.cookie == "string") {
         request.cookie = request.cookie.split("; ");
       }
+
       if (!Array.isArray(request.cookie)) delete request.cookie;
       ChromeXt.dispatch("xmlhttpRequest", {
         id: GM_info.script.id,
@@ -857,9 +872,13 @@ class ResponseSink {
       this.xhr.headers.get(headerName);
     this.xhr.finalUrl = this.xhr.headers.get("Location") || this.xhr.url;
     this.xhr.responseURL = this.xhr.finalUrl;
-    if (this.xhr.finalUrl != this.xhr.url && this.xhr.redirect == "error") {
-      this.xhr.error = new Error("Redirection not allowed");
-      this.xhr.abort();
+    if (this.xhr.finalUrl != this.xhr.url) {
+      if (this.xhr.redirect == "error") {
+        this.xhr.error = new Error("Redirection not allowed");
+        this.xhr.abort();
+      } else if (this.xhr.redirect == "follow") {
+        this.xhr.abort("redirect", false);
+      }
     }
     this.xhr.total = this.xhr.headers.get("Content-Length");
     if (this.xhr.total !== null) {
@@ -927,9 +946,9 @@ class ResponseSink {
     this.dispatch("loadend");
     if (parseError instanceof Error) throw parseError;
   }
-  abort(reason) {
+  abort(reason, loadend = true) {
     this.dispatch(reason);
-    this.dispatch("loadend");
+    if (loadend) this.dispatch("loadend");
   }
 }
 // Kotlin separator

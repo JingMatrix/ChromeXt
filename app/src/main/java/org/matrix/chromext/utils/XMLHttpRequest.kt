@@ -24,7 +24,6 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
   val binary = request.optBoolean("binary")
   val buffersize = request.optInt("buffersize", 8)
   val cookie = request.optJSONArray("cookie")
-  val followRedirects = request.optString("redirect") != "error"
   val headers = request.optJSONObject("headers")
   val method = request.optString("method")
   val nocache = request.optBoolean("nocache")
@@ -53,7 +52,6 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
     with(connection!!) {
       setRequestMethod(method)
       headers?.keys()?.forEach { setRequestProperty(it, headers.optString(it)) }
-      setInstanceFollowRedirects(followRedirects)
       setUseCaches(!nocache)
       setConnectTimeout(timeout)
 
@@ -84,8 +82,8 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
             data.put("headers", JSONObject(headers))
             val binary =
                 responseType !in listOf("", "text", "document", "json") ||
-                    headers.containsKey("Content-Encoding") ||
-                    (headers.get("Content-Type")?.optString(0, "")?.contains("charset") == true)
+                    contentEncoding != "" ||
+                    contentType.contains("charset")
             data.put("binary", binary)
 
             if (!anonymous) {
@@ -125,7 +123,6 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
               data.put("type", it::class.java.name)
               data.put("message", it.message)
               errorStream?.bufferedReader()?.use { it.readText() }?.let { data.put("error", it) }
-              // Log.d("XMLHttpRequest failed with ${url}: " + it.toString())
               if (it is SocketTimeoutException) {
                 response("timeout", data.put("bytesTransferred", it.bytesTransferred))
               } else {

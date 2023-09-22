@@ -10,6 +10,7 @@ import android.os.Handler
 import java.io.File
 import java.lang.ref.WeakReference
 import java.net.CookieManager
+import java.net.HttpURLConnection
 import java.util.concurrent.Executors
 import org.json.JSONObject
 import org.matrix.chromext.devtools.DevSessions
@@ -51,6 +52,7 @@ object Chrome {
     @Suppress("DEPRECATION") val packageInfo = ctx.packageManager?.getPackageInfo(packageName, 0)
     Log.i("Package: ${packageName}, v${packageInfo?.versionName}")
     setupHttpCache(ctx)
+    HttpURLConnection.setFollowRedirects(false)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       val groupId = "org.matrix.chromext"
       val group = NotificationChannelGroup(groupId, "ChromeXt")
