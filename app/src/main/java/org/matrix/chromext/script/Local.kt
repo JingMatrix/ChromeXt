@@ -134,9 +134,11 @@ object Local {
     val seed = Random.nextDouble()
     // Use empty lines to randomize anchorInChromeXt
     val parts =
-        localScript[0].replaceFirst("ChromeXt", name).split("\n").filter {
-          if (it.length != 0) true else Random.nextDouble() > seed
-        }
+        localScript[0]
+            .replaceFirst("ChromeXt", name)
+            .replaceFirst("ChromeXtUnlockKeyForInit", key.toString())
+            .split("\n")
+            .filter { if (it.length != 0) true else Random.nextDouble() > seed }
     anchorInChromeXt = parts.indexOfFirst { it.endsWith("// Kotlin anchor") } + 2
     initChromeXt = parts.joinToString("\n")
     openEruda =

@@ -77,14 +77,9 @@ object Listener {
   }
 
   private fun checkPermisson(action: String, key: Double, tab: Any?): Boolean {
+    if (key != Local.key) return false
     val url = Chrome.getUrl(tab)!!
     if (url.endsWith(".txt")) return false
-    if (parseOrigin(url) == null) return true
-    if (!isChromeXtFrontEnd(url) &&
-        !isDevToolsFrontEnd(url) &&
-        !isUserScript(url) &&
-        key != Local.key)
-        return false
     if (isUserScript(url) && !allowedActions.get("userscript")!!.contains(action)) return false
     if (allowedActions.get("front-end")!!.contains(action) && !isChromeXtFrontEnd(url)) return false
     if (allowedActions.get("devtools")!!.contains(action) && !isDevToolsFrontEnd(url)) return false
@@ -114,8 +109,8 @@ object Listener {
     runCatching {
           val data = JSONObject(text)
           val action = data.getString("action")
+          val key = data.getDouble("key")
           val payload = data.optString("payload")
-          val key = data.optDouble("key")
           if (checkPermisson(action, key, currentTab)) {
             val callback = on(action, payload, currentTab)
             if (callback != null) Chrome.evaluateJavascript(listOf(callback), currentTab)
