@@ -1,6 +1,7 @@
 package org.matrix.chromext.hook
 
 import android.app.Activity
+import android.os.Build
 import android.os.Handler
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
@@ -44,7 +45,10 @@ object WebViewHook : BaseHook() {
           if (consoleMessage.messageLevel() == ConsoleMessage.MessageLevel.TIP &&
               consoleMessage.sourceId() == "local://ChromeXt/init" &&
               consoleMessage.lineNumber() == Local.anchorInChromeXt) {
-            val webView = records.find { it.get()?.getWebChromeClient() == chromeClient }?.get()
+            val webView =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                  records.find { it.get()?.getWebChromeClient() == chromeClient }?.get()
+                } else Chrome.getTab() as WebView?
             Listener.startAction(consoleMessage.message(), webView)
           } else {
             Log.d(
