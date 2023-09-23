@@ -132,7 +132,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
       const result = super[method].apply(this, args);
       if (
         this.#ChromeXt instanceof ChromeXtTarget &&
-        !this.#ChromeXt.isLocked() &&
+        !this.#ChromeXt.isLocked(true) &&
         SyncMethods.includes(method)
       )
         this.sync();
@@ -170,8 +170,8 @@ if (typeof Symbol.ChromeXt == "undefined") {
       props.EventTarget.forEach((m) => {
         Object.defineProperty(this, m, {
           value: (...args) => {
-            if (this.isLocked()) throw new backup.Error("ChromeXt locked");
-            return this.#target[m].apply(this.#target, args);
+            if (!this.isLocked(true))
+              return this.#target[m].apply(this.#target, args);
           },
         });
       });
@@ -182,16 +182,13 @@ if (typeof Symbol.ChromeXt == "undefined") {
         this.#factory(p, v);
         Object.defineProperty(this, p, {
           set(v) {
-            if (!this.isLocked() && secure.description == "verified") {
+            // Allow to redefine it for unlocked ChromeXtTarget instances
+            if (secure.description == "verified" && !this.isLocked(true))
               this.#factory(p, v);
-              return true;
-            } else {
-              return false;
-            }
+            return true;
           },
           get() {
-            if (!this.isLocked()) return this.#factory(p);
-            return [];
+            if (!this.isLocked(true)) return this.#factory(p);
           },
         });
       });
@@ -302,7 +299,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
     }
 
     dispatch(action, payload) {
-      if (this.isLocked()) throw new backup.Error("ChromeXt locked");
+      this.isLocked(true);
       if (action != "block" && this.#security != secure) {
         const error = new backup.Error(
           `ChromeXt called with security level: ${this.#security}`,
@@ -314,10 +311,14 @@ if (typeof Symbol.ChromeXt == "undefined") {
       // Kotlin anchor
       this.#debug(backup.stringify({ action, payload, key: initKey }));
     }
-    isLocked() {
-      return this.#locked === true && secure.description == "verified";
+    isLocked(throwError = false) {
+      const locked = this.#locked === true && secure.description == "verified";
+      if (throwError && locked) throw new backup.Error("ChromeXt locked");
+      return locked;
     }
     lock(token, name) {
+      if (secure.description == "verified")
+        throw backup.Error("ChromeXt was already locked once before");
       if (!this.isLocked() && name.length > 16 && token === initKey) {
         this.#locked = true;
         secure = Symbol("verified"); // Context is verified by the provided token
@@ -338,8 +339,8 @@ if (typeof Symbol.ChromeXt == "undefined") {
       }
     }
     post(event, detail) {
-      if (this.isLocked()) throw new backup.Error("ChromeXt locked");
-      this.dispatchEvent(new backup.Event(event, { detail }));
+      if (!this.isLocked(true))
+        this.dispatchEvent(new backup.Event(event, { detail }));
     }
     unlock(token, apiOnly = true) {
       if (!this.isLocked()) {
