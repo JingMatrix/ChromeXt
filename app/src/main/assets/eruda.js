@@ -56,36 +56,47 @@ eruda._initDevTools = new Proxy(eruda._initDevTools, {
         createHTML: (s) => s,
       });
     } catch {
-      stubHTMLPolicy = ChromeXt.trustedTypes.polices.values().next().value;
-      ChromeXt.trustedTypes.bypass = true;
+      if (typeof Element.prototype.setHTML != "function") return;
     }
     const _insertAdjacentHTML = HTMLElement.prototype.insertAdjacentHTML;
     HTMLDivElement.prototype.insertAdjacentHTML = function (p, t) {
-      return _insertAdjacentHTML.apply(this, [p, stubHTMLPolicy.createHTML(t)]);
+      if (stubHTMLPolicy != undefined) {
+        return _insertAdjacentHTML.apply(this, [
+          p,
+          stubHTMLPolicy.createHTML(t),
+        ]);
+      } else {
+        const div = document.createElement("div");
+        div.setHTML(t);
+        return this.insertAdjacentElement(p, div.children[0]);
+      }
     };
     const _html = eruda._$el.__proto__.html;
     eruda._$el.__proto__.html = function (t) {
-      return _html.apply(this, [stubHTMLPolicy.createHTML(t)]);
+      if (stubHTMLPolicy != undefined) {
+        return _html.apply(this, [stubHTMLPolicy.createHTML(t)]);
+      } else {
+        for (const node of this) node.setHTML(t);
+      }
     };
-    if (typeof Element.prototype.setHTML == "function") {
-      const _enable = eruda.chobitsu.domain("Overlay").enable;
-      eruda.chobitsu.domain("Overlay").enable = function () {
-        if (_enable.enabled) return;
-        _enable.enabled = true;
-        _enable.apply(this, arguments);
-        const overlay =
-          eruda._container.parentNode.querySelector(
-            ".__chobitsu-hide__"
-          ).shadowRoot;
-        const tooltip = overlay.querySelector("div.luna-dom-highlighter > div");
-        Object.defineProperty(tooltip, "innerHTML", {
-          set(value) {
-            this.setHTML(value);
-          },
-        });
-      };
-    }
     this.typesHooked = true;
+    if (typeof Element.prototype.setHTML != "function") return;
+    const _enable = eruda.chobitsu.domain("Overlay").enable;
+    eruda.chobitsu.domain("Overlay").enable = function () {
+      if (_enable.enabled) return;
+      _enable.enabled = true;
+      _enable.apply(this, arguments);
+      const overlay =
+        eruda._container.parentNode.querySelector(
+          ".__chobitsu-hide__"
+        ).shadowRoot;
+      const tooltip = overlay.querySelector("div.luna-dom-highlighter > div");
+      Object.defineProperty(tooltip, "innerHTML", {
+        set(value) {
+          this.setHTML(value);
+        },
+      });
+    };
   },
   apply(target, thisArg, args) {
     this.bypassTrustedTypes();

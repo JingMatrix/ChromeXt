@@ -19,54 +19,9 @@ if (typeof Symbol.ChromeXt == "undefined") {
     Event: CustomEvent,
     confirm: confirm.bind(window),
     parse: JSON.parse.bind(JSON),
-    replace: String.prototype.replace,
     stringify: JSON.stringify.bind(JSON),
     setTimeout: setTimeout.bind(window),
-    REGEX: /\n {4}[^\n]+/,
   };
-
-  const cachedTypes = {
-    polices: new Set(),
-    // Caching polices created by trustedTypes
-    bypass: false,
-    Error: class extends TypeError {
-      constructor(name) {
-        const msg =
-          "Failed to execute 'createHTML' on 'TrustedTypePolicy': " +
-          `Policy ${name}'s TrustedTypePolicyOptions did not specify a 'createHTML' member.`;
-        super(msg);
-        this.stack = backup.replace.apply(this.stack, [backup.REGEX, ""]);
-      }
-    },
-  };
-
-  trustedTypes.createPolicy = new Proxy(trustedTypes.createPolicy, {
-    apply(target, thisArg, args) {
-      const policyOptions = args[1] || {};
-      const original = policyOptions.createHTML;
-      function createHTML() {
-        if (cachedTypes.bypass) {
-          return arguments[0];
-        } else {
-          if (typeof original == "function") {
-            return original.apply(policyOptions, arguments);
-          } else {
-            throw new cachedTypes.Error(args[0]);
-          }
-        }
-      }
-
-      args[1] = new Proxy(policyOptions, {
-        get(_target, prop) {
-          if (prop == "createHTML") return createHTML;
-          return Reflect.get(...arguments);
-        },
-      });
-      const result = target.apply(thisArg, args);
-      cachedTypes.polices.add(result);
-      return result;
-    },
-  });
 
   const SyncMethods = ["pop", "push", "fill", "splice", "sync"];
 
@@ -196,9 +151,6 @@ if (typeof Symbol.ChromeXt == "undefined") {
 
     get globalKeys() {
       return props.global;
-    }
-    get trustedTypes() {
-      return cachedTypes;
     }
 
     /** @param {any | Error} prop */
