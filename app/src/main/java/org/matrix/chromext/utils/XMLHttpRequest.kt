@@ -51,6 +51,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
     connection = url.openConnection() as HttpURLConnection
     with(connection!!) {
       setRequestMethod(method)
+      setInstanceFollowRedirects(false)
       headers?.keys()?.forEach { setRequestProperty(it, headers.optString(it)) }
       setUseCaches(!nocache)
       setConnectTimeout(timeout)
