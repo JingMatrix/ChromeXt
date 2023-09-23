@@ -69,11 +69,14 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
       runCatching {
             if (method != "GET" && request.has("data")) {
               val input = request.optString("data")
-              if (binary) {
-                outputStream.write(Base64.decode(input, Base64.DEFAULT))
-              } else {
-                outputStream.write(input.toByteArray())
-              }
+              val bytes =
+                  if (binary) {
+                    Base64.decode(input, Base64.DEFAULT)
+                  } else {
+                    input.toByteArray()
+                  }
+              setFixedLengthStreamingMode(bytes.size)
+              outputStream.write(bytes)
             }
 
             data.put("status", responseCode)
@@ -88,7 +91,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
 
             if (!anonymous) {
               headerFields
-                  .filter { it.key != null && it.key.startsWith("Set-Cookie") }
+                  .filter { it.key != null && it.key.lowercase().startsWith("set-cookie") }
                   .forEach {
                     it.value.forEach {
                       HttpCookie.parse(it).forEach { Chrome.cookieStore.add(uri, it) }
@@ -122,14 +125,13 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
             if (it is IOException) {
               data.put("type", it::class.java.name)
               data.put("message", it.message)
+              data.put("stack", it.stackTraceToString())
               errorStream?.bufferedReader()?.use { it.readText() }?.let { data.put("error", it) }
               if (it is SocketTimeoutException) {
                 response("timeout", data.put("bytesTransferred", it.bytesTransferred))
               } else {
                 response("error", data)
               }
-            } else {
-              Log.ex(it)
             }
           }
     }

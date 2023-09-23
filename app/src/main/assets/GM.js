@@ -501,11 +501,48 @@ function GM_xmlhttpRequest(details) {
       details.data != null &&
       typeof details.data != "string" &&
       details.method != "GET" &&
-      details.binary == false
+      details.binary !== true
     ) {
       details.binary = true;
     }
-    if ("binary" in details && "data" in details && details.binary) {
+
+    if (details.data instanceof FormData) {
+      let parts = [];
+      const formboundary =
+        "------WebKitFormBoundary" +
+        Math.random().toString(36).slice(2, 10).toUpperCase() +
+        Math.random().toString(36).slice(2, 10).toUpperCase();
+      details.headers.set(
+        "Content-Type",
+        "multipart/form-data; boundary=" + formboundary.slice(2)
+      );
+      for (const [k, v] of details.data.entries()) {
+        parts.push(formboundary);
+        let disposition = `Content-Disposition: form-data; name="${k}"`;
+        if (v instanceof Blob) {
+          const name = v.name || "blob";
+          const type = v.type || "unknown";
+          disposition += `; filename="${name}"`;
+          parts.push(disposition);
+          parts.push(`Content-Type: ${type}`);
+          parts.push(`Content-Transfer-Encoding: base64`);
+          parts.push("");
+          const binary = new Uint8Array(await v.arrayBuffer());
+          parts.push(
+            btoa(Array.from(binary, (x) => String.fromCodePoint(x)).join(""))
+          );
+        } else {
+          parts.push(disposition);
+          parts.push("");
+          parts.push(v);
+        }
+      }
+      parts.push(formboundary + "--\r\n");
+      details.data = parts.join("\r\n");
+      details.binary = false;
+    }
+
+    if ("data" in details && details.binary === true) {
       if (Array.isArray(details.data)) details.data = new Blob(details.data);
       switch (details.data.constructor) {
         case DataView:
@@ -631,17 +668,28 @@ function GM_xmlhttpRequest(details) {
             );
           });
       } else if (["timeout", "error"].includes(type)) {
+        const writer = sink.writer; // To dispatch loadstart event
+        const cause = new Error(data.message);
+        cause.stack = data.stack;
         const error = new Error(
-          [data.status, data.statusText, data.message]
-            .filter((e) => e)
-            .join(", "),
+          [data.status, data.statusText].filter((e) => e).join(", "),
           {
-            cause: data.error || type.toUpperCase(),
+            cause,
           }
         );
         error.name = data.type;
         xhr.error = error;
-        xhr.abort(type);
+        xhr.response = data.error;
+        delete xhr.stack;
+        delete xhr.type;
+        if (xhr.response != undefined) {
+          writer
+            .close()
+            .then(() => xhr.abort(type))
+            .catch((e) => reject(e));
+        } else {
+          xhr.abort(type);
+        }
       }
     }
 
@@ -916,7 +964,9 @@ class ResponseSink {
   }
   async close(_controller) {
     const type =
-      this.xhr.overrideMimeType || this.xhr.headers.get("Content-Type") || "";
+      this.xhr.overrideMimeType ||
+      this.xhr.headers.get("Content-Type") ||
+      "text/xml";
     if (
       Array.isArray(this.xhr.response) &&
       this.xhr.response.length != 0 &&
