@@ -506,7 +506,8 @@ function GM_xmlhttpRequest(details) {
       details.binary = true;
     }
 
-    if (details.data instanceof FormData) {
+    if (details.data instanceof FormData && details.method != "GET") {
+      details.binary = false;
       let parts = [];
       const formboundary =
         "------WebKitFormBoundary" +
@@ -520,26 +521,30 @@ function GM_xmlhttpRequest(details) {
         parts.push(formboundary);
         let disposition = `Content-Disposition: form-data; name="${k}"`;
         if (v instanceof Blob) {
+          details.binary = true;
           const name = v.name || "blob";
           const type = v.type || "unknown";
           disposition += `; filename="${name}"`;
           parts.push(disposition);
           parts.push(`Content-Type: ${type}`);
-          parts.push(`Content-Transfer-Encoding: base64`);
           parts.push("");
           const binary = new Uint8Array(await v.arrayBuffer());
-          parts.push(
-            btoa(Array.from(binary, (x) => String.fromCodePoint(x)).join(""))
-          );
+          parts.push(binary);
         } else {
           parts.push(disposition);
           parts.push("");
           parts.push(v);
         }
       }
-      parts.push(formboundary + "--\r\n");
-      details.data = parts.join("\r\n");
-      details.binary = false;
+      parts.push(formboundary + "--");
+      if (!details.binary) {
+        parts.push("");
+        details.data = parts.join("\r\n");
+      } else {
+        const blob = [];
+        parts.forEach((d) => blob.push(d, "\r\n"));
+        details.data = new Blob(blob);
+      }
     }
 
     if ("data" in details && details.binary === true) {
