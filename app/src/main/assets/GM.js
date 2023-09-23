@@ -496,55 +496,71 @@ function GM_xmlhttpRequest(details) {
     if (details instanceof Request && details.method != "GET") {
       details.data = details.data || (await details.blob());
     }
+
+    if (details.data instanceof FormData) {
+      if (details.binary !== true)
+        for (const value of details.data.values())
+          if (value instanceof Blob) {
+            details.binary = true;
+            break;
+          }
+      if (!details.binary) {
+        const form = Array.from(details.data.entries())
+          .map(([k, v]) => `${k}=${v}`)
+          .join("&");
+        if (details.method == "GET") {
+          if (!details.url.includes("?"))
+            details.url += "?" + encodeURIComponent(form);
+        } else {
+          details.headers.set(
+            "Content-Type",
+            "application/x-www-form-urlencoded"
+          );
+          details.data = form;
+        }
+      } else {
+        const parts = [];
+        const formboundary =
+          "------WebKitFormBoundary" +
+          Math.random().toString(36).slice(2, 10).toUpperCase() +
+          Math.random().toString(36).slice(2, 10).toUpperCase();
+        details.headers.set(
+          "Content-Type",
+          "multipart/form-data; boundary=" + formboundary.slice(2)
+        );
+        for (const [k, v] of details.data.entries()) {
+          parts.push(formboundary);
+          let disposition = `Content-Disposition: form-data; name="${k}"`;
+          if (v instanceof Blob) {
+            details.binary = true;
+            const name = v.name || "blob";
+            const type = v.type || "unknown";
+            disposition += `; filename="${name}"`;
+            parts.push(disposition);
+            parts.push(`Content-Type: ${type}`);
+            parts.push("");
+            const binary = new Uint8Array(await v.arrayBuffer());
+            parts.push(binary);
+          } else {
+            parts.push(disposition);
+            parts.push("");
+            parts.push(v);
+          }
+        }
+        parts.push(formboundary + "--");
+        const blob = [];
+        parts.forEach((d) => blob.push(d, "\r\n"));
+        details.data = new Blob(blob);
+      }
+    }
+
     if (
-      "data" in details &&
-      details.data != null &&
+      details.data &&
       typeof details.data != "string" &&
       details.method != "GET" &&
       details.binary !== true
     ) {
       details.binary = true;
-    }
-
-    if (details.data instanceof FormData && details.method != "GET") {
-      details.binary = false;
-      let parts = [];
-      const formboundary =
-        "------WebKitFormBoundary" +
-        Math.random().toString(36).slice(2, 10).toUpperCase() +
-        Math.random().toString(36).slice(2, 10).toUpperCase();
-      details.headers.set(
-        "Content-Type",
-        "multipart/form-data; boundary=" + formboundary.slice(2)
-      );
-      for (const [k, v] of details.data.entries()) {
-        parts.push(formboundary);
-        let disposition = `Content-Disposition: form-data; name="${k}"`;
-        if (v instanceof Blob) {
-          details.binary = true;
-          const name = v.name || "blob";
-          const type = v.type || "unknown";
-          disposition += `; filename="${name}"`;
-          parts.push(disposition);
-          parts.push(`Content-Type: ${type}`);
-          parts.push("");
-          const binary = new Uint8Array(await v.arrayBuffer());
-          parts.push(binary);
-        } else {
-          parts.push(disposition);
-          parts.push("");
-          parts.push(v);
-        }
-      }
-      parts.push(formboundary + "--");
-      if (!details.binary) {
-        parts.push("");
-        details.data = parts.join("\r\n");
-      } else {
-        const blob = [];
-        parts.forEach((d) => blob.push(d, "\r\n"));
-        details.data = new Blob(blob);
-      }
     }
 
     if ("data" in details && details.binary === true) {
