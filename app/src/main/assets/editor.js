@@ -9,7 +9,7 @@ async function installScript(force = false) {
   }
 }
 
-function renderEditor(code, checkEncoding) {
+function renderEditor(code, alertEncoding) {
   let scriptMeta = document.querySelector("#meta");
   if (scriptMeta) return;
   const separator = "==/UserScript==\n";
@@ -30,15 +30,16 @@ function renderEditor(code, checkEncoding) {
   scriptMeta.id = "meta";
   document.body.prepend(scriptMeta);
 
-  if (checkEncoding) {
+  if (alertEncoding) {
     const msg =
-      "Current script may contain badly decoded text.\n\nTo fix possible issues, you can download this script and open it locally.";
+      "Current script may contain badly encoded text.\n\nTo fix possible issues, you can download this script and open it locally.";
     createDialog(msg, false);
   } else {
     const msg =
-      "Code editor is blocked on this page.\n\nPlease use page menu to install this UserScript, or reload current page to enable the editor.";
+      "Code editor is blocked on this page.\n\nPlease use the menu to install this UserScript, or reload the page to solve this problem.";
     createDialog(msg);
     setTimeout(fixDialog);
+    // setTimeout is not working in sanboxed pages
   }
 
   scriptMeta.setAttribute("contenteditable", true);
@@ -115,8 +116,8 @@ async function prepareDOM() {
   document.head.appendChild(meta);
   document.head.appendChild(style);
 
-  const checkEncoding = !(await fixEncoding(true, true, code));
-  renderEditor(code, checkEncoding);
+  const alertEncoding = !(await fixEncoding(true, true, code));
+  renderEditor(code, alertEncoding);
 }
 
 prepareDOM();

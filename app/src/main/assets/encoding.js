@@ -93,9 +93,14 @@ class SJIS extends TwoBytes {
   map = () => SingleByte.generateTable(this.decode.bind(this), 0xa1, 0xdf);
 }
 
-function useUTF8(text, utf8, encoding = document.characterSet.toLowerCase()) {
-  // Check if text with given encoding is proper, utf8 is the same data encoded with utf8
-  // Return true if we should discard given encoding and use UTF-8 insteadly
+function preferUTF8(
+  text,
+  utf8,
+  encoding = document.characterSet.toLowerCase()
+) {
+  // Check if text with given encoding is properly encodes;
+  // The argmuent utf8 is the same data encoded with UTF-8;
+  // Return true if we should discard given encoding and use UTF-8 encoding instead
   if (encoding == "utf-8") return false;
   const encoded = new TextDecoder(encoding).decode(
     new TextEncoder().encode(utf8)
@@ -123,7 +128,7 @@ function fixEncoding(tryPart = false, tryFetch = true, node) {
   if (window.content) {
     if (!window.content.fixed) {
       const utf8 = window.content["utf-8"];
-      if (useUTF8(text, utf8, encoding)) node.textContent = utf8;
+      if (preferUTF8(text, utf8, encoding)) node.textContent = utf8;
     }
     window.content.fixed = true;
     return true;
@@ -159,7 +164,7 @@ function fixEncoding(tryPart = false, tryFetch = true, node) {
       fetch(url, { cache: "force-cache", mode: "same-origin" })
         .then((res) => res.text())
         .then((utf8) => {
-          node.textContent = useUTF8(text, utf8, encoding) ? utf8 : text;
+          node.textContent = preferUTF8(text, utf8, encoding) ? utf8 : text;
           resolve(true);
         })
         .catch((_e) => resolve(false));
