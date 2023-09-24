@@ -601,6 +601,16 @@ function GM_xmlhttpRequest(details) {
     ChromeXt.removeEventListener("xmlhttpRequest", listener);
   }
 
+  function redirect(response) {
+    const request = { ...details, url: response.finalUrl };
+    if ([301, 302, 303].includes(response.status)) {
+      request.method = "GET";
+      delete request.data;
+      delete request.binary;
+    }
+    return request;
+  }
+
   const xhrHandler = {
     target: new EventTarget(),
     get() {
@@ -667,26 +677,20 @@ function GM_xmlhttpRequest(details) {
       }
       sink.parse(data);
       if (type == "progress") {
-        sink.writer.write(data).catch((error) => {
-          if (error == "redirect") {
-            details.url = xhr.finalUrl;
-            GM_xmlhttpRequest(details)
-              .then((res) => resolve(res))
-              .catch((e) => reject(e));
-          } else {
-            reject(error);
-          }
-        });
+        sink.writer.write(data);
       } else if (type == "load") {
         sink.writer
           .close()
           .then(() => resolve(xhr.response))
           .catch((error) => {
-            reject(
-              new TypeError("Fail to parse response data: " + error.message, {
-                cause: error,
-              })
-            );
+            // error might be caused by abort
+            if (error instanceof Error) {
+              reject(
+                new TypeError("Fail to parse response data: " + error.message, {
+                  cause: error,
+                })
+              );
+            }
           });
       } else if (["timeout", "error"].includes(type)) {
         const writer = sink.writer; // To dispatch loadstart event
@@ -719,9 +723,18 @@ function GM_xmlhttpRequest(details) {
         uuid,
         abort: true,
       });
-      if (xhr.error instanceof Error) reject(xhr.error);
       revoke(listener);
-      sink.writer.abort(type);
+      if (type == "redirect") {
+        if (xhr.redirect == "error") {
+          xhr.error = new Error("Redirection not allowed");
+        } else if (xhr.redirect == "follow") {
+          GM_xmlhttpRequest(redirect(xhr))
+            .then((res) => resolve(res))
+            .catch((e) => reject(e));
+        }
+      }
+      if (xhr.error instanceof Error) reject(xhr.error);
+      sink.writer.abort(type, type != "redirect");
     };
 
     let request = details;
@@ -755,7 +768,7 @@ function GM_xmlhttpRequest(details) {
       xhr.responseType
     );
     xhr.readyState = 1;
-    xhr.redirect = details.redirect || "manual";
+    xhr.redirect = details.redirect || "follow";
 
     if (useJSFetch) {
       request.signal.addEventListener("abort", xhr.abort);
@@ -942,12 +955,7 @@ class ResponseSink {
     this.xhr.finalUrl = this.xhr.headers.get("Location") || this.xhr.url;
     this.xhr.responseURL = this.xhr.finalUrl;
     if (this.xhr.finalUrl != this.xhr.url) {
-      if (this.xhr.redirect == "error") {
-        this.xhr.error = new Error("Redirection not allowed");
-        this.xhr.abort();
-      } else if (this.xhr.redirect == "follow") {
-        this.xhr.abort("redirect", false);
-      }
+      this.close().then(() => this.xhr.abort("redirect"));
     }
     this.xhr.total = this.xhr.headers.get("Content-Length");
     if (this.xhr.total !== null) {
@@ -984,6 +992,7 @@ class ResponseSink {
     this.dispatch("progress");
   }
   async close(_controller) {
+    if (this.#writer == undefined) return;
     const type =
       this.xhr.overrideMimeType ||
       this.xhr.headers.get("Content-Type") ||
