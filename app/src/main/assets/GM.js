@@ -601,16 +601,6 @@ function GM_xmlhttpRequest(details) {
     ChromeXt.removeEventListener("xmlhttpRequest", listener);
   }
 
-  function redirect(response) {
-    const request = { ...details, url: response.finalUrl };
-    if ([301, 302, 303].includes(response.status)) {
-      request.method = "GET";
-      delete request.data;
-      delete request.binary;
-    }
-    return request;
-  }
-
   const xhrHandler = {
     target: new EventTarget(),
     get() {
@@ -678,6 +668,10 @@ function GM_xmlhttpRequest(details) {
       sink.parse(data);
       if (type == "progress") {
         sink.writer.write(data);
+      } else if (type == "redirect" && xhr.redirect == "error") {
+        xhr.error = new Error("Redirection not allowed");
+        sink.dispatch("error");
+        xhr.abort("redirect");
       } else if (type == "load") {
         sink.writer
           .close()
@@ -724,17 +718,8 @@ function GM_xmlhttpRequest(details) {
         abort: true,
       });
       revoke(listener);
-      if (type == "redirect") {
-        if (xhr.redirect == "error") {
-          xhr.error = new Error("Redirection not allowed");
-        } else if (xhr.redirect == "follow") {
-          GM_xmlhttpRequest(redirect(xhr))
-            .then((res) => resolve(res))
-            .catch((e) => reject(e));
-        }
-      }
       if (xhr.error instanceof Error) reject(xhr.error);
-      sink.writer.abort(type, type != "redirect");
+      sink.writer.abort(type);
     };
 
     let request = details;
@@ -768,7 +753,6 @@ function GM_xmlhttpRequest(details) {
       xhr.responseType
     );
     xhr.readyState = 1;
-    xhr.redirect = details.redirect || "follow";
 
     if (useJSFetch) {
       request.signal.addEventListener("abort", xhr.abort);
@@ -924,49 +908,46 @@ class ResponseSink {
   parse(data) {
     if (typeof data != "object") return;
     for (const prop in data) {
-      if (prop == "headers") continue;
+      if (prop == "headers" || prop == "status") continue;
       const val = data[prop];
       if (typeof val == "function") continue;
       this.xhr[prop] = val;
     }
-    if (this.xhr.readyState != 1) return;
-    const headers = data.headers;
-    if (typeof headers != "object" || this.xhr.headers instanceof Headers)
-      return;
-    if (headers instanceof Headers) {
-      this.xhr.headers = headers;
-    } else {
-      Object.defineProperty(this.xhr, "headers", { value: new Headers() });
-      Object.entries(headers).forEach(([k, vs]) => {
-        for (const v of vs) {
-          this.xhr.headers.append(k, v);
-        }
+    if (this.xhr.status == data.status) return;
+    // status change if there are redirections
+
+    this.xhr.status = data.status;
+
+    let headers = data.headers;
+    if (!(headers instanceof Headers)) {
+      const entries = Object.entries(headers);
+      headers = new Headers();
+      entries.forEach(([k, vs]) => {
+        for (const v of vs) headers.append(k, v);
       });
     }
+    this.xhr.headers = headers;
     this.xhr.readyState = 2;
-    this.xhr.responseHeaders = Object.entries(
-      Object.fromEntries(this.xhr.headers)
-    )
+    const responseHeaders = Object.entries(Object.fromEntries(headers))
       .map(([k, v]) => k.toLowerCase() + ": " + v)
       .join("\r\n");
-    this.xhr.getAllResponseHeaders = () => this.xhr.responseHeaders;
-    this.xhr.getResponseHeader = (headerName) =>
-      this.xhr.headers.get(headerName);
-    this.xhr.finalUrl = this.xhr.headers.get("Location") || this.xhr.url;
+    this.xhr.responseHeaders = responseHeaders;
+    this.xhr.getAllResponseHeaders = () => responseHeaders;
+    this.xhr.getResponseHeader = (headerName) => headers.get(headerName);
+    this.xhr.finalUrl = headers.get("Location") || this.xhr.url;
     this.xhr.responseURL = this.xhr.finalUrl;
-    if (this.xhr.finalUrl != this.xhr.url) {
-      this.close().then(() => this.xhr.abort("redirect"));
-    }
-    this.xhr.total = this.xhr.headers.get("Content-Length");
+    this.xhr.total = headers.get("Content-Length");
     if (this.xhr.total !== null) {
       this.xhr.lengthComputable = true;
       this.xhr.total = Number(this.xhr.total);
     }
+    if (this.xhr.finalUrl != this.xhr.url && this.xhr.redirect != "error")
+      this.dispatch("redirect", { ...this.xhr });
     if (data instanceof Response) return;
-    this.xhr.encoding = this.xhr.headers.get("Content-Encoding");
-    if (this.xhr.encoding != null) {
+    const encoding = headers.get("Content-Encoding");
+    if (encoding != null) {
       try {
-        this.ds = new DecompressionStream(this.xhr.encoding.toLowerCase());
+        this.ds = new DecompressionStream(encoding.toLowerCase());
       } catch {
         this.xhr.abort();
       }
@@ -1026,9 +1007,9 @@ class ResponseSink {
     this.dispatch("loadend");
     if (parseError instanceof Error) throw parseError;
   }
-  abort(reason, loadend = true) {
+  abort(reason) {
     this.dispatch(reason);
-    if (loadend) this.dispatch("loadend");
+    this.dispatch("loadend");
   }
 }
 // Kotlin separator

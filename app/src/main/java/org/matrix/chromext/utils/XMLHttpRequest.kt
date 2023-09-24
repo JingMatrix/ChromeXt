@@ -51,7 +51,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
     connection = url.openConnection() as HttpURLConnection
     with(connection!!) {
       setRequestMethod(method)
-      setInstanceFollowRedirects(false)
+      setInstanceFollowRedirects(request.optString("redirect") != "manual")
       headers?.keys()?.forEach { setRequestProperty(it, headers.optString(it)) }
       setUseCaches(!nocache)
       setConnectTimeout(timeout)
@@ -86,19 +86,11 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
             data.put("headers", JSONObject(headers))
             val binary =
                 responseType !in listOf("", "text", "document", "json") ||
-                    contentEncoding != "" ||
-                    contentType.contains("charset")
+                    contentEncoding != null ||
+                    (contentType != null &&
+                        contentType.contains("charset") &&
+                        !contentType.contains("utf-8"))
             data.put("binary", binary)
-
-            if (!anonymous) {
-              headerFields
-                  .filter { it.key != null && it.key.lowercase().startsWith("set-cookie") }
-                  .forEach {
-                    it.value.forEach {
-                      HttpCookie.parse(it).forEach { Chrome.cookieStore.add(uri, it) }
-                    }
-                  }
-            }
 
             val buffer = ByteArray(buffersize * DEFAULT_BUFFER_SIZE)
             while (true) {
@@ -120,7 +112,7 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
               response("progress", data, false)
               data.remove("headers")
             }
-            response("load", data, false)
+            response("load", data)
           }
           .onFailure {
             if (it is IOException) {
@@ -136,9 +128,12 @@ class XMLHttpRequest(id: String, request: JSONObject, uuid: Double, currentTab: 
             }
           }
     }
+    if (!anonymous && connection != null) {
+      Chrome.storeCoookies(this, connection!!.headerFields)
+    }
   }
 
-  private fun response(
+  fun response(
       type: String,
       data: JSONObject = JSONObject(),
       disconnect: Boolean = true,
