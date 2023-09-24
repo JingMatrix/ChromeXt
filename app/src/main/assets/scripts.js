@@ -23,8 +23,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
     setTimeout: setTimeout.bind(window),
   };
 
-  const SyncMethods = ["pop", "push", "fill", "splice", "sync"];
-
+  const SyncMethods = ["fill", "pop", "push", "splice"];
   class SyncArray extends Array {
     #freeze;
     #ChromeXt = null; // Used to validate the sync method
@@ -37,61 +36,58 @@ if (typeof Symbol.ChromeXt == "undefined") {
       this.#sync = sync;
       this.#freeze = freeze;
 
-      props.Array.forEach((m) => {
-        if (typeof this[m] != "function") return;
-        Object.defineProperty(this, m, {
-          value: (...args) => {
-            return this.#verify(args, m);
-          },
-        });
-      });
-
-      Object.defineProperty(this, "sync", {
-        value: (data = this, LocalChromeXt = this.#ChromeXt || ChromeXt) => {
-          this.#ChromeXt = null; // Must be re-validate each time
-          if (this.#sync && typeof this.#name == "string") {
-            const payload = {
-              origin: window.location.origin,
-              name: this.#name,
-            };
-            if (typeof data == "object" && Array.isArray(data)) {
-              if (this.#freeze) data = data.filter((it) => Object.isFrozen(it));
-              data = [...new Set(data)];
-              if (data.length > 0) payload.data = data;
-            }
-            LocalChromeXt.dispatch("syncData", payload);
+      const toVerify = ["fill", "push"];
+      const hook = (args, method) => {
+        if (toVerify.includes(method) && this.#freeze) {
+          let n = 0;
+          if (method == "push") {
+            n = args.length;
+          } else if (method == "fill") {
+            n = 1;
           }
-        },
-      });
+          for (let i = 0; i < n; i++) {
+            if (!Object.isFrozen(args[i]))
+              throw new backup.Error(`Element ${args[i]} is not frozen`);
+          }
+        }
+        const result = super[method](...args);
+        this.sync();
+        return result;
+      };
+
+      this.proxy = (target, prop) => {
+        // Getter for methods of super
+        const value = target[prop];
+        if (SyncMethods.includes(prop) && typeof value == "function") {
+          return (...args) => hook(args, prop);
+        } else {
+          return value;
+        }
+      };
+    }
+
+    sync(data = this) {
+      const LocalChromeXt = this.#ChromeXt || ChromeXt;
+      LocalChromeXt.isLocked(true);
+      this.#ChromeXt = null; // Must be re-validate each time
+      if (this.#sync && typeof this.#name == "string") {
+        const payload = {
+          origin: window.location.origin,
+          name: this.#name,
+        };
+        if (typeof data == "object" && Array.isArray(data)) {
+          if (this.#freeze) data = data.filter((it) => Object.isFrozen(it));
+          data = [...new Set(data)];
+          if (data.length > 0) payload.data = data;
+        }
+        LocalChromeXt.dispatch("syncData", payload);
+      }
     }
 
     /** @param {ChromeXtTarget} target */
     set ChromeXt(target) {
       this.#ChromeXt = target;
       backup.setTimeout(() => (this.#ChromeXt = null));
-    }
-
-    #verify(args, method) {
-      if (this.#freeze) {
-        let n = 0;
-        if (method == "push") {
-          n = args.length;
-        } else if (method == "fill") {
-          n = 1;
-        }
-        for (let i = 0; i < n; i++) {
-          if (!Object.isFrozen(args[i]))
-            throw new backup.Error(`Element ${args[i]} is not frozen`);
-        }
-      }
-      const result = super[method].apply(this, args);
-      if (
-        this.#ChromeXt instanceof ChromeXtTarget &&
-        !this.#ChromeXt.isLocked(true) &&
-        SyncMethods.includes(method)
-      )
-        this.sync();
-      return result;
     }
   }
 
@@ -106,10 +102,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
     #security; // State of ChromeXt context
     #target;
 
-    #commands;
-    #cspRules;
-    #filters;
-    #scripts;
+    #store = {}; // SyncArrays with names in props.ChromeXt
 
     constructor(security, debug, target) {
       if (typeof debug == "function" && target instanceof EventTarget) {
@@ -123,30 +116,21 @@ if (typeof Symbol.ChromeXt == "undefined") {
       this.#check(security);
 
       props.EventTarget.forEach((m) => {
-        Object.defineProperty(this, m, {
-          value: (...args) => {
-            if (!this.isLocked(true))
-              return this.#target[m].apply(this.#target, args);
-          },
-        });
+        const method = this.#target[m].bind(this.#target);
+        this[m] = (...args) => {
+          if (!this.isLocked(true)) return method(...args);
+        };
       });
 
-      props.ChromeXt.forEach((p) => {
-        const sync = p != "scripts" && p != "commands";
-        const v = new SyncArray(p, sync, p == "scripts");
-        this.#factory(p, v);
-        Object.defineProperty(this, p, {
-          set(v) {
-            // Allow to redefine it for unlocked ChromeXtTarget instances
-            if (secure.description == "verified" && !this.isLocked(true))
-              this.#factory(p, v);
-            return true;
-          },
-          get() {
-            if (!this.isLocked(true)) return this.#factory(p);
-          },
+      if (secure.description == "secure" && this.#security == secure) {
+        props.ChromeXt.forEach((p) => {
+          const sync = p != "scripts" && p != "commands";
+          const v = new SyncArray(p, sync, p == "scripts");
+          this.#store[p] = v;
+          this[p] = new Proxy(v, { get: v.proxy });
+          delete v.proxy;
         });
-      });
+      }
     }
 
     get globalKeys() {
@@ -217,25 +201,6 @@ if (typeof Symbol.ChromeXt == "undefined") {
       return backup.confirm(msg.join("\n"));
     }
 
-    #factory(p, v) {
-      // Set or get private properties
-      switch (p) {
-        case "commands":
-          if (v) this.#commands = v;
-          return this.#commands;
-        case "cspRules":
-          if (v) this.#cspRules = v;
-          return this.#cspRules;
-        case "filters":
-          if (v) this.#filters = v;
-          return this.#filters;
-        case "scripts":
-          if (v) this.#scripts = v;
-          return this.#scripts;
-      }
-      throw new backup.Error(`Invalid field #${p}`);
-    }
-
     #patchConsole() {
       if (this.#security == secure || backup.debug !== undefined) return;
       backup.debug = console.debug;
@@ -245,7 +210,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
             const data = backup.parse(args.join(""));
             if ("action" in data) console.warn("Attacks to ChromeXt defended");
           } catch {}
-          Reflect.apply(...arguments);
+          return Reflect.apply(...arguments);
         },
       });
     }
@@ -309,12 +274,15 @@ if (typeof Symbol.ChromeXt == "undefined") {
         if (!apiOnly) {
           // Allow to use SyncMethods
           props.ChromeXt.forEach((k) => {
-            UnLocked[k] = new Proxy(this.#factory(k), {
+            const array = this.#store[k];
+            UnLocked[k] = new Proxy(this[k], {
               get(target, prop) {
-                const value = target[prop];
-                if (typeof value == "function" && SyncMethods.includes(prop))
-                  target.ChromeXt = UnLocked; // Validate sync method of SyncArray
-                return Reflect.get(...arguments);
+                let value = target[prop];
+                if (prop == "sync" || SyncMethods.includes(prop)) {
+                  array.ChromeXt = UnLocked; // Unlock sync methods of SyncArray
+                  if (prop == "sync") value = value.bind(array);
+                }
+                return value;
               },
             });
           });
@@ -326,6 +294,8 @@ if (typeof Symbol.ChromeXt == "undefined") {
     }
   }
 
+  Object.freeze(ChromeXtTarget.prototype);
+  Object.freeze(SyncArray.prototype);
   const ChromeXt = new ChromeXtTarget(secure);
   const userDefinedChromeXt = Symbol.ChromeXt;
   Object.freeze(ChromeXt);

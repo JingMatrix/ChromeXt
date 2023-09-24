@@ -1079,7 +1079,7 @@ GM.bootstrap = () => {
   } else {
     const handler = {
       // A handler to block access to globalThis
-      window: { GM, ChromeXt: Symbol[GM.name] },
+      window: { GM },
       keys: Array.from(ChromeXt.globalKeys),
       set(target, prop, value) {
         if (target[prop] != value || target.propertyIsEnumerable(prop)) {
