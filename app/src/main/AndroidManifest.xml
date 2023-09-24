@@ -8,6 +8,7 @@
 		<package android:name="com.chrome.beta"/>
 		<package android:name="com.chrome.canary"/>
 		<package android:name="com.chrome.dev"/>
+		<package android:name="com.kiwibrowser.browser"/>
 		<package android:name="com.microsoft.emmx"/>
 		<package android:name="com.microsoft.emmx.beta"/>
 		<package android:name="com.microsoft.emmx.canary"/>

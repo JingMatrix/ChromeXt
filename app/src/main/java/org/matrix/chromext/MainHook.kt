@@ -26,6 +26,7 @@ val supportedPackages =
         "com.chrome.beta",
         "com.chrome.canary",
         "com.chrome.dev",
+        "com.kiwibrowser.browser",
         "com.microsoft.emmx",
         "com.microsoft.emmx.beta",
         "com.microsoft.emmx.canary",
