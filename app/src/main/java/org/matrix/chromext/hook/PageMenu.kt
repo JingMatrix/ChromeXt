@@ -145,24 +145,15 @@ object PageMenuHook : BaseHook() {
                   // protected void updateRequestDesktopSiteMenuItem(Menu menu, @Nullable Tab
                   // currentTab, boolean canShowRequestDesktopSite, boolean isChromeScheme)
                   .hookBefore {
+                    if ((it.args[3] as Boolean)) return@hookBefore
                     val ctx = mContext.get(it.thisObject) as Context
                     Resource.enrich(ctx)
                     val menu = it.args[0] as Menu
                     Chrome.updateTab(it.args[1])
                     val url = getUrl()
-                    val skip =
-                        (menu.size() <= 20 || !(it.args[2] as Boolean) || (it.args[3] as Boolean))
-                    // Infalte only for the main_menu, which has more than 20 items at least
-
-                    if (skip && !isUserScript(url)) return@hookBefore
 
                     val iconRowMenu = menu.getItem(0)
-                    if (!skip &&
-                        iconRowMenu.hasSubMenu() &&
-                        readerMode.isInit() &&
-                        !Chrome.isBrave) {
-                      // The first menu item should be the @id/icon_row_menu_id
-
+                    if (iconRowMenu.hasSubMenu() && readerMode.isInit() && !Chrome.isBrave) {
                       val infoMenu = iconRowMenu.getSubMenu()!!.getItem(3)
                       infoMenu.setIcon(R.drawable.ic_book)
                       infoMenu.setEnabled(true)
@@ -172,6 +163,10 @@ object PageMenuHook : BaseHook() {
                       mId.setAccessible(false)
                     }
 
+                    val skip = menu.size() <= 20 || !(it.args[2] as Boolean)
+                    // Inflate only for the main_menu, which has more than 20 items at least
+
+                    if (skip && !isUserScript(url)) return@hookBefore
                     MenuInflater(ctx).inflate(R.menu.main_menu, menu)
 
                     val mItems = menu::class.java.getDeclaredField("mItems")
@@ -190,6 +185,7 @@ object PageMenuHook : BaseHook() {
                       toShow.clear()
                       toShow.add(2)
                       if (skip) {
+                        // Show this menu for local preview pages (Custom Tab) of UserScripts
                         items.find { it.itemId == R.id.install_script_id }?.setVisible(true)
                         mItems.setAccessible(false)
                         return@hookBefore
