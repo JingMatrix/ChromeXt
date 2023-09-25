@@ -9,10 +9,7 @@ import android.view.View
 import android.view.View.OnClickListener
 import java.io.File
 import java.io.FileReader
-import java.lang.reflect.InvocationHandler
-import java.lang.reflect.Method
 import java.lang.reflect.Modifier
-import java.lang.reflect.Proxy
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
@@ -22,6 +19,7 @@ import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.findFieldOrNull
 import org.matrix.chromext.utils.findMethod
+import org.matrix.chromext.utils.hookBefore
 
 object PreferenceProxy {
   private var clickHooked: Boolean = false
@@ -219,21 +217,36 @@ object PreferenceProxy {
                   Log.toast(ctx, "ChromeXt data are reset")
                 })
 
-    mClickListener.setAccessible(true)
-    preferences.forEach { (name, pref) ->
-      mClickListener.set(
-          pref,
-          Proxy.newProxyInstance(
-              Chrome.getContext().classLoader,
-              arrayOf(mClickListener.type),
-              object : InvocationHandler {
-                override fun invoke(proxy: Any, method: Method, args: Array<Any>) {
-                  if (method.name == "onClick" && args.size == 1 && args[0] is View) {
-                    listeners[name]?.invoke(pref)
+    if (mClickListener.type == OnClickListener::class.java) {
+      mClickListener.setAccessible(true)
+      preferences.forEach { (name, pref) ->
+        mClickListener.set(
+            pref,
+            object : OnClickListener {
+              override fun onClick(v: View) {
+                listeners[name]?.invoke(pref)
+              }
+            })
+      }
+      mClickListener.setAccessible(false)
+    } else if (!clickHooked) {
+      clickHooked = true
+      val mPreference = mClickListener.type.declaredFields.first()
+      val prefTitles =
+          preferences.entries.map { (name, pref) ->
+            Pair(name, pref.toString().split(" ").take(3).joinToString(" "))
+          }
+      findMethod(mClickListener.type) { name == "onClick" }
+          .hookBefore {
+            prefTitles.forEach(
+                fun(p: Pair<String, String>) {
+                  val pref = mPreference.get(it.thisObject)!!
+                  if (pref.toString().startsWith(p.second)) {
+                    listeners[p.first]?.invoke(pref)
+                    it.result = true
                   }
-                }
-              }))
+                })
+          }
     }
-    mClickListener.setAccessible(false)
   }
 }
