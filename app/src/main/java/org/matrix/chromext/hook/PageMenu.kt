@@ -1,6 +1,7 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
+import android.util.DisplayMetrics
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
@@ -155,13 +156,14 @@ object PageMenuHook : BaseHook() {
 
                     if (skip && !isUserScript(url)) return@hookBefore
 
+                    val iconRowMenu = menu.getItem(0)
                     if (!skip &&
-                        menu.getItem(0).hasSubMenu() &&
+                        iconRowMenu.hasSubMenu() &&
                         readerMode.isInit() &&
                         !Chrome.isBrave) {
                       // The first menu item should be the @id/icon_row_menu_id
 
-                      val infoMenu = menu.getItem(0).getSubMenu()!!.getItem(3)
+                      val infoMenu = iconRowMenu.getSubMenu()!!.getItem(3)
                       infoMenu.setIcon(R.drawable.ic_book)
                       infoMenu.setEnabled(true)
                       val mId = infoMenu::class.java.getDeclaredField("mId")
@@ -197,6 +199,13 @@ object PageMenuHook : BaseHook() {
                     if (isChromeXtFrontEnd(url)) {
                       toShow.clear()
                       toShow.addAll(listOf(3, 4))
+                    }
+
+                    if (!Chrome.isVivaldi &&
+                        ctx.resources.displayMetrics.densityDpi >= DisplayMetrics.DENSITY_XXHIGH &&
+                        toShow.size == 1 &&
+                        toShow.first() == 1) {
+                      iconRowMenu.setVisible(true)
                     }
 
                     val position =
