@@ -141,13 +141,13 @@ object PreferenceProxy {
                           File(
                                   Environment.getExternalStoragePublicDirectory(
                                       Environment.DIRECTORY_DOWNLOADS),
-                                  "Booksmarks.html")
+                                  "Bookmarks.html")
                               .writeText(html)
                           Log.toast(
                               ctx,
                               "Bookmarks exported to " +
                                   Environment.DIRECTORY_DOWNLOADS +
-                                  "/Booksmarks.html")
+                                  "/Bookmarks.html")
                         }
                         .onFailure { Log.ex(it) }
                   } else {
