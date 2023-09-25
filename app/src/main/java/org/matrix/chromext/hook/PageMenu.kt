@@ -202,7 +202,8 @@ object PageMenuHook : BaseHook() {
                     }
 
                     if (!Chrome.isVivaldi &&
-                        ctx.resources.displayMetrics.densityDpi >= DisplayMetrics.DENSITY_XXHIGH &&
+                        ctx.resources.configuration.smallestScreenWidthDp >=
+                            DisplayMetrics.DENSITY_XXHIGH &&
                         toShow.size == 1 &&
                         toShow.first() == 1) {
                       iconRowMenu.setVisible(true)
