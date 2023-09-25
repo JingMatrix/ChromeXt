@@ -1,3 +1,5 @@
+const isSandboxed = ["raw.githubusercontent.com"].includes(location.hostname);
+
 async function installScript(force = false) {
   const dialog = document.querySelector("dialog#confirm");
   if (!force) {
@@ -39,7 +41,7 @@ function renderEditor(code, alertEncoding) {
       "Code editor is blocked on this page.\n\nPlease use the menu to install this UserScript, or reload the page to solve this problem.";
     createDialog(msg);
     setTimeout(fixDialog);
-    // setTimeout is not working in sanboxed pages
+    // setTimeout is not working in sandboxed pages, and thus can be used for detecting sandboxed pages
   }
 
   scriptMeta.setAttribute("contenteditable", true);
@@ -111,7 +113,14 @@ async function prepareDOM() {
   style.textContent = _editor_style;
 
   const code = document.querySelector("body > pre");
-  if (code == null || document.readyState == "loading") return prepareDOM();
+  if (document.readyState == "loading") {
+    if (isSandboxed) {
+      return prepareDOM();
+      // EventListeners are unavailable in sandboxed pages
+    } else {
+      return document.addEventListener("DOMContentLoaded", prepareDOM);
+    }
+  }
   Symbol.installScript = installScript;
   document.head.appendChild(meta);
   document.head.appendChild(style);
