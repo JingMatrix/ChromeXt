@@ -38,7 +38,10 @@ function GM_addStyle(css) {
 const unsafeWindow = window;
 // Kotlin separator
 
-const GM_log = console.info.bind(console, GM_info.script.name + ":");
+const GM_log = console.info.bind(
+  console,
+  GM_info.script.id.split(":").at(-1) + ":"
+);
 // Kotlin separator
 
 function GM_notification(details, ondone) {

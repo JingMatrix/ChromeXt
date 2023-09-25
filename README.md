@@ -189,6 +189,7 @@ and [GM.js](app/src/main/assets/GM.js)
 - [x] Support Samsung Internet browser
 - [x] Implement GM_cookie
 - [x] Improve valid UserScripts Url detection
+- [ ] Save and present script errors and `GM_log` logs
 - [ ] Use `iframe` and local server to run general [WebExtensions](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions)
 - [ ] Support importing UserScripts from Tampermonkey exports
 - [ ] Support backup and restore
