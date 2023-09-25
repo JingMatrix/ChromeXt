@@ -98,6 +98,17 @@ object PageMenuHook : BaseHook() {
           }
         }
 
+    findMethod(proxy.customTabActivity) {
+          // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
+          parameterTypes contentDeepEquals arrayOf(Int::class.java, Boolean::class.java) &&
+              returnType == Boolean::class.java
+        }
+        .hookBefore {
+          if (menuHandler(it.thisObject as Context, it.args[0] as Int)) {
+            it.result = true
+          }
+        }
+
     var findMenuHook: Unhook? = null
     findMenuHook =
         findMethod(proxy.chromeTabbedActivity) {
