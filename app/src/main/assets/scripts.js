@@ -51,7 +51,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
           }
         }
         const result = super[method](...args);
-        this.sync();
+        ChromeXt.isLocked() && this.sync();
         return result;
       };
 
