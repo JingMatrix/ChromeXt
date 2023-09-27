@@ -285,8 +285,9 @@ eruda.Resources = class extends eruda.Resources {
       })
       .on("click", ".eruda-command", (e) => {
         const index = e.curTarget.dataset.index;
-        this._command[index].listener(e);
-        eruda.hide();
+        const hide = this._command[index].listener(e);
+        if (hide !== false) eruda.hide();
+        this.refreshCommand();
       });
   }
   refresh() {
@@ -295,12 +296,13 @@ eruda.Resources = class extends eruda.Resources {
   refreshCommand() {
     this._command = ChromeXt.commands.filter((m) => m.enabled);
     const commands = this._command
-      .map(
-        (cmd, index) =>
-          `<span data-index=${index} class="${c("command")}">${
-            cmd.title
-          }</span>`
-      )
+      .map(function (cmd, index) {
+        let title = cmd.title.toString();
+        if (typeof cmd.title == "function") {
+          title = cmd.title(index);
+        }
+        return `<span data-index=${index} class="${c("command")}">${title}</span>`;
+      })
       .join("");
     this._$command.html(
       `<h2 class="${c("title")}">UserScript Commands</h2>` +
