@@ -12,8 +12,8 @@ android {
     applicationId = "org.matrix.chromext"
     minSdk = 21
     targetSdk = 34
-    versionCode = 13
-    versionName = "3.7.0"
+    versionCode = 14
+    versionName = "3.8.0"
   }
 
   buildFeatures { buildConfig = true }
