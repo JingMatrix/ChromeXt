@@ -1,4 +1,5 @@
 const globalThis = GM.globalThis;
+const window = GM.globalThis;
 const self = GM.globalThis;
 const parent = GM.globalThis;
 const frames = GM.globalThis;
@@ -7,7 +8,6 @@ delete GM.globalThis;
 // Override possible references to the original window object.
 // Note that from the DevTools console, these objects are undefined if they are not used in the script debugging context.
 // However, one can break this jail using setTimeout or Function.
-// In case that some libraries export names globally, blocking of window is postoned.
 delete GM_info.script.code;
 delete GM_info.script.sync_code;
 delete GM.key;
@@ -1073,12 +1073,21 @@ GM.bootstrap = () => {
     const handler = {
       // A handler to block access to globalThis
       window: { GM },
+      libLoading: meta.requires.length > 0,
       keys: Array.from(ChromeXt.globalKeys),
+      deleteProperty(_target, prop) {
+        if (this.libLoading && prop == "__loading__") {
+          this.libLoading = false;
+          if (prop in this.window) return;
+        }
+        return delete this.window[prop];
+      },
       set(target, prop, value) {
         if (target[prop] != value || target.propertyIsEnumerable(prop)) {
           // Avoid redefining global non-enumerable classes, though they are accessible to the getter
           this.window[prop] = value;
         }
+        if (this.libLoading) Reflect.set(...arguments);
         return true;
       },
       get(target, prop, receiver) {
