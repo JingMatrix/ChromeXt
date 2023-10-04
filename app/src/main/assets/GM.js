@@ -490,6 +490,10 @@ function GM_xmlhttpRequest(details) {
   details.method = details.method
     ? details.method.toUpperCase()
     : fallback_method;
+  if (["GET", "HEAD"].includes(details.method)) {
+    delete details.data;
+    delete details.body;
+  }
 
   let useJSFetch = true;
   if (typeof details.forceCORS == "boolean") useJSFetch = !details.forceCORS;
