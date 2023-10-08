@@ -27,23 +27,6 @@ object PreferenceHook : BaseHook() {
 
     val proxy = PreferenceProxy
 
-    // var findSwipeRefreshHandler: Unhook? = null
-    // findSwipeRefreshHandler =
-    //     proxy.tabWebContentsUserData.declaredConstructors[0].hookAfter {
-    //       val subType = it.thisObject::class.java
-    //       if (subType.interfaces contentDeepEquals arrayOf(proxy.overscrollRefreshHandler))
-    //		{
-    //         findSwipeRefreshHandler!!.unhook()
-    //         findMethod(subType) { name == "release" }
-    //             // public void release(boolean allowRefresh)
-    //             .hookBefore {
-    //               if (it.args[0] as Boolean) {
-    //                 it.args[0] = ScriptDbManager.on("userAgentSpoof", getUrl()) == null
-    //               }
-    //             }
-    //       }
-    //     }
-
     proxy.addPreferencesFromResource
         // public void addPreferencesFromResource(Int preferencesResId)
         .hookMethod {
@@ -99,23 +82,6 @@ object PreferenceHook : BaseHook() {
             toggleGestureConflict(true)
           } else {
             toggleGestureConflict(false)
-          }
-        }
-
-    findMethod(proxy.intentHandler, true) {
-          Modifier.isStatic(getModifiers()) &&
-              getParameterTypes() contentDeepEquals
-                  arrayOf(Context::class.java, Intent::class.java, String::class.java)
-        }
-        // private static void startActivityForTrustedIntentInternal(Context context,
-        // Intent intent, String componentClassName)
-        .hookBefore {
-          val intent = it.args[1] as Intent
-          if (intent.hasExtra("org.chromium.chrome.browser.customtabs.MEDIA_VIEWER_URL")) {
-            val fileurl = resolveContentUrl(intent.getData()!!.toString())!!
-            if (fileurl.startsWith("/")) {
-              intent.setData(Uri.parse("file://" + fileurl))
-            }
           }
         }
   }
