@@ -74,19 +74,19 @@ fun isDevToolsFrontEnd(url: String?): Boolean {
 private val invalidUserScriptDomains = listOf("github.com")
 val invalidUserScriptUrls = mutableListOf<String>()
 
-fun isUserScript(url: String?): Boolean {
+fun isUserScript(url: String?, path: String? = null): Boolean {
   if (url == null) return false
   if (url.endsWith(".user.js")) {
     if (invalidUserScriptUrls.contains(url)) return false
     if (invalidUserScriptDomains.contains(URL(url).getAuthority())) return false
     return true
   } else {
-    return resolveContentUrl(url)?.endsWith(".js") == true
+    return (path ?: resolveContentUrl(url)).endsWith(".js")
   }
 }
 
-fun resolveContentUrl(url: String): String? {
-  if (!url.startsWith("content://")) return null
+fun resolveContentUrl(url: String): String {
+  if (!url.startsWith("content://")) return ""
   Chrome.getContext().contentResolver.query(Uri.parse(url), null, null, null, null)?.use { cursor ->
     cursor.moveToFirst()
     val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
@@ -97,7 +97,7 @@ fun resolveContentUrl(url: String): String? {
       return cursor.getString(nameIndex)
     }
   }
-  return null
+  return ""
 }
 
 private val trustedHosts =

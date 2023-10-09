@@ -74,32 +74,41 @@ object ScriptDbManager {
     dbHelper.close()
   }
 
-  fun invokeScript(url: String, webView: WebView? = null) {
-    val codes = mutableListOf<String>(Local.initChromeXt)
-    val path = resolveContentUrl(url)
-    var trustedPage = true
-    if (path != null && (Chrome.isSamsung || !path.startsWith("/"))) {
+  private fun fixEncoding(url: String, path: String, codes: MutableList<String>) {
+    if (path.endsWith(".js") || path.endsWith(".txt")) {
+      // Fix encoding for local text files
       val inputStream = Chrome.getContext().contentResolver.openInputStream(Uri.parse(url))
       val text = inputStream?.bufferedReader()?.readText()
       if (text != null) {
         val data = JSONObject(mapOf("utf-8" to text))
         codes.add("window.content=${data};")
         codes.add(Local.encoding)
-        codes.add("fixEncoding();")
       }
       inputStream?.close()
-    }
-    if (url.endsWith(".txt") && codes.size == 1) {
-      trustedPage = false
+    } else if (url.endsWith(".js") || url.endsWith(".txt")) {
+      // Fix encoding for remote text files
       codes.add(Local.encoding)
-      codes.add("fixEncoding();")
     }
+
+    if (codes.size > 1 && (url.endsWith(".txt") || path.endsWith(".txt")))
+        codes.add("fixEncoding();")
+  }
+
+  fun invokeScript(url: String, webView: WebView? = null) {
+    val codes = mutableListOf<String>(Local.initChromeXt)
+    val path = resolveContentUrl(url)
     val webSettings = webView?.settings
+
+    var trustedPage = true
+    // Whether ChromeXt is accessible in the global context
     var runScripts = false
+    // Whether UserScripts are invoked
     var bypassSandbox = false
-    if (isUserScript(url)) {
+
+    fixEncoding(url, path, codes)
+
+    if (isUserScript(url, path)) {
       trustedPage = false
-      if (codes.size == 1) codes.add(Local.encoding)
       codes.add(Local.promptInstallUserScript)
       bypassSandbox = shouldBypassSandbox(url)
     } else if (isDevToolsFrontEnd(url)) {
@@ -125,22 +134,19 @@ object ScriptDbManager {
           codes.add("Object.defineProperties(window.navigator,{userAgent:{value:'${agent}'}});")
           webSettings?.userAgentString = agent
         }
+        trustedPage = false
         runScripts = true
       }
     }
-    if (runScripts) {
-      codes.add("Symbol.ChromeXt.lock(${Local.key}, '${Local.name}');")
-    } else if (trustedPage) {
+
+    if (trustedPage) {
       codes.add("globalThis.ChromeXt = Symbol.ChromeXt;")
+    } else if (runScripts) {
+      codes.add("Symbol.ChromeXt.lock(${Local.key}, '${Local.name}');")
     }
     codes.add("//# sourceURL=local://ChromeXt/init")
+    val code = codes.joinToString("\n")
     webSettings?.javaScriptEnabled = true
-    val code =
-        if (trustedPage) codes.joinToString("\n")
-        else {
-          val source = codes.removeLast()
-          "\"use strict\";{" + codes.joinToString("\n") + "}\n" + source
-        }
     Chrome.evaluateJavascript(listOf(code), webView, bypassSandbox, bypassSandbox)
     if (runScripts) {
       codes.clear()

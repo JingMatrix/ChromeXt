@@ -136,7 +136,7 @@ object Local {
     // Use empty lines to randomize anchorInChromeXt
     val parts =
         localScript[0]
-            .replaceFirst("ChromeXt", name)
+            .replaceFirst("Symbol.ChromeXt", "Symbol." + name)
             .replaceFirst("ChromeXtUnlockKeyForInit", key.toString())
             .split("\n")
             .filter { if (it.length != 0) true else Random.nextDouble() > seed }
@@ -144,7 +144,7 @@ object Local {
     initChromeXt = parts.joinToString("\n")
     openEruda =
         localScript[1]
-            .replaceFirst("ChromeXt", name)
+            .replaceFirst("Symbol.ChromeXt", "Symbol." + name)
             .replaceFirst("ChromeXtUnlockKeyForEruda", key.toString())
     cspRule = localScript[2]
     cosmeticFilter = localScript[3]

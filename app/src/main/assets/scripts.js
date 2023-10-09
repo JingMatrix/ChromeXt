@@ -1,3 +1,5 @@
+"use strict";
+
 if (typeof Symbol.ChromeXt == "undefined") {
   const initKey = ChromeXtUnlockKeyForInit;
   // Used to lock and unlock ChromeXt;
