@@ -143,6 +143,9 @@ object Listener {
         if (isUserScript(url)) invalidUserScriptUrls.add(url!!)
         callback = "if (Symbol.ChromeXt) Symbol.ChromeXt.lock(${Local.key},'${Local.name}');"
       }
+      "focus" -> {
+        Chrome.updateTab(currentTab)
+      }
       "installScript" -> {
         val script = parseScript(payload)
         if (script == null) {
