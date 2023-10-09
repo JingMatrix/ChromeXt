@@ -93,16 +93,18 @@ object Listener {
           connection.inputStream.bufferedReader().use {
             var firstLine = it.readLine()
             val new_version = Local.getErudaVersion(ctx, firstLine)
-            if (new_version != Local.eruda_version) {
+            if (new_version == null) {
+              callback(null)
+            } else if (new_version != Local.eruda_version) {
               Local.eruda_version = new_version
               callback(firstLine + "\n" + it.readText())
             } else {
-              callback(null)
+              callback("latest")
             }
             it.close()
           }
         }
-        .onFailure { Log.ex(it) }
+        .onFailure { callback(null) }
   }
 
   fun startAction(text: String, currentTab: Any? = null) {
@@ -285,7 +287,6 @@ object Listener {
           codes.add("{${Local.eruda}}\n//# sourceURL=local://ChromeXt/eruda")
           Chrome.evaluateJavascript(codes)
         } else {
-          eruda.createNewFile()
           on("updateEruda", JSONObject().put("load", true).toString())
         }
       }
@@ -295,15 +296,20 @@ object Listener {
         Chrome.IO.submit {
           checkErudaVerison(ctx) {
             val msg =
-                if (it != null) "Updated to eruda v" + Local.eruda_version
-                else "Eruda is already the lastest"
+                if (it == "latest") {
+                  "Eruda is already the latest"
+                } else if (it != null) {
+                  "Updated to eruda v" + Local.eruda_version
+                } else {
+                  "Failed to download Eruda.js from ${ERUD_URL}"
+                }
             Handler(ctx.mainLooper).post { Log.toast(ctx, msg) }
             if (it != null) {
-              val file = File(ctx.filesDir, "Eruda.js")
-              file.outputStream().write(it.toByteArray())
-            }
-            if (payload != "" && JSONObject(payload).optBoolean("load")) {
-              on("loadEruda")
+              if (it != "latest") {
+                val file = File(ctx.filesDir, "Eruda.js")
+                file.outputStream().write(it.toByteArray())
+              }
+              if (payload != "" && JSONObject(payload).optBoolean("load")) on("loadEruda")
             }
           }
         }

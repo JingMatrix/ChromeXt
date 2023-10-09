@@ -9,6 +9,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Resource
+import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.randomString
 
 object GM {
@@ -97,7 +98,7 @@ object Local {
   val key = Random.nextDouble()
   val name = randomString(25)
 
-  var eruda_version: String
+  var eruda_version: String?
 
   val anchorInChromeXt: Int
   // lineNumber of the anchor in GM.js, used to verify ChromeXt.dispatch
@@ -149,7 +150,7 @@ object Local {
     cosmeticFilter = localScript[3]
   }
 
-  fun getErudaVersion(ctx: Context = Chrome.getContext(), versionText: String? = null): String {
+  fun getErudaVersion(ctx: Context = Chrome.getContext(), versionText: String? = null): String? {
     val eruda = File(ctx.filesDir, "Eruda.js")
     if (eruda.exists() || versionText != null) {
       val verisonReg = Regex(" eruda v(?<version>[\\d\\.]+) https://")
@@ -157,8 +158,11 @@ object Local {
       val vMatchGroup = verisonReg.find(firstLine)?.groups as? MatchNamedGroupCollection
       if (vMatchGroup != null) {
         return vMatchGroup.get("version")?.value as String
+      } else if (eruda.exists()) {
+        eruda.delete()
+        Log.toast(ctx, "Eruda.js is corrupted")
       }
     }
-    return "latest"
+    return null
   }
 }

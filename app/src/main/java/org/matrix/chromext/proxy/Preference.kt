@@ -85,7 +85,7 @@ object PreferenceProxy {
     val sharedPref = ctx.getSharedPreferences("ChromeXt", Context.MODE_PRIVATE)
 
     var summary = "Click to install eruda, size around 0.5 MiB"
-    if (Local.eruda_version != "latest") {
+    if (Local.eruda_version != null) {
       summary = "Current version: v" + Local.eruda_version
     }
     setSummary.invoke(preferences["eruda"], summary)
@@ -161,7 +161,7 @@ object PreferenceProxy {
             "exit" to
                 fun(_: Any) {
                   if (Chrome.isDev || Chrome.isVivaldi) {
-                    Log.toast(ctx, "This function is not available for your Chrome build")
+                    Log.toast(ctx, "Feature unavailable")
                     return
                   }
                   with(
@@ -185,7 +185,7 @@ object PreferenceProxy {
                     }
                   } else {
                     setChecked.invoke(obj, false)
-                    Log.toast(ctx, "Feature unavaible for your Chrome or Android versions")
+                    Log.toast(ctx, "Feature unavailable")
                   }
                 },
             "keep_storage" to
