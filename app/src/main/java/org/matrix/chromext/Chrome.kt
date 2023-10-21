@@ -8,6 +8,7 @@ import android.net.http.HttpResponseCache
 import android.os.Build
 import android.os.Handler
 import java.io.File
+import java.io.FileReader
 import java.lang.ref.WeakReference
 import java.net.CookieManager
 import java.net.HttpCookie
@@ -280,6 +281,28 @@ object Chrome {
       if (condition.invoke(tab)) tabs.add(tab.getString("id"))
     }
     return tabs
+  }
+
+  private fun setFlag(name: String, value: Int): Boolean {
+    val ctx = getContext()
+    val localState = File(ctx.filesDir, "../app_chrome/Local State")
+    if (!localState.exists()) return false
+    val config = JSONObject(FileReader(localState).use { it.readText() })
+    val labs = config.getJSONObject("browser").getJSONArray("enabled_labs_experiments")
+    val newFlag = name + "@" + value
+    var flagFound = false
+    for (i in 0 until labs.length()) {
+      val flag = labs.getString(i)
+      if (flag == newFlag) return false
+      if (flag.startsWith(name + "@")) {
+        labs.put(i, newFlag)
+        flagFound = true
+        break
+      }
+    }
+    if (!flagFound) labs.put(newFlag)
+    localState.outputStream().write(config.toString().toByteArray())
+    return true
   }
 }
 
