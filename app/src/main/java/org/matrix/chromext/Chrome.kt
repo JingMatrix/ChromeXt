@@ -39,6 +39,9 @@ object Chrome {
   var isSamsung = false
   var isVivaldi = false
 
+  var version: String? = null
+  var packageName: String? = null
+
   val IO = Executors.newCachedThreadPool()
   val cookieStore = CookieManager().getCookieStore()
 
@@ -47,6 +50,7 @@ object Chrome {
     mContext = WeakReference(ctx)
 
     if (initialized || packageName == null) return
+    this.packageName = packageName
 
     isBrave = packageName.startsWith("com.brave.browser")
     isDev = packageName.endsWith("canary") || packageName.endsWith("dev")
@@ -54,7 +58,8 @@ object Chrome {
     isSamsung = packageName.startsWith("com.sec.android.app.sbrowser")
     isVivaldi = packageName == "com.vivaldi.browser"
     @Suppress("DEPRECATION") val packageInfo = ctx.packageManager?.getPackageInfo(packageName, 0)
-    Log.i("Package: ${packageName}, v${packageInfo?.versionName}")
+    version = packageInfo?.versionName
+    Log.i("Package: ${packageName}, v${version}")
 
     setupHttpCache(ctx)
     saveRedirectCookie()

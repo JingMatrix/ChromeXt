@@ -145,6 +145,21 @@ object PageMenuHook : BaseHook() {
                     }
               }
 
+              // findMethod(appMenuPropertiesDelegateImpl, true) {
+              //       parameterTypes.size == 2 &&
+              //           parameterTypes.first() == Menu::class.java &&
+              //           returnType == Void.TYPE
+              //     }
+              //     // public void prepareMenu(Menu menu, AppMenuHandler handler)
+              //     .hookAfter {
+              //       val ctx = mContext.get(it.thisObject) as Context
+              //       val menu = it.args[0] as Menu
+              //       val id =
+              //           ctx.resources.getIdentifier(
+              //               "auto_dark_web_contents_row_menu_id", "id", ctx.packageName)
+              //       menu.findItem(id)?.setVisible(true)
+              //     }
+
               findMethod(appMenuPropertiesDelegateImpl, true) {
                     parameterTypes contentDeepEquals
                         arrayOf(
