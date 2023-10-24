@@ -22,6 +22,9 @@ import org.matrix.chromext.utils.*
 object readerMode {
   val ID = 31415926
   private var readerModeManager: Class<*>? = null
+  private val stubUrl =
+      UserScriptProxy.gURL.declaredConstructors[1].newInstance(
+          "https://github.com/JingMatrix/ChromeXt")
 
   fun isInit(): Boolean {
     return readerModeManager != null
@@ -32,8 +35,8 @@ object readerMode {
   }
 
   fun enable() {
-    val mDistillerUrl =
-        readerModeManager!!.declaredFields.filter { it.type == UserScriptProxy.gURL }.last()!!
+    val mUrls = readerModeManager!!.declaredFields.filter { it.type == UserScriptProxy.gURL }
+    // Multiple fields with the same type: mReaderModePageUrl, mDistillerUrl.
     val activateReaderMode =
         // There exist other methods with the same signatures
         findMethod(readerModeManager!!) {
@@ -42,14 +45,18 @@ object readerMode {
 
     val manager = readerModeManager!!.declaredConstructors[0].newInstance(Chrome.getTab(), null)
 
-    mDistillerUrl.setAccessible(true)
-    mDistillerUrl.set(
-        manager,
-        UserScriptProxy.gURL.declaredConstructors[1].newInstance(
-            "https://github.com/JingMatrix/ChromeXt"))
-    mDistillerUrl.setAccessible(false)
+    mUrls.forEach {
+      it.setAccessible(true)
+      it.set(manager, stubUrl)
+    }
+    // Avoid throwing errors in the method ReaderModeManager.removeUrlFromMutedSites
 
     activateReaderMode.invoke(manager)
+
+    mUrls.forEach {
+      it.set(manager, null)
+      it.setAccessible(false)
+    }
   }
 }
 
