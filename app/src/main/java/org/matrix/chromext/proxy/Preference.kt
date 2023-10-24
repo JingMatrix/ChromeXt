@@ -213,6 +213,11 @@ object PreferenceProxy {
                       apply()
                     }
                   }
+                  val file = File(ctx.filesDir, "Eruda.js")
+                  if (file.exists()) {
+                    file.delete()
+                    Local.eruda_version = null
+                  }
                   ctx.deleteDatabase("userscript")
                   Log.toast(ctx, "ChromeXt data are reset")
                 })
