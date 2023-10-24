@@ -27,22 +27,6 @@ object PreferenceHook : BaseHook() {
 
     val proxy = PreferenceProxy
 
-    if (Chrome.packageName == "com.android.chrome" && Chrome.version!!.startsWith("118")) {
-      // To find org.chromium.base.FeatureMap, search for method `isForceDarkWebContentEnabled`,
-      // which calls FeatureMap.isEnabledInNative twice
-      runCatching {
-        findMethod(Chrome.load("kO0")) {
-              parameterTypes contentDeepEquals arrayOf(String::class.java) &&
-                  returnType == Boolean::class.java
-            }
-            // public boolean isEnabledInNative(String featureName)
-            .hookBefore {
-              val featureName = it.args[0] as String
-              if (featureName == "DarkenWebsitesCheckboxInThemesSetting") it.result = true
-            }
-      }
-    }
-
     proxy.addPreferencesFromResource
         // public void addPreferencesFromResource(Int preferencesResId)
         .hookMethod {
