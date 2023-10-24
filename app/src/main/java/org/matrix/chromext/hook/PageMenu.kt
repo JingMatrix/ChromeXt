@@ -114,11 +114,13 @@ object PageMenuHook : BaseHook() {
         findMethod(proxy.chromeTabbedActivity) {
               parameterTypes.size == 0 &&
                   returnType.isInterface() &&
-                  returnType.declaredMethods.size > 6
+                  returnType.declaredMethods.size >= 6
             }
+            // public AppMenuPropertiesDelegate createAppMenuPropertiesDelegate()
             .hookAfter {
               findMenuHook!!.unhook()
               val appMenuPropertiesDelegateImpl = it.result::class.java.superclass as Class<*>
+              // Can be found by searching `Android.PrepareMenu`
               val mContext =
                   findField(appMenuPropertiesDelegateImpl, true) { type == Context::class.java }
               mContext.setAccessible(true)
