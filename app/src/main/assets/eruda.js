@@ -80,7 +80,6 @@ eruda._initDevTools = new Proxy(eruda._initDevTools, {
       }
     };
     this.typesHooked = true;
-    if (typeof Element.prototype.setHTML != "function") return;
     const _enable = eruda.chobitsu.domain("Overlay").enable;
     eruda.chobitsu.domain("Overlay").enable = function () {
       if (_enable.enabled) return;
@@ -93,7 +92,13 @@ eruda._initDevTools = new Proxy(eruda._initDevTools, {
       const tooltip = overlay.querySelector("div.luna-dom-highlighter > div");
       Object.defineProperty(tooltip, "innerHTML", {
         set(value) {
-          this.setHTML(value);
+          if (this.innerHTML == value) return true;
+          try {
+            this.setHTML(value);
+          } catch {
+            this.textContent = value;
+          }
+          return true;
         },
       });
     };
