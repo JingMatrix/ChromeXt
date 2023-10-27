@@ -1,6 +1,7 @@
 package org.matrix.chromext.proxy
 
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.utils.findField
 
 object PageMenuProxy {
 
@@ -12,4 +13,5 @@ object PageMenuProxy {
       Chrome.load("org.chromium.chrome.browser.login.ChromeHttpAuthHandler").superclass as Class<*>
   val tabImpl = UserScriptProxy.tabImpl
   val mIsLoading = UserScriptProxy.mIsLoading
+  val mObservers = findField(tabImpl) { type.interfaces.contains(Iterable::class.java) }
 }

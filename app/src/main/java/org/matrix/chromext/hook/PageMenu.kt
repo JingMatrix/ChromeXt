@@ -21,42 +21,23 @@ import org.matrix.chromext.utils.*
 
 object readerMode {
   val ID = 31415926
-  private var readerModeManager: Class<*>? = null
-  private val stubUrl =
-      UserScriptProxy.gURL.declaredConstructors[1].newInstance(
-          "https://github.com/JingMatrix/ChromeXt")
 
-  fun isInit(): Boolean {
-    return readerModeManager != null
-  }
+  fun activate() {
+    @Suppress("UNCHECKED_CAST")
+    val observers = (PageMenuProxy.mObservers.get(Chrome.getTab()) as Iterable<Any>).toList()
+    val readerModeManager =
+        observers.find {
+          it::class.java.interfaces.size == 1 &&
+              findFieldOrNull(it::class.java) { type == PageMenuProxy.propertyModel } != null
+        }!!
 
-  fun init(managerClass: Class<*>) {
-    readerModeManager = managerClass
-  }
-
-  fun enable() {
-    val mUrls = readerModeManager!!.declaredFields.filter { it.type == UserScriptProxy.gURL }
-    // Multiple fields with the same type: mReaderModePageUrl, mDistillerUrl.
     val activateReaderMode =
         // There exist other methods with the same signatures
-        findMethod(readerModeManager!!) {
+        findMethod(readerModeManager::class.java) {
           parameterTypes.size == 0 && returnType == Void.TYPE && name != "destroy"
         }
 
-    val manager = readerModeManager!!.declaredConstructors[0].newInstance(Chrome.getTab(), null)
-
-    mUrls.forEach {
-      it.setAccessible(true)
-      it.set(manager, stubUrl)
-    }
-    // Avoid throwing errors in the method ReaderModeManager.removeUrlFromMutedSites
-
-    activateReaderMode.invoke(manager)
-
-    mUrls.forEach {
-      it.set(manager, null)
-      it.setAccessible(false)
-    }
+    activateReaderMode.invoke(readerModeManager)
   }
 }
 
@@ -72,7 +53,7 @@ object PageMenuHook : BaseHook() {
 
     fun menuHandler(ctx: Context, id: Int): Boolean {
       if (id == readerMode.ID) {
-        readerMode.enable()
+        readerMode.activate()
         return true
       }
       when (ctx.resources.getResourceName(id)) {
@@ -188,7 +169,7 @@ object PageMenuHook : BaseHook() {
                     val url = getUrl()
 
                     val iconRowMenu = menu.getItem(0)
-                    if (iconRowMenu.hasSubMenu() && readerMode.isInit() && !Chrome.isBrave) {
+                    if (iconRowMenu.hasSubMenu() && !Chrome.isBrave) {
                       val infoMenu = iconRowMenu.getSubMenu()!!.getItem(3)
                       infoMenu.setIcon(R.drawable.ic_book)
                       infoMenu.setEnabled(true)
@@ -258,24 +239,6 @@ object PageMenuHook : BaseHook() {
                     for (i in 0..3) items.removeLast()
                     mItems.setAccessible(false)
                   }
-            }
-
-    var findReaderHook: Unhook? = null
-    findReaderHook =
-        findMethod(proxy.tabImpl) {
-              parameterTypes contentDeepEquals arrayOf(proxy.emptyTabObserver) &&
-                  returnType == Void.TYPE
-              // There exist other methods with the same signatures
-            }
-            // public void addObserver(TabObserver observer)
-            .hookAfter {
-              val subType = it.args[0]::class.java
-              if (subType.interfaces.size == 1 &&
-                  findFieldOrNull(subType) { type == proxy.propertyModel } != null) {
-                readerMode.init(subType)
-                Chrome.updateTab(it.thisObject)
-                findReaderHook!!.unhook()
-              }
             }
   }
 }
