@@ -186,6 +186,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
             const type = res.headers.get("Content-Type").trim();
             if (
               type.startsWith("text/javascript") ||
+              type.startsWith("application/javascript") ||
               type.startsWith("text/plain")
             ) {
               this.security = secure;
