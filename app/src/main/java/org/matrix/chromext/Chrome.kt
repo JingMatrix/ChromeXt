@@ -39,6 +39,7 @@ object Chrome {
   var isEdge = false
   var isSamsung = false
   var isVivaldi = false
+  var isCocCoc = false
 
   var version: String? = null
   var packageName: String? = null
@@ -54,6 +55,7 @@ object Chrome {
     this.packageName = packageName
 
     isBrave = packageName.startsWith("com.brave.browser")
+    isCocCoc = packageName.startsWith("com.coccoc.trinhduyet")
     isDev = packageName.endsWith("canary") || packageName.endsWith("dev")
     isEdge = packageName.startsWith("com.microsoft.emmx")
     isSamsung = packageName.startsWith("com.sec.android.app.sbrowser")

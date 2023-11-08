@@ -26,6 +26,8 @@ val supportedPackages =
         "com.chrome.beta",
         "com.chrome.canary",
         "com.chrome.dev",
+        "com.coccoc.trinhduyet",
+        "com.coccoc.trinhduyet_beta",
         "com.kiwibrowser.browser",
         "com.microsoft.emmx",
         "com.microsoft.emmx.beta",
@@ -57,9 +59,14 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             Chrome.init(it.args[0] as Context, lpparam.packageName)
             initHooks(UserScriptHook)
             runCatching {
-                  initHooks(PreferenceHook, if (Chrome.isEdge) PageInfoHook else PageMenuHook)
+                  initHooks(
+                      PreferenceHook,
+                      if (Chrome.isEdge || Chrome.isCocCoc) PageInfoHook else PageMenuHook)
                 }
-                .onFailure { initHooks(ContextMenuHook) }
+                .onFailure {
+                  initHooks(ContextMenuHook)
+                  if (BuildConfig.DEBUG) Log.ex(it)
+                }
           }
     } else {
       val ctx = AndroidAppHelper.currentApplication()
