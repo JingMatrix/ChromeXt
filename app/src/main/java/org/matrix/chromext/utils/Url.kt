@@ -2,7 +2,6 @@ package org.matrix.chromext.utils
 
 import android.net.Uri
 import android.provider.OpenableColumns
-import java.net.URL
 import kotlin.text.Regex
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.Script
@@ -78,7 +77,7 @@ fun isUserScript(url: String?, path: String? = null): Boolean {
   if (url == null) return false
   if (url.endsWith(".user.js")) {
     if (invalidUserScriptUrls.contains(url)) return false
-    if (invalidUserScriptDomains.contains(URL(url).getAuthority())) return false
+    invalidUserScriptDomains.forEach { if (url.startsWith("https://" + it) == true) return false }
     return true
   } else {
     return (path ?: resolveContentUrl(url)).endsWith(".js")
