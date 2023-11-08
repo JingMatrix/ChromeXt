@@ -135,37 +135,17 @@ object PageMenuHook : BaseHook() {
                     }
               }
 
-              // findMethod(appMenuPropertiesDelegateImpl, true) {
-              //       parameterTypes.size == 2 &&
-              //           parameterTypes.first() == Menu::class.java &&
-              //           returnType == Void.TYPE
-              //     }
-              //     // public void prepareMenu(Menu menu, AppMenuHandler handler)
-              //     .hookAfter {
-              //       val ctx = mContext.get(it.thisObject) as Context
-              //       val menu = it.args[0] as Menu
-              //       val id =
-              //           ctx.resources.getIdentifier(
-              //               "auto_dark_web_contents_row_menu_id", "id", ctx.packageName)
-              //       menu.findItem(id)?.setVisible(true)
-              //     }
-
               findMethod(appMenuPropertiesDelegateImpl, true) {
-                    parameterTypes contentDeepEquals
-                        arrayOf(
-                            Menu::class.java,
-                            proxy.tab,
-                            Boolean::class.java,
-                            Boolean::class.java) && returnType == Void.TYPE
+                    parameterTypes.size == 2 &&
+                        parameterTypes.first() == Menu::class.java &&
+                        returnType == Void.TYPE
                   }
-                  // protected void updateRequestDesktopSiteMenuItem(Menu menu, @Nullable Tab
-                  // currentTab, boolean canShowRequestDesktopSite, boolean isChromeScheme)
-                  .hookBefore {
-                    if ((it.args[3] as Boolean)) return@hookBefore
+                  // public void prepareMenu(Menu menu, AppMenuHandler handler)
+                  .hookAfter inflate@{
                     val ctx = mContext.get(it.thisObject) as Context
                     Resource.enrich(ctx)
+
                     val menu = it.args[0] as Menu
-                    Chrome.updateTab(it.args[1])
                     val url = getUrl()
 
                     val iconRowMenu = menu.getItem(0)
@@ -179,10 +159,10 @@ object PageMenuHook : BaseHook() {
                       mId.setAccessible(false)
                     }
 
-                    val skip = menu.size() <= 20 || !(it.args[2] as Boolean)
+                    val skip = menu.size() <= 20
                     // Inflate only for the main_menu, which has more than 20 items at least
 
-                    if (skip && !isUserScript(url)) return@hookBefore
+                    if (skip && !isUserScript(url)) return@inflate
                     MenuInflater(ctx).inflate(R.menu.main_menu, menu)
 
                     val mItems = menu::class.java.getDeclaredField("mItems")
@@ -204,7 +184,7 @@ object PageMenuHook : BaseHook() {
                         // Show this menu for local preview pages (Custom Tab) of UserScripts
                         items.find { it.itemId == R.id.install_script_id }?.setVisible(true)
                         mItems.setAccessible(false)
-                        return@hookBefore
+                        return@inflate
                       }
                     }
 
