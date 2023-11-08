@@ -142,7 +142,10 @@ eruda._initStyle = new Proxy(eruda._initStyle, {
           this.addStyle("font_fix", eruda._styles[0]);
           document.removeEventListener("securitypolicyviolation", catchCSP);
         } else if (e.blockedURI == "inline" && e.target == eruda._container) {
-          console.error("Impossible to load Eruda");
+          document.removeEventListener("securitypolicyviolation", catchCSP);
+          throw new Error(
+            "Eruda blocked by " + e.effectiveDirective + " " + e.originalPolicy
+          );
         }
       };
       eruda._replaceFont = false;
