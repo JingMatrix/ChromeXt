@@ -123,3 +123,9 @@ fun parseOrigin(url: String): String? {
     return null
   }
 }
+
+fun isChromeScheme(url: String): Boolean {
+  val protocol = url.split("://")
+  return (protocol.size > 1 &&
+      arrayOf("chrome", "chrome-native", "edge").contains(protocol.first()))
+}

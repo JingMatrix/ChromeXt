@@ -159,7 +159,7 @@ object PageMenuHook : BaseHook() {
                       mId.setAccessible(false)
                     }
 
-                    val skip = menu.size() <= 20
+                    val skip = menu.size() <= 20 || isChromeScheme(url)
                     // Inflate only for the main_menu, which has more than 20 items at least
 
                     if (skip && !isUserScript(url)) return@inflate

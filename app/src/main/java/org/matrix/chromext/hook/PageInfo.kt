@@ -50,7 +50,6 @@ object PageInfoHook : BaseHook() {
           controller!!.invokeMethod() { name == "destroy" }
         }
       }
-      Log.d("${infoRow}")
       return infoRow
     }
 
@@ -58,7 +57,7 @@ object PageInfoHook : BaseHook() {
 
     proxy.pageInfoController.declaredConstructors[0].hookAfter {
       val url = Chrome.getUrl()!!
-      if (controller == null) return@hookAfter
+      if (isChromeScheme(url) || controller == null) return@hookAfter
       (proxy.mRowWrapper.get(proxy.mView.get(it.thisObject)) as LinearLayout).addView(
           addErudaRow(url))
     }
