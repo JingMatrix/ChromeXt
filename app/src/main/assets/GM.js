@@ -169,14 +169,15 @@ const GM_cookie = new (class CookieManager {
   }
   async #dispatch(method, details, callback) {
     if (typeof callback == "function") {
-      let error;
+      let error, result;
       try {
-        return await this.#command(method, details);
+        result = await this.#command(method, details);
       } catch (e) {
         error = e;
       }
-      callback(e.message);
+      callback(error?.message);
       if (error instanceof Error) throw error;
+      return result;
     } else {
       return this.#command(method, details);
     }
@@ -184,9 +185,18 @@ const GM_cookie = new (class CookieManager {
   set(details, callback) {
     let cookies = details;
     if (!Array.isArray(cookies)) cookies = [details];
+    for (const cookie of cookies) {
+      if (typeof cookie.expirationDate == "number") {
+        cookie.expires = cookie.expirationDate;
+        delete cookie.expirationDate;
+      }
+      if (cookie.domain == undefined) cookie.domain = window.location.hostname;
+    }
     return this.#dispatch("Network.setCookies", { cookies }, callback);
   }
   delete(details, callback) {
+    if (details.domain == undefined && details.url == undefined)
+      details.domain = window.location.hostname;
     return this.#dispatch("Network.deleteCookies", details, callback);
   }
 })();
