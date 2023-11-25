@@ -1,6 +1,7 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
+import android.os.Handler
 import android.util.DisplayMetrics
 import android.view.Menu
 import android.view.MenuInflater
@@ -112,6 +113,12 @@ object PageMenuHook : BaseHook() {
               val mContext =
                   findField(appMenuPropertiesDelegateImpl, true) { type == Context::class.java }
               mContext.setAccessible(true)
+              val mActivityTabProvider =
+                  findField(appMenuPropertiesDelegateImpl, true) {
+                    type.interfaces.size == 1 &&
+                        findFieldOrNull(type.superclass) { type == Handler::class.java } != null
+                  }
+              mActivityTabProvider.setAccessible(true)
 
               if (Chrome.isBrave) {
                 // Brave browser replaces the first row menu with class AppMenuIconRowFooter,
@@ -142,6 +149,8 @@ object PageMenuHook : BaseHook() {
                   }
                   // public void prepareMenu(Menu menu, AppMenuHandler handler)
                   .hookAfter inflate@{
+                    val tabProvider = mActivityTabProvider.get(it.thisObject)!!
+                    Chrome.updateTab(tabProvider.invokeMethod { name == "get" })
                     val ctx = mContext.get(it.thisObject) as Context
                     Resource.enrich(ctx)
 
