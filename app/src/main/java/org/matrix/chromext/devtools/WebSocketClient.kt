@@ -210,6 +210,8 @@ fun connectDevTools(client: LocalSocket) {
         } else {
           "chrome_devtools_remote"
         }
+      } else if (Chrome.isMi) {
+        "miui_webview_devtools_remote"
       } else if (WebViewHook.isInit) {
         "webview_devtools_remote"
       } else {

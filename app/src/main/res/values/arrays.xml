@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 	<string-array name="xposedscope">
+		<item>com.android.browser</item>
 		<item>com.android.chrome</item>
 		<item>com.brave.browser</item>
 		<item>com.brave.browser_beta</item>
@@ -11,6 +12,7 @@
 		<item>com.coccoc.trinhduyet</item>
 		<item>com.coccoc.trinhduyet_beta</item>
 		<item>com.kiwibrowser.browser</item>
+		<item>com.mi.globalbrowser</item>
 		<item>com.microsoft.emmx</item>
 		<item>com.microsoft.emmx.beta</item>
 		<item>com.microsoft.emmx.canary</item>

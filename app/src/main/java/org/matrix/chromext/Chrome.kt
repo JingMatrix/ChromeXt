@@ -37,6 +37,7 @@ object Chrome {
   var isBrave = false
   var isDev = false
   var isEdge = false
+  var isMi = false
   var isSamsung = false
   var isVivaldi = false
   var isCocCoc = false
@@ -58,6 +59,7 @@ object Chrome {
     isCocCoc = packageName.startsWith("com.coccoc.trinhduyet")
     isDev = packageName.endsWith("canary") || packageName.endsWith("dev")
     isEdge = packageName.startsWith("com.microsoft.emmx")
+    isMi = packageName == "com.mi.globalbrowser" || packageName == "com.android.browser"
     isSamsung = packageName.startsWith("com.sec.android.app.sbrowser")
     isVivaldi = packageName == "com.vivaldi.browser"
     @Suppress("DEPRECATION") val packageInfo = ctx.packageManager?.getPackageInfo(packageName, 0)
@@ -256,7 +258,10 @@ object Chrome {
     val code = "Symbol.${Local.name}.unlock(${Local.key}).post('${event}', ${data});"
     Log.d("broadcasting ${event}")
     if (WebViewHook.isInit) {
-      val tabs = WebViewHook.records.filter { matching(it.get()?.getUrl()) }
+      val tabs =
+          WebViewHook.records.filter {
+            matching(it.get()?.invokeMethod() { name == "getUrl" } as String?)
+          }
       if (tabs.size > 1 || !excludeSelf)
           tabs.forEach { WebViewHook.evaluateJavascript(code, it.get()) }
       return

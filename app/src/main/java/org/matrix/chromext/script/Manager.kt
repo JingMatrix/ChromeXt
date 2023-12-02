@@ -6,11 +6,11 @@ import android.database.AbstractWindowedCursor
 import android.database.CursorWindow
 import android.net.Uri
 import android.os.Build
-import android.webkit.WebView
 import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.invokeMethod
 import org.matrix.chromext.utils.isChromeXtFrontEnd
 import org.matrix.chromext.utils.isDevToolsFrontEnd
 import org.matrix.chromext.utils.isUserScript
@@ -94,10 +94,10 @@ object ScriptDbManager {
         codes.add("fixEncoding();")
   }
 
-  fun invokeScript(url: String, webView: WebView? = null) {
+  fun invokeScript(url: String, webView: Any? = null) {
     val codes = mutableListOf<String>(Local.initChromeXt)
     val path = resolveContentUrl(url)
-    val webSettings = webView?.settings
+    val webSettings = webView?.invokeMethod { name == "getSettings" }
 
     var trustedPage = true
     // Whether ChromeXt is accessible in the global context
@@ -113,7 +113,7 @@ object ScriptDbManager {
       bypassSandbox = shouldBypassSandbox(url)
     } else if (isDevToolsFrontEnd(url)) {
       codes.add(Local.customizeDevTool)
-      webSettings?.userAgentString = null
+      webSettings?.invokeMethod(null) { name == "setUserAgentString" }
     } else if (!isChromeXtFrontEnd(url)) {
       val origin = parseOrigin(url)
       if (origin != null) {
@@ -132,7 +132,7 @@ object ScriptDbManager {
         if (userAgents.contains(origin)) {
           val agent = userAgents.get(origin)
           codes.add("Object.defineProperties(window.navigator,{userAgent:{value:'${agent}'}});")
-          webSettings?.userAgentString = agent
+          webSettings?.invokeMethod(agent) { name == "setUserAgentString" }
         }
         trustedPage = false
         runScripts = true
@@ -146,7 +146,7 @@ object ScriptDbManager {
     }
     codes.add("//# sourceURL=local://ChromeXt/init")
     val code = codes.joinToString("\n")
-    webSettings?.javaScriptEnabled = true
+    webSettings?.invokeMethod(true) { name == "setJavaScriptEnabled" }
     Chrome.evaluateJavascript(listOf(code), webView, bypassSandbox, bypassSandbox)
     if (runScripts) {
       codes.clear()

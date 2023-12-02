@@ -3,6 +3,7 @@ package org.matrix.chromext
 import android.app.AndroidAppHelper
 import android.content.Context
 import android.webkit.WebChromeClient
+import android.webkit.WebView
 import android.webkit.WebViewClient
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
@@ -70,16 +71,32 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
           }
     } else {
       val ctx = AndroidAppHelper.currentApplication()
+
+      Chrome.isMi =
+          lpparam.packageName == "com.mi.globalbrowser" ||
+              lpparam.packageName == "com.android.browser"
+      if (ctx == null && Chrome.isMi) return
+      // Wait to get the browser context of Mi Browser
+
       if (ctx != null && lpparam.packageName != "android") {
         Chrome.init(ctx, ctx.packageName)
       }
 
+      if (Chrome.isMi) {
+        WebViewHook.WebView = Chrome.load("com.miui.webkit.WebView")
+        WebViewHook.ViewClient = Chrome.load("com.android.browser.tab.TabWebViewClient")
+        WebViewHook.ChromeClient = Chrome.load("com.android.browser.tab.TabWebChromeClient")
+        initHooks(WebViewHook, ContextMenuHook)
+        return
+      }
+
+      WebViewHook.WebView = WebView::class.java
+      WebView.setWebContentsDebuggingEnabled(true)
+
       WebViewClient::class.java.declaredConstructors[0].hookAfter {
         if (it.thisObject::class != WebViewClient::class) {
           WebViewHook.ViewClient = it.thisObject::class.java
-          if (WebViewHook.ChromeClient != null) {
-            initHooks(WebViewHook, ContextMenuHook)
-          }
+          if (WebViewHook.ChromeClient != null) {}
         }
       }
 

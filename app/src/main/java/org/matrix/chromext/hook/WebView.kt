@@ -3,9 +3,6 @@ package org.matrix.chromext.hook
 import android.app.Activity
 import android.os.Build
 import android.os.Handler
-import android.webkit.ConsoleMessage
-import android.webkit.WebChromeClient
-import android.webkit.WebView
 import java.lang.ref.WeakReference
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
@@ -15,67 +12,74 @@ import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
+import org.matrix.chromext.utils.invokeMethod
 
 object WebViewHook : BaseHook() {
 
   var ViewClient: Class<*>? = null
   var ChromeClient: Class<*>? = null
-  val records = mutableListOf<WeakReference<WebView>>()
+  var WebView: Class<*>? = null
+  val records = mutableListOf<WeakReference<Any>>()
 
   fun evaluateJavascript(code: String?, view: Any?) {
-    val webView = (view ?: Chrome.getTab()) as WebView?
-    if (code != null && code.length > 0 && webView != null && webView.settings.javaScriptEnabled) {
-      Handler(Chrome.getContext().mainLooper).post { webView.evaluateJavascript(code, null) }
+    val webView = (view ?: Chrome.getTab())
+    if (code != null && code.length > 0 && webView != null) {
+      val webSettings = webView.invokeMethod { name == "getSettings" }
+      if (webSettings?.invokeMethod { name == "getJavaScriptEnabled" } == true)
+          Handler(Chrome.getContext().mainLooper).post {
+            webView.invokeMethod(code, null) { name == "evaluateJavascript" }
+          }
     }
   }
 
   override fun init() {
 
-    WebView.setWebContentsDebuggingEnabled(true)
-
-    findMethod(ChromeClient!!, true) {
-          name == "onConsoleMessage" &&
-              parameterTypes contentDeepEquals arrayOf(ConsoleMessage::class.java)
-        }
+    findMethod(ChromeClient!!, true) { name == "onConsoleMessage" }
         // public boolean onConsoleMessage (ConsoleMessage consoleMessage)
         .hookAfter {
           // This should be the way to communicate with the front-end of ChromeXt
-          val chromeClient = it.thisObject as WebChromeClient
-          val consoleMessage = it.args[0] as ConsoleMessage
-          if (consoleMessage.messageLevel() == ConsoleMessage.MessageLevel.TIP &&
-              consoleMessage.sourceId() == "local://ChromeXt/init" &&
-              consoleMessage.lineNumber() == Local.anchorInChromeXt) {
+          val chromeClient = it.thisObject
+          val consoleMessage = it.args[0]
+          val messageLevel = consoleMessage.invokeMethod { name == "messageLevel" }
+          val sourceId = consoleMessage.invokeMethod { name == "sourceId" }
+          val lineNumber = consoleMessage.invokeMethod { name == "lineNumber" }
+          val message = consoleMessage.invokeMethod { name == "message" } as String
+          if (messageLevel.toString() == "TIP" &&
+              sourceId == "local://ChromeXt/init" &&
+              lineNumber == Local.anchorInChromeXt) {
             val webView =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                  records.find { it.get()?.getWebChromeClient() == chromeClient }?.get()
-                } else Chrome.getTab() as WebView?
-            Listener.startAction(consoleMessage.message(), webView)
+                  records
+                      .find {
+                        it.get()?.invokeMethod { name == "getWebChromeClient" } == chromeClient
+                      }
+                      ?.get()
+                } else Chrome.getTab()
+            Listener.startAction(message, webView)
           } else {
-            Log.d(
-                consoleMessage.messageLevel().toString() +
-                    ": [${consoleMessage.sourceId()}@${consoleMessage.lineNumber()}] ${consoleMessage.message()}")
+            Log.d(messageLevel.toString() + ": [${sourceId}@${lineNumber}] ${message}")
           }
         }
 
-    fun onUpdateUrl(url: String, view: WebView) {
-      if (url.startsWith("javascript")) return
+    fun onUpdateUrl(url: String, view: Any?) {
+      if (url.startsWith("javascript") || view == null) return
       Chrome.updateTab(view)
       ScriptDbManager.invokeScript(url, view)
     }
 
-    findMethod(WebView::class.java) { name == "setWebChromeClient" }
+    findMethod(WebView!!) { name == "setWebChromeClient" }
         .hookAfter {
-          val webView = it.thisObject as WebView
+          val webView = it.thisObject
           records.removeAll(records.filter { it.get() == null || it.get() == webView })
           if (it.args[0] != null) records.add(WeakReference(webView))
         }
 
-    findMethod(WebView::class.java) { name == "onAttachedToWindow" }
-        .hookAfter { Chrome.updateTab(it.thisObject as WebView) }
+    findMethod(WebView!!) { name == "onAttachedToWindow" }
+        .hookAfter { Chrome.updateTab(it.thisObject) }
 
     findMethod(ViewClient!!, true) { name == "onPageStarted" }
         // public void onPageStarted (WebView view, String url, Bitmap favicon)
-        .hookAfter { onUpdateUrl(it.args[1] as String, it.args[0] as WebView) }
+        .hookAfter { onUpdateUrl(it.args[1] as String, it.args[0]) }
 
     findMethod(Activity::class.java) { name == "onStop" }
         .hookBefore { ScriptDbManager.updateScriptStorage() }
