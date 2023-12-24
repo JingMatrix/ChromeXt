@@ -46,8 +46,9 @@ object PreferenceProxy {
       }
 
   private val preferenceFragmentCompat =
-      if (Chrome.isBrave) developerSettings.superclass.superclass
-      else developerSettings.superclass as Class<*>
+      loopOverSuperClass(developerSettings.superclass) {
+        !Chrome.isBrave || it.superclass.name.startsWith("androidx.fragment")
+      }
   val findPreference =
       findMethod(preferenceFragmentCompat) {
         parameterTypes contentDeepEquals arrayOf(CharSequence::class.java) &&
@@ -61,6 +62,14 @@ object PreferenceProxy {
             // There exist other methods with the same signatures
           }
           .first()
+
+  private fun loopOverSuperClass(base: Class<*>, condition: (Class<*>) -> Boolean): Class<*> {
+    if (condition(base)) {
+      return base
+    } else {
+      return loopOverSuperClass(base.superclass, condition)
+    }
+  }
 
   fun setClickListener(preferences: Map<String, Any>) {
     val ctx = Chrome.getContext()
