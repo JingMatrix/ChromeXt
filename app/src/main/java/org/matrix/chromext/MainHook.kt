@@ -90,25 +90,31 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
         return
       }
 
-      WebViewHook.WebView = WebView::class.java
-      WebView.setWebContentsDebuggingEnabled(true)
-
       WebViewClient::class.java.declaredConstructors[0].hookAfter {
         if (it.thisObject::class != WebViewClient::class) {
           WebViewHook.ViewClient = it.thisObject::class.java
-          if (WebViewHook.ChromeClient != null) {}
+          hookWebView()
         }
       }
 
       WebChromeClient::class.java.declaredConstructors[0].hookAfter {
         if (it.thisObject::class != WebChromeClient::class) {
           WebViewHook.ChromeClient = it.thisObject::class.java
-          if (WebViewHook.ViewClient != null) {
-            initHooks(WebViewHook, ContextMenuHook)
-          }
+          hookWebView()
         }
       }
     }
+  }
+
+  private fun hookWebView() {
+    if (WebViewHook.ChromeClient == null || WebViewHook.ViewClient == null) return
+    if (WebViewHook.WebView == null) {
+      runCatching {
+        WebViewHook.WebView = WebView::class.java
+        WebView.setWebContentsDebuggingEnabled(true)
+      }
+    }
+    initHooks(WebViewHook, ContextMenuHook)
   }
 
   override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
