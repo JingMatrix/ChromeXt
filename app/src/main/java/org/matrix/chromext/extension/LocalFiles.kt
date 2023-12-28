@@ -53,7 +53,8 @@ object LocalFiles {
                 val data =
                     if (name == "/" + background) {
                       val html = FileReader(file).use { it.readText() }
-                      "<html><head><script>const extension = ${extensions.get(id)!!.put("html", html)}</script><script src='/ChromeXt.js' type='module'></script></head></html>".toByteArray()
+                      "<html><head><script>const extension = ${extensions.get(id)!!.put("html", html)}</script><script src='/ChromeXt.js' type='module'></script></head></html>"
+                          .toByteArray()
                     } else if (name == "/ChromeXt.js") {
                       script.toByteArray()
                     } else {

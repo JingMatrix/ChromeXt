@@ -415,9 +415,11 @@ object Listener {
 
 private class ScriptNotification(detail: JSONObject) : BroadcastReceiver() {
   private val detail = detail
+
   companion object {
     const val ACTION_USERSCRIPT = "ChromeXt"
     const val UUID = "GM_notification"
+
     fun newIntent(id: String, uuid: Int): PendingIntent {
       val ctx = Chrome.getContext()
       val detail = JSONObject(mapOf("id" to id, "uuid" to uuid))
@@ -430,6 +432,7 @@ private class ScriptNotification(detail: JSONObject) : BroadcastReceiver() {
       return PendingIntent.getBroadcast(ctx, uuid, intent, PendingIntent.FLAG_IMMUTABLE)
     }
   }
+
   override fun onReceive(ctx: Context, intent: Intent) {
     if (intent.getAction() == ACTION_USERSCRIPT) {
       val uuid = intent.getIntExtra(UUID, 0)

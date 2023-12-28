@@ -43,6 +43,7 @@ fun hitDevTools(): LocalSocket {
 
 object DevSessions {
   private val clients = mutableSetOf<DevToolClient>()
+
   fun get(tabId: String): DevToolClient? {
     var cached = clients.find { it.tabId == tabId }
     if (cached?.isClosed() == true) {
@@ -51,6 +52,7 @@ object DevSessions {
     }
     return cached
   }
+
   fun new(tabId: String): DevToolClient {
     var client = get(tabId) ?: DevToolClient(tabId)
     if (client.isClosed()) {
@@ -59,6 +61,7 @@ object DevSessions {
     }
     return client
   }
+
   fun add(client: DevToolClient?) {
     if (client == null) return
     val cached = clients.find { it.tabId == client.tabId }

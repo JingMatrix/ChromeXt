@@ -46,7 +46,7 @@ object PreferenceProxy {
       }
 
   private val preferenceFragmentCompat =
-      loopOverSuperClass(developerSettings.superclass) {
+      loopOverSuperClass(developerSettings.superclass as Class<*>) {
         !Chrome.isBrave || it.superclass.name.startsWith("androidx.fragment")
       }
   val findPreference =
@@ -67,7 +67,7 @@ object PreferenceProxy {
     if (condition(base)) {
       return base
     } else {
-      return loopOverSuperClass(base.superclass, condition)
+      return loopOverSuperClass(base.superclass as Class<*>, condition)
     }
   }
 

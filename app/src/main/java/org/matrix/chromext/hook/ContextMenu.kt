@@ -20,6 +20,7 @@ import org.matrix.chromext.utils.*
 object ContextMenuHook : BaseHook() {
 
   val erudaMenuId = 31415926
+
   private fun openEruda(url: String) {
     if (WebViewHook.isInit) {
       val webSettings = Chrome.getTab()?.invokeMethod { name == "getSettings" }
@@ -49,6 +50,7 @@ object ContextMenuHook : BaseHook() {
   }
 
   private var actionModeFinder: Unhook? = null
+
   private fun hookActionMode(cls: Class<*>) {
     actionModeFinder?.unhook()
     findMethod(cls) { name == "onCreateActionMode" }
