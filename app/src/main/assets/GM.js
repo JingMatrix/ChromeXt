@@ -1157,10 +1157,13 @@ GM.bootstrap = () => {
       this.sync({ key, value });
       return true;
     },
-    async_get(key) {
+    async_get(key, default_value) {
       if (!this.cache.has(key)) {
         this.cache.add(key);
-        return this.storage[key];
+        const value = this.storage[key];
+        return new Promise((resolve) =>
+          resolve(value != undefined ? value : default_value)
+        );
       }
       const id = Math.random();
       this.sync({ key, id, broadcast: false });
@@ -1169,6 +1172,7 @@ GM.bootstrap = () => {
         GM_info.uuid,
         meta.id,
         (data, resolve, _reject) => {
+          if (data.value == undefined) data.value = default_value;
           this.storage[key] = data.value;
           resolve(data.value);
         },
