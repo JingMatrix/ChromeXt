@@ -78,7 +78,8 @@ object UserScriptProxy {
   }
 
   fun newLoadUrlParams(url: String): Any {
-    val constructor = loadUrlParams.declaredConstructors.first()
+    val constructor =
+        loadUrlParams.declaredConstructors.find { it.parameterTypes.contains(String::class.java) }!!
     val types = constructor.parameterTypes
     if (types contentDeepEquals arrayOf(Int::class.java, String::class.java)) {
       return constructor.newInstance(0, url)
