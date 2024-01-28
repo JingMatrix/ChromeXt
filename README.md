@@ -141,7 +141,7 @@ Before you submit your pull-requests, please ensure that the command
 `./gradlew build` or `gradlew.bat build` produces no warnings and no errors.
 
 Here are corresponding files you might want / need to change:
-1. Front end: [manager.vue](https://github.com/JingMatrix/viteblog/tree/master/components/ChromeXt/manager.vue)
+1. Front end: [manager.vue](https://github.com/JingMatrix/jingmatrix.github.io/tree/main/components/ChromeXt/manager.vue)
 2. Tampermonkey API: [Local.kt](app/src/main/java/org/matrix/chromext/script/Local.kt)
 and [GM.js](app/src/main/assets/GM.js)
 3. Eruda configuration: [eruda.js](app/src/main/assets/eruda.js)
