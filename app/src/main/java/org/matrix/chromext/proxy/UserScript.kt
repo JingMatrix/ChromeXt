@@ -62,12 +62,7 @@ object UserScriptProxy {
   val loadUrl =
       findMethod(tabImpl) {
         parameterTypes contentDeepEquals arrayOf(loadUrlParams) &&
-            returnType ==
-                if (Chrome.isSamsung) {
-                  Void.TYPE
-                } else {
-                  Int::class.java
-                }
+            (Chrome.isSamsung || returnType != Void.TYPE)
       }
 
   val kMaxURLChars = 2097152

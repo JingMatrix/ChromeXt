@@ -10,6 +10,7 @@ import android.view.View
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import de.robv.android.xposed.XC_MethodHook.Unhook
+import java.lang.reflect.Modifier
 import java.util.ArrayList
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
@@ -102,8 +103,10 @@ object PageMenuHook : BaseHook() {
     findMenuHook =
         findMethod(proxy.chromeTabbedActivity) {
               parameterTypes.size == 0 &&
-                  returnType.isInterface() &&
-                  returnType.declaredMethods.size >= 6
+                  returnType.declaredMethods.size >= 6 &&
+                  (returnType.declaredFields.size == 0 ||
+                      returnType.declaredFields.find { it.type == Context::class.java } != null) &&
+                  (returnType.isInterface() || Modifier.isAbstract(returnType.modifiers))
             }
             // public AppMenuPropertiesDelegate createAppMenuPropertiesDelegate()
             .hookAfter {
