@@ -7,6 +7,7 @@ import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.findFieldOrNull
 import org.matrix.chromext.utils.findMethod
+import org.matrix.chromext.utils.findMethodOrNull
 import org.matrix.chromext.utils.invokeMethod
 import org.matrix.chromext.utils.parseOrigin
 
@@ -43,6 +44,19 @@ object UserScriptProxy {
       } else {
         Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
       }
+  private val mId =
+      tabImpl.declaredFields
+          .run {
+            val target = find { it.name == "mId" }
+            if (target == null) {
+              val profile = Chrome.load("org.chromium.chrome.browser.profiles.Profile")
+              val startIndex = indexOfFirst { it.type == gURL }
+              val endIndex = indexOfFirst { it.type == profile }
+              slice(startIndex..endIndex).findLast { it.type == Int::class.java }!!
+            } else target
+          }
+          .also { it.isAccessible = true }
+  private val getId = findMethodOrNull(tabImpl) { name == "getId" }
   val mNativeAndroid = findField(tabImpl) { type == Long::class.java }
   val mTab = findFieldOrNull(tabWebContentsDelegateAndroidImpl) { type == tabImpl }
   val mIsLoading =
@@ -70,6 +84,11 @@ object UserScriptProxy {
   private fun loadUrl(url: String, tab: Any? = Chrome.getTab()) {
     if (!Chrome.checkTab(tab)) return
     loadUrl.invoke(tab, newLoadUrlParams(url))
+  }
+
+  fun getTabId(tab: Any): String {
+    val id = if (getId != null) getId.invoke(tab)!! else mId.get(tab)!!
+    return id.toString()
   }
 
   fun newLoadUrlParams(url: String): Any {

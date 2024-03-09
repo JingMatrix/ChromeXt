@@ -210,7 +210,7 @@ object Chrome {
       if (ids.size > 1) Log.i("Multiple possible tabIds matched with url ${url}")
       return ids.first()
     } else {
-      return getTab(tab)!!.invokeMethod() { name == "getId" }.toString()
+      return UserScriptProxy.getTabId(getTab(tab)!!)
     }
   }
 
