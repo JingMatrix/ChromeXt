@@ -162,7 +162,7 @@ object Chrome {
   fun checkTab(tab: Any?): Boolean {
     if (tab == null) return false
     if (UserScriptHook.isInit) {
-      return UserScriptProxy.mNativeAndroid.get(tab) != 0L
+      return tab.invokeMethod { name == "isInitialized" } as Boolean
     } else {
       return tab == getTab()
     }

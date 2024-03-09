@@ -4,7 +4,6 @@ import android.net.Uri
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
-import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.findFieldOrNull
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.findMethodOrNull
@@ -57,7 +56,6 @@ object UserScriptProxy {
           }
           .also { it.isAccessible = true }
   private val getId = findMethodOrNull(tabImpl) { name == "getId" }
-  val mNativeAndroid = findField(tabImpl) { type == Long::class.java }
   val mTab = findFieldOrNull(tabWebContentsDelegateAndroidImpl) { type == tabImpl }
   val mIsLoading =
       tabImpl.declaredFields
