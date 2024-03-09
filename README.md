@@ -196,3 +196,4 @@ and [GM.js](app/src/main/assets/GM.js)
 - [ ] Support backup and restore
 - [ ] Add recommended UserScripts to the front end manager
 - [x] Add [chrome devtools front-end](https://chromium.googlesource.com/devtools/devtools-frontend/) for Edge, see [devtools_http_handler.cc](https://source.chromium.org/chromium/chromium/src/+/main:content/browser/devtools/devtools_http_handler.cc) as reference.
+- [x] Hide inserted menu for non-page

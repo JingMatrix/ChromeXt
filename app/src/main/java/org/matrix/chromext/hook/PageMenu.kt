@@ -119,7 +119,9 @@ object PageMenuHook : BaseHook() {
               val mActivityTabProvider =
                   findField(appMenuPropertiesDelegateImpl, true) {
                     type.interfaces.size == 1 &&
-                        findFieldOrNull(type.superclass) { type == Handler::class.java } != null
+                        findFieldOrNull(type.superclass as Class<*>) {
+                          type == Handler::class.java
+                        } != null
                   }
               mActivityTabProvider.setAccessible(true)
 
@@ -171,16 +173,16 @@ object PageMenuHook : BaseHook() {
                       mId.setAccessible(false)
                     }
 
-                    val skip = menu.size() <= 20 || isChromeScheme(url)
-                    // Inflate only for the main_menu, which has more than 20 items at least
-
-                    if (skip && !isUserScript(url)) return@inflate
-                    MenuInflater(ctx).inflate(R.menu.main_menu, menu)
-
                     val mItems = menu::class.java.getDeclaredField("mItems")
                     mItems.setAccessible(true)
 
                     @Suppress("UNCHECKED_CAST") val items = mItems.get(menu) as ArrayList<MenuItem>
+
+                    val skip = items.filter { it.isVisible() }.size <= 10 || isChromeScheme(url)
+                    // Inflate only for the main_menu, which has more than visible 10 items at least
+
+                    if (skip && !isUserScript(url)) return@inflate
+                    MenuInflater(ctx).inflate(R.menu.main_menu, menu)
 
                     // Show items with indices in main_menu.xml
                     val toShow = mutableListOf<Int>(1)
