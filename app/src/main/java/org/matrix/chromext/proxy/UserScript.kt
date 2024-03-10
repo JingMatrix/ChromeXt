@@ -4,7 +4,7 @@ import android.net.Uri
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
-import org.matrix.chromext.utils.findFieldOrNull
+import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.findMethodOrNull
 import org.matrix.chromext.utils.invokeMethod
@@ -18,14 +18,14 @@ object UserScriptProxy {
   val gURL = Chrome.load("org.chromium.url.GURL")
   val loadUrlParams =
       if (Chrome.isSamsung) {
-        Chrome.load("com.sec.terrace.browser.TerraceLoadUrlParams")
+        Chrome.load("com.sec.android.app.sbrowser.tab.LoadUrlParams")
       } else {
         Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
       }
   // val tabModelJniBridge = Chrome.load("org.chromium.chrome.browser.tabmodel.TabModelJniBridge")
   val tabWebContentsDelegateAndroidImpl =
       if (Chrome.isSamsung) {
-        Chrome.load("com.sec.terrace.Terrace")
+        Chrome.load("com.sec.android.app.sbrowser.tab.Tab")
       } else {
         Chrome.load("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
       }
@@ -39,12 +39,14 @@ object UserScriptProxy {
       }
   val tabImpl =
       if (Chrome.isSamsung) {
-        tabWebContentsDelegateAndroidImpl
+        Chrome.load("com.sec.terrace.Terrace")
       } else {
         Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
       }
+  private val getId = findMethodOrNull(tabImpl) { name == "getId" }
   private val mId =
-      tabImpl.declaredFields
+      (if (Chrome.isSamsung) tabWebContentsDelegateAndroidImpl else tabImpl)
+          .declaredFields
           .run {
             val target = find { it.name == "mId" }
             if (target == null) {
@@ -55,8 +57,7 @@ object UserScriptProxy {
             } else target
           }
           .also { it.isAccessible = true }
-  private val getId = findMethodOrNull(tabImpl) { name == "getId" }
-  val mTab = findFieldOrNull(tabWebContentsDelegateAndroidImpl) { type == tabImpl }
+  val mTab = findField(tabWebContentsDelegateAndroidImpl) { type == tabImpl }
   val mIsLoading =
       tabImpl.declaredFields
           .run {
@@ -72,7 +73,7 @@ object UserScriptProxy {
           }
           .also { it.isAccessible = true }
   val loadUrl =
-      findMethod(tabImpl) {
+      findMethod(if (Chrome.isSamsung) tabWebContentsDelegateAndroidImpl else tabImpl) {
         parameterTypes contentDeepEquals arrayOf(loadUrlParams) &&
             (Chrome.isSamsung || returnType != Void.TYPE)
       }
@@ -80,7 +81,7 @@ object UserScriptProxy {
   val kMaxURLChars = 2097152
 
   private fun loadUrl(url: String, tab: Any? = Chrome.getTab()) {
-    if (!Chrome.checkTab(tab)) return
+    if (!Chrome.isSamsung && !Chrome.checkTab(tab)) return
     loadUrl.invoke(tab, newLoadUrlParams(url))
   }
 
@@ -105,7 +106,9 @@ object UserScriptProxy {
   fun evaluateJavascript(script: String, tab: Any? = Chrome.getTab()): Boolean {
     if (script == "") return true
     if (Chrome.isSamsung) {
-      (tab ?: Chrome.getTab())?.invokeMethod(script, null) { name == "evaluateJavaScriptForTests" }
+      mTab.get(tab ?: Chrome.getTab())?.invokeMethod(script, null) {
+        name == "evaluateJavaScriptForTests"
+      }
       return true
     }
     if (script.length > kMaxURLChars - 20000) return false
@@ -119,11 +122,7 @@ object UserScriptProxy {
   }
 
   fun getTab(delegate: Any): Any? {
-    if (Chrome.isSamsung) {
-      return delegate
-    } else {
-      return mTab?.get(delegate)
-    }
+    return if (Chrome.isSamsung) delegate else mTab.get(delegate)
   }
 
   fun parseUrl(packed: Any?): String? {

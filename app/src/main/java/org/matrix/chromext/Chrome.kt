@@ -189,23 +189,27 @@ object Chrome {
     if (tab != null) {
       mTab = WeakReference(tab)
       if (Chrome.isSamsung) {
-        val context = findField(tab::class.java) { name == "mContext" }
-        mContext = WeakReference(context.get(tab) as Context)
+        val context = findField(UserScriptProxy.tabImpl) { name == "mContext" }
+        mContext = WeakReference(context.get(UserScriptProxy.mTab.get(tab)) as Context)
       }
     }
   }
 
   fun getTabId(tab: Any?, url: String? = null): String {
-    if (WebViewHook.isInit) {
+    if (WebViewHook.isInit || Chrome.isSamsung) {
       if (url == null && getContext().mainLooper.getThread() != Thread.currentThread())
           Log.w("Url parameter is missing in a non-UI thread")
-      val attached = tab == Chrome.getTab()
+      val attached = !WebViewHook.isInit || tab == Chrome.getTab()
       val ids = filterTabs {
-        val description = JSONObject(getString("description"))
-        optString("type") == "page" &&
-            optString("url") == url!! &&
-            !description.optBoolean("never_attached") &&
-            !(attached && !description.optBoolean("attached"))
+        if (getString("description") == "") {
+          optString("type") == "page" && optString("url") == url!!
+        } else {
+          val description = JSONObject(getString("description"))
+          optString("type") == "page" &&
+              optString("url") == url!! &&
+              !description.optBoolean("never_attached") &&
+              !(attached && !description.optBoolean("attached"))
+        }
       }
       if (ids.size > 1) Log.i("Multiple possible tabIds matched with url ${url}")
       return ids.first()

@@ -25,11 +25,17 @@ object UserScriptHook : BaseHook() {
     // findMethod(proxy.tabModelJniBridge) { name == "destroy" }
     //     .hookBefore { Chrome.dropTabModel(it.thisObject) }
 
-    findMethod(proxy.tabWebContentsDelegateAndroidImpl) { name == "onUpdateUrl" }
+    if (Chrome.isSamsung)
+        findMethod(proxy.tabWebContentsDelegateAndroidImpl) { name == "onDidFinishNavigation" }
+            .hookAfter { Chrome.updateTab(it.thisObject) }
+
+    findMethod(if (Chrome.isSamsung) proxy.tabImpl else proxy.tabWebContentsDelegateAndroidImpl) {
+          name == "onUpdateUrl"
+        }
         // public void onUpdateUrl(GURL url)
         .hookAfter {
           val tab = proxy.getTab(it.thisObject)!!
-          Chrome.updateTab(tab)
+          if (!Chrome.isSamsung) Chrome.updateTab(tab)
           val url = proxy.parseUrl(it.args[0])!!
           val isLoading = proxy.mIsLoading.get(tab) as Boolean
           if (!url.startsWith("chrome") && isLoading) {
@@ -37,7 +43,9 @@ object UserScriptHook : BaseHook() {
           }
         }
 
-    findMethod(proxy.tabWebContentsDelegateAndroidImpl) { name == "addMessageToConsole" }
+    findMethod(proxy.tabWebContentsDelegateAndroidImpl) {
+          name == if (Chrome.isSamsung) "onAddMessageToConsole" else "addMessageToConsole"
+        }
         // public boolean addMessageToConsole(int level, String message, int lineNumber,
         // String sourceId)
         .hookAfter {
