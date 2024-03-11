@@ -1,13 +1,17 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.net.http.HttpResponseCache
+import org.matrix.chromext.BuildConfig
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.Local
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
@@ -25,9 +29,37 @@ object UserScriptHook : BaseHook() {
     // findMethod(proxy.tabModelJniBridge) { name == "destroy" }
     //     .hookBefore { Chrome.dropTabModel(it.thisObject) }
 
-    if (Chrome.isSamsung)
-        findMethod(proxy.tabWebContentsDelegateAndroidImpl) { name == "onDidFinishNavigation" }
-            .hookAfter { Chrome.updateTab(it.thisObject) }
+    if (Chrome.isSamsung) {
+      findMethod(proxy.tabWebContentsDelegateAndroidImpl) { name == "onDidFinishNavigation" }
+          .hookAfter { Chrome.updateTab(it.thisObject) }
+
+      runCatching {
+        // Avoid exceptions thrown due to signature conficts while binding services
+        val ConnectionManager =
+            Chrome.load("com.samsung.android.sdk.scs.base.connection.ConnectionManager")
+        val mServiceConnection =
+            findField(ConnectionManager) { name == "mServiceConnection" }
+                .also { it.isAccessible = true }
+
+        findMethod(ConnectionManager) { name == "connectToService" }
+            // (Landroid/content/Context;Landroid/content/Intent;)Z
+            .hookBefore {
+              val hook = it
+              val ctx = hook.args[0] as Context
+              val intent = hook.args[1] as Intent
+              val connection = mServiceConnection.get(hook.thisObject) as ServiceConnection
+              runCatching {
+                    if (BuildConfig.DEBUG) Log.d("Binding service ${intent} with ${ctx}")
+                    val bound = ctx.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+                    hook.result = bound
+                  }
+                  .onFailure {
+                    if (BuildConfig.DEBUG) Log.ex(it)
+                    hook.result = false
+                  }
+            }
+      }
+    }
 
     findMethod(if (Chrome.isSamsung) proxy.tabImpl else proxy.tabWebContentsDelegateAndroidImpl) {
           name == "onUpdateUrl"
