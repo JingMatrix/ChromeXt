@@ -8,11 +8,11 @@ import org.matrix.chromext.Chrome
 
 private val blocksReg =
     Regex(
-        """(?<metablock>[\S\s]*?// ==UserScript==\r?\n([\S\s]*?)\r?\n// ==/UserScript==\s+)(?<code>[\S\s]*)""")
+        """(?<metablock>[\S\s]*?// ==UserScript==\r?\n[\S\s]*?\r?\n// ==/UserScript==\s+)(?<code>[\S\s]*)""")
 private val metaReg = Regex("""^//\s+@(?<key>[\w-]+)\s+(?<value>.+)""")
 
 fun parseScript(input: String, storage: String? = null): Script? {
-  val blockMatchGroup = blocksReg.matchEntire(input)?.groups as? MatchNamedGroupCollection
+  val blockMatchGroup = blocksReg.matchEntire(input)?.groups
   if (blockMatchGroup == null) {
     return null
   }
@@ -25,15 +25,15 @@ fun parseScript(input: String, storage: String? = null): Script? {
         var grant = mutableListOf<String>()
         var exclude = mutableListOf<String>()
         var require = mutableListOf<String>()
-        val meta = (blockMatchGroup.get("metablock")?.value as String)
-        val code = blockMatchGroup.get("code")?.value as String
+        val meta = (blockMatchGroup[1]?.value as String)
+        val code = blockMatchGroup[2]?.value as String
         var storage: JSONObject? = null
       }
   script.meta.split("\n").forEach {
-    val metaMatchGroup = metaReg.matchEntire(it)?.groups as? MatchNamedGroupCollection
+    val metaMatchGroup = metaReg.matchEntire(it)?.groups
     if (metaMatchGroup != null) {
-      val key = metaMatchGroup.get("key")?.value as String
-      val value = metaMatchGroup.get("value")?.value as String
+      val key = metaMatchGroup[1]?.value as String
+      val value = metaMatchGroup[2]?.value as String
       when (key) {
         "name" -> script.name = value.replace(":", "")
         "namespace" -> script.namespace = value
