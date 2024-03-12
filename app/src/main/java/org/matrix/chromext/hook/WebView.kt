@@ -34,9 +34,11 @@ object WebViewHook : BaseHook() {
 
   override fun init() {
 
-    findMethod(ChromeClient!!, true) { name == "onConsoleMessage" }
+    findMethod(ChromeClient!!, true) { name == "onConsoleMessage" && parameterCount == 1 }
         // public boolean onConsoleMessage (ConsoleMessage consoleMessage)
         .hookAfter {
+          // Don't use ConsoleMessage to specify this method since Mi Browser uses its own
+          // implementation
           // This should be the way to communicate with the front-end of ChromeXt
           val chromeClient = it.thisObject
           val consoleMessage = it.args[0]
