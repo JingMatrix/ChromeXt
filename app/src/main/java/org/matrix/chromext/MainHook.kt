@@ -86,7 +86,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
         WebViewHook.WebView = Chrome.load("com.miui.webkit.WebView")
         WebViewHook.ViewClient = Chrome.load("com.android.browser.tab.TabWebViewClient")
         WebViewHook.ChromeClient = Chrome.load("com.android.browser.tab.TabWebChromeClient")
-        initHooks(WebViewHook, ContextMenuHook)
+        hookWebView()
         return
       }
 
@@ -110,9 +110,10 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     if (WebViewHook.ChromeClient == null || WebViewHook.ViewClient == null) return
     if (WebViewHook.WebView == null) {
       runCatching {
-        WebViewHook.WebView = WebView::class.java
-        WebView.setWebContentsDebuggingEnabled(true)
-      }
+            WebViewHook.WebView = WebView::class.java
+            WebView.setWebContentsDebuggingEnabled(true)
+          }
+          .onFailure { if (BuildConfig.DEBUG) Log.ex(it) }
     }
     initHooks(WebViewHook, ContextMenuHook)
   }
