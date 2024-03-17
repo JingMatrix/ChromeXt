@@ -38,6 +38,7 @@ object Chrome {
   var isDev = false
   var isEdge = false
   var isMi = false
+  var isQihoo = false
   var isSamsung = false
   var isVivaldi = false
   var isCocCoc = false
@@ -60,11 +61,13 @@ object Chrome {
     isDev = packageName.endsWith("canary") || packageName.endsWith("dev")
     isEdge = packageName.startsWith("com.microsoft.emmx")
     isMi = packageName == "com.mi.globalbrowser" || packageName == "com.android.browser"
+    isQihoo = packageName == "com.qihoo.contents"
     isSamsung = packageName.startsWith("com.sec.android.app.sbrowser")
     isVivaldi = packageName == "com.vivaldi.browser"
     @Suppress("DEPRECATION") val packageInfo = ctx.packageManager?.getPackageInfo(packageName, 0)
     version = packageInfo?.versionName
-    Log.i("Package: ${packageName}, v${version}")
+    version = (if (version?.startsWith("v") == true) "" else "v") + version
+    Log.i("Package: ${packageName}, ${version}")
 
     setupHttpCache(ctx)
     saveRedirectCookie()
