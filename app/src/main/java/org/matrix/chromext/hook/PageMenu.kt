@@ -1,6 +1,7 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
+import android.os.Bundle
 import android.os.Handler
 import android.util.DisplayMetrics
 import android.view.Menu
@@ -104,6 +105,10 @@ object PageMenuHook : BaseHook() {
         findMethod(proxy.chromeTabbedActivity) {
               parameterTypes.size == 0 &&
                   returnType.declaredMethods.size >= 6 &&
+                  (returnType.declaredMethods.find {
+                    // Bundle getBundleForMenuItem(int itemId);
+                    it.returnType == Bundle::class.java && it.parameterTypes.size == 1
+                  } != null) &&
                   (returnType.declaredFields.size == 0 ||
                       returnType.declaredFields.find { it.type == Context::class.java } != null) &&
                   (returnType.isInterface() || Modifier.isAbstract(returnType.modifiers))
@@ -150,7 +155,8 @@ object PageMenuHook : BaseHook() {
               findMethod(appMenuPropertiesDelegateImpl, true) {
                     parameterTypes.size == 2 &&
                         parameterTypes.first() == Menu::class.java &&
-                        returnType == Void.TYPE
+                        returnType == Void.TYPE &&
+                        !Modifier.isStatic(modifiers)
                   }
                   // public void prepareMenu(Menu menu, AppMenuHandler handler)
                   .hookAfter inflate@{

@@ -1,6 +1,7 @@
 package org.matrix.chromext.proxy
 
 import android.net.Uri
+import android.view.ContextThemeWrapper
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
@@ -51,8 +52,14 @@ object UserScriptProxy {
             val target = find { it.name == "mId" }
             if (target == null) {
               val profile = Chrome.load("org.chromium.chrome.browser.profiles.Profile")
-              val startIndex = indexOfFirst { it.type == gURL }
-              val endIndex = indexOfFirst { it.type == profile }
+              val windowAndroid = Chrome.load("org.chromium.ui.base.WindowAndroid")
+              var startIndex = indexOfFirst { it.type == gURL }
+              if (startIndex == -1) startIndex = 0
+              val endIndex = indexOfFirst {
+                it.type == profile ||
+                    it.type == ContextThemeWrapper::class.java ||
+                    it.type == windowAndroid
+              }
               slice(startIndex..endIndex).findLast { it.type == Int::class.java }!!
             } else target
           }
