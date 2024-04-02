@@ -156,7 +156,8 @@ object PageMenuHook : BaseHook() {
                     parameterTypes.size == 2 &&
                         parameterTypes.first() == Menu::class.java &&
                         returnType == Void.TYPE &&
-                        !Modifier.isStatic(modifiers)
+                        !Modifier.isStatic(modifiers) &&
+                        !Modifier.isAbstract(modifiers)
                   }
                   // public void prepareMenu(Menu menu, AppMenuHandler handler)
                   .hookAfter inflate@{
