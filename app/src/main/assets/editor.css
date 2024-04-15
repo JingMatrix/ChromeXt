@@ -5,9 +5,14 @@ html {
 pre {
   overflow-x: scroll;
 }
+@media (prefers-color-scheme: dark) {
+  body > pre > em {
+    color: yellow;
+  }
+}
 pre > em {
   font-weight: bold;
-  color: yellow;
+  color: blue;
 }
 pre > span {
   font-weight: bold;
