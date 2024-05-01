@@ -57,6 +57,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
           .hookAfter {
             Chrome.init(it.args[0] as Context, lpparam.packageName)
             initHooks(UserScriptHook)
+            if (ContextMenuHook.isInit) return@hookAfter
             runCatching {
                   initHooks(
                       PreferenceHook,
