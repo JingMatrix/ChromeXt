@@ -847,6 +847,7 @@ function GM_xmlhttpRequest(details) {
       }
 
       if (!Array.isArray(request.cookie)) delete request.cookie;
+      if (request.method == "HEAD") request.redirect = "manual";
       ChromeXt.dispatch("xmlhttpRequest", {
         id: GM_info.script.id,
         request,
@@ -875,7 +876,7 @@ class ResponseSink {
     const event = new ProgressEvent(type, this.xhr);
     this.xhr.dispatchEvent(event);
     if (typeof this.xhr["on" + type] == "function") {
-      this.xhr["on" + type](data || this.xhr);
+      this.xhr["on" + type](data || { ...this.xhr });
     }
   }
   static async prepare(type, data) {
@@ -1213,6 +1214,12 @@ GM.bootstrap = () => {
     if (typeof sync == "function") {
       GM[name] = function () {
         const result = sync.apply(null, arguments);
+        if (name == "xmlHttpRequest") {
+          return new Promise(async (resolve) => {
+            await result;
+            resolve({ ...result });
+          });
+        }
         if (result instanceof Promise) return result;
         return new Promise(async (resolve) => {
           resolve(await result);
@@ -1286,7 +1293,7 @@ GM.bootstrap = () => {
     }
 
     GM_info.scriptHandler = "ChromeXt";
-    GM_info.version = "3.8.0";
+    GM_info.version = "3.8.1";
     Object.freeze(GM_info);
     ChromeXt.scripts.push(GM_info);
   }
