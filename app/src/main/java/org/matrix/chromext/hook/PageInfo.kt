@@ -17,6 +17,7 @@ object PageInfoHook : BaseHook() {
 
   override fun init() {
 
+    if (ContextMenuHook.isInit) return
     var controller: Any? = null
     val proxy = PageInfoProxy
 
@@ -63,5 +64,6 @@ object PageInfoHook : BaseHook() {
     }
 
     // readerMode.init(Chrome.load("org.chromium.chrome.browser.dom_distiller.ReaderModeManager"))
+    isInit = true
   }
 }

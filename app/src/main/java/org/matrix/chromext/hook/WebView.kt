@@ -95,5 +95,6 @@ object WebViewHook : BaseHook() {
 
     findMethod(Activity::class.java) { name == "onStop" }
         .hookBefore { ScriptDbManager.updateScriptStorage() }
+    isInit = true
   }
 }

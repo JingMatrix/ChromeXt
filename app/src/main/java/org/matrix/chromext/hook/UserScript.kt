@@ -118,5 +118,6 @@ object UserScriptHook : BaseHook() {
           Log.d("HttpResponseCache: Hit ${cache.hitCount} / NetWork ${cache.networkCount}")
           cache.flush()
         }
+    isInit = true
   }
 }

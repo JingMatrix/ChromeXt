@@ -84,6 +84,7 @@ object PreferenceHook : BaseHook() {
             toggleGestureConflict(false)
           }
         }
+    isInit = true
   }
 
   private fun toggleGestureConflict(excludeSystemGesture: Boolean) {

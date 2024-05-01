@@ -52,6 +52,7 @@ object PageMenuHook : BaseHook() {
 
   override fun init() {
 
+    if (ContextMenuHook.isInit) return
     val proxy = PageMenuProxy
 
     fun menuHandler(ctx: Context, id: Int): Boolean {
@@ -241,5 +242,6 @@ object PageMenuHook : BaseHook() {
                     mItems.setAccessible(false)
                   }
             }
+    isInit = true
   }
 }

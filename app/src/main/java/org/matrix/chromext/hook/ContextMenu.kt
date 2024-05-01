@@ -194,5 +194,6 @@ object ContextMenuHook : BaseHook() {
                 hookActionMode(it.args[0]::class.java)
               }
     }
+    isInit = true
   }
 }

@@ -132,8 +132,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     hook.forEach {
       if (it.isInit) return@forEach
       it.init()
-      it.isInit = true
-      Log.d("${it.javaClass.simpleName} hooked")
+      if (it.isInit) Log.d("${it.javaClass.simpleName} hooked")
     }
   }
 }
