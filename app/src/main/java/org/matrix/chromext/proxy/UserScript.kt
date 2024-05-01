@@ -2,6 +2,7 @@ package org.matrix.chromext.proxy
 
 import android.net.Uri
 import android.view.ContextThemeWrapper
+import android.view.View.OnAttachStateChangeListener
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
@@ -54,13 +55,13 @@ object UserScriptProxy {
               val profile = Chrome.load("org.chromium.chrome.browser.profiles.Profile")
               val windowAndroid = Chrome.load("org.chromium.ui.base.WindowAndroid")
               var startIndex = indexOfFirst { it.type == gURL }
-              if (startIndex == -1) startIndex = 0
               val endIndex = indexOfFirst {
                 it.type == profile ||
                     it.type == ContextThemeWrapper::class.java ||
                     it.type == windowAndroid
               }
-              slice(startIndex..endIndex).findLast { it.type == Int::class.java }!!
+              if (startIndex == -1 || startIndex > endIndex) startIndex = 0
+              slice(startIndex..endIndex - 1).findLast { it.type == Int::class.java }!!
             } else target
           }
           .also { it.isAccessible = true }
@@ -68,14 +69,21 @@ object UserScriptProxy {
   val mIsLoading =
       tabImpl.declaredFields
           .run {
+            // mIsLoading is used in method stopLoading, before calling
+            // Lorg/chromium/content_public/browser/WebContents;->stop()V
             val target = find { it.name == "mIsLoading" }
             if (target == null) {
               val webContents = Chrome.load("org.chromium.content_public.browser.WebContents")
-              val anchorIndex =
-                  maxOf(
-                      indexOfFirst { it.type == loadUrlParams },
-                      indexOfFirst { it.type == webContents })
-              slice(anchorIndex..size - 1).find { it.type == Boolean::class.java }!!
+              var startIndex = indexOfFirst { it.type == webContents }
+              var endIndex = indexOfFirst { it.type == OnAttachStateChangeListener::class.java }
+              var alterStartIndex = indexOfFirst { it.type == loadUrlParams }
+              if (endIndex < startIndex && endIndex < alterStartIndex) endIndex = size - 1
+              if (startIndex < endIndex && alterStartIndex < endIndex) {
+                startIndex = maxOf(startIndex, alterStartIndex)
+              } else {
+                startIndex = minOf(startIndex, alterStartIndex)
+              }
+              slice(startIndex..endIndex - 1).find { it.type == Boolean::class.java }!!
             } else target
           }
           .also { it.isAccessible = true }
