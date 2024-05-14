@@ -114,7 +114,7 @@ object ContextMenuHook : BaseHook() {
                 findMethodOrNull(selectionMenuWrapper::class.java) { name == "showSelectionMenu" }
             if (showSelectionMenu == null) return@hookAfter
             val selectionMenu =
-                selectionMenuWrapper::class.java.declaredFields.first().get(selectionMenuWrapper)
+                selectionMenuWrapper::class.java.declaredFields.first().get(selectionMenuWrapper)!!
             val horizontalCustomPopupDialog =
                 selectionMenu::class
                     .java
