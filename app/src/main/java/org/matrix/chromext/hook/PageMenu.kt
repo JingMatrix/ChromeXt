@@ -34,13 +34,17 @@ object readerMode {
               findFieldOrNull(it::class.java) { type == PageMenuProxy.propertyModel } != null
         }!!
 
-    val activateReaderMode =
-        // There exist other methods with the same signatures
-        findMethod(readerModeManager::class.java) {
-          parameterTypes.size == 0 && returnType == Void.TYPE && name != "destroy"
+    readerModeManager::class
+        .java
+        .declaredMethods
+        .filter {
+          // There exist other methods with the same signatures, which might be tryShowingPrompt
+          it.parameterTypes.size == 0 &&
+              !Modifier.isStatic(it.modifiers) &&
+              it.returnType == Void.TYPE &&
+              it.name != "destroy"
         }
-
-    activateReaderMode.invoke(readerModeManager)
+        .forEach { it.invoke(readerModeManager) }
   }
 }
 
