@@ -12,6 +12,7 @@ import android.widget.PopupWindow
 import android.widget.TextView
 import de.robv.android.xposed.XC_MethodHook.Unhook
 import java.lang.Class
+import java.lang.ref.WeakReference
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 import org.matrix.chromext.R
@@ -22,7 +23,7 @@ import org.matrix.chromext.utils.*
 object ContextMenuHook : BaseHook() {
 
   val erudaMenuId = 31415926
-  private var textView: TextView? = null
+  private var text: WeakReference<TextView>? = null
 
   private fun openEruda(url: String) {
     if (WebViewHook.isInit) {
@@ -86,7 +87,7 @@ object ContextMenuHook : BaseHook() {
       val view = popupWindow.contentView
       if (!(view is ViewGroup && view.getChildAt(0) is TextView)) return@hookAfter
       val sampleView = view.getChildAt(0) as TextView
-      textView = TextView(ctx)
+      val textView = TextView(ctx)
       textView!!.setHorizontallyScrolling(true)
       textView!!.setSingleLine(true)
       textView!!.ellipsize = sampleView.ellipsize
@@ -99,6 +100,7 @@ object ContextMenuHook : BaseHook() {
         popupWindow.dismiss()
       }
       view.addView(textView!!, view.childCount)
+      text = WeakReference(textView)
     }
   }
 
@@ -114,7 +116,8 @@ object ContextMenuHook : BaseHook() {
                 findMethodOrNull(selectionMenuWrapper::class.java) { name == "showSelectionMenu" }
             if (showSelectionMenu == null) return@hookAfter
             val selectionMenu =
-                selectionMenuWrapper::class.java.declaredFields.first().get(selectionMenuWrapper)!!
+                selectionMenuWrapper::class.java.declaredFields.first().get(selectionMenuWrapper)
+                    as kotlin.Any
             val horizontalCustomPopupDialog =
                 selectionMenu::class
                     .java
@@ -130,7 +133,7 @@ object ContextMenuHook : BaseHook() {
                   if (isChromeXtFrontEnd(url)) R.string.main_menu_developer_tools
                   else if (isUserScript(url)) R.string.main_menu_install_script
                   else R.string.main_menu_eruda_console
-              textView?.setText(titleId)
+              text?.get()?.setText(titleId)
             }
           }
     } else if (Chrome.isMi) {
