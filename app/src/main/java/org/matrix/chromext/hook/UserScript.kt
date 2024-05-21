@@ -13,6 +13,7 @@ import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.findMethod
+import org.matrix.chromext.utils.findMethodOrNull
 import org.matrix.chromext.utils.hookAfter
 import org.matrix.chromext.utils.hookBefore
 
@@ -30,7 +31,14 @@ object UserScriptHook : BaseHook() {
     //     .hookBefore { Chrome.dropTabModel(it.thisObject) }
 
     if (Chrome.isSamsung) {
-      findMethod(proxy.tabWebContentsDelegateAndroidImpl) { name == "onDidFinishNavigation" }
+      findMethodOrNull(proxy.tabWebContentsDelegateAndroidImpl) { name == "onDidFinishNavigation" }
+          .let {
+            if (it == null)
+                findMethod(proxy.tabWebContentsDelegateAndroidImpl) {
+                  name == "updateBrowserControlsState"
+                }
+            else it
+          }
           .hookAfter { Chrome.updateTab(it.thisObject) }
 
       runCatching {

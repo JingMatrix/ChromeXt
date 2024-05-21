@@ -189,7 +189,7 @@ object Chrome {
   }
 
   fun updateTab(tab: Any?) {
-    if (tab != null) {
+    if (tab != null && tab != getTab()) {
       mTab = WeakReference(tab)
       if (Chrome.isSamsung) {
         val context = findField(UserScriptProxy.tabImpl) { name == "mContext" }
