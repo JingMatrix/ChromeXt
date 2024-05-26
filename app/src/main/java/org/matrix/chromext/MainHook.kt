@@ -5,6 +5,7 @@ import android.content.Context
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import dalvik.system.PathClassLoader
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.callbacks.XC_LoadPackage
@@ -13,6 +14,7 @@ import org.matrix.chromext.hook.ContextMenuHook
 import org.matrix.chromext.hook.PageInfoHook
 import org.matrix.chromext.hook.PageMenuHook
 import org.matrix.chromext.hook.PreferenceHook
+import org.matrix.chromext.hook.SpotifyHook
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.utils.Log
@@ -40,6 +42,7 @@ val supportedPackages =
         "com.naver.whale",
         "com.sec.android.app.sbrowser",
         "com.sec.android.app.sbrowser.beta",
+        "com.spotify.music",
         "com.vivaldi.browser",
         "com.vivaldi.browser.snapshot",
         "org.axpos.aosmium",
@@ -55,6 +58,11 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
     Log.d(lpparam.processName + " started")
     if (lpparam.packageName == "org.matrix.chromext") return
+    if (lpparam.packageName == "com.spotify.music") {
+      SpotifyHook.loader = PathClassLoader(lpparam.appInfo.sourceDir, lpparam.classLoader)
+      initHooks(SpotifyHook)
+      return
+    }
     if (supportedPackages.contains(lpparam.packageName)) {
       lpparam.classLoader
           .loadClass("org.chromium.ui.base.WindowAndroid")
