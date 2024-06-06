@@ -1,4 +1,7 @@
-const isSandboxed = ["raw.githubusercontent.com"].includes(location.hostname);
+const isSandboxed = [
+  "raw.githubusercontent.com",
+  "gist.githubusercontent.com",
+].includes(location.hostname);
 
 async function installScript(force = false) {
   const dialog = document.querySelector("dialog#confirm");

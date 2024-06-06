@@ -109,7 +109,7 @@ fun isChromeXtFrontEnd(url: String?): Boolean {
   return false
 }
 
-private val sandboxHosts = listOf("raw.githubusercontent.com")
+private val sandboxHosts = listOf("raw.githubusercontent.com", "gist.githubusercontent.com")
 
 fun shouldBypassSandbox(url: String?): Boolean {
   sandboxHosts.forEach { if (url?.startsWith("https://" + it) == true) return true }

@@ -99,7 +99,11 @@ if (typeof Symbol.ChromeXt == "undefined") {
     }
   }
 
-  const trustedDomains = ["greasyfork.org", "raw.githubusercontent.com"];
+  const trustedDomains = [
+    "greasyfork.org",
+    "raw.githubusercontent.com",
+    "gist.githubusercontent.com",
+  ];
   // Verified sources of UserScripts
 
   let secure = Symbol("secure"); // Secure states of ChromeXt context
