@@ -193,7 +193,20 @@ class Filter {
   }
 }
 
-const c = eruda.util.classPrefix;
+function c(str) {
+  const prefix = `eruda-`;
+  return str
+    .trim()
+    .split(/\s+/)
+    .map((singleClass) => {
+      if (singleClass.includes(prefix)) {
+        return singleClass;
+      }
+      return singleClass.replace(/[\w-]+/, (match) => `${prefix}${match}`);
+    })
+    .join(" ");
+}
+
 const s = (spans) =>
   spans
     .map((e) => `<span class="${c("icon-" + e + " " + e)}"></span>`)
