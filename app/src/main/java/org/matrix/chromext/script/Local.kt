@@ -101,6 +101,7 @@ object Local {
   var eruda_version: String?
 
   val anchorInChromeXt: Int
+
   // lineNumber of the anchor in GM.js, used to verify ChromeXt.dispatch
 
   init {
