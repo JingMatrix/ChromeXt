@@ -1,5 +1,7 @@
 # ChromeXt
 
+[![Build](https://img.shields.io/github/actions/workflow/status/JingMatrix/ChromeXt/android.yml?branch=master&logo=github&label=Build&event=push)](https://github.com/JingMatrix/ChromeXt/actions/workflows/android.yml?query=event%3Apush+is%3Acompleted+branch%3Amaster) [![Download](https://img.shields.io/github/v/release/JingMatrix/ChromeXt?color=orange&logoColor=orange&label=Download&logo=DocuSign)](https://github.com/JingMatrix/ChromeXt/releases/latest) [![Total](https://shields.io/github/downloads/JingMatrix/ChromeXt/total?logo=Bookmeter&label=Counts&logoColor=yellow&color=yellow)](https://github.com/JingMatrix/ChromeXt/releases)
+
 Add UserScript and DevTools supports to Chromium based and WebView based browsers using Xposed framework.
 
 ##  How does it work?
