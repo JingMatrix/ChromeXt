@@ -76,7 +76,9 @@ val invalidUserScriptUrls = mutableListOf<String>()
 fun isUserScript(url: String?, path: String? = null): Boolean {
   if (url == null) return false
   if (url.endsWith(".user.js") ||
-      (Chrome.isEdge && url.endsWith(".js") && url.startsWith("file://"))) {
+      (Chrome.isEdge &&
+          url.endsWith(".js") &&
+          (url.startsWith("file://") || url.startsWith("content://")))) {
     if (invalidUserScriptUrls.contains(url)) return false
     invalidUserScriptDomains.forEach { if (url.startsWith("https://" + it) == true) return false }
     return true
@@ -92,7 +94,7 @@ fun resolveContentUrl(url: String): String {
     val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
     val dataIndex = cursor.getColumnIndex("_data")
     if (dataIndex != -1) {
-      return cursor.getString(dataIndex)
+      return cursor.getString(dataIndex) ?: cursor.getString(nameIndex)
     } else {
       return cursor.getString(nameIndex)
     }
