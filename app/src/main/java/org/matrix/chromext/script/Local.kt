@@ -49,6 +49,7 @@ object GM {
         "none" -> return@forEach
         "GM_info" -> return@forEach
         "GM.ChromeXt" -> return@forEach
+        "window.close" -> return@forEach
         else ->
             if (localScript.containsKey(it)) {
               grants += localScript.get(it)

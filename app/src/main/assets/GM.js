@@ -1078,12 +1078,12 @@ GM.bootstrap = () => {
 
   const grants = meta.grants;
 
-  if (
-    meta["inject-into"] == "page" ||
-    grants.includes("none") ||
-    grants.includes("unsafeWindow")
-  ) {
+  if (meta["inject-into"] == "page" || grants.includes("none")) {
     GM.globalThis = window;
+    if (grants.includes("window.close")) {
+      // The page may abuse window.close
+      window.close = () => ChromeXt.dispatch("close");
+    }
   } else {
     const handler = {
       // A handler to block access to globalThis
@@ -1108,7 +1108,9 @@ GM.bootstrap = () => {
       get(target, prop, receiver) {
         if (target[prop] == target) return receiver;
         // Block possible jail break
-        if (this.keys.includes(prop)) {
+        if (prop == "close" && grants.includes("window.close")) {
+          return () => ChromeXt.dispatch("close");
+        } else if (this.keys.includes(prop)) {
           const val = target[prop];
           return typeof val == "function" ? val.bind(target) : val;
         } else if (

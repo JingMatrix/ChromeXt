@@ -36,7 +36,9 @@ import org.matrix.chromext.script.parseScript
 import org.matrix.chromext.utils.ERUD_URL
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.XMLHttpRequest
+import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.invalidUserScriptUrls
+import org.matrix.chromext.utils.invokeMethod
 import org.matrix.chromext.utils.isChromeXtFrontEnd
 import org.matrix.chromext.utils.isDevToolsFrontEnd
 import org.matrix.chromext.utils.isUserScript
@@ -142,6 +144,45 @@ object Listener {
         val url = Chrome.getUrl(currentTab)
         if (isUserScript(url)) invalidUserScriptUrls.add(url!!)
         callback = "if (Symbol.ChromeXt) Symbol.ChromeXt.lock(${Local.key},'${Local.name}');"
+      }
+      "close" -> {
+        val activity = Chrome.getContext()
+        if (Chrome.isSamsung &&
+            currentTab != null &&
+            activity::class.java ==
+                Chrome.load("com.sec.android.app.sbrowser.SBrowserMainActivity")) {
+          val manager = activity.invokeMethod { name == "getTabManager" }!!
+          @Suppress("UNCHECKED_CAST")
+          val tabList = manager.invokeMethod { name == "getAllTabList" } as List<Any>
+          tabList
+              .find { it.invokeMethod { name == "getTab" } == currentTab }
+              ?.also { manager.invokeMethod(it) { name == "closeTab" } }
+        } else if (currentTab != null &&
+            activity::class.java == UserScriptProxy.chromeTabbedActivity) {
+          val tab = Chrome.load("org.chromium.chrome.browser.tab.Tab")
+          val tabModel = Chrome.load("org.chromium.chrome.browser.tabmodel.TabModel")
+          val getCurrentTabModel =
+              findMethod(activity::class.java, true) {
+                parameterTypes.size == 0 && returnType == tabModel
+              }
+          val model = getCurrentTabModel.invoke(activity)!!
+          val closeTab =
+              findMethod(model::class.java) {
+                returnType == Boolean::class.java &&
+                    parameterTypes contentDeepEquals
+                        arrayOf(
+                            tab,
+                            tab,
+                            Boolean::class.java,
+                            Boolean::class.java,
+                            Boolean::class.java,
+                            Int::class.java)
+              }
+          closeTab.invoke(model, currentTab, null, false, false, false, 0)
+        } else {
+          val msg = "Closing tab ${currentTab} with context ${activity}"
+          callback = "console.error(new TypeError('ChromeXt Action failure', {cause: '${msg}'}));"
+        }
       }
       "focus" -> {
         Chrome.updateTab(currentTab)
