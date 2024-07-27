@@ -109,21 +109,26 @@ object Listener {
         .onFailure { callback(null) }
   }
 
-  fun startAction(text: String, currentTab: Any? = null) {
+  fun startAction(text: String, currentTab: Any? = null, auxObject: Any? = null) {
     runCatching {
           val data = JSONObject(text)
           val action = data.getString("action")
           val key = data.getDouble("key")
           val payload = data.optString("payload")
           if (checkPermisson(action, key, currentTab)) {
-            val callback = on(action, payload, currentTab)
+            val callback = on(action, payload, currentTab, auxObject)
             if (callback != null) Chrome.evaluateJavascript(listOf(callback), currentTab)
           }
         }
         .onFailure { Log.i("${it::class.java.name}: startAction fails with " + text) }
   }
 
-  fun on(action: String, payload: String = "", currentTab: Any? = null): String? {
+  fun on(
+      action: String,
+      payload: String = "",
+      currentTab: Any? = null,
+      auxObject: Any? = null
+  ): String? {
     var callback: String? = null
     when (action) {
       "copy" -> {
@@ -147,7 +152,9 @@ object Listener {
       }
       "close" -> {
         val activity = Chrome.getContext()
-        if (Chrome.isSamsung &&
+        if (WebViewHook.isInit && currentTab != null && auxObject != null) {
+          auxObject.invokeMethod(currentTab) { name == "onCloseWindow" }
+        } else if (Chrome.isSamsung &&
             currentTab != null &&
             activity::class.java ==
                 Chrome.load("com.sec.android.app.sbrowser.SBrowserMainActivity")) {

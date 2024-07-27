@@ -64,7 +64,7 @@ object WebViewHook : BaseHook() {
                       }
                       ?.get()
                 } else Chrome.getTab()
-            Listener.startAction(message, webView)
+            Listener.startAction(message, webView, chromeClient)
           } else {
             Log.d(messageLevel.toString() + ": [${sourceId}@${lineNumber}] ${message}")
           }
