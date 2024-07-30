@@ -115,7 +115,9 @@ object PageMenuHook : BaseHook() {
                     it.returnType == Bundle::class.java && it.parameterTypes.size == 1
                   } != null) &&
                   (returnType.declaredFields.size == 0 ||
-                      returnType.declaredFields.find { it.type == Context::class.java } != null) &&
+                      returnType.declaredFields.find {
+                        Context::class.java.isAssignableFrom(it.type)
+                      } != null) &&
                   (returnType.isInterface() || Modifier.isAbstract(returnType.modifiers))
             }
             // public AppMenuPropertiesDelegate createAppMenuPropertiesDelegate()
@@ -124,7 +126,9 @@ object PageMenuHook : BaseHook() {
               val appMenuPropertiesDelegateImpl = it.result::class.java.superclass as Class<*>
               // Can be found by searching `Android.PrepareMenu`
               val mContext =
-                  findField(appMenuPropertiesDelegateImpl, true) { type == Context::class.java }
+                  findField(appMenuPropertiesDelegateImpl, true) {
+                    Context::class.java.isAssignableFrom(type)
+                  }
               mContext.setAccessible(true)
               val mActivityTabProvider =
                   findField(appMenuPropertiesDelegateImpl, true) {

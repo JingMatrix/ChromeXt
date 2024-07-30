@@ -40,6 +40,7 @@ val supportedPackages =
         "com.vivaldi.browser",
         "com.vivaldi.browser.snapshot",
         "org.bromite.bromite",
+        "org.chromium.chrome",
         "org.chromium.thorium",
         "org.cromite.cromite",
         "org.greatfire.freebrowser",
