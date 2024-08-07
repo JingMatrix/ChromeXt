@@ -12,6 +12,7 @@ import org.matrix.chromext.script.Local
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findField
+import org.matrix.chromext.utils.findFieldOrNull
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.findMethodOrNull
 import org.matrix.chromext.utils.hookAfter
@@ -42,31 +43,63 @@ object UserScriptHook : BaseHook() {
           .hookAfter { Chrome.updateTab(it.thisObject) }
 
       runCatching {
-        // Avoid exceptions thrown due to signature conficts while binding services
-        val ConnectionManager =
-            Chrome.load("com.samsung.android.sdk.scs.base.connection.ConnectionManager")
-        val mServiceConnection =
-            findField(ConnectionManager) { name == "mServiceConnection" }
-                .also { it.isAccessible = true }
+            // Avoid exceptions thrown due to signature conficts while binding services
+            val ConnectionManager =
+                Chrome.load("com.samsung.android.sdk.scs.base.connection.ConnectionManager")
+            val mServiceConnection =
+                findField(ConnectionManager) { name == "mServiceConnection" }
+                    .also { it.isAccessible = true }
 
-        findMethod(ConnectionManager) { name == "connectToService" }
-            // (Landroid/content/Context;Landroid/content/Intent;)Z
-            .hookBefore {
-              val hook = it
-              val ctx = hook.args[0] as Context
-              val intent = hook.args[1] as Intent
-              val connection = mServiceConnection.get(hook.thisObject) as ServiceConnection
-              runCatching {
-                    if (BuildConfig.DEBUG) Log.d("Binding service ${intent} with ${ctx}")
-                    val bound = ctx.bindService(intent, connection, Context.BIND_AUTO_CREATE)
-                    hook.result = bound
-                  }
-                  .onFailure {
-                    if (BuildConfig.DEBUG) Log.ex(it)
-                    hook.result = false
+            findMethod(ConnectionManager) { name == "connectToService" }
+                // (Landroid/content/Context;Landroid/content/Intent;)Z
+                .hookBefore {
+                  val hook = it
+                  val ctx = hook.args[0] as Context
+                  val intent = hook.args[1] as Intent
+                  val connection = mServiceConnection.get(hook.thisObject) as ServiceConnection
+                  runCatching {
+                        if (BuildConfig.DEBUG) Log.d("Binding service ${intent} with ${ctx}")
+                        val bound = ctx.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+                        hook.result = bound
+                      }
+                      .onFailure {
+                        if (BuildConfig.DEBUG) Log.ex(it)
+                        hook.result = false
+                      }
+                }
+          }
+          .onFailure { if (BuildConfig.DEBUG) Log.ex(it) }
+
+      runCatching {
+            // Avoid version codes mismatch when isolated child services are connected
+            val childProcessConnection =
+                Chrome.load("org.chromium.base.process_launcher.ChildProcessConnection")
+            val packageUtils = Chrome.load("org.chromium.base.PackageUtils")
+            val buildInfo = Chrome.load("org.chromium.base.BuildInfo")
+            val buildConifg = Chrome.load("org.chromium.build.BuildConfig")
+
+            val mServiceName = findField(childProcessConnection) { name == "mServiceName" }
+            val getApplicationPackageInfo =
+                findMethod(packageUtils) { name == "getApplicationPackageInfo" }
+            val packageVersionCode = findMethod(buildInfo) { name == "packageVersionCode" }
+            val version_code = findFieldOrNull(buildConifg) { name == "VERSION_CODE" }
+
+            if (version_code != null) {
+              findMethod(childProcessConnection) { name == "onServiceConnectedOnLauncherThread" }
+                  // (Landroid/os/IBinder;)V
+                  .hookBefore {
+                    val latestPackage = getApplicationPackageInfo.invoke(null, 0)
+                    val latestVersionCode = packageVersionCode.invoke(null, latestPackage)
+                    val loadedVersionCode = version_code.get(null)
+                    if (latestVersionCode != loadedVersionCode) {
+                      Log.d(
+                          "Version codes mismatched for child services ${mServiceName.get(it.thisObject)}")
+                      version_code.set(null, latestVersionCode)
+                    }
                   }
             }
-      }
+          }
+          .onFailure { if (BuildConfig.DEBUG) Log.ex(it) }
     }
 
     findMethod(if (Chrome.isSamsung) proxy.tabImpl else proxy.tabWebContentsDelegateAndroidImpl) {
