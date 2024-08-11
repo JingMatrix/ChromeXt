@@ -1295,7 +1295,7 @@ GM.bootstrap = () => {
     }
 
     GM_info.scriptHandler = "ChromeXt";
-    GM_info.version = "3.8.1";
+    GM_info.version = "3.8.2";
     Object.freeze(GM_info);
     ChromeXt.scripts.push(GM_info);
   }
