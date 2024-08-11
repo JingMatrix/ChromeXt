@@ -193,6 +193,14 @@ object Listener {
       }
       "focus" -> {
         Chrome.updateTab(currentTab)
+        val detail = JSONObject(payload)
+        val requestFocus = detail.getBoolean("requestFocus")
+        val activity = Chrome.getContext()
+        if (requestFocus &&
+            currentTab != null &&
+            activity::class.java == UserScriptProxy.chromeTabbedActivity) {
+          (activity as Activity).window.decorView.requestFocus()
+        }
       }
       "installScript" -> {
         val script = parseScript(payload)

@@ -6,7 +6,7 @@ if (typeof Symbol.ChromeXt == "undefined") {
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible")
-      ChromeXt.dispatch("focus", undefined, initKey);
+      ChromeXt.dispatch("focus", { requestFocus: false }, initKey);
   });
   // update current active tab
 
