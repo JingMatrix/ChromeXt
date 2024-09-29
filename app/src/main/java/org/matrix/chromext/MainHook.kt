@@ -16,6 +16,7 @@ import org.matrix.chromext.hook.PreferenceHook
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.findMethodOrNull
 import org.matrix.chromext.utils.hookAfter
 
 val supportedPackages =
@@ -73,7 +74,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
       val ctx = AndroidAppHelper.currentApplication()
 
       Chrome.isMi =
-          lpparam.packageName == "com.mi.globalbrowser" ||
+          Chrome.isMi ||
+              lpparam.packageName == "com.mi.globalbrowser" ||
               lpparam.packageName == "com.android.browser"
       Chrome.isQihoo = lpparam.packageName == "com.qihoo.contents"
 
@@ -84,8 +86,37 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
       if (Chrome.isMi) {
         WebViewHook.WebView = Chrome.load("com.miui.webkit.WebView")
-        WebViewHook.ViewClient = Chrome.load("com.android.browser.tab.TabWebViewClient")
-        WebViewHook.ChromeClient = Chrome.load("com.android.browser.tab.TabWebChromeClient")
+        runCatching {
+              WebViewHook.ViewClient = Chrome.load("com.android.browser.tab.TabWebViewClient")
+              WebViewHook.ChromeClient = Chrome.load("com.android.browser.tab.TabWebChromeClient")
+            }
+            .onFailure {
+              val miuiAutologinBar = Chrome.load("com.android.browser.MiuiAutologinBar")
+              // Use MiuiAutologinBar to find `com.android.browser.tab.Tab`, which can located by
+              // searching the string "X-MiOrigin"
+              val fields = miuiAutologinBar.declaredFields.map { it.type }
+              val tab =
+                  miuiAutologinBar.declaredMethods
+                      .find {
+                        it.parameterCount == 2 &&
+                            it.parameterTypes[1] == Boolean::class.java &&
+                            !fields.contains(it.parameterTypes[0])
+                      }!!
+                      .run { parameterTypes[0] }
+              tab.declaredFields.forEach {
+                if (findMethodOrNull(it.type) {
+                  // Found by searching the string "Console: "
+                  it.name == "onGeolocationPermissionsHidePrompt"
+                } != null)
+                    WebViewHook.ChromeClient = it.type
+                if (findMethodOrNull(it.type) {
+                  // Found by searching the string "Tab.MainWebViewClient"
+                  it.name == "onReceivedHttpAuthRequest"
+                } != null)
+                    WebViewHook.ViewClient = it.type
+              }
+            }
+
         hookWebView()
         return
       }
