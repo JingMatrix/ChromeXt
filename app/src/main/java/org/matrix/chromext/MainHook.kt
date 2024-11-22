@@ -30,6 +30,7 @@ val supportedPackages =
         "com.chrome.dev",
         "com.coccoc.trinhduyet",
         "com.coccoc.trinhduyet_beta",
+        "com.herond.android.browser",
         "com.kiwibrowser.browser",
         "com.microsoft.emmx",
         "com.microsoft.emmx.beta",

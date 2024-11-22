@@ -56,7 +56,8 @@ object Chrome {
     if (initialized || packageName == null) return
     this.packageName = packageName
 
-    isBrave = packageName.startsWith("com.brave.browser")
+    isBrave =
+        packageName.startsWith("com.brave.browser") || packageName == "com.herond.android.browser"
     isCocCoc = packageName.startsWith("com.coccoc.trinhduyet")
     isDev = packageName.endsWith("canary") || packageName.endsWith("dev")
     isEdge = packageName.startsWith("com.microsoft.emmx")
