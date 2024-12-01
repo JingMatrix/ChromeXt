@@ -24,7 +24,7 @@ Note for WebView based browsers users: you _only_ need to enable this module for
 
 ChromeXt requires **Xposed framework**.
 
-For root users, install [LSPosed](https://github.com/LSPosed/LSPosed) first,
+For root users, install [LSPosed](https://github.com/JingMatrix/LSPosed) first,
 pick up the latest built APK from my repo's [GitHub Actions](https://github.com/JingMatrix/ChromeXt/actions) and install it.
 
 For non-root users,
@@ -32,7 +32,7 @@ I modify a bit [LSPatch](https://github.com/JingMatrix/LSPatch) to support `Chro
 1. Download the latest `lspatch-release` from my [GitHub Actions](https://github.com/JingMatrix/LSPatch/actions).
 2. Download the latest `ChromeXt.apk` from my [GitHub Actions](https://github.com/JingMatrix/ChromeXt/actions).
 3. Extract previously downloaded files to get files `lspatch.jar` (with some suffix) and `ChromeXt-signed.apk`.
-4. Patch your APK (taking `arm64_ChromePublic.apk` as example) using the following command: `java -jar lspatch.jar arm64_ChromePublic.apk -d -v -m ChromeXt-signed.apk --force`. If `java` environment is not available, please consider using the provided `manager` APK.
+4. Patch your APK (taking `arm64_ChromePublic.apk` as example) using the following command: `java -jar lspatch.jar arm64_ChromePublic.apk -d -v -m ChromeXt-signed.apk --force --injectdex`. If `java` environment is not available, please consider using the provided `manager` APK (and check the `Inject loader dex` option).
 5. Install the patched APK, which might require you to first uninstall the one on your devices.
 
 Notes: currently _to download_ files from `GitHub Actions`, one needs to log in GitHub.
