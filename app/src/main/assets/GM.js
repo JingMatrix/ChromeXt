@@ -1102,7 +1102,9 @@ GM.bootstrap = () => {
           // Avoid redefining global non-enumerable classes, though they are accessible to the getter
           this.window[prop] = value;
         }
-        if (this.libLoading) Reflect.set(...arguments);
+        if (meta["inject-into"] != "content" && meta["sandbox"] != "DOM") {
+          if (this.libLoading) Reflect.set(...arguments);
+        }
         return true;
       },
       get(target, prop, receiver) {
