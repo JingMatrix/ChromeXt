@@ -20,8 +20,11 @@ jobs:
         distribution: 'temurin'
 
     - name: Build with Gradle
-      run: ./gradlew app:assembleRelease
+      run: ./gradlew app:assembleDebug && ./gradlew app:assembleRelease
         
+    - name: Rename debug build
+      run: mv app/build/outputs/apk/debug/app-debug.apk app/build/ChromeXt_debug.apk
+
     - name: Rename signed apk
       run: mv app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/ChromeXt.apk
 
@@ -35,13 +38,24 @@ jobs:
         keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
         keyPassword: ${{ secrets.KEY_PASSWORD }}
 
+    - name: Upload debug build
+      uses: actions/upload-artifact@main
+      with:
+        name: ChromeXt_debug.apk
+        path: app/build/ChromeXt_debug.apk
+
     - name: Upload signed APK
       uses: actions/upload-artifact@main
       with:
-        name: ChromeXt.apk
+        name: ChromeXt_signed.apk
         path: ${{steps.sign_app.outputs.signedReleaseFile}}
+
+    - name: Collect debug build
+      uses: actions/download-artifact@main
+      with:
+        name: ChromeXt_debug.apk
 
     - name: Collect signed APK
       uses: actions/download-artifact@main
       with:
-        name: ChromeXt.apk
+        name: ChromeXt_signed.apk
