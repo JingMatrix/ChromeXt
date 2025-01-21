@@ -20,6 +20,7 @@ class DevToolClient(tabId: String) : LocalSocket() {
   private var cspBypassed = false
   private var id = 1
   private var mClosed = false
+  private var listening = false
 
   init {
     connectDevTools(this)
@@ -84,6 +85,11 @@ class DevToolClient(tabId: String) : LocalSocket() {
   }
 
   fun listen(callback: (JSONObject) -> Unit = { msg -> Log.d(msg.toString()) }) {
+    if (listening) {
+      Log.d("skip duplicated listen calls")
+      return
+    }
+    listening = true
     runCatching {
           while (!isClosed()) {
             val type = inputStream.read()

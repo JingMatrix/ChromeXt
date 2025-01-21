@@ -11,7 +11,7 @@ import org.matrix.chromext.Chrome
 private val blocksReg =
     Regex(
         """(?<metablock>[\S\s]*?// ==UserScript==\r?\n[\S\s]*?\r?\n// ==/UserScript==\s+)(?<code>[\S\s]*)""")
-private val metaReg = Regex("""^//\s+@(?<key>[\w-]+)\s+(?<value>.+)""")
+private val metaReg = Regex("""^//\s+@(?<key>[\w-]+)(\s+(?<value>.+))?""")
 
 fun parseScript(input: String, storage: String? = null): Script? {
   val blockMatchGroup = blocksReg.matchEntire(input)?.groups
@@ -30,20 +30,28 @@ fun parseScript(input: String, storage: String? = null): Script? {
         val meta = (blockMatchGroup[1]?.value as String)
         val code = blockMatchGroup[2]?.value as String
         var storage: JSONObject? = null
+        var noframes = false
       }
   script.meta.split("\n").forEach {
     val metaMatchGroup = metaReg.matchEntire(it)?.groups
     if (metaMatchGroup != null) {
       val key = metaMatchGroup[1]?.value as String
-      val value = metaMatchGroup[2]?.value as String
-      when (key) {
-        "name" -> script.name = value.replace(":", "")
-        "namespace" -> script.namespace = value
-        "match" -> script.match.add(value)
-        "include" -> script.match.add(value)
-        "grant" -> script.grant.add(value)
-        "exclude" -> script.exclude.add(value)
-        "require" -> script.require.add(value)
+      if (metaMatchGroup[2] != null) {
+        val value = metaMatchGroup[3]?.value as String
+        when (key) {
+          "name" -> script.name = value.replace(":", "")
+          "namespace" -> script.namespace = value
+          "match" -> script.match.add(value)
+          "include" -> script.match.add(value)
+          "grant" -> script.grant.add(value)
+          "exclude" -> script.exclude.add(value)
+          "require" -> script.require.add(value)
+          "noframes" -> script.noframes = true
+        }
+      } else {
+        when (key) {
+          "noframes" -> script.noframes = true
+        }
       }
     }
   }
@@ -76,7 +84,8 @@ fun parseScript(input: String, storage: String? = null): Script? {
             script.meta,
             script.code,
             script.storage,
-            lib)
+            lib,
+            script.noframes)
     return parsed
   }
 }

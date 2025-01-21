@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationChannelGroup
 import android.app.NotificationManager
 import android.content.Context
+import android.net.Uri
 import android.net.http.HttpResponseCache
 import android.os.Build
 import android.os.Handler
@@ -22,6 +23,7 @@ import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.Local
+import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.XMLHttpRequest
 import org.matrix.chromext.utils.findField
@@ -219,6 +221,35 @@ object Chrome {
       return ids.first()
     } else {
       return UserScriptProxy.getTabId(getTab(tab)!!)
+    }
+  }
+
+  fun injectFrames(tab: Any? = null) {
+    val url = getUrl(tab)!!
+    IO.submit {
+      val tabId = getTabId(tab, url)
+      wakeUpDevTools()
+      var client = DevSessions.new(tabId)
+      DevSessions.add(client)
+      client.command(null, "Page.enable", JSONObject())
+      var frameId: String? = null
+      client.listen {
+        if (it.has("method")) {
+          val method = it.getString("method")
+          val params = it.getJSONObject("params")
+          if (method == "Page.frameScheduledNavigation" && params.getString("url") != url) {
+            frameId = params.getString("frameId")
+          } else if (method == "Page.frameDetached" && params.getString("frameId") == frameId) {
+            ScriptDbManager.invokeScript(url, tab, false).forEach {
+              client.command(
+                  null,
+                  "Page.navigate",
+                  JSONObject().put("url", "javascript: ${Uri.encode(it)}").put("frameId", frameId))
+            }
+            frameId = null
+          }
+        }
+      }
     }
   }
 

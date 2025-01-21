@@ -14,6 +14,7 @@ data class Script(
     val code: String,
     var storage: JSONObject?,
     val lib: List<String> = mutableListOf<String>(),
+    val noframes: Boolean,
 )
 
 private const val SQL_CREATE_ENTRIES =

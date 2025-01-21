@@ -35,7 +35,7 @@ object GM {
 
   fun bootstrap(
       script: Script,
-      codes: MutableList<String> = mutableListOf<String>()
+      codes: MutableList<String> = mutableListOf<String>(),
   ): MutableList<String> {
     var code = script.code
     var grants = ""
@@ -47,6 +47,7 @@ object GM {
     script.grant.forEach {
       when (it) {
         "none" -> return@forEach
+        "frames" -> return@forEach
         "GM_info" -> return@forEach
         "GM.ChromeXt" -> return@forEach
         "window.close" -> return@forEach

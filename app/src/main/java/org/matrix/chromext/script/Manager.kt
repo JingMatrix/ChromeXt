@@ -94,7 +94,11 @@ object ScriptDbManager {
         codes.add("fixEncoding();")
   }
 
-  fun invokeScript(url: String, webView: Any? = null) {
+  fun invokeScript(
+      url: String,
+      webView: Any? = null,
+      evaluate: Boolean = true
+  ): MutableList<String> {
     val codes = mutableListOf<String>(Local.initChromeXt)
     val path = resolveContentUrl(url)
     val webSettings = webView?.invokeMethod { name == "getSettings" }
@@ -147,12 +151,21 @@ object ScriptDbManager {
     codes.add("//# sourceURL=local://ChromeXt/init")
     val code = codes.joinToString("\n")
     webSettings?.invokeMethod(true) { name == "setJavaScriptEnabled" }
-    Chrome.evaluateJavascript(listOf(code), webView, bypassSandbox, bypassSandbox)
+    if (evaluate) Chrome.evaluateJavascript(listOf(code), webView, bypassSandbox, bypassSandbox)
     if (runScripts) {
       codes.clear()
-      scripts.filter { matching(it, url) }.forEach { GM.bootstrap(it, codes) }
-      Chrome.evaluateJavascript(codes)
+      if (!evaluate) codes.add(code)
+      var framesGranted = false
+      scripts
+          .filter { matching(it, url) && !(!evaluate && it.noframes) }
+          .forEach {
+            if (it.grant.contains("frames")) framesGranted = true
+            GM.bootstrap(it, codes)
+          }
+      if (evaluate) Chrome.evaluateJavascript(codes)
+      if (framesGranted && evaluate) Chrome.injectFrames(webView)
     }
+    return codes
   }
 
   fun updateScriptStorage() {
