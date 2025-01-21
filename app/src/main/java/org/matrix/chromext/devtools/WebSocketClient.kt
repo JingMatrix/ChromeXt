@@ -14,13 +14,15 @@ import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.randomString
 
-class DevToolClient(tabId: String) : LocalSocket() {
+class DevToolClient(tabId: String, tag: String? = null) : LocalSocket() {
 
   val tabId = tabId
+  val tag = tag
   private var cspBypassed = false
   private var id = 1
-  private var mClosed = false
   private var listening = false
+  private var mClosed = false
+  private var pageEnabled = false
 
   init {
     connectDevTools(this)
@@ -50,6 +52,13 @@ class DevToolClient(tabId: String) : LocalSocket() {
     return mClosed
   }
 
+  fun enablePage() {
+    if (!pageEnabled) {
+      command(null, "Page.enable", JSONObject())
+      pageEnabled = true
+    }
+  }
+
   fun command(id: Int?, method: String, params: JSONObject?) {
     if (isClosed()) {
       return
@@ -69,7 +78,7 @@ class DevToolClient(tabId: String) : LocalSocket() {
 
   fun bypassCSP(bypass: Boolean) {
     if (cspBypassed == bypass) return
-    command(null, "Page.enable", JSONObject())
+    enablePage()
     command(null, "Page.setBypassCSP", JSONObject().put("enabled", bypass))
     cspBypassed = bypass
     if (bypass) DevSessions.add(this)
@@ -125,7 +134,7 @@ class DevToolClient(tabId: String) : LocalSocket() {
         }
         .onFailure {
           if (!isClosed()) {
-            Log.e("Fail to listen at tab ${tabId}: ${it.message}")
+            Log.ex(it, "Listening at tab ${tabId}")
           }
         }
     close()

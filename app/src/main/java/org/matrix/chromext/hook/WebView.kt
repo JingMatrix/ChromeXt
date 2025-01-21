@@ -44,11 +44,11 @@ object WebViewHook : BaseHook() {
           val chromeClient = it.thisObject
           val consoleMessage = it.args[0]
           val messageLevel = consoleMessage.invokeMethod { name == "messageLevel" }
-          val sourceId = consoleMessage.invokeMethod { name == "sourceId" }
+          val sourceId = consoleMessage.invokeMethod { name == "sourceId" } as String
           val lineNumber = consoleMessage.invokeMethod { name == "lineNumber" }
           val message = consoleMessage.invokeMethod { name == "message" } as String
           if (messageLevel.toString() == "TIP" &&
-              sourceId == "local://ChromeXt/init" &&
+              sourceId.startsWith("local://ChromeXt/init") &&
               lineNumber == Local.anchorInChromeXt) {
             val webView =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -64,7 +64,7 @@ object WebViewHook : BaseHook() {
                       }
                       ?.get()
                 } else Chrome.getTab()
-            Listener.startAction(message, webView, chromeClient)
+            Listener.startAction(message, webView, chromeClient, sourceId)
           } else {
             Log.d(messageLevel.toString() + ": [${sourceId}@${lineNumber}] ${message}")
           }

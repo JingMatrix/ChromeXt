@@ -35,9 +35,9 @@ object Log {
     XposedBridge.log("ChromeXt error: " + msg)
   }
 
-  fun ex(thr: Throwable) {
-    Log.e(TAG, "", thr)
-    XposedBridge.log("ChromeXt backtrace: " + thr.toString())
+  fun ex(thr: Throwable, msg: String = "") {
+    Log.e(TAG, msg, thr)
+    XposedBridge.log("ChromeXt exception caught: [${msg}] " + thr.toString())
   }
 
   fun toast(context: Context, msg: String) {

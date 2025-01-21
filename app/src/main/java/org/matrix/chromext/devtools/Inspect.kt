@@ -44,8 +44,8 @@ fun hitDevTools(): LocalSocket {
 object DevSessions {
   private val clients = mutableSetOf<DevToolClient>()
 
-  fun get(tabId: String): DevToolClient? {
-    var cached = clients.find { it.tabId == tabId }
+  fun get(condition: (DevToolClient) -> Boolean): DevToolClient? {
+    var cached = clients.find { condition(it) }
     if (cached?.isClosed() == true) {
       clients.remove(cached)
       cached = null
@@ -53,8 +53,13 @@ object DevSessions {
     return cached
   }
 
-  fun new(tabId: String): DevToolClient {
-    var client = get(tabId) ?: DevToolClient(tabId)
+  fun new(
+      tabId: String,
+      tag: String?,
+      condition: (DevToolClient) -> Boolean = { true }
+  ): DevToolClient {
+    var client =
+        get { it.tabId == tabId && it.tag == tag && condition(it) } ?: DevToolClient(tabId, tag)
     if (client.isClosed()) {
       hitDevTools().close()
       client = DevToolClient(tabId)

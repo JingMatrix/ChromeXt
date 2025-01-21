@@ -109,15 +109,18 @@ object Listener {
         .onFailure { callback(null) }
   }
 
-  fun startAction(text: String, currentTab: Any? = null, auxObject: Any? = null) {
+  fun startAction(text: String, currentTab: Any? = null, auxObject: Any? = null, sourceId: String) {
+    var frameId: String? = null
+    val sourceParts = sourceId.split("/init/")
+    if (sourceParts.size > 1) frameId = sourceParts.last()
     runCatching {
           val data = JSONObject(text)
           val action = data.getString("action")
           val key = data.getDouble("key")
           val payload = data.optString("payload")
           if (checkPermisson(action, key, currentTab)) {
-            val callback = on(action, payload, currentTab, auxObject)
-            if (callback != null) Chrome.evaluateJavascript(listOf(callback), currentTab)
+            val callback = on(action, payload, currentTab, auxObject, frameId)
+            if (callback != null) Chrome.evaluateJavascript(listOf(callback), currentTab, frameId)
           }
         }
         .onFailure { Log.i("${it::class.java.name}: startAction fails with " + text) }
@@ -127,7 +130,8 @@ object Listener {
       action: String,
       payload: String = "",
       currentTab: Any? = null,
-      auxObject: Any? = null
+      auxObject: Any? = null,
+      frameId: String? = null
   ): String? {
     var callback: String? = null
     when (action) {
@@ -241,7 +245,7 @@ object Listener {
                 .setLocalOnly(true)
                 .setOnlyAlertOnce(true)
         if (detail.optBoolean("onclick")) {
-          builder.setContentIntent(ScriptNotification.newIntent(id, uuid))
+          builder.setContentIntent(ScriptNotification.newIntent(id, uuid, frameId))
           tabNotification.put(uuid, currentTab!!)
         }
         val notificationManager =
@@ -295,7 +299,11 @@ object Listener {
         } else {
           val request =
               XMLHttpRequest(
-                  detail.getString("id"), detail.getJSONObject("request"), uuid, currentTab)
+                  detail.getString("id"),
+                  detail.getJSONObject("request"),
+                  uuid,
+                  currentTab,
+                  frameId)
           xmlhttpRequests.put(uuid, request)
           Chrome.IO.submit { request.send() }
         }
@@ -308,11 +316,13 @@ object Listener {
         val data = JSONArray()
         fun checkResult(result: JSONObject): Boolean {
           data.put(result)
-          if (result.getInt("id") == 2) {
+          if (result.has("id") && result.getInt("id") == 2) {
             detail.put("response", data)
             detail.remove("params")
             val code = "Symbol.${Local.name}.unlock(${Local.key}).post('cookie', ${detail});"
-            Chrome.evaluateJavascript(listOf(code), currentTab)
+            Handler(Chrome.getContext().mainLooper).post {
+              Chrome.evaluateJavascript(listOf(code), currentTab, frameId)
+            }
             return false
           }
           return true
@@ -320,7 +330,7 @@ object Listener {
         val url = Chrome.getUrl(currentTab)
         Chrome.IO.submit {
           val tabId = Chrome.getTabId(currentTab, url)
-          val client = DevSessions.new(tabId)
+          val client = DevToolClient(tabId, "cookie")
           Chrome.IO.submit { client.listen { if (!checkResult(it)) client.close() } }
           client.command(null, "Network.enable", JSONObject())
           client.command(null, method, params)
@@ -344,7 +354,7 @@ object Listener {
                   FileReader(eruda).use { it.readText() } +
                       "\n//# sourceURL=${ERUD_URL}@${Local.eruda_version}/eruda.js")
           codes.add("{${Local.eruda}}\n//# sourceURL=local://ChromeXt/eruda")
-          Chrome.evaluateJavascript(codes)
+          Chrome.evaluateJavascript(codes, currentTab, frameId)
         } else {
           on("updateEruda", JSONObject().put("load", true).toString())
         }
@@ -388,7 +398,9 @@ object Listener {
         if (WebViewHook.isInit) WebView.setWebContentsDebuggingEnabled(true)
         Chrome.IO.submit {
           val code = "ChromeXt.post('inspect_pages', ${getInspectPages()});"
-          Chrome.evaluateJavascript(listOf(code), currentTab)
+          Handler(Chrome.getContext().mainLooper).post {
+            Chrome.evaluateJavascript(listOf(code), currentTab, frameId)
+          }
         }
       }
       "userscript" -> {
@@ -438,7 +450,7 @@ object Listener {
       "websocket" -> {
         val detail = JSONObject(payload)
         val targetTabId = detail.getString("targetTabId")
-        var target = DevSessions.get(targetTabId)
+        var target = DevSessions.get { it.tabId == targetTabId && it.tag == "transit" }
         if (detail.has("message")) {
           val message = JSONObject(detail.getString("message"))
           target?.command(
@@ -446,7 +458,10 @@ object Listener {
         } else {
           fun response(res: JSONObject) {
             if (Chrome.checkTab(currentTab)) {
-              Chrome.evaluateJavascript(listOf("ChromeXt.post('websocket', ${res})"), currentTab)
+              Handler(Chrome.getContext().mainLooper).post {
+                Chrome.evaluateJavascript(
+                    listOf("ChromeXt.post('websocket', ${res})"), currentTab, frameId)
+              }
             } else {
               target?.close()
             }
@@ -454,7 +469,7 @@ object Listener {
           Chrome.IO.submit {
             target?.close()
             hitDevTools().close()
-            target = DevToolClient(targetTabId)
+            target = DevToolClient(targetTabId, "transit")
             if (!target!!.isClosed()) {
               DevSessions.add(target!!)
               response(JSONObject(mapOf("open" to true)))
@@ -469,17 +484,18 @@ object Listener {
   }
 }
 
-private class ScriptNotification(detail: JSONObject) : BroadcastReceiver() {
+private class ScriptNotification(detail: JSONObject, frameId: String?) : BroadcastReceiver() {
   private val detail = detail
+  private val frameId = frameId
 
   companion object {
     const val ACTION_USERSCRIPT = "ChromeXt"
     const val UUID = "GM_notification"
 
-    fun newIntent(id: String, uuid: Int): PendingIntent {
+    fun newIntent(id: String, uuid: Int, frameId: String?): PendingIntent {
       val ctx = Chrome.getContext()
       val detail = JSONObject(mapOf("id" to id, "uuid" to uuid))
-      ctx.registerReceiver(ScriptNotification(detail), IntentFilter(ACTION_USERSCRIPT))
+      ctx.registerReceiver(ScriptNotification(detail, frameId), IntentFilter(ACTION_USERSCRIPT))
       val intent =
           Intent().apply {
             setAction(ACTION_USERSCRIPT)
@@ -495,7 +511,7 @@ private class ScriptNotification(detail: JSONObject) : BroadcastReceiver() {
       if (uuid == detail.getInt("uuid")) {
         val tab = Listener.tabNotification.get(detail.getInt("uuid"))!!
         val code = "Symbol.${Local.name}.unlock(${Local.key}).post('notification', ${detail});"
-        Chrome.evaluateJavascript(listOf(code), tab)
+        Chrome.evaluateJavascript(listOf(code), tab, frameId)
         ctx.unregisterReceiver(this)
         Listener.tabNotification.remove(uuid)
       }

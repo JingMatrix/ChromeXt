@@ -41,7 +41,7 @@ object PageInfoHook : BaseHook() {
         title.setText(R.string.main_menu_install_script)
         infoRow.setOnClickListener {
           val sandBoxed = shouldBypassSandbox(url)
-          Chrome.evaluateJavascript(listOf("Symbol.installScript(true);"), null, sandBoxed)
+          Chrome.evaluateJavascript(listOf("Symbol.installScript(true);"), null, null, sandBoxed)
           controller!!.invokeMethod() { name == "destroy" }
         }
       } else {
