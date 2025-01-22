@@ -52,11 +52,13 @@ class DevToolClient(tabId: String, tag: String? = null) : LocalSocket() {
     return mClosed
   }
 
-  fun enablePage() {
-    if (!pageEnabled) {
+  fun isPageEnabled(forceActivate: Boolean = false): Boolean {
+    val status = pageEnabled
+    if (forceActivate && !pageEnabled) {
       command(null, "Page.enable", JSONObject())
       pageEnabled = true
     }
+    return status
   }
 
   fun command(id: Int?, method: String, params: JSONObject?) {
@@ -78,7 +80,7 @@ class DevToolClient(tabId: String, tag: String? = null) : LocalSocket() {
 
   fun bypassCSP(bypass: Boolean) {
     if (cspBypassed == bypass) return
-    enablePage()
+    isPageEnabled(true)
     command(null, "Page.setBypassCSP", JSONObject().put("enabled", bypass))
     cspBypassed = bypass
     if (bypass) DevSessions.add(this)
@@ -94,10 +96,7 @@ class DevToolClient(tabId: String, tag: String? = null) : LocalSocket() {
   }
 
   fun listen(callback: (JSONObject) -> Unit = { msg -> Log.d(msg.toString()) }) {
-    if (listening) {
-      Log.d("skip duplicated listen calls")
-      return
-    }
+    if (listening) Log.w("client was being listened on")
     listening = true
     runCatching {
           while (!isClosed()) {

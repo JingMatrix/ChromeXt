@@ -231,7 +231,8 @@ object Chrome {
       wakeUpDevTools()
       var client = DevSessions.new(tabId, "page")
       DevSessions.add(client)
-      client.enablePage()
+      val duplicated = client.isPageEnabled(true)
+      if (duplicated) return@submit
       var frames: MutableMap<String, String> = mutableMapOf<String, String>()
       client.listen {
         if (it.has("method")) {
