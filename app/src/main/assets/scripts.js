@@ -13,12 +13,11 @@ if (typeof Symbol.ChromeXt == "undefined") {
   const props = {
     Array: Object.getOwnPropertyNames(Array.prototype),
     ChromeXt: ["commands", "cspRules", "filters", "scripts"],
-    EventTarget: Object.getOwnPropertyNames(EventTarget.prototype),
+    EventTarget: ["addEventListener", "dispatchEvent", "removeEventListener"],
     global: Object.keys(window),
     // Drop user-defined props in the global context
   };
 
-  props.EventTarget.pop(); // Remove the prop `constructor`
   props.global.push(...props.EventTarget);
 
   const backup = {
@@ -368,6 +367,4 @@ if (Symbol.ChromeXt.filters.length > 0) {
       node.style.display = "none";
     });
   });
-  const amp = "amp-ad,amp-embed,amp-sticky-ad,amp-analytics,amp-auto-ads";
-  document.querySelectorAll(amp).forEach((node) => node.remove());
 }
