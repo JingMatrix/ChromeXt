@@ -3,6 +3,7 @@ package org.matrix.chromext.proxy
 import android.view.View.OnClickListener
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.TextView
 import java.lang.ref.WeakReference
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.utils.findField
@@ -10,9 +11,10 @@ import org.matrix.chromext.utils.findField
 object PageInfoProxy {
 
   val pageInfoRowView = Chrome.load("org.chromium.components.page_info.PageInfoRowView")
-  val mIcon = pageInfoRowView.declaredFields[0]
-  val mTitle = pageInfoRowView.declaredFields[1]
-  val mSubtitle = pageInfoRowView.declaredFields[2]
+  val mIcon = pageInfoRowView.declaredFields.find { it.type.name.contains("ChromeImageView") }!!
+  val mTitle = pageInfoRowView.declaredFields.find { it.type == TextView::class.java }!!
+  val mSubtitle =
+      pageInfoRowView.declaredFields.find { it != mTitle && it.type == TextView::class.java }!!
 
   val pageInfoController = Chrome.load("org.chromium.components.page_info.PageInfoController")
   val mView =
