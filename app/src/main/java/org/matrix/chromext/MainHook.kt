@@ -41,6 +41,7 @@ val supportedPackages =
         "com.sec.android.app.sbrowser.beta",
         "com.vivaldi.browser",
         "com.vivaldi.browser.snapshot",
+        "org.axpos.aosmium",
         "org.bromite.bromite",
         "org.chromium.chrome",
         "org.chromium.thorium",
