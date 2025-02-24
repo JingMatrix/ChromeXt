@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 	<string-array name="xposedscope">
+		<item>app.vanadium.browser</item>
 		<item>com.android.browser</item>
 		<item>com.android.chrome</item>
 		<item>com.brave.browser</item>

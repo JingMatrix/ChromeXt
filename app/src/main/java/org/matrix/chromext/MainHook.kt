@@ -21,6 +21,7 @@ import org.matrix.chromext.utils.hookAfter
 
 val supportedPackages =
     arrayOf(
+        "app.vanadium.browser",
         "com.android.chrome",
         "com.brave.browser",
         "com.brave.browser_beta",
