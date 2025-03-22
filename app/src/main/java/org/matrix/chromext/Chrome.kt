@@ -44,6 +44,7 @@ object Chrome {
   var isSamsung = false
   var isVivaldi = false
   var isCocCoc = false
+  var withoutChromeClient = false
 
   var version: String? = null
   var packageName: String? = null

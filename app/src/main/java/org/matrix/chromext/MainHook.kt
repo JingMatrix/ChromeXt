@@ -8,6 +8,7 @@ import android.webkit.WebViewClient
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.IXposedHookZygoteInit
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import java.lang.ref.WeakReference
 import org.matrix.chromext.hook.BaseHook
 import org.matrix.chromext.hook.ContextMenuHook
 import org.matrix.chromext.hook.PageInfoHook
@@ -16,6 +17,7 @@ import org.matrix.chromext.hook.PreferenceHook
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.findMethodOrNull
 import org.matrix.chromext.utils.hookAfter
 
@@ -51,10 +53,13 @@ val supportedPackages =
         "org.triple.banana",
         "us.spotco.mulch")
 
+val applicationsWithoutChromeClient = arrayOf("com.google.android.apps.books")
+
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
     Log.d(lpparam.processName + " started")
     if (lpparam.packageName == "org.matrix.chromext") return
+    Chrome.withoutChromeClient = applicationsWithoutChromeClient.contains(lpparam.packageName)
     if (supportedPackages.contains(lpparam.packageName)) {
       lpparam.classLoader
           .loadClass("org.chromium.ui.base.WindowAndroid")
@@ -88,7 +93,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
       if (ctx != null && lpparam.packageName != "android") Chrome.init(ctx, ctx.packageName)
 
       if (Chrome.isMi) {
-        WebViewHook.WebView = Chrome.load("com.miui.webkit.WebView")
+        WebViewHook.CustomWebView = Chrome.load("com.miui.webkit.WebView")
         runCatching {
               WebViewHook.ViewClient = Chrome.load("com.android.browser.tab.TabWebViewClient")
               WebViewHook.ChromeClient = Chrome.load("com.android.browser.tab.TabWebChromeClient")
@@ -125,7 +130,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
       }
 
       if (Chrome.isQihoo) {
-        WebViewHook.WebView = Chrome.load("com.qihoo.webkit.WebView")
+        WebViewHook.CustomWebView = Chrome.load("com.qihoo.webkit.WebView")
         WebViewHook.ViewClient = Chrome.load("com.qihoo.webkit.WebViewClient")
         WebViewHook.ChromeClient = Chrome.load("com.qihoo.webkit.WebChromeClient")
         hookWebView()
@@ -139,10 +144,22 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
         }
       }
 
-      WebChromeClient::class.java.declaredConstructors[0].hookAfter {
-        if (it.thisObject::class != WebChromeClient::class) {
-          WebViewHook.ChromeClient = it.thisObject::class.java
-          hookWebView()
+      if (Chrome.withoutChromeClient) {
+        WebViewHook.ChromeClient = WebChromeClient::class.java
+        findMethod(WebView::class.java) { name == "addJavascriptInterface" }
+            // public void addJavascriptInterface (Object object, String name)
+            .hookAfter {
+              val webView = it.thisObject as WebView
+              Log.i("JavaScript Interface ${it.args[1]} added to ${webView}")
+              if (it.args[0] != null) WebViewHook.records.add(WeakReference(webView))
+              webView.setWebChromeClient(WebChromeClient())
+            }
+      } else {
+        WebChromeClient::class.java.declaredConstructors[0].hookAfter {
+          if (it.thisObject::class != WebChromeClient::class) {
+            WebViewHook.ChromeClient = it.thisObject::class.java
+            hookWebView()
+          }
         }
       }
     }
@@ -150,9 +167,9 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
   private fun hookWebView() {
     if (WebViewHook.ChromeClient == null || WebViewHook.ViewClient == null) return
-    if (WebViewHook.WebView == null) {
+    if (WebViewHook.CustomWebView == null) {
       runCatching {
-            WebViewHook.WebView = WebView::class.java
+            WebViewHook.CustomWebView = WebView::class.java
             WebView.setWebContentsDebuggingEnabled(true)
           }
           .onFailure { if (BuildConfig.DEBUG) Log.ex(it) }

@@ -19,7 +19,7 @@ object WebViewHook : BaseHook() {
 
   var ViewClient: Class<*>? = null
   var ChromeClient: Class<*>? = null
-  var WebView: Class<*>? = null
+  var CustomWebView: Class<*>? = null
   val records = mutableListOf<WeakReference<Any>>()
 
   fun evaluateJavascript(code: String?, view: Any?) {
@@ -55,7 +55,7 @@ object WebViewHook : BaseHook() {
                   records
                       .find {
                         if (Chrome.isQihoo) {
-                              val mProvider = findField(WebView!!) { name == "mProvider" }
+                              val mProvider = findField(CustomWebView!!) { name == "mProvider" }
                               mProvider.get(it.get())
                             } else {
                               it.get()
@@ -76,14 +76,14 @@ object WebViewHook : BaseHook() {
       ScriptDbManager.invokeScript(url, view)
     }
 
-    findMethod(WebView!!) { name == "setWebChromeClient" }
+    findMethod(CustomWebView!!) { name == "setWebChromeClient" }
         .hookAfter {
           val webView = it.thisObject
           records.removeAll(records.filter { it.get() == null || it.get() == webView })
           if (it.args[0] != null) records.add(WeakReference(webView))
         }
 
-    findMethod(WebView!!) { name == "onAttachedToWindow" }
+    findMethod(CustomWebView!!) { name == "onAttachedToWindow" }
         .hookAfter { Chrome.updateTab(it.thisObject) }
 
     findMethod(ViewClient!!, true) { name == "onPageStarted" }
