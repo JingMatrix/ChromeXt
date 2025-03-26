@@ -47,6 +47,29 @@ object SpotifyHook : BaseHook() {
           }
         }
 
+    findMethod(loader.loadClass("p/qag")) { name == "apply" }
+        // To find this method, search string `checkDeviceCapability`
+        .hookAfter {
+          val FIELD = "checkDeviceCapability"
+          if (it.result.toString().contains("${FIELD}=")) {
+            @Suppress("UNCHECKED_CAST") var queryParameter = it.result as Map<String, Any>
+            @Suppress("UNCHECKED_CAST")
+            val store =
+                queryParameter::class
+                    .java
+                    .declaredFields
+                    .find { it.type == Array::class.java }!!
+                    .let {
+                      it.setAccessible(true)
+                      it.get(queryParameter)
+                    } as Array<Any>
+
+            val index = store.indexOfLast { it == FIELD || it == "trackRows" }
+            store[index] = "trackRows"
+            store[index + 1] = true
+          }
+        }
+
     isInit = true
   }
 }
