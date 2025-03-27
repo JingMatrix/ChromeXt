@@ -47,12 +47,15 @@ object SpotifyHook : BaseHook() {
           }
         }
 
-    findMethod(loader.loadClass("p/qag")) { name == "apply" }
-        // To find this method, search string `checkDeviceCapability`
+    val preparePlayOptions =
+        loader.loadClass("com.spotify.player.model.command.options.PreparePlayOptions")
+    val option = findMethod(preparePlayOptions) { name == "configurationOverride" }.returnType
+
+    findMethod(option) { name == "containsKey" }
         .hookAfter {
           val FIELD = "checkDeviceCapability"
-          if (it.result.toString().contains("${FIELD}=")) {
-            @Suppress("UNCHECKED_CAST") var queryParameter = it.result as Map<String, Any>
+          if (it.args[0] == "signal" && it.thisObject.toString().contains("${FIELD}=")) {
+            @Suppress("UNCHECKED_CAST") val queryParameter = it.thisObject as Map<String, Any>
             @Suppress("UNCHECKED_CAST")
             val store =
                 queryParameter::class
