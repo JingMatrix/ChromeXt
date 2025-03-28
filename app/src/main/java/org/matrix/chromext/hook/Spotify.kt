@@ -24,7 +24,11 @@ object SpotifyHook : BaseHook() {
           // and breaks the player when other patches are applied.
           "streaming-rules" to "",
           // Enables premium UI in settings and removes the premium button in the nav-bar.
-          "nft-disabled" to "1")
+          "nft-disabled" to "1",
+          // Enable Cross-Platform Spotify Car Thing.
+          "can_use_superbird" to true,
+          // Removes the premium button in the nav-bar for tablet users.
+          "tablet-free" to false)
 
   override fun init() {
 
