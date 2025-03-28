@@ -1,5 +1,6 @@
 package org.matrix.chromext.hook
 
+import de.robv.android.xposed.XC_MethodHook.Unhook
 import org.matrix.chromext.utils.*
 
 object SpotifyHook : BaseHook() {
@@ -76,6 +77,27 @@ object SpotifyHook : BaseHook() {
             store[index + 1] = true
           }
         }
+
+    val localFilesProperties =
+        loader.loadClass("com.spotify.localfiles.mediastoreimpl.LocalFilesProperties")
+    var parserFinder: Unhook? = null
+    parserFinder =
+        findMethod(localFilesProperties) { name == "parse" }
+            .hookAfter {
+              parserFinder?.unhook()
+              findMethod(it.args[0]::class.java) {
+                    parameterTypes contentDeepEquals
+                        arrayOf(String::class.java, String::class.java, Boolean::class.java) &&
+                        returnType == Boolean::class.java
+                  }
+                  .hookBefore {
+                    // Log.d("(${it.args[0]}, ${it.args[1]}, ${it.args[2]}) -> ${it.result}")
+                    if (it.args[0] == "android-context-menu" &&
+                        it.args[1] == "remove_ads_upsell_enabled") {
+                      it.result = false
+                    }
+                  }
+            }
 
     isInit = true
   }
