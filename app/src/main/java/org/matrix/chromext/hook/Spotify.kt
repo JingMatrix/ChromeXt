@@ -119,14 +119,40 @@ object SpotifyHook : BaseHook() {
         loader.loadClass("com.spotify.voiceassistants.playermodels.ContextJsonAdapter")
     val context = loader.loadClass("com.spotify.player.model.Context")
     val autoValue_Context = loader.loadClass("com.spotify.player.model.AutoValue_Context")
+
+    val preparePlayOptionsJsonAdapter =
+        loader.loadClass("com.spotify.voiceassistants.playermodels.PreparePlayOptionsJsonAdapter")
+    val autoValue_PreparePlayOptions =
+        loader.loadClass("com.spotify.player.model.command.options.AutoValue_PreparePlayOptions")
+
+    val autoValue_PlayerOptionOverrides =
+        loader.loadClass("com.spotify.player.model.command.options.AutoValue_PlayerOptionOverrides")
+
     val url = findField(autoValue_Context) { name == "url" }
     val uri = findField(autoValue_Context) { name == "uri" }
+
+    val playerOptionsOverride =
+        findField(autoValue_PreparePlayOptions) { name == "playerOptionsOverride" }
+
+    val shufflingContext = findField(autoValue_PlayerOptionOverrides) { name == "shufflingContext" }
 
     findMethod(contextJsonAdapter) { name == "fromJson" && returnType == context }
         .hookAfter {
           url.set(it.result, (url.get(it.result) as String).replace("station:", ""))
           uri.set(it.result, (uri.get(it.result) as String).replace("station:", ""))
-          Log.d("Voice assistance model: ${it.result}")
+          Log.d("VA context: ${it.result}", true)
+        }
+
+    findMethod(preparePlayOptionsJsonAdapter) {
+          name == "fromJson" && returnType == preparePlayOptions
+        }
+        .hookAfter {
+          val player_options_override = playerOptionsOverride.get(it.result)
+          var value = findField(player_options_override::class.java) { type == Any::class.java }
+          val shuffling_context = shufflingContext.get(value.get(player_options_override))
+          value = findField(shuffling_context::class.java) { type == Any::class.java }
+          value.set(shuffling_context, false)
+          Log.d("VA player options: ${it.result}", true)
         }
 
     isInit = true
