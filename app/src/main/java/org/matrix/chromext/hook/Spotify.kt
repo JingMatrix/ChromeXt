@@ -1,5 +1,6 @@
 package org.matrix.chromext.hook
 
+import de.robv.android.xposed.XC_MethodHook.Unhook
 import org.matrix.chromext.utils.*
 
 object SpotifyHook : BaseHook() {
@@ -58,6 +59,7 @@ object SpotifyHook : BaseHook() {
     findMethod(option) { name == "containsKey" }
         .hookAfter {
           val FIELD = "checkDeviceCapability"
+          // Log.d("${it.thisObject}", true)
           if (it.args[0] == "signal" && it.thisObject.toString().contains("${FIELD}=")) {
             @Suppress("UNCHECKED_CAST") val queryParameter = it.thisObject as Map<String, Any>
             @Suppress("UNCHECKED_CAST")
@@ -75,6 +77,56 @@ object SpotifyHook : BaseHook() {
             store[index] = "trackRows"
             store[index + 1] = true
           }
+        }
+
+    val localFilesProperties =
+        loader.loadClass("com.spotify.localfiles.mediastoreimpl.LocalFilesProperties")
+
+    var flagFinder: Unhook? = null
+    flagFinder =
+        findMethod(localFilesProperties) { name == "parse" }
+            .hookAfter {
+              flagFinder?.unhook()
+              findMethod(it.args[0]::class.java) {
+                    parameterTypes contentDeepEquals
+                        arrayOf(String::class.java, String::class.java, Boolean::class.java) &&
+                        returnType == Boolean::class.java
+                  }
+                  .hookAfter {
+                    if (it.args[0] == "android-context-menu" &&
+                        it.args[1] == "remove_ads_upsell_enabled") {
+                      it.result = false
+                    }
+                    // Log.d("(${it.args[0]}, ${it.args[1]}, ${it.args[2]}) => ${it.result}")
+                  }
+
+              // @Suppress("UNCHECKED_CAST")
+              // val models = it.thisObject.invokeMethod { name == "models" } as List<Any>
+              // models[0]::class
+              //     .java
+              //     .declaredConstructors
+              //     .find {
+              //       it.parameterTypes contentDeepEquals
+              //           arrayOf(String::class.java, String::class.java, Boolean::class.java)
+              //     }!!
+              //     .hookAfter {
+              //       Log.d("(${it.args[0]}, ${it.args[1]}, ${it.args[2]}) -> ${it.thisObject}")
+              //     }
+
+            }
+
+    val contextJsonAdapter =
+        loader.loadClass("com.spotify.voiceassistants.playermodels.ContextJsonAdapter")
+    val context = loader.loadClass("com.spotify.player.model.Context")
+    val autoValue_Context = loader.loadClass("com.spotify.player.model.AutoValue_Context")
+    val url = findField(autoValue_Context) { name == "url" }
+    val uri = findField(autoValue_Context) { name == "uri" }
+
+    findMethod(contextJsonAdapter) { name == "fromJson" && returnType == context }
+        .hookAfter {
+          url.set(it.result, (url.get(it.result) as String).replace("station:", ""))
+          uri.set(it.result, (uri.get(it.result) as String).replace("station:", ""))
+          Log.d("Voice assistance model: ${it.result}")
         }
 
     isInit = true
