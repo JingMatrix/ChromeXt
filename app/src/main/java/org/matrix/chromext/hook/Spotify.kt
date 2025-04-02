@@ -155,6 +155,18 @@ object SpotifyHook : BaseHook() {
           Log.d("VA player options: ${it.result}", true)
         }
 
+    loader
+        .loadClass("com.spotify.home.evopage.mobius.State\$Content")
+        .declaredConstructors[0]
+        .hookAfter {
+          val model = it.args[0]
+          @Suppress("UNCHECKED_CAST")
+          val sections =
+              findField(model::class.java) { type == List::class.java }.get(model)
+                  as MutableList<Any>
+          sections.removeIf { it.toString().startsWith("DisplayAdFeature(") }
+        }
+
     isInit = true
   }
 }
