@@ -155,16 +155,25 @@ object SpotifyHook : BaseHook() {
           Log.d("VA player options: ${it.result}", true)
         }
 
-    loader
-        .loadClass("com.spotify.home.evopage.mobius.State\$Content")
-        .declaredConstructors[0]
-        .hookAfter {
-          val model = it.args[0]
-          @Suppress("UNCHECKED_CAST")
-          val sections =
-              findField(model::class.java) { type == List::class.java }.get(model)
-                  as MutableList<Any>
-          sections.removeIf { it.toString().startsWith("DisplayAdFeature(") }
+    val homeStructure = loader.loadClass("com.spotify.home.evopage.homeapi.proto.HomeStructure")
+    val section = loader.loadClass("com.spotify.home.evopage.homeapi.proto.Section")
+
+    val sections_ = findField(homeStructure) { name == "sections_" }
+    val featureTypeCase_ = findField(section) { name == "featureTypeCase_" }
+    val toRemove =
+        setOf("IMAGE_BRAND_AD_FIELD_NUMBER", "VIDEO_BRAND_AD_FIELD_NUMBER").map {
+          findField(section) { name == it }.get(null) as Int
+        }
+
+    findMethod(homeStructure) { returnType == sections_.type }
+        .hookBefore {
+          @Suppress("UNCHECKED_CAST") val sections = sections_.get(it.thisObject) as List<Any>
+          // See source code of ProtobufArrayList at
+          // https://github.com/protocolbuffers/protobuf/blob/main/java/core/src/main/java/com/google/protobuf/ProtobufArrayList.java
+          val ProtobufArrayList = sections::class.java.declaredConstructors[0]
+          val cleaned =
+              sections.filter { !toRemove.contains(featureTypeCase_.get(it)) }.toTypedArray()
+          sections_.set(it.thisObject, ProtobufArrayList.newInstance(cleaned, cleaned.size, true))
         }
 
     isInit = true
