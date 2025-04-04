@@ -21,8 +21,7 @@ object SpotifyHook : BaseHook() {
           // Allows adding songs to queue and removes the smart shuffle mode restriction,
           // allowing to pick any of the other modes.
           "pick-and-shuffle" to false,
-          // Disables shuffle-mode streaming-rule, which forces songs to be played shuffled
-          // and breaks the player when other patches are applied.
+          // Disables shuffle-mode streaming-rule, which forces songs to be played shuffled.
           "streaming-rules" to "",
           // Enables premium UI in settings and removes the premium button in the nav-bar.
           "nft-disabled" to "1",
@@ -33,6 +32,7 @@ object SpotifyHook : BaseHook() {
 
   override fun init() {
 
+    // Spoof product state
     val productStateProto = loader.loadClass("com.spotify.remoteconfig.internal.ProductStateProto")
     val accountAttribute = loader.loadClass("com.spotify.remoteconfig.internal.AccountAttribute")
     val value_ = findField(accountAttribute) { name == "value_" }
@@ -40,7 +40,6 @@ object SpotifyHook : BaseHook() {
     findMethod(productStateProto) { parameterTypes.size == 0 && returnType == Map::class.java }
         .hookAfter {
           @Suppress("UNCHECKED_CAST") val state = it.result as Map<String, Any>
-
           for ((key, value) in stateOverride) {
             if (state.containsKey(key)) {
               val attribute = state.get(key)
@@ -52,6 +51,7 @@ object SpotifyHook : BaseHook() {
           }
         }
 
+    // Enable trackRows view in artist page
     val preparePlayOptions =
         loader.loadClass("com.spotify.player.model.command.options.PreparePlayOptions")
     val option = findMethod(preparePlayOptions) { name == "configurationOverride" }.returnType
@@ -59,19 +59,12 @@ object SpotifyHook : BaseHook() {
     findMethod(option) { name == "containsKey" }
         .hookAfter {
           val FIELD = "checkDeviceCapability"
-          // Log.d("${it.thisObject}", true)
           if (it.args[0] == "signal" && it.thisObject.toString().contains("${FIELD}=")) {
             @Suppress("UNCHECKED_CAST") val queryParameter = it.thisObject as Map<String, Any>
             @Suppress("UNCHECKED_CAST")
             val store =
-                queryParameter::class
-                    .java
-                    .declaredFields
-                    .find { it.type == Array::class.java }!!
-                    .let {
-                      it.setAccessible(true)
-                      it.get(queryParameter)
-                    } as Array<Any>
+                findField(queryParameter::class.java) { type == Array::class.java }
+                    .get(queryParameter) as Array<Any>
 
             val index = store.indexOfLast { it == FIELD || it == "trackRows" }
             store[index] = "trackRows"
@@ -79,6 +72,7 @@ object SpotifyHook : BaseHook() {
           }
         }
 
+    // Remove upsell in the context menu of track details
     val localFilesProperties =
         loader.loadClass("com.spotify.localfiles.mediastoreimpl.LocalFilesProperties")
 
@@ -99,22 +93,9 @@ object SpotifyHook : BaseHook() {
                     }
                     // Log.d("(${it.args[0]}, ${it.args[1]}, ${it.args[2]}) => ${it.result}")
                   }
-
-              // @Suppress("UNCHECKED_CAST")
-              // val models = it.thisObject.invokeMethod { name == "models" } as List<Any>
-              // models[0]::class
-              //     .java
-              //     .declaredConstructors
-              //     .find {
-              //       it.parameterTypes contentDeepEquals
-              //           arrayOf(String::class.java, String::class.java, Boolean::class.java)
-              //     }!!
-              //     .hookAfter {
-              //       Log.d("(${it.args[0]}, ${it.args[1]}, ${it.args[2]}) -> ${it.thisObject}")
-              //     }
-
             }
 
+    // Remove VA restrictions
     val contextJsonAdapter =
         loader.loadClass("com.spotify.voiceassistants.playermodels.ContextJsonAdapter")
     val context = loader.loadClass("com.spotify.player.model.Context")
@@ -155,6 +136,7 @@ object SpotifyHook : BaseHook() {
           Log.d("VA player options: ${it.result}", true)
         }
 
+    // Remove AD sections in home page
     val homeStructure = loader.loadClass("com.spotify.home.evopage.homeapi.proto.HomeStructure")
     val section = loader.loadClass("com.spotify.home.evopage.homeapi.proto.Section")
 
