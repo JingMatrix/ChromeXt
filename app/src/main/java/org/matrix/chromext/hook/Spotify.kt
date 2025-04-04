@@ -149,13 +149,13 @@ object SpotifyHook : BaseHook() {
 
     findMethod(homeStructure) { returnType == sections_.type }
         .hookBefore {
-          @Suppress("UNCHECKED_CAST") val sections = sections_.get(it.thisObject) as List<Any>
+          @Suppress("UNCHECKED_CAST")
+          val sections = sections_.get(it.thisObject) as MutableList<Any>
           // See source code of ProtobufArrayList at
           // https://github.com/protocolbuffers/protobuf/blob/main/java/core/src/main/java/com/google/protobuf/ProtobufArrayList.java
-          val ProtobufArrayList = sections::class.java.declaredConstructors[0]
-          val cleaned =
-              sections.filter { !toRemove.contains(featureTypeCase_.get(it)) }.toTypedArray()
-          sections_.set(it.thisObject, ProtobufArrayList.newInstance(cleaned, cleaned.size, true))
+          findField(sections::class.java, true) { type == Boolean::class.java }.set(sections, true)
+          // Set sections mutable
+          sections.removeIf { toRemove.contains(featureTypeCase_.get(it)) }
         }
 
     isInit = true
