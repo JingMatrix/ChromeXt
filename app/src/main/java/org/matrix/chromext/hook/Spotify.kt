@@ -16,6 +16,9 @@ object SpotifyHook : BaseHook() {
           "shuffle" to false,
           // Allows playing any song on-demand, without a shuffled order.
           "on-demand" to true,
+          // Enable Spotify Connect and disable other premium related UI, like buying premium.
+          // It also removes the download button.
+          "type" to "premium",
           // Make sure playing songs is not disabled remotely and playlists show up.
           "streaming" to true,
           // Allows adding songs to queue and removes the smart shuffle mode restriction,
