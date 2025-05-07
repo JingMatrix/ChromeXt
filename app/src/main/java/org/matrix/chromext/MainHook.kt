@@ -64,9 +64,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             initHooks(UserScriptHook)
             if (ContextMenuHook.isInit) return@hookAfter
             runCatching {
-                  initHooks(
-                      PreferenceHook,
-                      if (Chrome.isEdge || Chrome.isCocCoc) PageInfoHook else PageMenuHook)
+                  if (!Chrome.isVivaldi) initHooks(PreferenceHook)
+                  initHooks(if (Chrome.isEdge || Chrome.isCocCoc) PageInfoHook else PageMenuHook)
                 }
                 .onFailure {
                   initHooks(ContextMenuHook)
