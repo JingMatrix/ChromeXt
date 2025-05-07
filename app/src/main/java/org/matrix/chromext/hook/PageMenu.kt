@@ -2,7 +2,6 @@ package org.matrix.chromext.hook
 
 import android.content.Context
 import android.os.Bundle
-import android.os.Handler
 import android.util.DisplayMetrics
 import android.view.Menu
 import android.view.MenuInflater
@@ -125,18 +124,15 @@ object PageMenuHook : BaseHook() {
               findMenuHook!!.unhook()
               val appMenuPropertiesDelegateImpl = it.result::class.java.superclass as Class<*>
               // Can be found by searching `Android.PrepareMenu`
+
+              val parameters = appMenuPropertiesDelegateImpl.declaredConstructors[0].parameterTypes
+
               val mContext =
-                  findField(appMenuPropertiesDelegateImpl, true) {
-                    Context::class.java.isAssignableFrom(type)
-                  }
+                  findField(appMenuPropertiesDelegateImpl, true) { type == parameters[0] }
               mContext.setAccessible(true)
+
               val mActivityTabProvider =
-                  findField(appMenuPropertiesDelegateImpl, true) {
-                    type.interfaces.size == 1 &&
-                        findFieldOrNull(type.superclass as Class<*>) {
-                          type == Handler::class.java
-                        } != null
-                  }
+                  findField(appMenuPropertiesDelegateImpl, true) { type == parameters[1] }
               mActivityTabProvider.setAccessible(true)
 
               if (Chrome.isBrave) {
