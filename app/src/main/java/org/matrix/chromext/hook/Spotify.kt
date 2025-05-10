@@ -161,6 +161,22 @@ object SpotifyHook : BaseHook() {
           sections.removeIf { toRemove.contains(featureTypeCase_.get(it)) }
         }
 
+    // Remove premium upsell
+    val fetchMessageRequest =
+        loader.loadClass(
+            "com.spotify.messaging.clientmessagingplatform.clientmessagingplatformsdk.data.models.network.FetchMessageRequest")
+    val entityUri = findField(fetchMessageRequest) { name == "entityUri" }
+    val purchaseAllowed = findField(fetchMessageRequest) { name == "purchaseAllowed" }
+
+    findMethod(fetchMessageRequest) { name == "getOpportunityId" }
+        .hookAfter {
+          val request = it.thisObject
+          if ((entityUri.get(request) as String).startsWith("upsell")) {
+            purchaseAllowed.set(request, false)
+          }
+          Log.d("${request}")
+        }
+
     isInit = true
   }
 }
