@@ -6,12 +6,20 @@ import org.matrix.chromext.utils.*
 object SpotifyHook : BaseHook() {
   var loader = this::class.java.classLoader!!
 
+  data class Page(
+      val structure: String,
+      val section: String,
+      val field: String,
+      val toRemove: Set<String>
+  )
+
   val stateOverride =
       mapOf(
           // Disables player and app ads.
           "ads" to false,
           // Works along on-demand, allows playing any song without restriction.
           "player-license" to "premium",
+          "player-license-v2" to "premium",
           // Disables shuffle being initially enabled when first playing a playlist.
           "shuffle" to false,
           // Allows playing any song on-demand, without a shuffled order.
@@ -31,7 +39,9 @@ object SpotifyHook : BaseHook() {
           // Enable Cross-Platform Spotify Car Thing.
           "can_use_superbird" to true,
           // Removes the premium button in the nav-bar for tablet users.
-          "tablet-free" to false)
+          "tablet-free" to false,
+          "ad-session-persistence" to false,
+      )
 
   override fun init() {
 
@@ -124,7 +134,7 @@ object SpotifyHook : BaseHook() {
         .hookAfter {
           url.set(it.result, (url.get(it.result) as String).replace("station:", ""))
           uri.set(it.result, (uri.get(it.result) as String).replace("station:", ""))
-          Log.d("VA context: ${it.result}", true)
+          // Log.d("VA context: ${it.result}", true)
         }
 
     findMethod(preparePlayOptionsJsonAdapter) {
@@ -139,27 +149,41 @@ object SpotifyHook : BaseHook() {
           Log.d("VA player options: ${it.result}", true)
         }
 
-    // Remove AD sections in home page
-    val homeStructure = loader.loadClass("com.spotify.home.evopage.homeapi.proto.HomeStructure")
-    val section = loader.loadClass("com.spotify.home.evopage.homeapi.proto.Section")
+    // Remove AD sections in home page and browse page
+    val homePage =
+        Page(
+            structure = "com.spotify.home.evopage.homeapi.proto.HomeStructure",
+            section = "com.spotify.home.evopage.homeapi.proto.Section",
+            field = "featureTypeCase_",
+            toRemove = setOf("IMAGE_BRAND_AD_FIELD_NUMBER", "VIDEO_BRAND_AD_FIELD_NUMBER"))
 
-    val sections_ = findField(homeStructure) { name == "sections_" }
-    val featureTypeCase_ = findField(section) { name == "featureTypeCase_" }
-    val toRemove =
-        setOf("IMAGE_BRAND_AD_FIELD_NUMBER", "VIDEO_BRAND_AD_FIELD_NUMBER").map {
-          findField(section) { name == it }.get(null) as Int
-        }
+    val browsePage =
+        Page(
+            structure = "com.spotify.browsita.v1.resolved.BrowseStructure",
+            section = "com.spotify.browsita.v1.resolved.Section",
+            field = "sectionTypeCase_",
+            toRemove = setOf("BRAND_ADS_FIELD_NUMBER"))
 
-    findMethod(homeStructure) { returnType == sections_.type }
-        .hookBefore {
-          @Suppress("UNCHECKED_CAST")
-          val sections = sections_.get(it.thisObject) as MutableList<Any>
-          // See source code of ProtobufArrayList at
-          // https://github.com/protocolbuffers/protobuf/blob/main/java/core/src/main/java/com/google/protobuf/ProtobufArrayList.java
-          findField(sections::class.java, true) { type == Boolean::class.java }.set(sections, true)
-          // Set sections mutable
-          sections.removeIf { toRemove.contains(featureTypeCase_.get(it)) }
-        }
+    for (page in listOf(homePage, browsePage)) {
+      val structure = loader.loadClass(page.structure)
+      val section = loader.loadClass(page.section)
+
+      val sections_ = findField(structure) { name == "sections_" }
+      val featureTypeCase_ = findField(section) { name == page.field }
+      val toRemove = page.toRemove.map { findField(section) { name == it }.get(null) as Int }
+
+      findMethod(structure) { returnType == sections_.type }
+          .hookBefore {
+            @Suppress("UNCHECKED_CAST")
+            val sections = sections_.get(it.thisObject) as MutableList<Any>
+            // See source code of ProtobufArrayList at
+            // https://github.com/protocolbuffers/protobuf/blob/main/java/core/src/main/java/com/google/protobuf/ProtobufArrayList.java
+            findField(sections::class.java, true) { type == Boolean::class.java }
+                .set(sections, true)
+            // Set sections mutable
+            sections.removeIf { toRemove.contains(featureTypeCase_.get(it)) }
+          }
+    }
 
     // Remove premium upsell
     val fetchMessageRequest =
@@ -174,8 +198,11 @@ object SpotifyHook : BaseHook() {
           if ((entityUri.get(request) as String).startsWith("upsell")) {
             purchaseAllowed.set(request, false)
           }
-          Log.d("${request}")
         }
+
+    // Skip AD track
+    // val contextTrackBuilder = loader.loadClass("com.spotify.player.model.ContextTrack\$Builder")
+    // val contextTrack = loader.loadClass("com.spotify.player.model.ContextTrack")
 
     isInit = true
   }
