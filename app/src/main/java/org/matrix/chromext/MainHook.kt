@@ -17,6 +17,7 @@ import org.matrix.chromext.hook.PreferenceHook
 import org.matrix.chromext.hook.SpotifyHook
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
+import org.matrix.chromext.hook.XHSHook
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findMethodOrNull
 import org.matrix.chromext.utils.hookAfter
@@ -61,6 +62,11 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     if (lpparam.packageName == "com.spotify.music") {
       SpotifyHook.loader = PathClassLoader(lpparam.appInfo.sourceDir, lpparam.classLoader)
       initHooks(SpotifyHook)
+      return
+    }
+    if (lpparam.packageName == "com.xingin.xhs") {
+      XHSHook.loader = PathClassLoader(lpparam.appInfo.sourceDir, lpparam.classLoader)
+      initHooks(XHSHook)
       return
     }
     if (supportedPackages.contains(lpparam.packageName)) {
