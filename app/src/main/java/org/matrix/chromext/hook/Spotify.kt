@@ -13,6 +13,20 @@ object SpotifyHook : BaseHook() {
       val toRemove: Set<String>
   )
 
+  val myPlan =
+      mapOf(
+          "planColor_" to "#1ED760",
+      )
+
+  val myPremiumPlanRow =
+      mapOf(
+          "premiumPlanShortName_" to "LSPosed",
+          "premiumPlanColor_" to "#1ED760",
+          // "subscriptionProvider_" to 1,
+          // "subscriptionType_" to 1,
+          // "planTier_" to 2,
+      )
+
   val stateOverride =
       mapOf(
           // Disables player and app ads.
@@ -41,7 +55,15 @@ object SpotifyHook : BaseHook() {
           // Removes the premium button in the nav-bar for tablet users.
           "tablet-free" to false,
           "ad-session-persistence" to false,
-      )
+          "allow-live-events" to false,
+          "name" to "Spotify Premium",
+          "catalogue" to "premium",
+          "has-been-premium-mini" to true,
+          "high-bitrate" to true,
+          "allow-advertising-id-transmission" to false,
+          "exclude-from-marketing-and-advertising" to true,
+          "ab-ad-player-targeting" to false,
+          "is-eligible-premium-unboxing" to true)
 
   override fun init() {
 
@@ -62,6 +84,9 @@ object SpotifyHook : BaseHook() {
               Log.d("Key ${key} not found in productState")
             }
           }
+          // for ((key, value) in state) {
+          //   Log.d("${key} [${value_.get(value).javaClass}] ${value_.get(value)}")
+          // }
         }
 
     // Enable trackRows view in artist page
@@ -200,9 +225,29 @@ object SpotifyHook : BaseHook() {
           }
         }
 
-    // Skip AD track
-    // val contextTrackBuilder = loader.loadClass("com.spotify.player.model.ContextTrack\$Builder")
-    // val contextTrack = loader.loadClass("com.spotify.player.model.ContextTrack")
+    // Spoof premium plan row view
+    val premiumPlanRow = loader.loadClass("com.spotify.pamviewservice.v1.proto.PremiumPlanRow")
+    premiumPlanRow.declaredMethods
+        .filter { it.name != "dynamicMethod" && it.name != "parser" }
+        .forEach {
+          it.hookBefore {
+            val currentRow = it.thisObject
+            for ((key, value) in myPremiumPlanRow) {
+              val field = findField(premiumPlanRow) { name == key }
+              if (field.get(currentRow) == value) return@hookBefore
+              field.set(currentRow, value)
+            }
+          }
+        }
+
+    // Spoof plan overview view
+    val plan = loader.loadClass("com.spotify.pam.v2.Plan")
+    val defaultPlan = findField(plan) { name == "DEFAULT_INSTANCE" }.get(null)
+
+    for ((key, value) in myPlan) {
+      val field = findField(plan) { name == key }
+      field.set(defaultPlan, value)
+    }
 
     isInit = true
   }
