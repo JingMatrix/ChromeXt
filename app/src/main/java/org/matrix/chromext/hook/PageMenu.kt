@@ -83,8 +83,10 @@ object PageMenuHook : BaseHook() {
     }
 
     findMethod(proxy.chromeTabbedActivity) {
-          // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
-          parameterTypes contentDeepEquals arrayOf(Int::class.java, Boolean::class.java) &&
+          // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu, ? triggeringMotion)
+          (parameterCount == 2 || parameterCount == 3) &&
+              parameterTypes[0] == Int::class.java &&
+              parameterTypes[1] == Boolean::class.java &&
               returnType == Boolean::class.java
         }
         .hookBefore {
@@ -94,8 +96,10 @@ object PageMenuHook : BaseHook() {
         }
 
     findMethod(proxy.customTabActivity) {
-          // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu)
-          parameterTypes contentDeepEquals arrayOf(Int::class.java, Boolean::class.java) &&
+          // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu, ? triggeringMotion)
+          (parameterCount == 2 || parameterCount == 3) &&
+              parameterTypes[0] == Int::class.java &&
+              parameterTypes[1] == Boolean::class.java &&
               returnType == Boolean::class.java
         }
         .hookBefore {
