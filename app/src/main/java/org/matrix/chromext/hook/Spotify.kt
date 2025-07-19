@@ -16,15 +16,7 @@ object SpotifyHook : BaseHook() {
   val myPlan =
       mapOf(
           "planColor_" to "#1ED760",
-      )
-
-  val myPremiumPlanRow =
-      mapOf(
-          "premiumPlanShortName_" to "LSPosed",
-          "premiumPlanColor_" to "#1ED760",
-          // "subscriptionProvider_" to 1,
-          // "subscriptionType_" to 1,
-          // "planTier_" to 2,
+          "planName_" to "JingMatrix",
       )
 
   val stateOverride =
@@ -222,21 +214,6 @@ object SpotifyHook : BaseHook() {
           val request = it.thisObject
           if ((entityUri.get(request) as String).startsWith("upsell")) {
             purchaseAllowed.set(request, false)
-          }
-        }
-
-    // Spoof premium plan row view
-    val premiumPlanRow = loader.loadClass("com.spotify.pamviewservice.v1.proto.PremiumPlanRow")
-    premiumPlanRow.declaredMethods
-        .filter { it.name != "dynamicMethod" && it.name != "parser" }
-        .forEach {
-          it.hookBefore {
-            val currentRow = it.thisObject
-            for ((key, value) in myPremiumPlanRow) {
-              val field = findField(premiumPlanRow) { name == key }
-              if (field.get(currentRow) == value) return@hookBefore
-              field.set(currentRow, value)
-            }
           }
         }
 
