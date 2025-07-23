@@ -10,7 +10,7 @@ We hook the `onUpdateUrl` function in [UserScript.kt](app/src/main/java/org/matr
 add URL comparison there and evaluate JavaScript using the `javascript:` scheme (or DevTools Protocol when possible).
 
 Chromium based browsers,
-such as [Egde](https://www.microsoft.com/en-us/edge/download),
+such as ~~[Edge](https://www.microsoft.com/en-us/edge/download),~~
 [Bromite](https://github.com/bromite/bromite),
 [Samsung Internet](https://en.wikipedia.org/wiki/Samsung_Internet),
 and [Brave](https://github.com/brave/brave-browser), are fully supported.
@@ -79,8 +79,8 @@ From the three dots page menu, ChromeXt offers you the
 1. `Developer tools` menu for the UserScript manager front end,
 2. `Eruda console` menu for other pages.
 
-For `Edge` browser, these menus are moved to the page info menu,
-which locates at the left corner inside the URL input bar.
+~~For `Edge` browser, these menus are moved to the page info menu,
+which locates at the left corner inside the URL input bar.~~
 
 For WebView based browsers and _Samsung Internet_, these menu items are presented in the context menu.
 

@@ -57,13 +57,10 @@ object PreferenceProxy {
             returnType == preference
       }
   val addPreferencesFromResource =
-      preferenceFragmentCompat.declaredMethods
-          .filter {
-            it.parameterTypes contentDeepEquals arrayOf(Int::class.java) &&
-                it.returnType == Void.TYPE
-            // There exist other methods with the same signatures
-          }
-          .first()
+      preferenceFragmentCompat.declaredMethods.find {
+        it.parameterTypes contentDeepEquals arrayOf(Int::class.java) && it.returnType == Void.TYPE
+        // There exist other methods with the same signatures
+      }!!
 
   private fun loopOverSuperClass(base: Class<*>, condition: (Class<*>) -> Boolean): Class<*> {
     if (condition(base)) {

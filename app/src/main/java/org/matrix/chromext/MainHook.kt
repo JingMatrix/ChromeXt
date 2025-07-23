@@ -69,7 +69,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                 }
                 .onFailure {
                   initHooks(ContextMenuHook)
-                  if (BuildConfig.DEBUG && !Chrome.isSamsung) Log.ex(it)
+                  if (BuildConfig.DEBUG && !(Chrome.isSamsung || Chrome.isEdge)) Log.ex(it)
                 }
           }
     } else {
