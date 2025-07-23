@@ -83,7 +83,12 @@ object UserScriptProxy {
               } else {
                 startIndex = minOf(startIndex, alterStartIndex)
               }
-              slice(startIndex..endIndex - 1).find { it.type == Boolean::class.java }!!
+              val possibleTarget =
+                  slice(startIndex..endIndex - 1).find { it.type == Boolean::class.java }
+              if (possibleTarget == null) {
+                startIndex = indexOfFirst { it.type == webContents }
+                slice(startIndex..size - 1).find { it.type == Boolean::class.java }!!
+              } else possibleTarget
             } else target
           }
           .also { it.isAccessible = true }
