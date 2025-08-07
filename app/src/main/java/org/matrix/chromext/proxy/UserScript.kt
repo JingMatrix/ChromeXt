@@ -2,7 +2,7 @@ package org.matrix.chromext.proxy
 
 import android.net.Uri
 import android.view.ContextThemeWrapper
-import android.view.View.OnAttachStateChangeListener
+import java.lang.reflect.Modifier
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
@@ -74,21 +74,13 @@ object UserScriptProxy {
             val target = find { it.name == "mIsLoading" }
             if (target == null) {
               val webContents = Chrome.load("org.chromium.content_public.browser.WebContents")
-              var startIndex = indexOfFirst { it.type == webContents }
-              var endIndex = indexOfFirst { it.type == OnAttachStateChangeListener::class.java }
-              var alterStartIndex = indexOfFirst { it.type == loadUrlParams }
-              if (endIndex < startIndex && endIndex < alterStartIndex) endIndex = size - 1
-              if (startIndex < endIndex && alterStartIndex < endIndex) {
-                startIndex = maxOf(startIndex, alterStartIndex)
-              } else {
-                startIndex = minOf(startIndex, alterStartIndex)
-              }
-              val possibleTarget =
-                  slice(startIndex..endIndex - 1).find { it.type == Boolean::class.java }
-              if (possibleTarget == null) {
-                startIndex = indexOfFirst { it.type == webContents }
-                slice(startIndex..size - 1).find { it.type == Boolean::class.java }!!
-              } else possibleTarget
+              val startIndex =
+                  maxOf(
+                      indexOfFirst { it.type == webContents },
+                      indexOfFirst { it.type == loadUrlParams })
+              slice(startIndex..size - 1).find {
+                it.type == Boolean::class.java && !Modifier.isStatic(it.modifiers)
+              }!!
             } else target
           }
           .also { it.isAccessible = true }
