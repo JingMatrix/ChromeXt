@@ -21,6 +21,32 @@ import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.Local
 import org.matrix.chromext.utils.*
 
+enum class AppMenuItemType(val value: Int) {
+  /** Regular Android menu item that contains a title and an icon if icon is specified. */
+  STANDARD(0),
+
+  /**
+   * Menu item that has two buttons, the first one is a title and the second one is an icon. It is
+   * different from the regular menu item because it contains two separate buttons.
+   */
+  TITLE_BUTTON(1),
+
+  /**
+   * Menu item that has multiple buttons (no more than 5). Every one of these buttons is displayed
+   * as an icon.
+   */
+  BUTTON_ROW(2),
+
+  /** A divider item to distinguish between menu item groupings. */
+  DIVIDER(3),
+
+  /**
+   * The number of menu item types specified above. If you add a menu item type you MUST increment
+   * this.
+   */
+  NUM_ENTRIES(4)
+}
+
 object readerMode {
   val ID = 31415926
 
@@ -37,7 +63,8 @@ object readerMode {
         .java
         .declaredMethods
         .filter {
-          // There exist other methods with the same signatures, which might be tryShowingPrompt
+          // There exist other methods with the same signatures,
+		  // which might be tryShowingPrompt
           it.parameterTypes.size == 0 &&
               !Modifier.isStatic(it.modifiers) &&
               it.returnType == Void.TYPE &&
@@ -205,7 +232,7 @@ object PageMenuHook : BaseHook() {
       MenuInflater(ctx).inflate(R.menu.main_menu, menu)
 
       // Show items with indices in main_menu.xml
-      val toShow = mutableListOf<Int>(1)
+      val toShow = mutableListOf<Int>(1) // Reversed index in main_menu
 
       if (isDevToolsFrontEnd(url)) {
         toShow.clear()
@@ -260,6 +287,15 @@ object PageMenuHook : BaseHook() {
 
     if (prepareMenu == null && maybeAddDividerLine == null) return
 
+    val buildModelForStandardMenuItem =
+        findMethod(appMenuPropertiesDelegateImpl) {
+          parameterTypes contentDeepEquals
+              arrayOf(Int::class.java, Int::class.java, Int::class.java) &&
+              returnType == proxy.propertyModel
+        }
+    // public PropertyModel buildModelForStandardMenuItem(
+    // @IdRes int id, @StringRes int titleId, @DrawableRes int iconResId)
+
     val MVCListAdapter_ModelList = maybeAddDividerLine!!.parameterTypes.first()
     val mItems = findField(MVCListAdapter_ModelList, true) { type == ArrayList::class.java }
 
@@ -279,6 +315,8 @@ object PageMenuHook : BaseHook() {
     // private MVCListAdapter.ListItem buildNewIncognitoTabItem()
     val MVCListAdapter_ListItem = buildNewIncognitoTabItem.returnType
     val model = findField(MVCListAdapter_ListItem) { type == proxy.propertyModel }
+    val mType = findField(MVCListAdapter_ListItem) { type == Int::class.java }
+    // the original field name was "type"
 
     val mData = findField(proxy.propertyModel) { type == Map::class.java }
 
@@ -292,32 +330,83 @@ object PageMenuHook : BaseHook() {
           val ctx = mContext.get(it.thisObject) as Context
 
           Resource.enrich(ctx)
-          @Suppress("UNCHECKED_CAST") val items = mItems.get(it.result) as ArrayList<Any>
+          val url = getUrl()
+
+          @Suppress("UNCHECKED_CAST") val menuModels = mItems.get(it.result) as MutableList<Any>
 
           @Suppress("UNCHECKED_CAST")
-          val iconModels = mData.get(model.get(items[0])) as Map<Any, Any?>
-          @Suppress("UNCHECKED_CAST")
+          val iconModels = mData.get(model.get(menuModels[0])) as Map<Any, Any?>
           val additionalIcons =
-              mItems.get(
-                  iconModels.entries
-                      .find { it.key.toString() == "ADDITIONAL_ICONS" }!!
-                      .let {
-                        val _value = it.value!!::class.java.declaredFields[0]
-                        _value.get(it.value)
-                      }) as ArrayList<Any>
-          @Suppress("UNCHECKED_CAST")
-          val pageInfoModel = mData.get(model.get(additionalIcons[3])) as Map<Any, Any?>
-          pageInfoModel.forEach {
-            if (it.value == null) {
-              return@forEach
-            }
-            val _value = it.value!!::class.java.declaredFields[0].also { it.setAccessible(true) }
-            if (it.key.toString() == "MENU_ITEM_ID") {
-              _value.set(it.value, readerMode.ID)
-            } else if (it.key.toString() == "ICON") {
-              _value.set(it.value, ctx.resources.getDrawable(R.drawable.ic_book, null))
+              iconModels.entries
+                  .find { it.key.toString() == "ADDITIONAL_ICONS" }
+                  ?.let {
+                    val _value = it.value!!::class.java.declaredFields[0]
+                    _value.get(it.value)
+                  }
+          if (additionalIcons != null && !Chrome.isBrave) {
+            @Suppress("UNCHECKED_CAST") val icons = mItems.get(additionalIcons) as ArrayList<Any>
+            @Suppress("UNCHECKED_CAST")
+            val pageInfoModel = mData.get(model.get(icons[3])) as Map<Any, Any?>
+            pageInfoModel.forEach {
+              if (it.value == null) {
+                return@forEach
+              }
+              val _value = it.value!!::class.java.declaredFields[0].also { it.setAccessible(true) }
+              if (it.key.toString() == "MENU_ITEM_ID") {
+                _value.set(it.value, readerMode.ID)
+              } else if (it.key.toString() == "ICON") {
+                _value.set(it.value, ctx.resources.getDrawable(R.drawable.ic_book, null))
+              }
             }
           }
+
+          val skip = menuModels.size <= 10 || isChromeScheme(url)
+          if (skip && !isUserScript(url)) return@hookAfter
+
+          val localMenus =
+              listOf(
+                  buildModelForStandardMenuItem.invoke(
+                      it.thisObject,
+                      R.id.developer_tools_id,
+                      R.string.main_menu_developer_tools,
+                      R.drawable.ic_devtools),
+                  buildModelForStandardMenuItem.invoke(
+                      it.thisObject,
+                      R.id.extension_id,
+                      R.string.main_menu_extension,
+                      R.drawable.ic_extension),
+                  buildModelForStandardMenuItem.invoke(
+                      it.thisObject,
+                      R.id.install_script_id,
+                      R.string.main_menu_install_script,
+                      R.drawable.ic_install_script),
+                  buildModelForStandardMenuItem.invoke(
+                      it.thisObject,
+                      R.id.eruda_console_id,
+                      R.string.main_menu_eruda_console,
+                      R.drawable.ic_devtools))
+
+          val menusToAdd = mutableListOf<Any>()
+
+          val itemConstuctor = MVCListAdapter_ListItem.declaredConstructors[0]
+          if (isChromeXtFrontEnd(url)) {
+            menusToAdd.add(
+                itemConstuctor.newInstance(AppMenuItemType.STANDARD.value, localMenus[0]))
+            menusToAdd.add(
+                itemConstuctor.newInstance(AppMenuItemType.STANDARD.value, localMenus[1]))
+          } else if (isUserScript(url)) {
+            menusToAdd.add(
+                itemConstuctor.newInstance(AppMenuItemType.STANDARD.value, localMenus[2]))
+          } else {
+            menusToAdd.add(
+                itemConstuctor.newInstance(AppMenuItemType.STANDARD.value, localMenus[3]))
+          }
+
+          val injectPosition =
+              menuModels
+                  .filter { mType.get(it) == AppMenuItemType.DIVIDER.value }[2]
+                  .let { menuModels.indexOf(it) }
+          menuModels.addAll(injectPosition + 1, menusToAdd)
         }
   }
 }
