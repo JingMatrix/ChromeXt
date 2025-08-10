@@ -126,153 +126,198 @@ object PageMenuHook : BaseHook() {
             // public AppMenuPropertiesDelegate createAppMenuPropertiesDelegate()
             .hookAfter {
               findMenuHook!!.unhook()
-              val appMenuPropertiesDelegateImpl = it.result::class.java.superclass as Class<*>
-              // Can be found by searching `Android.PrepareMenu`
               val tabbedAppMenuPropertiesDelegate = it.result::class.java
-
-              val parameters = appMenuPropertiesDelegateImpl.declaredConstructors[0].parameterTypes
-
-              val mContext =
-                  findField(appMenuPropertiesDelegateImpl, true) { type == parameters[0] }
-              mContext.setAccessible(true)
-
-              val mActivityTabProvider =
-                  findField(appMenuPropertiesDelegateImpl, true) { type == parameters[1] }
-              mActivityTabProvider.setAccessible(true)
-
-              if (Chrome.isBrave) {
-                // Brave browser replaces the first row menu with class AppMenuIconRowFooter,
-                // and it customize the menu by onFooterViewInflated() function in
-                // https://github.com/brave/brave-core/blob/master/android/java/
-                // org/chromium/chrome/browser/appmenu/BraveTabbedAppMenuPropertiesDelegate.java
-                findMethod(tabbedAppMenuPropertiesDelegate, true) {
-                      parameterTypes.size == 2 && getParameterTypes()[1] == View::class.java
-                    }
-                    // public void onFooterViewInflated(AppMenuHandler appMenuHandler, View view)
-                    .hookAfter {
-                      val appMenuIconRowFooter = it.args[1] as LinearLayout
-                      val bookmarkButton =
-                          (appMenuIconRowFooter.getChildAt(1) as LinearLayout).getChildAt(1)
-                              as ImageButton
-                      bookmarkButton.setVisibility(View.VISIBLE)
-                      val ctx = mContext.get(it.thisObject) as Context
-                      Resource.enrich(ctx)
-                      bookmarkButton.setImageResource(R.drawable.ic_book)
-                      bookmarkButton.setId(readerMode.ID)
-                    }
-              }
-
-              val prepareMenu =
-                  findMethodOrNull(appMenuPropertiesDelegateImpl, true) {
-                    parameterTypes.size == 2 &&
-                        parameterTypes.first() == Menu::class.java &&
-                        returnType == Void.TYPE &&
-                        !Modifier.isStatic(modifiers) &&
-                        !Modifier.isAbstract(modifiers)
-                  }
-              // public void prepareMenu(Menu menu, AppMenuHandler handler)
-              if (prepareMenu == null) {
-                val maybeAddDividerLine =
-                    findMethod(tabbedAppMenuPropertiesDelegate) {
-                      parameterTypes.size == 2 &&
-                          parameterTypes[1] == Int::class.java &&
-                          returnType == Void.TYPE &&
-                          !Modifier.isAbstract(modifiers)
-                    }
-                val listAdapter_ModelList = maybeAddDividerLine.parameterTypes.first()
-                val mItems =
-                    findField(listAdapter_ModelList, true) { type == ArrayList::class.java }
-                findMethod(tabbedAppMenuPropertiesDelegate) {
-                      parameterTypes.size == 0 && returnType == listAdapter_ModelList
-                    }
-                    .hookAfter {
-						 @Suppress("UNCHECKED_CAST")
-                      val items = mItems.get(it.result) as ArrayList<Any>
-                      items.forEach { Log.d("${it}") }
-                    }
-              } else {
-                prepareMenu.hookAfter inflate@{
-                  val tabProvider = mActivityTabProvider.get(it.thisObject)!!
-                  Chrome.updateTab(tabProvider.invokeMethod { name == "get" })
-                  val ctx = mContext.get(it.thisObject) as Context
-                  Resource.enrich(ctx)
-
-                  val menu = it.args[0] as Menu
-                  val url = getUrl()
-
-                  val iconRowMenu = menu.getItem(0)
-                  if (iconRowMenu.hasSubMenu() && !Chrome.isBrave) {
-                    val infoMenu = iconRowMenu.getSubMenu()!!.getItem(3)
-                    infoMenu.setIcon(R.drawable.ic_book)
-                    infoMenu.setEnabled(true)
-                    val mId = infoMenu::class.java.getDeclaredField("mId")
-                    mId.setAccessible(true)
-                    mId.set(infoMenu, readerMode.ID)
-                    mId.setAccessible(false)
-                  }
-
-                  val mItems = menu::class.java.getDeclaredField("mItems")
-                  mItems.setAccessible(true)
-
-                  @Suppress("UNCHECKED_CAST") val items = mItems.get(menu) as ArrayList<MenuItem>
-
-                  val skip = items.filter { it.isVisible() }.size <= 10 || isChromeScheme(url)
-                  // Inflate only for the main_menu, which has more than visible 10 items at least
-
-                  if (skip && !isUserScript(url)) return@inflate
-                  MenuInflater(ctx).inflate(R.menu.main_menu, menu)
-
-                  // Show items with indices in main_menu.xml
-                  val toShow = mutableListOf<Int>(1)
-
-                  if (isDevToolsFrontEnd(url)) {
-                    toShow.clear()
-                  }
-
-                  if (isUserScript(url)) {
-                    toShow.clear()
-                    toShow.add(2)
-                    if (skip) {
-                      // Show this menu for local preview pages (Custom Tab) of UserScripts
-                      items.find { it.itemId == R.id.install_script_id }?.setVisible(true)
-                      mItems.setAccessible(false)
-                      return@inflate
-                    }
-                  }
-
-                  if (isChromeXtFrontEnd(url)) {
-                    toShow.clear()
-                    toShow.addAll(listOf(3, 4))
-                  }
-
-                  if (!Chrome.isVivaldi &&
-                      ctx.resources.configuration.smallestScreenWidthDp >=
-                          DisplayMetrics.DENSITY_XXHIGH &&
-                      toShow.size == 1 &&
-                      toShow.first() == 1) {
-                    iconRowMenu.setVisible(true)
-                  }
-
-                  val position =
-                      items
-                          .withIndex()
-                          .filter {
-                            ctx.resources
-                                .getResourceName(it.value.getItemId())
-                                .endsWith("id/divider_line_id")
-                          }
-                          .map { it.index }[1]
-
-                  toShow.forEach {
-                    val newMenuItem: MenuItem = items[items.size - it]
-                    newMenuItem.setVisible(true)
-                    items.add(position + 1, newMenuItem)
-                  }
-                  for (i in 0..3) items.removeLast()
-                  mItems.setAccessible(false)
-                }
-              }
+              inflateAppMenu(tabbedAppMenuPropertiesDelegate)
             }
+
     isInit = true
+  }
+
+  fun inflateAppMenu(tabbedAppMenuPropertiesDelegate: Class<*>) {
+    val proxy = PageMenuProxy
+    val appMenuPropertiesDelegateImpl = tabbedAppMenuPropertiesDelegate.superclass as Class<*>
+    // Can be found by searching `Android.PrepareMenu`
+
+    val parameters = appMenuPropertiesDelegateImpl.declaredConstructors[0].parameterTypes
+    val mContext = findField(appMenuPropertiesDelegateImpl, true) { type == parameters[0] }
+    val mActivityTabProvider =
+        findField(appMenuPropertiesDelegateImpl, true) { type == parameters[1] }
+
+    if (Chrome.isBrave) {
+      // Brave browser replaces the first row menu with class AppMenuIconRowFooter,
+      // and it customize the menu by onFooterViewInflated() function in
+      // https://github.com/brave/brave-core/blob/master/android/java/
+      // org/chromium/chrome/browser/appmenu/BraveTabbedAppMenuPropertiesDelegate.java
+      findMethod(tabbedAppMenuPropertiesDelegate, true) {
+            parameterTypes.size == 2 && getParameterTypes()[1] == View::class.java
+          }
+          // public void onFooterViewInflated(AppMenuHandler appMenuHandler, View view)
+          .hookAfter {
+            val appMenuIconRowFooter = it.args[1] as LinearLayout
+            val bookmarkButton =
+                (appMenuIconRowFooter.getChildAt(1) as LinearLayout).getChildAt(1) as ImageButton
+            bookmarkButton.setVisibility(View.VISIBLE)
+            val ctx = mContext.get(it.thisObject) as Context
+            Resource.enrich(ctx)
+            bookmarkButton.setImageResource(R.drawable.ic_book)
+            bookmarkButton.setId(readerMode.ID)
+          }
+    }
+
+    val prepareMenu =
+        findMethodOrNull(appMenuPropertiesDelegateImpl, true) {
+          parameterTypes.size == 2 &&
+              parameterTypes.first() == Menu::class.java &&
+              returnType == Void.TYPE &&
+              !Modifier.isStatic(modifiers) &&
+              !Modifier.isAbstract(modifiers)
+        }
+    // public void prepareMenu(Menu menu, AppMenuHandler handler)
+
+    prepareMenu?.hookAfter prepare@{
+      val tabProvider = mActivityTabProvider.get(it.thisObject)!!
+      Chrome.updateTab(tabProvider.invokeMethod { name == "get" })
+      val ctx = mContext.get(it.thisObject) as Context
+      Resource.enrich(ctx)
+
+      val menu = it.args[0] as Menu
+      val url = getUrl()
+
+      val iconRowMenu = menu.getItem(0)
+      if (iconRowMenu.hasSubMenu() && !Chrome.isBrave) {
+        val infoMenu = iconRowMenu.getSubMenu()!!.getItem(3)
+        infoMenu.setIcon(R.drawable.ic_book)
+        infoMenu.setEnabled(true)
+        val mId = infoMenu::class.java.getDeclaredField("mId")
+        mId.setAccessible(true)
+        mId.set(infoMenu, readerMode.ID)
+        mId.setAccessible(false)
+      }
+
+      val mItems = menu::class.java.getDeclaredField("mItems").also { it.setAccessible(true) }
+
+      @Suppress("UNCHECKED_CAST") val items = mItems.get(menu) as ArrayList<MenuItem>
+
+      val skip = items.filter { it.isVisible() }.size <= 10 || isChromeScheme(url)
+      // Inflate only for the main_menu, which has more than visible 10 items at least
+
+      if (skip && !isUserScript(url)) return@prepare
+      MenuInflater(ctx).inflate(R.menu.main_menu, menu)
+
+      // Show items with indices in main_menu.xml
+      val toShow = mutableListOf<Int>(1)
+
+      if (isDevToolsFrontEnd(url)) {
+        toShow.clear()
+      }
+
+      if (isUserScript(url)) {
+        toShow.clear()
+        toShow.add(2)
+        if (skip) {
+          // Show this menu for local preview pages (Custom Tab) of UserScripts
+          items.find { it.itemId == R.id.install_script_id }?.setVisible(true)
+          return@prepare
+        }
+      }
+
+      if (isChromeXtFrontEnd(url)) {
+        toShow.clear()
+        toShow.addAll(listOf(3, 4))
+      }
+
+      if (!Chrome.isVivaldi &&
+          ctx.resources.configuration.smallestScreenWidthDp >= DisplayMetrics.DENSITY_XXHIGH &&
+          toShow.size == 1 &&
+          toShow.first() == 1) {
+        iconRowMenu.setVisible(true)
+      }
+
+      val position =
+          items
+              .withIndex()
+              .filter {
+                ctx.resources.getResourceName(it.value.getItemId()).endsWith("id/divider_line_id")
+              }
+              .map { it.index }[1]
+
+      toShow.forEach {
+        val newMenuItem: MenuItem = items[items.size - it]
+        newMenuItem.setVisible(true)
+        items.add(position + 1, newMenuItem)
+      }
+      for (i in 0..3) items.removeLast()
+    }
+
+    val maybeAddDividerLine =
+        findMethodOrNull(tabbedAppMenuPropertiesDelegate) {
+          parameterTypes.size == 2 &&
+              parameterTypes[1] == Int::class.java &&
+              returnType == Void.TYPE &&
+              !Modifier.isAbstract(modifiers)
+        }
+    // private void maybeAddDividerLine(MVCListAdapter.ModelList modelList, @IdRes int id)
+
+    if (prepareMenu == null && maybeAddDividerLine == null) return
+
+    val MVCListAdapter_ModelList = maybeAddDividerLine!!.parameterTypes.first()
+    val mItems = findField(MVCListAdapter_ModelList, true) { type == ArrayList::class.java }
+
+    val excludedReturnValuesForModelItem =
+        arrayOf(
+            MVCListAdapter_ModelList,
+            Int::class.java,
+            Boolean::class.java,
+            Void.TYPE,
+            View::class.java)
+    val buildNewIncognitoTabItem =
+        findMethod(tabbedAppMenuPropertiesDelegate) {
+          parameterTypes.size == 0 &&
+              !Modifier.isStatic(modifiers) &&
+              !excludedReturnValuesForModelItem.contains(returnType)
+        }
+    // private MVCListAdapter.ListItem buildNewIncognitoTabItem()
+    val MVCListAdapter_ListItem = buildNewIncognitoTabItem.returnType
+    val model = findField(MVCListAdapter_ListItem) { type == proxy.propertyModel }
+
+    val mData = findField(proxy.propertyModel) { type == Map::class.java }
+
+    findMethod(tabbedAppMenuPropertiesDelegate) {
+          parameterTypes.size == 0 && returnType == MVCListAdapter_ModelList
+        }
+        // public MVCListAdapter.ModelList buildMenuModelList()
+        .hookAfter {
+          val tabProvider = mActivityTabProvider.get(it.thisObject)!!
+          Chrome.updateTab(tabProvider.invokeMethod { name == "get" })
+          val ctx = mContext.get(it.thisObject) as Context
+
+          Resource.enrich(ctx)
+          @Suppress("UNCHECKED_CAST") val items = mItems.get(it.result) as ArrayList<Any>
+
+          @Suppress("UNCHECKED_CAST")
+          val iconModels = mData.get(model.get(items[0])) as Map<Any, Any?>
+          @Suppress("UNCHECKED_CAST")
+          val additionalIcons =
+              mItems.get(
+                  iconModels.entries
+                      .find { it.key.toString() == "ADDITIONAL_ICONS" }!!
+                      .let {
+                        val _value = it.value!!::class.java.declaredFields[0]
+                        _value.get(it.value)
+                      }) as ArrayList<Any>
+          @Suppress("UNCHECKED_CAST")
+          val pageInfoModel = mData.get(model.get(additionalIcons[3])) as Map<Any, Any?>
+          pageInfoModel.forEach {
+            if (it.value == null) {
+              return@forEach
+            }
+            val _value = it.value!!::class.java.declaredFields[0].also { it.setAccessible(true) }
+            if (it.key.toString() == "MENU_ITEM_ID") {
+              _value.set(it.value, readerMode.ID)
+            } else if (it.key.toString() == "ICON") {
+              _value.set(it.value, ctx.resources.getDrawable(R.drawable.ic_book, null))
+            }
+          }
+        }
   }
 }
