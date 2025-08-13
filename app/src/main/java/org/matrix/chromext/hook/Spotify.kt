@@ -30,7 +30,8 @@ object SpotifyHook : BaseHook() {
           "shuffle" to false,
           // Allows playing any song on-demand, without a shuffled order.
           "on-demand" to true,
-          // Enable Spotify Connect and disable other premium related UI, like buying premium.
+          // Enable Spotify Connect and disable other premium related UI, like buying
+          // premium.
           // It also removes the download button.
           "type" to "premium",
           // Make sure playing songs is not disabled remotely and playlists show up.
@@ -38,7 +39,8 @@ object SpotifyHook : BaseHook() {
           // Allows adding songs to queue and removes the smart shuffle mode restriction,
           // allowing to pick any of the other modes.
           "pick-and-shuffle" to false,
-          // Disables shuffle-mode streaming-rule, which forces songs to be played shuffled.
+          // Disables shuffle-mode streaming-rule, which forces songs to be played
+          // shuffled.
           "streaming-rules" to "",
           // Enables premium UI in settings and removes the premium button in the nav-bar.
           "nft-disabled" to "1",
@@ -53,7 +55,6 @@ object SpotifyHook : BaseHook() {
           "has-been-premium-mini" to true,
           "high-bitrate" to true,
           "allow-advertising-id-transmission" to false,
-          "exclude-from-marketing-and-advertising" to true,
           "ab-ad-player-targeting" to false,
           "is-eligible-premium-unboxing" to true)
 
@@ -121,7 +122,8 @@ object SpotifyHook : BaseHook() {
                         it.args[1] == "remove_ads_upsell_enabled") {
                       it.result = false
                     }
-                    // Log.d("(${it.args[0]}, ${it.args[1]}, ${it.args[2]}) => ${it.result}")
+                    // Log.d("(${it.args[0]}, ${it.args[1]}, ${it.args[2]}) =>
+                    // ${it.result}")
                   }
             }
 
@@ -225,6 +227,27 @@ object SpotifyHook : BaseHook() {
       val field = findField(plan) { name == key }
       field.set(defaultPlan, value)
     }
+
+    // Remove create button
+    val storytellingContainerFragment =
+        loader.loadClass(
+            "com.spotify.campaigns.storytelling.container.StorytellingContainerFragment")
+    findMethod(
+            findField(storytellingContainerFragment) {
+                  findMethodOrNull(type) { returnType == Enum::class.java } != null
+                }
+                .type) {
+              parameterTypes contentDeepEquals
+                  arrayOf(String::class.java, String::class.java, Enum::class.java) &&
+                  returnType == Enum::class.java
+            }
+        .hookBefore {
+          if (it.args[0] == "android-playlist-creation-createplaylistmenuimpl" &&
+              it.args[1] == "create_button_position") {
+            it.result = it.args[2]
+            Log.d("${it.args[1]} set to ${it.args[2]}")
+          }
+        }
 
     isInit = true
   }
