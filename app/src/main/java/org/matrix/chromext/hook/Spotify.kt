@@ -53,7 +53,6 @@ object SpotifyHook : BaseHook() {
           "has-been-premium-mini" to true,
           "high-bitrate" to true,
           "allow-advertising-id-transmission" to false,
-          "exclude-from-marketing-and-advertising" to true,
           "ab-ad-player-targeting" to false,
           "is-eligible-premium-unboxing" to true)
 
@@ -225,6 +224,29 @@ object SpotifyHook : BaseHook() {
       val field = findField(plan) { name == key }
       field.set(defaultPlan, value)
     }
+
+    // Remove create button
+    var configurationServiceFinder: Unhook? = null
+    configurationServiceFinder =
+        findMethod(localFilesProperties) { name == "parse" }
+            .hookBefore {
+              configurationServiceFinder?.unhook()
+              val configurationService = it.args[0]::class.java
+              // implemented interface com.spotify.remoteconfig.runtime.PropertyParser
+
+              findMethod(configurationService) {
+                    parameterTypes contentDeepEquals
+                        arrayOf(String::class.java, String::class.java, Enum::class.java) &&
+                        returnType == Enum::class.java
+                  }
+                  .hookBefore {
+                    if (it.args[0] == "android-playlist-creation-createplaylistmenuimpl" &&
+                        it.args[1] == "create_button_position") {
+                      it.result = it.args[2]
+                      Log.d("${it.args[1]} set to ${it.args[2]}")
+                    }
+                  }
+            }
 
     isInit = true
   }
