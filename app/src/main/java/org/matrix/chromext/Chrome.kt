@@ -160,7 +160,9 @@ object Chrome {
 
   fun getContext(): Context {
     if (Chrome.isSamsung) return mContext!!.get()!!
-    val activity = getTab()?.invokeMethod { name == "getContext" } as Context?
+    val activity =
+        getTab()?.invokeMethod { name == "getContext" || returnType == Context::class.java }
+            as Context?
     if (activity != null && mContext == null) init(activity, activity.packageName)
     return activity ?: mContext!!.get()!!
   }
