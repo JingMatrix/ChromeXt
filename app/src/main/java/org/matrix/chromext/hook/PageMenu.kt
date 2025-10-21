@@ -340,6 +340,7 @@ object PageMenuHook : BaseHook() {
               iconModels.entries
                   .find { it.key.toString() == "ADDITIONAL_ICONS" }
                   ?.let {
+                    it.value ?: return@let null
                     val _value = it.value!!::class.java.declaredFields[0]
                     _value.get(it.value)
                   }
