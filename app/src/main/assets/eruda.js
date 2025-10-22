@@ -316,14 +316,31 @@ eruda.Resources = class extends eruda.Resources {
   }
   refreshCommand() {
     this._command = ChromeXt.commands.filter((m) => m.enabled);
-    const commands = this._command
-      .map(function (cmd, index) {
-        let title = cmd.title.toString();
-        if (typeof cmd.title == "function") {
-          title = cmd.title(index);
-        }
-        return `<span data-index=${index} class="${c("command")}">${title}</span>`;
+    const commands = Map.groupBy(this._command
+        .map(function (cmd, index) {
+          cmd["index"] = index;
+          return cmd;
+        }),
+      function (cmd) {
+        return cmd.id
       })
+      .entries()
+      .map(function (entry) {
+        let cmds = entry[1]
+          .map(function (cmd) {
+            let title = cmd.title.toString();
+            if (typeof cmd.title == "function") {
+              title = cmd.title(cmd.index);
+            }
+            return `<span data-index="${cmd.index}" class="${c("command")}">${title}</span>`;
+          })
+          .join("")
+        return `<div class="${c("command-group")}">` +
+                  `<h3 class="${c("title")}">${entry[0].split(':').at(-1)}</h3>` +
+                  `${cmds}` +
+                `</div>`;
+      })
+      .toArray()
       .join("");
     this._$command.html(
       `<h2 class="${c("title")}">UserScript Commands</h2>` +

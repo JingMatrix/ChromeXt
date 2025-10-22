@@ -163,7 +163,7 @@ h2.eruda-title {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-around;
-  > span {
+  .eruda-command {
     padding: 0.3em;
     margin: 0.3em;
     border: 0.5px solid violet;
