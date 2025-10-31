@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import de.robv.android.xposed.XC_MethodHook.Unhook
 import java.lang.reflect.Modifier
 import java.util.ArrayList
+import java.util.LinkedHashSet
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 import org.matrix.chromext.R
@@ -47,6 +48,19 @@ enum class AppMenuItemType(val value: Int) {
   NUM_ENTRIES(4)
 }
 
+enum class EntryPoint(val value: Int) {
+  UNKNOWN(0),
+
+  /** The user opened reader mode through an app message. */
+  MESSAGE(1),
+
+  /** The user opened reader mode through the app menu. */
+  APP_MENU(2),
+
+  /** The user opened reader mode through the toolbar button. */
+  TOOLBAR_BUTTON(3),
+}
+
 object readerMode {
   val ID = 31415926
 
@@ -55,22 +69,22 @@ object readerMode {
     val observers = (PageMenuProxy.mObservers.get(Chrome.getTab()) as Iterable<Any>).toList()
     val readerModeManager =
         observers.find {
-          it::class.java.interfaces.size == 1 &&
+          findFieldOrNull(it::class.java) {
+            type == LinkedHashSet::class.java && Modifier.isStatic(modifiers)
+          } != null &&
               findFieldOrNull(it::class.java) { type == PageMenuProxy.propertyModel } != null
         }!!
 
     readerModeManager::class
         .java
         .declaredMethods
-        .filter {
-          // There exist other methods with the same signatures,
-          // which might be tryShowingPrompt
-          it.parameterTypes.size == 0 &&
+        .find {
+          // public void activateReaderMode(@EntryPoint int entryPoint)
+          it.parameterTypes contentEquals arrayOf(Int::class.java) &&
               !Modifier.isStatic(it.modifiers) &&
-              it.returnType == Void.TYPE &&
-              it.name != "destroy"
+              it.returnType == Void.TYPE
         }
-        .forEach { it.invoke(readerModeManager) }
+        ?.invoke(readerModeManager, EntryPoint.UNKNOWN.value)
   }
 }
 
