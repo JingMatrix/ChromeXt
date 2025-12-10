@@ -38,14 +38,20 @@ enum class AppMenuItemType(val value: Int) {
    */
   BUTTON_ROW(2),
 
+  /** Menu item that when contains submenus. */
+  MENU_ITEM_WITH_SUBMENU(3),
+
+  /** The header for submenus when submenus are displayed in drilldown. */
+  SUBMENU_HEADER(4),
+
   /** A divider item to distinguish between menu item groupings. */
-  DIVIDER(3),
+  DIVIDER(5),
 
   /**
    * The number of menu item types specified above. If you add a menu item type you MUST increment
    * this.
    */
-  NUM_ENTRIES(4)
+  NUM_ENTRIES(6)
 }
 
 enum class EntryPoint(val value: Int) {
