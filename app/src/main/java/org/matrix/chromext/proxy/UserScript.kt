@@ -84,6 +84,7 @@ object UserScriptProxy {
             } else target
           }
           .also { it.isAccessible = true }
+  val getUrl = findMethodOrNull(tabImpl) { returnType == gURL }
   val loadUrl =
       findMethod(if (Chrome.isSamsung) tabWebContentsDelegateAndroidImpl else tabImpl) {
         parameterTypes contentDeepEquals arrayOf(loadUrlParams) &&

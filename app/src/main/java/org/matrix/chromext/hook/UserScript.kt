@@ -103,13 +103,16 @@ object UserScriptHook : BaseHook() {
     }
 
     findMethod(if (Chrome.isSamsung) proxy.tabImpl else proxy.tabWebContentsDelegateAndroidImpl) {
-          name == "onUpdateUrl"
+          name == "onUpdateUrl" || name == "onUpdateTargetUrl"
         }
-        // public void onUpdateUrl(GURL url)
+        // public void onUpdateTargetUrl(GURL url)
         .hookAfter {
           val tab = proxy.getTab(it.thisObject)!!
           if (!Chrome.isSamsung) Chrome.updateTab(tab)
-          val url = proxy.parseUrl(it.args[0])!!
+          var url = proxy.parseUrl(it.args[0])!!
+          if (url.isEmpty() && proxy.getUrl != null) {
+            url = proxy.parseUrl(proxy.getUrl(tab))!!
+          }
           val isLoading = proxy.mIsLoading.get(tab) as Boolean
           if (!url.startsWith("chrome") && isLoading) {
             ScriptDbManager.invokeScript(url)
