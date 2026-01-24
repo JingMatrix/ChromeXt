@@ -180,7 +180,7 @@ object PageMenuHook : BaseHook() {
     isInit = true
   }
 
-  fun inflateAppMenu(tabbedAppMenuPropertiesDelegate: Class<*>) {
+  fun inflateAppMenu(tabbedAppMenuPropertiesDelegate: Class<*>): Unhook {
     val proxy = PageMenuProxy
     val appMenuPropertiesDelegateImpl = tabbedAppMenuPropertiesDelegate.superclass as Class<*>
     // Can be found by searching `Android.PrepareMenu`
@@ -221,81 +221,85 @@ object PageMenuHook : BaseHook() {
         }
     // public void prepareMenu(Menu menu, AppMenuHandler handler)
 
-    prepareMenu?.hookAfter prepare@{
-      val tabProvider = mActivityTabProvider.get(it.thisObject)!!
-      Chrome.updateTab(tabProvider.invokeMethod { name == "get" })
-      val ctx = mContext.get(it.thisObject) as Context
-      Resource.enrich(ctx)
+    if (prepareMenu != null)
+        return prepareMenu.hookAfter prepare@{
+          val tabProvider = mActivityTabProvider.get(it.thisObject)!!
+          Chrome.updateTab(tabProvider.invokeMethod { name == "get" })
+          val ctx = mContext.get(it.thisObject) as Context
+          Resource.enrich(ctx)
 
-      val menu = it.args[0] as Menu
-      val url = getUrl()
+          val menu = it.args[0] as Menu
+          val url = getUrl()
 
-      val iconRowMenu = menu.getItem(0)
-      if (iconRowMenu.hasSubMenu() && !Chrome.isBrave) {
-        val infoMenu = iconRowMenu.getSubMenu()!!.getItem(3)
-        infoMenu.setIcon(R.drawable.ic_book)
-        infoMenu.setEnabled(true)
-        val mId = infoMenu::class.java.getDeclaredField("mId")
-        mId.setAccessible(true)
-        mId.set(infoMenu, readerMode.ID)
-        mId.setAccessible(false)
-      }
+          val iconRowMenu = menu.getItem(0)
+          if (iconRowMenu.hasSubMenu() && !Chrome.isBrave) {
+            val infoMenu = iconRowMenu.getSubMenu()!!.getItem(3)
+            infoMenu.setIcon(R.drawable.ic_book)
+            infoMenu.setEnabled(true)
+            val mId = infoMenu::class.java.getDeclaredField("mId")
+            mId.setAccessible(true)
+            mId.set(infoMenu, readerMode.ID)
+            mId.setAccessible(false)
+          }
 
-      val mItems = menu::class.java.getDeclaredField("mItems").also { it.setAccessible(true) }
+          val mItems = menu::class.java.getDeclaredField("mItems").also { it.setAccessible(true) }
 
-      @Suppress("UNCHECKED_CAST") val items = mItems.get(menu) as ArrayList<MenuItem>
+          @Suppress("UNCHECKED_CAST") val items = mItems.get(menu) as ArrayList<MenuItem>
 
-      val skip = items.filter { it.isVisible() }.size <= 10 || isChromeScheme(url)
-      // Inflate only for the main_menu, which has more than visible 10 items at least
+          val skip = items.filter { it.isVisible() }.size <= 10 || isChromeScheme(url)
+          // Inflate only for the main_menu, which has more than visible 10 items at least
 
-      if (skip && !isUserScript(url)) return@prepare
-      MenuInflater(ctx).inflate(R.menu.main_menu, menu)
+          if (skip && !isUserScript(url)) return@prepare
+          MenuInflater(ctx).inflate(R.menu.main_menu, menu)
 
-      // Show items with indices in main_menu.xml
-      val toShow = mutableListOf<Int>(1) // Reversed index in main_menu
+          // Show items with indices in main_menu.xml
+          val toShow = mutableListOf<Int>(1) // Reversed index in main_menu
 
-      if (isDevToolsFrontEnd(url)) {
-        toShow.clear()
-      }
+          if (isDevToolsFrontEnd(url)) {
+            toShow.clear()
+          }
 
-      if (isUserScript(url)) {
-        toShow.clear()
-        toShow.add(2)
-        if (skip) {
-          // Show this menu for local preview pages (Custom Tab) of UserScripts
-          items.find { it.itemId == R.id.install_script_id }?.setVisible(true)
-          return@prepare
+          if (isUserScript(url)) {
+            toShow.clear()
+            toShow.add(2)
+            if (skip) {
+              // Show this menu for local preview pages (Custom Tab) of UserScripts
+              items.find { it.itemId == R.id.install_script_id }?.setVisible(true)
+              return@prepare
+            }
+          }
+
+          if (isChromeXtFrontEnd(url)) {
+            toShow.clear()
+            toShow.addAll(listOf(3, 4))
+          }
+
+          if (!Chrome.isVivaldi &&
+              ctx.resources.configuration.smallestScreenWidthDp >= DisplayMetrics.DENSITY_XXHIGH &&
+              toShow.size == 1 &&
+              toShow.first() == 1) {
+            iconRowMenu.setVisible(true)
+          }
+
+          val position =
+              items
+                  .withIndex()
+                  .filter {
+                    ctx.resources
+                        .getResourceName(it.value.getItemId())
+                        .endsWith("id/divider_line_id")
+                  }
+                  .map { it.index }[1]
+
+          toShow.forEach {
+            val newMenuItem: MenuItem = items[items.size - it]
+            newMenuItem.setVisible(true)
+            items.add(position + 1, newMenuItem)
+          }
+          for (i in 0..3) items.removeLast()
         }
-      }
 
-      if (isChromeXtFrontEnd(url)) {
-        toShow.clear()
-        toShow.addAll(listOf(3, 4))
-      }
-
-      if (!Chrome.isVivaldi &&
-          ctx.resources.configuration.smallestScreenWidthDp >= DisplayMetrics.DENSITY_XXHIGH &&
-          toShow.size == 1 &&
-          toShow.first() == 1) {
-        iconRowMenu.setVisible(true)
-      }
-
-      val position =
-          items
-              .withIndex()
-              .filter {
-                ctx.resources.getResourceName(it.value.getItemId()).endsWith("id/divider_line_id")
-              }
-              .map { it.index }[1]
-
-      toShow.forEach {
-        val newMenuItem: MenuItem = items[items.size - it]
-        newMenuItem.setVisible(true)
-        items.add(position + 1, newMenuItem)
-      }
-      for (i in 0..3) items.removeLast()
-    }
-
+    // Inflate for MVC UI model
     val maybeAddDividerLine =
         findMethodOrNull(tabbedAppMenuPropertiesDelegate) {
           parameterTypes.size == 2 &&
@@ -304,8 +308,6 @@ object PageMenuHook : BaseHook() {
               !Modifier.isAbstract(modifiers)
         }
     // private void maybeAddDividerLine(MVCListAdapter.ModelList modelList, @IdRes int id)
-
-    if (prepareMenu == null && maybeAddDividerLine == null) return
 
     val buildModelForStandardMenuItem =
         findMethod(appMenuPropertiesDelegateImpl) {
@@ -340,7 +342,7 @@ object PageMenuHook : BaseHook() {
 
     val mData = findField(proxy.propertyModel) { type == Map::class.java }
 
-    findMethod(tabbedAppMenuPropertiesDelegate) {
+    return findMethod(tabbedAppMenuPropertiesDelegate) {
           parameterTypes.size == 0 && returnType == MVCListAdapter_ModelList
         }
         // public MVCListAdapter.ModelList buildMenuModelList()
