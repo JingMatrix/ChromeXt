@@ -13,19 +13,12 @@ object SpotifyHook : BaseHook() {
       val toRemove: Set<String>
   )
 
-  val myPlan =
-      mapOf(
-          "planColor_" to "#1ED760",
-          "planName_" to "JingMatrix",
-      )
-
   val stateOverride =
       mapOf(
           // Disables player and app ads.
           "ads" to false,
           // Works along on-demand, allows playing any song without restriction.
           "player-license" to "premium",
-          "player-license-v2" to "premium",
           // Disables shuffle being initially enabled when first playing a playlist.
           "shuffle" to false,
           // Allows playing any song on-demand, without a shuffled order.
@@ -46,15 +39,7 @@ object SpotifyHook : BaseHook() {
           "can_use_superbird" to true,
           // Removes the premium button in the nav-bar for tablet users.
           "tablet-free" to false,
-          "ad-session-persistence" to false,
-          "allow-live-events" to false,
-          "name" to "Spotify Premium",
-          "catalogue" to "premium",
-          "has-been-premium-mini" to true,
-          "high-bitrate" to true,
-          "allow-advertising-id-transmission" to false,
-          "ab-ad-player-targeting" to false,
-          "is-eligible-premium-unboxing" to true)
+      )
 
   override fun init() {
 
@@ -171,7 +156,12 @@ object SpotifyHook : BaseHook() {
             structure = "com.spotify.home.evopage.homeapi.proto.HomeStructure",
             section = "com.spotify.home.evopage.homeapi.proto.Section",
             field = "featureTypeCase_",
-            toRemove = setOf("IMAGE_BRAND_AD_FIELD_NUMBER", "VIDEO_BRAND_AD_FIELD_NUMBER"))
+            toRemove =
+                setOf(
+                    "IMAGE_BRAND_AD_FIELD_NUMBER",
+                    "PREVIEW_FIELD_NUMBER",
+                    "VIDEO_BRAND_AD_FIELD_NUMBER",
+                ))
 
     val browsePage =
         Page(
@@ -186,18 +176,27 @@ object SpotifyHook : BaseHook() {
 
       val sections_ = findField(structure) { name == "sections_" }
       val featureTypeCase_ = findField(section) { name == page.field }
-      val toRemove = page.toRemove.map { findField(section) { name == it }.get(null) as Int }
+      // val sectionInfo_ = findField(section) { name == "sectionInfo_" }
+      val sectionTypes =
+          section.declaredFields
+              .filter { it.name.endsWith("_FIELD_NUMBER") }
+              .associate { field ->
+                field.isAccessible = true
+                val fieldValue = field.get(null)
+                fieldValue to field.name
+              }
 
       findMethod(structure) { returnType == sections_.type }
           .hookBefore {
             @Suppress("UNCHECKED_CAST")
             val sections = sections_.get(it.thisObject) as MutableList<Any>
+
             // See source code of ProtobufArrayList at
             // https://github.com/protocolbuffers/protobuf/blob/main/java/core/src/main/java/com/google/protobuf/ProtobufArrayList.java
             findField(sections::class.java, true) { type == Boolean::class.java }
                 .set(sections, true)
             // Set sections mutable
-            sections.removeIf { toRemove.contains(featureTypeCase_.get(it)) }
+            sections.removeIf { page.toRemove.contains(sectionTypes[featureTypeCase_.get(it)]) }
           }
     }
 
@@ -215,38 +214,6 @@ object SpotifyHook : BaseHook() {
             purchaseAllowed.set(request, false)
           }
         }
-
-    // Spoof plan overview view
-    val plan = loader.loadClass("com.spotify.pam.v2.Plan")
-    val defaultPlan = findField(plan) { name == "DEFAULT_INSTANCE" }.get(null)
-
-    for ((key, value) in myPlan) {
-      val field = findField(plan) { name == key }
-      field.set(defaultPlan, value)
-    }
-
-    // Remove create button
-    var configurationServiceFinder: Unhook? = null
-    configurationServiceFinder =
-        findMethod(localFilesProperties) { name == "parse" }
-            .hookBefore {
-              configurationServiceFinder?.unhook()
-              val configurationService = it.args[0]::class.java
-              // implemented interface com.spotify.remoteconfig.runtime.PropertyParser
-
-              findMethod(configurationService) {
-                    parameterTypes contentDeepEquals
-                        arrayOf(String::class.java, String::class.java, Enum::class.java) &&
-                        returnType == Enum::class.java
-                  }
-                  .hookBefore {
-                    if (it.args[0] == "android-playlist-creation-createplaylistmenuimpl" &&
-                        it.args[1] == "create_button_position") {
-                      it.result = it.args[2]
-                      Log.d("${it.args[1]} set to ${it.args[2]}")
-                    }
-                  }
-            }
 
     isInit = true
   }
