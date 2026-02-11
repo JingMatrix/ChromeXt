@@ -87,14 +87,17 @@ object SpotifyHook : BaseHook() {
         }
 
     // Remove upsell in the context menu of track details
-    val localFilesProperties =
-        loader.loadClass("com.spotify.localfiles.mediastoreimpl.LocalFilesProperties")
-
-    var flagFinder: Unhook? = null
-    flagFinder =
-        findMethod(localFilesProperties) { name == "parse" }
+    // We must first find the obfuscated class com.spotify.remoteconfig.runtime.PropertyParser
+    var propertyParserFinder: Unhook? = null
+    // Find a trampoline by searching smali files ending with `Properties`
+    val trampoline =
+        loader.loadClass(
+            "com.spotify.localfiles.configurationimpl.AndroidLocalFilesConfigurationImplProperties")
+    propertyParserFinder =
+        findMethod(trampoline) { name == "parse" }
             .hookAfter {
-              flagFinder?.unhook()
+              Log.d("Found PropertyParser at ${it.args[0]}}")
+              propertyParserFinder?.unhook()
               findMethod(it.args[0]::class.java) {
                     parameterTypes contentDeepEquals
                         arrayOf(String::class.java, String::class.java, Boolean::class.java) &&
@@ -103,6 +106,10 @@ object SpotifyHook : BaseHook() {
                   .hookAfter {
                     if (it.args[0] == "android-context-menu" &&
                         it.args[1] == "remove_ads_upsell_enabled") {
+                      it.result = false
+                    }
+                    if (it.args[0] == "android-libs-social-listening" &&
+                        it.args[1] == "enable_jam_upsell_in_context_menu_item") {
                       it.result = false
                     }
                     // Log.d("(${it.args[0]}, ${it.args[1]}, ${it.args[2]}) => ${it.result}")
