@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
   id("com.android.application")
   id("org.jetbrains.kotlin.android")
@@ -45,7 +47,12 @@ android {
             "Usability:Icons")
   }
 
-  kotlinOptions { jvmTarget = JavaVersion.VERSION_21.toString() }
+}
+
+kotlin {
+  compilerOptions {
+    jvmTarget = JvmTarget.JVM_21
+  }
 }
 
 dependencies { compileOnly("de.robv.android.xposed:api:82") }
