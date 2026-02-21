@@ -3,6 +3,8 @@ package org.matrix.chromext.hook
 import de.robv.android.xposed.XC_MethodHook.Unhook
 import org.matrix.chromext.utils.*
 
+fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }
+
 object SpotifyHook : BaseHook() {
   var loader = this::class.java.classLoader!!
 
@@ -45,12 +47,16 @@ object SpotifyHook : BaseHook() {
 
     // Spoof product state
     val productStateProto = loader.loadClass("com.spotify.remoteconfig.internal.ProductStateProto")
+    val values_ = findField(productStateProto) { name == "values_" }
     val accountAttribute = loader.loadClass("com.spotify.remoteconfig.internal.AccountAttribute")
     val value_ = findField(accountAttribute) { name == "value_" }
 
-    findMethod(productStateProto) { parameterTypes.size == 0 && returnType == Map::class.java }
+    @Suppress("UNCHECKED_CAST")
+    findMethod(productStateProto) { returnType == productStateProto }
         .hookAfter {
-          @Suppress("UNCHECKED_CAST") val state = it.result as Map<String, Any>
+          val rawData = it.args[0] as ByteArray
+          Log.d("parsing from raw data ${rawData.toHexString()}")
+          val state = values_.get(it.result) as Map<String, Any>
           for ((key, value) in stateOverride) {
             if (state.containsKey(key)) {
               val attribute = state.get(key)
@@ -70,12 +76,12 @@ object SpotifyHook : BaseHook() {
         loader.loadClass("com.spotify.player.model.command.options.PreparePlayOptions")
     val option = findMethod(preparePlayOptions) { name == "configurationOverride" }.returnType
 
+    @Suppress("UNCHECKED_CAST")
     findMethod(option) { name == "containsKey" }
         .hookAfter {
           val FIELD = "checkDeviceCapability"
           if (it.args[0] == "signal" && it.thisObject.toString().contains("${FIELD}=")) {
-            @Suppress("UNCHECKED_CAST") val queryParameter = it.thisObject as Map<String, Any>
-            @Suppress("UNCHECKED_CAST")
+            val queryParameter = it.thisObject as Map<String, Any>
             val store =
                 findField(queryParameter::class.java) { type == Array::class.java }
                     .get(queryParameter) as Array<Any>
@@ -219,6 +225,33 @@ object SpotifyHook : BaseHook() {
           val request = it.thisObject
           if ((entityUri.get(request) as String).startsWith("upsell")) {
             purchaseAllowed.set(request, false)
+          }
+        }
+
+    // Avoid forced logout
+    val sessionState = loader.loadClass("com.spotify.connectivity.sessionstate.SessionState")
+    findMethod(sessionState) { name == "getLogoutReason" }
+        .hookAfter { Log.d("Logout with reason ${it.result}") }
+
+    val response = loader.loadClass("com.spotify.cosmos.cosmos.Response")
+    val status_response = findField(response) { name == "status" }
+    val uri_response = findField(response) { name == "uri" }
+    val body_response = findField(response) { name == "body" }
+    // val getBodyString = findMethod(response) { name == "getBodyString" }
+
+    val resolverCallbackReceiver =
+        loader.loadClass("com.spotify.cosmos.routercallback.ResolverCallbackReceiver")
+    findMethod(resolverCallbackReceiver) { name == "sendOnResolved" }
+        .hookBefore {
+          val res = it.args[0]
+          val status_ = status_response.get(res) as Int
+          val uri_ = uri_response.get(res) as String
+          val body_ = body_response.get(res) as ByteArray
+          val bodyString = body_.filter { it in 32..126 }.map { it.toChar() }.joinToString("")
+          // Log.d("routercallback: ${uri_}", true)
+          if (status_ != 200 || uri_.endsWith("addOnPushedMessageForIdentFilter")) {
+            Log.d("blocked [uri, body]: [$uri_, $bodyString]", true)
+            it.result = true
           }
         }
 
