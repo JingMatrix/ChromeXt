@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-  compileSdk = 34
+  compileSdk = 35
   namespace = "org.matrix.chromext"
 
   defaultConfig {
@@ -44,8 +44,6 @@ android {
             "UnspecifiedRegisterReceiverFlag",
             "Usability:Icons")
   }
-
-  kotlinOptions { jvmTarget = JavaVersion.VERSION_21.toString() }
 }
 
 dependencies { compileOnly("de.robv.android.xposed:api:82") }
