@@ -5,6 +5,9 @@ import org.matrix.chromext.utils.*
 
 fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }
 
+fun ByteArray.toPrintableString() =
+    filter { it in 32..126 }.map { it.toInt().toChar() }.joinToString("")
+
 object SpotifyHook : BaseHook() {
   var loader = this::class.java.classLoader!!
 
@@ -229,6 +232,7 @@ object SpotifyHook : BaseHook() {
         }
 
     // Avoid forced logout
+    var must_logout = false
     val sessionState = loader.loadClass("com.spotify.connectivity.sessionstate.SessionState")
     findMethod(sessionState) { name == "getLogoutReason" }
         .hookAfter { Log.d("Logout with reason ${it.result}") }
@@ -247,11 +251,74 @@ object SpotifyHook : BaseHook() {
           val status_ = status_response.get(res) as Int
           val uri_ = uri_response.get(res) as String
           val body_ = body_response.get(res) as ByteArray
-          val bodyString = body_.filter { it in 32..126 }.map { it.toChar() }.joinToString("")
-          // Log.d("routercallback: ${uri_}", true)
-          if (status_ != 200 || uri_.endsWith("addOnPushedMessageForIdentFilter")) {
+          val bodyString = body_.toPrintableString()
+          if (uri_.endsWith("addOnPushedMessageForIdentFilter")) {
             Log.d("blocked [uri, body]: [$uri_, $bodyString]", true)
             it.result = true
+          }
+          if (status_ != 200 && uri_.contains("auth")) {
+            Log.d("routercallback: [$uri_, $bodyString]", true)
+            must_logout = true
+          }
+        }
+
+    val clientBase = loader.loadClass("com.spotify.esperanto.esperanto.ClientBase")
+    val coroutineClientBase =
+        loader.loadClass("com.spotify.esperanto.esperanto.CoroutineClientBase")
+    val empty = loader.loadClass("com.google.protobuf.Empty")
+    val single = loader.loadClass("io.reactivex.rxjava3.core.Single")
+    val exceptionHelper = loader.loadClass("io.reactivex.rxjava3.internal.util.ExceptionHelper")
+
+    val error_single =
+        findMethod(single) {
+          name == "error" && parameterTypes.size == 1 && parameterTypes[0] == Throwable::class.java
+        }
+    val never_single = findMethod(single) { name == "never" && parameterTypes.size == 0 }
+    val type_protobuf = findMethod(empty) { name == "getDefaultInstanceForType" }.returnType
+    val toByteArray = findMethod(type_protobuf) { name == "toByteArray" }
+    val toByteString = findMethod(type_protobuf) { name == "toByteString" }
+
+    findMethod(clientBase) { name == "callSingle" }
+        .hookBefore {
+          val service = it.args[0] as String
+          val method = it.args[1] as String
+          val payload = toByteArray.invoke(it.args[2]) as ByteArray
+          val payloadString = payload.toPrintableString()
+          // if (service.startsWith("spotify.ads.esperanto")) {
+          //   it.result = error_single.invoke(null, Exception("Blocked via Xposed"))
+          // }
+          if (service.contains("connectivity.auth") || method.contains("Token")) {
+            Log.d("callSingle: $service $method $payloadString", true)
+            // if (method == "removeUser" && !must_logout) it.result = never_single.invoke(null)
+          }
+        }
+
+    // findMethod(exceptionHelper) { returnType == RuntimeException::class.java }
+    //     .hookBefore {
+    //       val exception = it.args[0] as Throwable
+    //       Log.d("Catched $exception")
+    //       it.result = true
+    //     }
+
+    // Search `removeUser` to find this method
+    // findMethod(loader.loadClass("p.lu10")) {
+    //       parameterTypes.size == 2 && parameterTypes[1] == Int::class.java
+    //     }
+    //     .hookBefore {
+    //       if (!must_logout) {
+    //         Log.d("Blocked forced logout")
+    //         it.result = true // Skip original method
+    //       }
+    //     }
+
+    findMethod(coroutineClientBase) { name == "callStream" }
+        .hookBefore {
+          val service = it.args[0] as String
+          val method = it.args[1] as String
+          val payload = toByteArray.invoke(it.args[2]) as ByteArray
+          val payloadString = payload.toPrintableString()
+          if (method == "addOnPushedMessageForIdentFilter") {
+            Log.d("callStream: $service $method $payloadString", true)
           }
         }
 
