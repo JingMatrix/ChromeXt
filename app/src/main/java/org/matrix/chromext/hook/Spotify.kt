@@ -49,29 +49,76 @@ object SpotifyHook : BaseHook() {
   override fun init() {
 
     // Spoof product state
-    val productStateProto = loader.loadClass("com.spotify.remoteconfig.internal.ProductStateProto")
-    val values_ = findField(productStateProto) { name == "values_" }
-    val accountAttribute = loader.loadClass("com.spotify.remoteconfig.internal.AccountAttribute")
-    val value_ = findField(accountAttribute) { name == "value_" }
+    // val productStateProto =
+    // loader.loadClass("com.spotify.remoteconfig.internal.ProductStateProto")
+    // val values_ = findField(productStateProto) { name == "values_" }
+    // val accountAttribute = loader.loadClass("com.spotify.remoteconfig.internal.AccountAttribute")
+    // val value_ = findField(accountAttribute) { name == "value_" }
 
-    @Suppress("UNCHECKED_CAST")
-    findMethod(productStateProto) { returnType == productStateProto }
+    // @Suppress("UNCHECKED_CAST")
+    // findMethod(productStateProto) { returnType == productStateProto }
+    //     .hookAfter {
+    //       val rawData = it.args[0] as ByteArray
+    //       Log.d("parsing from raw data ${rawData.toHexString()}")
+    //       val state = values_.get(it.result) as Map<String, Any>
+    //       for ((key, value) in stateOverride) {
+    //         if (state.containsKey(key)) {
+    //           val attribute = state.get(key)
+    //           Log.d("Overriding ${key}:${value_.get(attribute)} to ${value}")
+    //           value_.set(attribute, value)
+    //         } else {
+    //           Log.d("Key ${key} not found in productState")
+    //         }
+    //       }
+    //       // for ((key, value) in state) {
+    //       //   Log.d("${key} [${value_.get(value).javaClass}] ${value_.get(value)}")
+    //       // }
+    //     }
+
+    val dynamicalStateOverride =
+        mapOf<String, String>(
+            // "ads" to "0",
+            // "player-license" to "premium",
+            "shuffle" to "0",
+            // "on-demand" to "1",
+            "type" to "premium",
+            "streaming" to "1",
+            // "pick-and-shuffle" to "0",
+            // "streaming-rules" to "",
+            "nft-disabled" to "1",
+            "smart-shuffle" to "AVAILABLE",
+        )
+
+    findMethod(LinkedHashMap::class.java) {
+          name == "get" && parameterTypes.size == 1 && returnType == Object::class.java
+        }
         .hookAfter {
-          val rawData = it.args[0] as ByteArray
-          Log.d("parsing from raw data ${rawData.toHexString()}")
-          val state = values_.get(it.result) as Map<String, Any>
-          for ((key, value) in stateOverride) {
-            if (state.containsKey(key)) {
-              val attribute = state.get(key)
-              Log.d("Overriding ${key}:${value_.get(attribute)} to ${value}")
-              value_.set(attribute, value)
-            } else {
-              Log.d("Key ${key} not found in productState")
+          if (it.args[0] is String &&
+              it.result is String &&
+              it.thisObject != dynamicalStateOverride) {
+            if (dynamicalStateOverride.containsKey(it.args[0])) {
+              val newValue = dynamicalStateOverride[it.args[0]]
+              Log.d("Overriding ${it.args[0]}:${it.result} -> ${newValue}")
+              it.result = newValue
             }
           }
-          // for ((key, value) in state) {
-          //   Log.d("${key} [${value_.get(value).javaClass}] ${value_.get(value)}")
-          // }
+        }
+
+    val nativeStateOverride =
+        mapOf<String, String>(
+            "ads" to "0",
+            "player-license" to "premium",
+            "pick-and-shuffle" to "0",
+            "on-demand" to "1",
+            "streaming-rules" to "",
+        )
+
+    val nativeSession = loader.loadClass("com.spotify.connectivity.auth.NativeSession")
+    findMethod(nativeSession) { name == "createNativeSessionWithoutAp" }
+        .hookBefore {
+          val state = it.args[3] as LinkedHashMap<String, String>
+          nativeStateOverride.forEach { entry -> state.put(entry.key, entry.value) }
+          Log.d("createNativeSessionWithoutAp $state")
         }
 
     // Enable trackRows view in artist page
@@ -231,7 +278,7 @@ object SpotifyHook : BaseHook() {
           }
         }
 
-    // Avoid forced logout
+    // Intercept possible productState inconsistency detection mechanism
     var must_logout = false
     val sessionState = loader.loadClass("com.spotify.connectivity.sessionstate.SessionState")
     findMethod(sessionState) { name == "getLogoutReason" }
@@ -241,7 +288,6 @@ object SpotifyHook : BaseHook() {
     val status_response = findField(response) { name == "status" }
     val uri_response = findField(response) { name == "uri" }
     val body_response = findField(response) { name == "body" }
-    // val getBodyString = findMethod(response) { name == "getBodyString" }
 
     val resolverCallbackReceiver =
         loader.loadClass("com.spotify.cosmos.routercallback.ResolverCallbackReceiver")
@@ -252,13 +298,9 @@ object SpotifyHook : BaseHook() {
           val uri_ = uri_response.get(res) as String
           val body_ = body_response.get(res) as ByteArray
           val bodyString = body_.toPrintableString()
-          if (uri_.endsWith("addOnPushedMessageForIdentFilter")) {
-            Log.d("blocked [uri, body]: [$uri_, $bodyString]", true)
+          if (uri_.endsWith("SubValues") || uri_.endsWith("addOnPushedMessageForIdentFilter")) {
+            Log.d("blocked [uri, body]: [$uri_, $bodyString]")
             it.result = true
-          }
-          if (status_ != 200 && uri_.contains("auth")) {
-            Log.d("routercallback: [$uri_, $bodyString]", true)
-            must_logout = true
           }
         }
 
@@ -284,42 +326,12 @@ object SpotifyHook : BaseHook() {
           val method = it.args[1] as String
           val payload = toByteArray.invoke(it.args[2]) as ByteArray
           val payloadString = payload.toPrintableString()
-          // if (service.startsWith("spotify.ads.esperanto")) {
-          //   it.result = error_single.invoke(null, Exception("Blocked via Xposed"))
-          // }
-          if (service.contains("connectivity.auth") || method.contains("Token")) {
-            Log.d("callSingle: $service $method $payloadString", true)
-            // if (method == "removeUser" && !must_logout) it.result = never_single.invoke(null)
+          if (service.startsWith("spotify.ads") || method == "writeProductStateToLegacyStorage") {
+            Log.d("blocked callSingle: $service $method $payloadString")
+            it.result = error_single.invoke(null, Exception("Blocked via Xposed"))
           }
-        }
-
-    // findMethod(exceptionHelper) { returnType == RuntimeException::class.java }
-    //     .hookBefore {
-    //       val exception = it.args[0] as Throwable
-    //       Log.d("Catched $exception")
-    //       it.result = true
-    //     }
-
-    // Search `removeUser` to find this method
-    // findMethod(loader.loadClass("p.lu10")) {
-    //       parameterTypes.size == 2 && parameterTypes[1] == Int::class.java
-    //     }
-    //     .hookBefore {
-    //       if (!must_logout) {
-    //         Log.d("Blocked forced logout")
-    //         it.result = true // Skip original method
-    //       }
-    //     }
-
-    findMethod(coroutineClientBase) { name == "callStream" }
-        .hookBefore {
-          val service = it.args[0] as String
-          val method = it.args[1] as String
-          val payload = toByteArray.invoke(it.args[2]) as ByteArray
-          val payloadString = payload.toPrintableString()
-          if (method == "addOnPushedMessageForIdentFilter") {
-            Log.d("callStream: $service $method $payloadString", true)
-          }
+          // if (service.contains("connectivity.auth") || method.contains("Token")) {}
+          // if (method == "removeUser" && !must_logout) it.result = never_single.invoke(null)
         }
 
     isInit = true
