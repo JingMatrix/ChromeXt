@@ -144,11 +144,49 @@ object UserScriptProxy {
     } else if (packed::class.java == String::class.java) {
       return packed as String
     } else if (packed::class.java == loadUrlParams) {
-      val mUrl = loadUrlParams.getDeclaredField("a")
-      return mUrl.get(packed) as String
+      // Try to find URL field with common names
+      val possibleFieldNames = listOf("a", "mUrl", "url", "mSpec", "spec")
+      for (fieldName in possibleFieldNames) {
+        try {
+          val field = loadUrlParams.getDeclaredField(fieldName)
+          field.isAccessible = true
+          val value = field.get(packed)
+          if (value is String) {
+            return value
+          }
+        } catch (e: Exception) {
+          // Ignore and try next
+        }
+      }
+      // Fall back to original approach
+      try {
+        val mUrl = loadUrlParams.getDeclaredField("a")
+        return mUrl.get(packed) as String
+      } catch (e: Exception) {
+        Log.ex(e)
+      }
     } else if (packed::class.java == gURL) {
-      val mSpec = gURL.getDeclaredField("a")
-      return mSpec.get(packed) as String
+      // Try to find URL field with common names
+      val possibleFieldNames = listOf("a", "mSpec", "spec", "mUrl", "url")
+      for (fieldName in possibleFieldNames) {
+        try {
+          val field = gURL.getDeclaredField(fieldName)
+          field.isAccessible = true
+          val value = field.get(packed)
+          if (value is String) {
+            return value
+          }
+        } catch (e: Exception) {
+          // Ignore and try next
+        }
+      }
+      // Fall back to original approach
+      try {
+        val mSpec = gURL.getDeclaredField("a")
+        return mSpec.get(packed) as String
+      } catch (e: Exception) {
+        Log.ex(e)
+      }
     }
     Log.e("parseUrl: ${packed::class.java} is not ${loadUrlParams.name} nor ${gURL.name}")
     return null
@@ -163,9 +201,20 @@ object UserScriptProxy {
         if (Chrome.isSamsung) {
           urlParams.invokeMethod(header) { name == "setVerbatimHeaders" }
         } else {
-          val mVerbatimHeaders =
-              loadUrlParams.declaredFields.filter { it.type == String::class.java }[1]
-          mVerbatimHeaders.set(urlParams, header)
+          // Try to find verbatim headers field with multiple approaches
+          val possibleFieldNames = listOf("verbatimHeaders", "mVerbatimHeaders", "headers")
+          var mVerbatimHeaders = loadUrlParams.declaredFields.firstOrNull { 
+            possibleFieldNames.contains(it.name) && it.type == String::class.java 
+          }
+          if (mVerbatimHeaders == null) {
+            // Fall back to index-based approach
+            val stringFields = loadUrlParams.declaredFields.filter { it.type == String::class.java }
+            mVerbatimHeaders = if (stringFields.size > 1) stringFields[1] else stringFields.firstOrNull()
+          }
+          mVerbatimHeaders?.let {
+            it.isAccessible = true
+            it.set(urlParams, header)
+          }
         }
         return true
       }
