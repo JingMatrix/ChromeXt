@@ -21,46 +21,75 @@ object PageInfoHook : BaseHook() {
     var controller: Any? = null
     val proxy = PageInfoProxy
 
-    fun addErudaRow(url: String): ViewGroup {
-      val infoRow =
-          proxy.pageInfoRowView.declaredConstructors[0].newInstance(Chrome.getContext(), null)
-              as ViewGroup
-      infoRow.setVisibility(View.VISIBLE)
-      val icon = proxy.mIcon.get(infoRow) as ImageView
-      icon.setImageResource(R.drawable.ic_devtools)
-      val subTitle = proxy.mSubtitle.get(infoRow) as TextView
-      (subTitle.getParent() as? ViewGroup)?.removeView(subTitle)
-      val title = proxy.mTitle.get(infoRow) as TextView
-      if (isChromeXtFrontEnd(url)) {
-        title.setText(R.string.main_menu_developer_tools)
-        infoRow.setOnClickListener {
-          Listener.on("inspectPages")
-          controller!!.invokeMethod() { name == "destroy" }
+    fun addErudaRow(url: String): ViewGroup? {
+      return try {
+        val constructor = proxy.pageInfoRowView.declaredConstructors.firstOrNull {
+          it.parameterTypes.size == 2 &&
+          it.parameterTypes[0] == android.content.Context::class.java
+        } ?: proxy.pageInfoRowView.declaredConstructors[0]
+        
+        val infoRow =
+            constructor.newInstance(Chrome.getContext(), null)
+                as ViewGroup
+        infoRow.setVisibility(View.VISIBLE)
+        
+        val icon = proxy.mIcon.get(infoRow) as? ImageView
+        icon?.setImageResource(R.drawable.ic_devtools)
+        
+        val subTitle = proxy.mSubtitle.get(infoRow) as? TextView
+        (subTitle?.getParent() as? ViewGroup)?.removeView(subTitle)
+        
+        val title = proxy.mTitle.get(infoRow) as? TextView ?: return null
+        if (isChromeXtFrontEnd(url)) {
+          title.setText(R.string.main_menu_developer_tools)
+          infoRow.setOnClickListener {
+            Listener.on("inspectPages")
+            controller?.invokeMethod { name == "destroy" }
+          }
+        } else if (isUserScript(url)) {
+          title.setText(R.string.main_menu_install_script)
+          infoRow.setOnClickListener {
+            val sandBoxed = shouldBypassSandbox(url)
+            Chrome.evaluateJavascript(listOf("Symbol.installScript(true);"), null, null, sandBoxed)
+            controller?.invokeMethod { name == "destroy" }
+          }
+        } else {
+          title.setText(R.string.main_menu_eruda_console)
+          infoRow.setOnClickListener {
+            UserScriptProxy.evaluateJavascript(Local.openEruda)
+            controller?.invokeMethod { name == "destroy" }
+          }
         }
-      } else if (isUserScript(url)) {
-        title.setText(R.string.main_menu_install_script)
-        infoRow.setOnClickListener {
-          val sandBoxed = shouldBypassSandbox(url)
-          Chrome.evaluateJavascript(listOf("Symbol.installScript(true);"), null, null, sandBoxed)
-          controller!!.invokeMethod() { name == "destroy" }
-        }
-      } else {
-        title.setText(R.string.main_menu_eruda_console)
-        infoRow.setOnClickListener {
-          UserScriptProxy.evaluateJavascript(Local.openEruda)
-          controller!!.invokeMethod() { name == "destroy" }
-        }
+        infoRow
+      } catch (e: Exception) {
+        Log.ex(e)
+        null
       }
-      return infoRow
     }
 
-    proxy.pageInfoControllerRef.declaredConstructors[0].hookAfter { controller = it.thisObject }
+    try {
+      proxy.pageInfoControllerRef.declaredConstructors[0].hookAfter { controller = it.thisObject }
+    } catch (e: Exception) {
+      Log.ex(e)
+    }
 
-    proxy.pageInfoController.declaredConstructors[0].hookAfter {
-      val url = Chrome.getUrl()!!
-      if (isChromeScheme(url) || controller == null) return@hookAfter
-      (proxy.mRowWrapper.get(proxy.mView.get(it.thisObject)) as LinearLayout).addView(
-          addErudaRow(url))
+    try {
+      proxy.pageInfoController.declaredConstructors[0].hookAfter {
+        val url = Chrome.getUrl() ?: return@hookAfter
+        if (isChromeScheme(url) || controller == null) return@hookAfter
+        try {
+          val view = proxy.mView.get(it.thisObject)
+          val rowWrapper = proxy.mRowWrapper.get(view) as? LinearLayout
+          val erudaRow = addErudaRow(url)
+          if (rowWrapper != null && erudaRow != null) {
+            rowWrapper.addView(erudaRow)
+          }
+        } catch (e: Exception) {
+          Log.ex(e)
+        }
+      }
+    } catch (e: Exception) {
+      Log.ex(e)
     }
 
     // readerMode.init(Chrome.load("org.chromium.chrome.browser.dom_distiller.ReaderModeManager"))
