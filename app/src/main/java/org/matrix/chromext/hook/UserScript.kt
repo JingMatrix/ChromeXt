@@ -102,6 +102,19 @@ object UserScriptHook : BaseHook() {
           .onFailure { if (BuildConfig.DEBUG) Log.ex(it) }
     }
 
+    if (proxy.mIsLoading == null) {
+      // The field could not be located, keep track of the loading state ourselves. The name of
+      // loadingStateChanged is preserved by the obfuscation since it is called from the native
+      // side.
+      runCatching {
+            findMethod(proxy.tabWebContentsDelegateAndroidImpl) { name == "loadingStateChanged" }
+                // public void loadingStateChanged(boolean toDifferentDocument)
+                .hookAfter { proxy.setLoading(proxy.getTab(it.thisObject), it.args[0] as Boolean) }
+            proxy.startTrackingLoadingState()
+          }
+          .onFailure { Log.ex(it, "Fail to track the loading state of tabs") }
+    }
+
     findMethod(if (Chrome.isSamsung) proxy.tabImpl else proxy.tabWebContentsDelegateAndroidImpl) {
           name == "onUpdateUrl" || name == "onUpdateTargetUrl"
         }
@@ -113,8 +126,7 @@ object UserScriptHook : BaseHook() {
           if (url.isEmpty() && proxy.getUrl != null) {
             url = proxy.parseUrl(proxy.getUrl(tab))!!
           }
-          val isLoading = proxy.mIsLoading.get(tab) as Boolean
-          if (!url.startsWith("chrome") && isLoading) {
+          if (!url.startsWith("chrome") && proxy.isLoading(tab)) {
             ScriptDbManager.invokeScript(url)
           }
         }

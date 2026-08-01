@@ -122,8 +122,9 @@ object PageMenuHook : BaseHook() {
         "org.matrix.chromext:id/eruda_console_id" ->
             UserScriptProxy.evaluateJavascript(Local.openEruda)
         "${ctx.packageName}:id/reload_menu_id" -> {
-          val isLoading = proxy.mIsLoading.get(Chrome.getTab()) as Boolean
-          if (!isLoading) return Listener.on("userAgentSpoof", getUrl()) != null
+          val tab = Chrome.getTab()
+          if (tab != null && !UserScriptProxy.isLoading(tab))
+              return Listener.on("userAgentSpoof", getUrl()) != null
         }
       }
       return false

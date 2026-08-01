@@ -2,7 +2,10 @@ package org.matrix.chromext.proxy
 
 import android.net.Uri
 import android.view.ContextThemeWrapper
+import java.lang.reflect.Field
 import java.lang.reflect.Modifier
+import java.util.Collections
+import java.util.WeakHashMap
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
@@ -46,27 +49,33 @@ object UserScriptProxy {
         Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
       }
   private val getId = findMethodOrNull(tabImpl) { name == "getId" }
-  private val mId =
-      (if (Chrome.isSamsung) tabWebContentsDelegateAndroidImpl else tabImpl)
-          .declaredFields
-          .run {
-            val target = find { it.name == "mId" }
-            if (target == null) {
-              val profile = Chrome.load("org.chromium.chrome.browser.profiles.Profile")
-              val windowAndroid = Chrome.load("org.chromium.ui.base.WindowAndroid")
-              var startIndex = indexOfFirst { it.type == gURL }
-              val endIndex = indexOfFirst {
-                it.type == profile ||
-                    it.type == ContextThemeWrapper::class.java ||
-                    it.type == windowAndroid
-              }
-              if (startIndex == -1 || startIndex > endIndex) startIndex = 0
-              slice(startIndex..endIndex - 1).findLast { it.type == Int::class.java }!!
-            } else target
-          }
-          .also { it.isAccessible = true }
+  // Resolved lazily: the heuristic below relies on the declaration order of the fields, which no
+  // longer survives the renaming done by recent Chromium releases. It is dead weight anyway as soon
+  // as the getId method is found, so it must not break the initialization of this object.
+  private val mId: Field by lazy {
+    (if (Chrome.isSamsung) tabWebContentsDelegateAndroidImpl else tabImpl)
+        .declaredFields
+        .run {
+          val target = find { it.name == "mId" }
+          if (target == null) {
+            val profile = Chrome.load("org.chromium.chrome.browser.profiles.Profile")
+            val windowAndroid = Chrome.load("org.chromium.ui.base.WindowAndroid")
+            var startIndex = indexOfFirst { it.type == gURL }
+            val endIndex = indexOfFirst {
+              it.type == profile ||
+                  it.type == ContextThemeWrapper::class.java ||
+                  it.type == windowAndroid
+            }
+            if (startIndex == -1 || startIndex > endIndex) startIndex = 0
+            slice(startIndex..endIndex - 1).findLast { it.type == Int::class.java }!!
+          } else target
+        }
+        .also { it.isAccessible = true }
+  }
   val mTab = findField(tabWebContentsDelegateAndroidImpl) { type == tabImpl }
-  val mIsLoading =
+  // Null when the field cannot be located, in which case the loading state is tracked by hooking
+  // the loadingStateChanged method, see UserScriptHook.
+  val mIsLoading: Field? =
       tabImpl.declaredFields
           .run {
             // mIsLoading is used in method stopLoading, before calling
@@ -78,12 +87,17 @@ object UserScriptProxy {
                   maxOf(
                       indexOfFirst { it.type == webContents },
                       indexOfFirst { it.type == loadUrlParams })
-              slice(startIndex..size - 1).find {
-                it.type == Boolean::class.java && !Modifier.isStatic(it.modifiers)
-              }!!
+              if (startIndex == -1) null
+              else
+                  slice(startIndex..size - 1).find {
+                    it.type == Boolean::class.java && !Modifier.isStatic(it.modifiers)
+                  }
             } else target
           }
-          .also { it.isAccessible = true }
+          ?.also { it.isAccessible = true }
+
+  private val loadingTabs = Collections.newSetFromMap(WeakHashMap<Any, Boolean>())
+  private var trackLoadingState = false
   val getUrl = findMethodOrNull(tabImpl) { returnType == gURL }
   val loadUrl =
       findMethod(if (Chrome.isSamsung) tabWebContentsDelegateAndroidImpl else tabImpl) {
@@ -96,6 +110,24 @@ object UserScriptProxy {
   private fun loadUrl(url: String, tab: Any? = Chrome.getTab()) {
     if (!Chrome.isSamsung && !Chrome.checkTab(tab)) return
     loadUrl.invoke(tab, newLoadUrlParams(url))
+  }
+
+  fun startTrackingLoadingState() {
+    trackLoadingState = true
+  }
+
+  fun setLoading(tab: Any?, loading: Boolean) {
+    if (tab == null) return
+    if (loading) loadingTabs.add(tab) else loadingTabs.remove(tab)
+  }
+
+  fun isLoading(tab: Any): Boolean {
+    mIsLoading?.let {
+      return it.get(tab) as Boolean
+    }
+    // Without any way to know the loading state, keep injecting: both the init script and
+    // GM.bootstrap are idempotent for a given document.
+    return if (trackLoadingState) loadingTabs.contains(tab) else true
   }
 
   fun getTabId(tab: Any): String {
