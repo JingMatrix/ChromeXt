@@ -12,6 +12,5 @@ object PageMenuProxy {
   val emptyTabObserver =
       Chrome.load("org.chromium.chrome.browser.login.ChromeHttpAuthHandler").superclass as Class<*>
   val tabImpl = UserScriptProxy.tabImpl
-  val mIsLoading = UserScriptProxy.mIsLoading
   val mObservers = findField(tabImpl) { type.interfaces.contains(Iterable::class.java) }
 }

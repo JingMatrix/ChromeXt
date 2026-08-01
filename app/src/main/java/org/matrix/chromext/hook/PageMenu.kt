@@ -122,16 +122,18 @@ object PageMenuHook : BaseHook() {
         "org.matrix.chromext:id/eruda_console_id" ->
             UserScriptProxy.evaluateJavascript(Local.openEruda)
         "${ctx.packageName}:id/reload_menu_id" -> {
-          val isLoading = proxy.mIsLoading.get(Chrome.getTab()) as Boolean
-          if (!isLoading) return Listener.on("userAgentSpoof", getUrl()) != null
+          val tab = Chrome.getTab()
+          if (tab != null && !UserScriptProxy.isLoading(tab))
+              return Listener.on("userAgentSpoof", getUrl()) != null
         }
       }
       return false
     }
 
     findMethod(proxy.chromeTabbedActivity) {
-          // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu, ? triggeringMotion)
-          (parameterCount == 2 || parameterCount == 3) &&
+          // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu, ? extras,
+          // ? triggeringMotion): the trailing parameters keep being added by Chromium
+          parameterCount in 2..4 &&
               parameterTypes[0] == Int::class.java &&
               parameterTypes[1] == Boolean::class.java &&
               returnType == Boolean::class.java
@@ -143,8 +145,9 @@ object PageMenuHook : BaseHook() {
         }
 
     findMethod(proxy.customTabActivity) {
-          // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu, ? triggeringMotion)
-          (parameterCount == 2 || parameterCount == 3) &&
+          // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu, ? extras,
+          // ? triggeringMotion): the trailing parameters keep being added by Chromium
+          parameterCount in 2..4 &&
               parameterTypes[0] == Int::class.java &&
               parameterTypes[1] == Boolean::class.java &&
               returnType == Boolean::class.java
@@ -340,7 +343,8 @@ object PageMenuHook : BaseHook() {
     val mType = findField(MVCListAdapter_ListItem) { type == Int::class.java }
     // the original field name was "type"
 
-    val mData = findField(proxy.propertyModel) { type == Map::class.java }
+    // Chromium declares this field as a HashMap since Chrome v150, it used to be a Map
+    val mData = findField(proxy.propertyModel) { Map::class.java.isAssignableFrom(type) }
 
     return findMethod(tabbedAppMenuPropertiesDelegate) {
           parameterTypes.size == 0 && returnType == MVCListAdapter_ModelList
@@ -411,17 +415,22 @@ object PageMenuHook : BaseHook() {
           val menusToAdd = mutableListOf<Any>()
 
           val itemConstuctor = MVCListAdapter_ListItem.declaredConstructors[0]
+          // Chromium swapped the parameter order of MVCListAdapter.ListItem in Chrome v150,
+          // it used to be ListItem(int type, PropertyModel model)
+          val newStandardItem = { model: Any? ->
+            if (itemConstuctor.parameterTypes.first() == Int::class.java) {
+              itemConstuctor.newInstance(AppMenuItemType.STANDARD.value, model)
+            } else {
+              itemConstuctor.newInstance(model, AppMenuItemType.STANDARD.value)
+            }
+          }
           if (isChromeXtFrontEnd(url)) {
-            menusToAdd.add(
-                itemConstuctor.newInstance(AppMenuItemType.STANDARD.value, localMenus[0]))
-            menusToAdd.add(
-                itemConstuctor.newInstance(AppMenuItemType.STANDARD.value, localMenus[1]))
+            menusToAdd.add(newStandardItem(localMenus[0]))
+            menusToAdd.add(newStandardItem(localMenus[1]))
           } else if (isUserScript(url)) {
-            menusToAdd.add(
-                itemConstuctor.newInstance(AppMenuItemType.STANDARD.value, localMenus[2]))
+            menusToAdd.add(newStandardItem(localMenus[2]))
           } else {
-            menusToAdd.add(
-                itemConstuctor.newInstance(AppMenuItemType.STANDARD.value, localMenus[3]))
+            menusToAdd.add(newStandardItem(localMenus[3]))
           }
 
           val injectPosition =

@@ -61,7 +61,8 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
           .declaredConstructors[1]
           .hookAfter {
             Chrome.init(it.args[0] as Context, lpparam.packageName)
-            initHooks(UserScriptHook)
+            // Keep the menu hooks reachable even when the UserScript hook cannot be installed
+            runCatching { initHooks(UserScriptHook) }.onFailure { Log.ex(it) }
             if (ContextMenuHook.isInit) return@hookAfter
             runCatching {
                   if (!Chrome.isVivaldi) initHooks(PreferenceHook)
