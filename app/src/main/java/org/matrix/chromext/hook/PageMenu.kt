@@ -1,6 +1,7 @@
 package org.matrix.chromext.hook
 
 import android.content.Context
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.util.DisplayMetrics
 import android.view.Menu
@@ -8,7 +9,6 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.widget.ImageButton
-import android.widget.LinearLayout
 import de.robv.android.xposed.XC_MethodHook.Unhook
 import java.lang.reflect.Modifier
 import java.util.ArrayList
@@ -44,7 +44,10 @@ enum class AppMenuItemType(val value: Int) {
   /** The header for submenus when submenus are displayed in drilldown. */
   SUBMENU_HEADER(4),
 
-  /** A divider item to distinguish between menu item groupings. */
+  /**
+   * A divider item to distinguish between menu item groupings. Chrome renumbered this to 7 in M151,
+   * so the value below only serves the forks that kept the original numbering.
+   */
   DIVIDER(5),
 
   /**
@@ -71,15 +74,18 @@ object readerMode {
   val ID = 31415926
 
   fun activate() {
-    @Suppress("UNCHECKED_CAST")
-    val observers = (PageMenuProxy.mObservers.get(Chrome.getTab()) as Iterable<Any>).toList()
+    val observers = PageMenuProxy.mObservers?.get(Chrome.getTab()) as? Iterable<*>
     val readerModeManager =
-        observers.find {
+        observers?.filterNotNull()?.find {
           findFieldOrNull(it::class.java) {
             type == LinkedHashSet::class.java && Modifier.isStatic(modifiers)
           } != null &&
               findFieldOrNull(it::class.java) { type == PageMenuProxy.propertyModel } != null
-        }!!
+        }
+    if (readerModeManager == null) {
+      Log.e("No ReaderModeManager is observing the current tab")
+      return
+    }
 
     readerModeManager::class
         .java
@@ -122,16 +128,19 @@ object PageMenuHook : BaseHook() {
         "org.matrix.chromext:id/eruda_console_id" ->
             UserScriptProxy.evaluateJavascript(Local.openEruda)
         "${ctx.packageName}:id/reload_menu_id" -> {
-          val isLoading = proxy.mIsLoading.get(Chrome.getTab()) as Boolean
-          if (!isLoading) return Listener.on("userAgentSpoof", getUrl()) != null
+          val tab = Chrome.getTab()
+          if (tab != null && !UserScriptProxy.isLoading(tab))
+              return Listener.on("userAgentSpoof", getUrl()) != null
         }
       }
       return false
     }
 
     findMethod(proxy.chromeTabbedActivity) {
-          // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu, ? triggeringMotion)
-          (parameterCount == 2 || parameterCount == 3) &&
+          // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu, ...)
+          // Chrome keeps appending optional trailing arguments, a Bundle and a MotionEventInfo as
+          // of M151, so only the leading two are worth matching on.
+          parameterCount >= 2 &&
               parameterTypes[0] == Int::class.java &&
               parameterTypes[1] == Boolean::class.java &&
               returnType == Boolean::class.java
@@ -143,8 +152,8 @@ object PageMenuHook : BaseHook() {
         }
 
     findMethod(proxy.customTabActivity) {
-          // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu, ? triggeringMotion)
-          (parameterCount == 2 || parameterCount == 3) &&
+          // public boolean onMenuOrKeyboardAction(int id, boolean fromMenu, ...)
+          parameterCount >= 2 &&
               parameterTypes[0] == Int::class.java &&
               parameterTypes[1] == Boolean::class.java &&
               returnType == Boolean::class.java
@@ -191,24 +200,62 @@ object PageMenuHook : BaseHook() {
         findField(appMenuPropertiesDelegateImpl, true) { type == parameters[1] }
 
     if (Chrome.isBrave) {
-      // Brave browser replaces the first row menu with class AppMenuIconRowFooter,
-      // and it customize the menu by onFooterViewInflated() function in
+      // Brave replaces the first row of the menu with AppMenuIconRowFooter, see
       // https://github.com/brave/brave-core/blob/master/android/java/
       // org/chromium/chrome/browser/appmenu/BraveTabbedAppMenuPropertiesDelegate.java
-      findMethod(tabbedAppMenuPropertiesDelegate, true) {
-            parameterTypes.size == 2 && getParameterTypes()[1] == View::class.java
+      // It used to hand that view to the delegate as onFooterViewInflated(handler, view); since
+      // 1.93 the delegate returns it from a one argument factory instead, and the row holds
+      // MaterialButtons looked up by id rather than nested ImageButtons. Everything here is
+      // best-effort: this only restyles one button, and it must never abort the caller, which is
+      // what actually adds the ChromeXt entries to the menu.
+      fun brandBookmarkButton(delegate: Any, footer: View?) {
+        val ctx = mContext.get(delegate) as Context
+        Resource.enrich(ctx)
+        val id = ctx.resources.getIdentifier("bookmark_this_page_id", "id", ctx.packageName)
+        val button = if (id == 0) null else footer?.findViewById<View>(id)
+        if (button == null) {
+          Log.e("No bookmark button in the Brave app menu footer")
+          return
+        }
+        button.setVisibility(View.VISIBLE)
+        // Only the icon is cosmetic; the id is what makes the button reach readerMode, so a browser
+        // whose icon setter we cannot name still gets a working button.
+        runCatching {
+              if (button is ImageButton) {
+                button.setImageResource(R.drawable.ic_book)
+              } else {
+                // MaterialButton takes a Drawable, and its setIcon does not survive obfuscation, so
+                // match the signature and keep the inherited background setters out of the way.
+                button.invokeMethod(ctx.getDrawable(R.drawable.ic_book)) {
+                  name == "setIcon" ||
+                      (parameterTypes contentDeepEquals arrayOf(Drawable::class.java) &&
+                          returnType == Void.TYPE &&
+                          !name.startsWith("setBackground"))
+                }
+              }
+            }
+            .onFailure { Log.e("Cannot set the reader mode icon: ${it}") }
+        button.setId(readerMode.ID)
+      }
+
+      runCatching {
+            val onFooterViewInflated =
+                findMethodOrNull(tabbedAppMenuPropertiesDelegate, true) {
+                  parameterTypes.size == 2 && parameterTypes[1] == View::class.java
+                }
+            if (onFooterViewInflated != null) {
+              onFooterViewInflated.hookAfter {
+                brandBookmarkButton(it.thisObject, it.args[1] as? View)
+              }
+            } else {
+              val footerFactory =
+                  findMethod(tabbedAppMenuPropertiesDelegate, true) {
+                    parameterTypes.size == 1 && returnType == View::class.java
+                  }
+              footerFactory.hookAfter { brandBookmarkButton(it.thisObject, it.result as? View) }
+            }
           }
-          // public void onFooterViewInflated(AppMenuHandler appMenuHandler, View view)
-          .hookAfter {
-            val appMenuIconRowFooter = it.args[1] as LinearLayout
-            val bookmarkButton =
-                (appMenuIconRowFooter.getChildAt(1) as LinearLayout).getChildAt(1) as ImageButton
-            bookmarkButton.setVisibility(View.VISIBLE)
-            val ctx = mContext.get(it.thisObject) as Context
-            Resource.enrich(ctx)
-            bookmarkButton.setImageResource(R.drawable.ic_book)
-            bookmarkButton.setId(readerMode.ID)
-          }
+          .onFailure { Log.ex(it, "Cannot reach the Brave app menu footer") }
     }
 
     val prepareMenu =
@@ -233,13 +280,28 @@ object PageMenuHook : BaseHook() {
 
           val iconRowMenu = menu.getItem(0)
           if (iconRowMenu.hasSubMenu() && !Chrome.isBrave) {
-            val infoMenu = iconRowMenu.getSubMenu()!!.getItem(3)
-            infoMenu.setIcon(R.drawable.ic_book)
-            infoMenu.setEnabled(true)
-            val mId = infoMenu::class.java.getDeclaredField("mId")
-            mId.setAccessible(true)
-            mId.set(infoMenu, readerMode.ID)
-            mId.setAccessible(false)
+            // Anchor on the page-info entry by id. Taking the fourth icon on faith is what made
+            // ChromeXt overwrite a user-configurable quick command on some forks (issue #290).
+            val iconRow = iconRowMenu.getSubMenu()!!
+            val infoMenu =
+                (0 until iconRow.size())
+                    .map { iconRow.getItem(it) }
+                    .firstOrNull {
+                      runCatching { ctx.resources.getResourceName(it.getItemId()) }
+                          .getOrNull()
+                          ?.endsWith("id/info_menu_id") == true
+                    }
+            if (infoMenu == null) {
+              // Only the reader mode button is lost; the ChromeXt entries below still go in.
+              Log.e("No page info entry in the icon row, skipping the reader mode button")
+            } else {
+              infoMenu.setIcon(R.drawable.ic_book)
+              infoMenu.setEnabled(true)
+              val mId = infoMenu::class.java.getDeclaredField("mId")
+              mId.setAccessible(true)
+              mId.set(infoMenu, readerMode.ID)
+              mId.setAccessible(false)
+            }
           }
 
           val mItems = menu::class.java.getDeclaredField("mItems").also { it.setAccessible(true) }
@@ -300,39 +362,69 @@ object PageMenuHook : BaseHook() {
         }
 
     // Inflate for MVC UI model
-    val maybeAddDividerLine =
+    val namesModelList =
         findMethodOrNull(tabbedAppMenuPropertiesDelegate) {
+          // void maybeAddDividerLine(MVCListAdapter.ModelList modelList, @IdRes int id), static
+          // since M150 and moved off the delegate entirely in M153
           parameterTypes.size == 2 &&
               parameterTypes[1] == Int::class.java &&
               returnType == Void.TYPE &&
-              !Modifier.isAbstract(modifiers)
+              !Modifier.isAbstract(modifiers) &&
+              !parameterTypes[0].isPrimitive &&
+              findFieldOrNull(parameterTypes[0], true) { type == ArrayList::class.java } != null
         }
-    // private void maybeAddDividerLine(MVCListAdapter.ModelList modelList, @IdRes int id)
+            ?: findMethod(appMenuPropertiesDelegateImpl) {
+              // public abstract MVCListAdapter.ModelList buildMenuModelList(), the one member the
+              // delegate cannot delegate away
+              parameterTypes.size == 0 &&
+                  Modifier.isAbstract(modifiers) &&
+                  !returnType.isPrimitive &&
+                  findFieldOrNull(returnType, true) { type == ArrayList::class.java } != null
+            }
+    // Either way the ModelList is the only non primitive type the signature mentions.
+    val MVCListAdapter_ModelList =
+        namesModelList.parameterTypes.firstOrNull() ?: namesModelList.returnType
+    val mItems = findField(MVCListAdapter_ModelList, true) { type == ArrayList::class.java }
 
     val buildModelForStandardMenuItem =
-        findMethod(appMenuPropertiesDelegateImpl) {
+        findMethodOrNull(appMenuPropertiesDelegateImpl) {
           parameterTypes contentDeepEquals
               arrayOf(Int::class.java, Int::class.java, Int::class.java) &&
               returnType == proxy.propertyModel
         }
     // public PropertyModel buildModelForStandardMenuItem(
     // @IdRes int id, @StringRes int titleId, @DrawableRes int iconResId)
+    // M153 hoisted every model factory into a static helper class that nothing we can name refers
+    // to, so when the method is gone we assemble the same model out of PropertyModel itself.
 
-    val MVCListAdapter_ModelList = maybeAddDividerLine!!.parameterTypes.first()
-    val mItems = findField(MVCListAdapter_ModelList, true) { type == ArrayList::class.java }
+    val modelOfKeys =
+        proxy.propertyModel.declaredConstructors
+            .firstOrNull {
+              it.parameterTypes.size == 1 &&
+                  it.parameterTypes[0].isAssignableFrom(ArrayList::class.java)
+            }
+            ?.also { it.isAccessible = true }
+    // public PropertyModel(List<PropertyKey> keys), the only constructor that registers the keys
+    val propertySetters =
+        proxy.propertyModel.declaredMethods
+            .filter {
+              it.parameterTypes.size == 2 &&
+                  it.returnType == Void.TYPE &&
+                  !Modifier.isStatic(it.modifiers)
+            }
+            .onEach { it.isAccessible = true }
+    // set(WritableIntPropertyKey, int) and its siblings, one overload per value type
 
-    val excludedReturnValuesForModelItem =
-        arrayOf(
-            MVCListAdapter_ModelList,
-            Int::class.java,
-            Boolean::class.java,
-            Void.TYPE,
-            View::class.java)
     val buildNewIncognitoTabItem =
         findMethod(tabbedAppMenuPropertiesDelegate) {
+          // Anchor on the shape of MVCListAdapter.ListItem, a PropertyModel plus an int type,
+          // otherwise zero argument getters such as getProfile() match just as well.
           parameterTypes.size == 0 &&
               !Modifier.isStatic(modifiers) &&
-              !excludedReturnValuesForModelItem.contains(returnType)
+              !returnType.isPrimitive &&
+              returnType != MVCListAdapter_ModelList &&
+              findFieldOrNull(returnType) { type == proxy.propertyModel } != null &&
+              findFieldOrNull(returnType) { type == Int::class.java } != null
         }
     // private MVCListAdapter.ListItem buildNewIncognitoTabItem()
     val MVCListAdapter_ListItem = buildNewIncognitoTabItem.returnType
@@ -340,94 +432,194 @@ object PageMenuHook : BaseHook() {
     val mType = findField(MVCListAdapter_ListItem) { type == Int::class.java }
     // the original field name was "type"
 
-    val mData = findField(proxy.propertyModel) { type == Map::class.java }
+    val mData = findField(proxy.propertyModel) { Map::class.java.isAssignableFrom(type) }
+    // declared as a raw HashMap since M150
+
+    val itemConstructor =
+        MVCListAdapter_ListItem.declaredConstructors
+            .first {
+              it.parameterTypes.size == 2 &&
+                  it.parameterTypes.contains(proxy.propertyModel) &&
+                  it.parameterTypes.contains(Int::class.java)
+            }
+            .also { it.isAccessible = true }
+    // R8 is free to swap the (int type, PropertyModel model) parameters around, and it did in M150
+    val typeComesFirst = itemConstructor.parameterTypes[0] == Int::class.java
+    fun newListItem(type: Int, menuModel: Any?): Any =
+        if (typeComesFirst) itemConstructor.newInstance(type, menuModel)
+        else itemConstructor.newInstance(menuModel, type)
+
+    // Brave hangs its own zero-argument ModelList getters off the delegate, and matching on the
+    // signature alone lands on one of those, so our entries end up in a list nobody ever shows. The
+    // superclass declares buildMenuModelList abstract and an override keeps the name, so use it.
+    val buildMenuModelList =
+        findMethodOrNull(appMenuPropertiesDelegateImpl, true) {
+              parameterTypes.size == 0 &&
+                  Modifier.isAbstract(modifiers) &&
+                  returnType == MVCListAdapter_ModelList
+            }
+            ?.name
 
     return findMethod(tabbedAppMenuPropertiesDelegate) {
-          parameterTypes.size == 0 && returnType == MVCListAdapter_ModelList
+          parameterTypes.size == 0 &&
+              returnType == MVCListAdapter_ModelList &&
+              (buildMenuModelList == null || name == buildMenuModelList)
         }
         // public MVCListAdapter.ModelList buildMenuModelList()
         .hookAfter {
-          val tabProvider = mActivityTabProvider.get(it.thisObject)!!
+          val delegate = it.thisObject
+          val tabProvider = mActivityTabProvider.get(delegate)!!
           Chrome.updateTab(tabProvider.invokeMethod { name == "get" })
-          val ctx = mContext.get(it.thisObject) as Context
+          val ctx = mContext.get(delegate) as Context
 
           Resource.enrich(ctx)
           val url = getUrl()
 
           @Suppress("UNCHECKED_CAST") val menuModels = mItems.get(it.result) as MutableList<Any>
 
-          @Suppress("UNCHECKED_CAST")
-          val iconModels = mData.get(model.get(menuModels[0])) as Map<Any, Any?>
-          val additionalIcons =
-              iconModels.entries
-                  .find { it.key.toString() == "ADDITIONAL_ICONS" }
-                  ?.let {
-                    val _value = it.value!!::class.java.declaredFields[0]
-                    _value.get(it.value)
-                  }
-          if (additionalIcons != null && !Chrome.isBrave) {
-            @Suppress("UNCHECKED_CAST") val icons = mItems.get(additionalIcons) as ArrayList<Any>
+          // Every PropertyModel value is boxed in a one field holder, null until the key is written
+          fun propertyOf(item: Any, key: String): Any? {
             @Suppress("UNCHECKED_CAST")
-            val pageInfoModel = mData.get(model.get(icons[3])) as Map<Any, Any?>
-            pageInfoModel.forEach {
-              if (it.value == null) {
-                return@forEach
-              }
-              val _value = it.value!!::class.java.declaredFields[0].also { it.setAccessible(true) }
-              if (it.key.toString() == "MENU_ITEM_ID") {
-                _value.set(it.value, readerMode.ID)
-              } else if (it.key.toString() == "ICON") {
-                _value.set(it.value, ctx.resources.getDrawable(R.drawable.ic_book, null))
-              }
-            }
+            val properties = mData.get(model.get(item)) as Map<Any, Any?>
+            val holder = properties.entries.find { it.key.toString() == key }?.value ?: return null
+            val boxed = holder::class.java.declaredFields.firstOrNull() ?: return null
+            return boxed.also { it.setAccessible(true) }.get(holder)
           }
+
+          fun menuIdNameOf(item: Any): String? {
+            val id = propertyOf(item, "MENU_ITEM_ID") as? Int ?: return null
+            return runCatching { ctx.resources.getResourceName(id) }.getOrNull()
+          }
+
+          // Rebranding the page info entry is cosmetic, so it must never cost us the menu entries
+          // that follow: a throw here would be swallowed by the hook and look like a missing menu.
+          runCatching {
+                val additionalIcons =
+                    menuModels.firstOrNull()?.let { row -> propertyOf(row, "ADDITIONAL_ICONS") }
+                if (additionalIcons != null && !Chrome.isBrave) {
+                  @Suppress("UNCHECKED_CAST")
+                  val icons = mItems.get(additionalIcons) as ArrayList<Any>
+                  // Vivaldi fills this row with five user configurable quick commands picked from
+                  // kzd.c/kzd.d/kzd.a, and the page info entry is in none of those lists, so a
+                  // positional guess just steals whichever command sits fourth (issue #290).
+                  val pageInfo =
+                      icons.find { menuIdNameOf(it)?.endsWith(":id/info_menu_id") == true }
+                  if (pageInfo == null) {
+                    Log.d("No page info entry to turn into the reader mode one")
+                  } else {
+                    @Suppress("UNCHECKED_CAST")
+                    val pageInfoModel = mData.get(model.get(pageInfo)) as Map<Any, Any?>
+                    pageInfoModel.forEach {
+                      if (it.value == null) {
+                        return@forEach
+                      }
+                      val _value =
+                          it.value!!::class.java.declaredFields[0].also { it.setAccessible(true) }
+                      if (it.key.toString() == "MENU_ITEM_ID") {
+                        _value.set(it.value, readerMode.ID)
+                      } else if (it.key.toString() == "ICON") {
+                        _value.set(it.value, ctx.resources.getDrawable(R.drawable.ic_book, null))
+                      }
+                    }
+                  }
+                }
+              }
+              .onFailure { Log.ex(it, "Cannot reach the page info entry of the app menu") }
 
           val skip = menuModels.size <= 10 || isChromeScheme(url)
           if (skip && !isUserScript(url)) return@hookAfter
 
-          val localMenus =
-              listOf(
-                  buildModelForStandardMenuItem.invoke(
-                      it.thisObject,
-                      R.id.developer_tools_id,
-                      R.string.main_menu_developer_tools,
-                      R.drawable.ic_devtools),
-                  buildModelForStandardMenuItem.invoke(
-                      it.thisObject,
-                      R.id.extension_id,
-                      R.string.main_menu_extension,
-                      R.drawable.ic_extension),
-                  buildModelForStandardMenuItem.invoke(
-                      it.thisObject,
-                      R.id.install_script_id,
-                      R.string.main_menu_install_script,
-                      R.drawable.ic_install_script),
-                  buildModelForStandardMenuItem.invoke(
-                      it.thisObject,
-                      R.id.eruda_console_id,
-                      R.string.main_menu_eruda_console,
-                      R.drawable.ic_devtools))
-
-          val menusToAdd = mutableListOf<Any>()
-
-          val itemConstuctor = MVCListAdapter_ListItem.declaredConstructors[0]
-          if (isChromeXtFrontEnd(url)) {
-            menusToAdd.add(
-                itemConstuctor.newInstance(AppMenuItemType.STANDARD.value, localMenus[0]))
-            menusToAdd.add(
-                itemConstuctor.newInstance(AppMenuItemType.STANDARD.value, localMenus[1]))
-          } else if (isUserScript(url)) {
-            menusToAdd.add(
-                itemConstuctor.newInstance(AppMenuItemType.STANDARD.value, localMenus[2]))
-          } else {
-            menusToAdd.add(
-                itemConstuctor.newInstance(AppMenuItemType.STANDARD.value, localMenus[3]))
+          fun writeProperty(menuModel: Any, key: Any, value: Any) {
+            val valueType =
+                when (value) {
+                  is Int -> Int::class.java
+                  is Boolean -> Boolean::class.java
+                  else -> Any::class.java
+                }
+            propertySetters
+                .find { it.parameterTypes[0].isInstance(key) && it.parameterTypes[1] == valueType }
+                ?.invoke(menuModel, key, value)
           }
 
-          val injectPosition =
+          fun standardMenuItem(id: Int, titleId: Int, iconResId: Int): Any? {
+            if (buildModelForStandardMenuItem != null)
+                return buildModelForStandardMenuItem.invoke(delegate, id, titleId, iconResId)
+            // Any menu item already in the list knows the full key set of a menu item, which is all
+            // PropertyModel needs to build an empty one of the same shape. Only the properties
+            // buildModelForStandardMenuItem itself writes get filled in: CLICK_HANDLER and the
+            // other listeners have to stay unset, or our entry would run the template's action.
+            val candidates =
+                menuModels.filter {
+                  propertyOf(it, "TITLE") is String && propertyOf(it, "ICON") != null
+                }
+            // Only a STANDARD row will do: the key set is copied wholesale, and a TITLE_BUTTON or
+            // BUTTON_ROW template carries keys for buttons we never fill in, which the adapter then
+            // dereferences. Better no entry than a malformed one.
+            val template =
+                candidates.firstOrNull { mType.get(it) == AppMenuItemType.STANDARD.value }
+            if (template == null || modelOfKeys == null) return null
+            @Suppress("UNCHECKED_CAST")
+            val keys = (mData.get(model.get(template)) as Map<Any, Any?>).keys
+            val menuModel = modelOfKeys.newInstance(keys.toList())
+            keys.forEach { key ->
+              val value =
+                  when (key.toString()) {
+                    "MENU_ITEM_ID" -> id
+                    "TITLE" -> ctx.getString(titleId)
+                    "ICON" -> ctx.resources.getDrawable(iconResId, null)
+                    "ENABLED" -> true
+                    "ICON_COLOR_RES",
+                    "ICON_NO_TINT",
+                    "ICON_SHOW_BADGE",
+                    "MENU_ICON_AT_START" -> propertyOf(template, key.toString())
+                    else -> null
+                  }
+              if (value != null) writeProperty(menuModel, key, value)
+            }
+            return menuModel
+          }
+
+          val entries =
+              if (isChromeXtFrontEnd(url)) {
+                listOf(
+                    Triple(
+                        R.id.developer_tools_id,
+                        R.string.main_menu_developer_tools,
+                        R.drawable.ic_devtools),
+                    Triple(
+                        R.id.extension_id, R.string.main_menu_extension, R.drawable.ic_extension))
+              } else if (isUserScript(url)) {
+                listOf(
+                    Triple(
+                        R.id.install_script_id,
+                        R.string.main_menu_install_script,
+                        R.drawable.ic_install_script))
+              } else {
+                listOf(
+                    Triple(
+                        R.id.eruda_console_id,
+                        R.string.main_menu_eruda_console,
+                        R.drawable.ic_devtools))
+              }
+
+          val menusToAdd = mutableListOf<Any>()
+          entries.forEach { (id, titleId, iconResId) ->
+            val menuModel = standardMenuItem(id, titleId, iconResId)
+            if (menuModel == null) {
+              Log.e("Cannot build a standard app menu item for the ChromeXt entries")
+              return@hookAfter
+            }
+            menusToAdd.add(newListItem(AppMenuItemType.STANDARD.value, menuModel))
+          }
+
+          // Chrome renumbered AppMenuItemType, DIVIDER moved from 5 to 7 in M151, so anchor on the
+          // divider resource ids and keep the ordinal only as a fallback for forks
+          val dividers =
               menuModels
-                  .filter { mType.get(it) == AppMenuItemType.DIVIDER.value }[2]
-                  .let { menuModels.indexOf(it) }
+                  .filter { menuIdNameOf(it)?.endsWith("divider_line_id") == true }
+                  .ifEmpty { menuModels.filter { mType.get(it) == AppMenuItemType.DIVIDER.value } }
+          val anchor = dividers.getOrNull(2) ?: dividers.lastOrNull()
+          val injectPosition = anchor?.let { menuModels.indexOf(it) } ?: (menuModels.size - 1)
           menuModels.addAll(injectPosition + 1, menusToAdd)
         }
   }

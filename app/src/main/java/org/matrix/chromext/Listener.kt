@@ -17,6 +17,8 @@ import android.os.Handler
 import android.webkit.WebView
 import java.io.File
 import java.io.FileReader
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 import java.net.HttpURLConnection
 import java.net.URL
 import org.json.JSONArray
@@ -37,6 +39,7 @@ import org.matrix.chromext.utils.ERUD_URL
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.XMLHttpRequest
 import org.matrix.chromext.utils.findMethod
+import org.matrix.chromext.utils.findMethodOrNull
 import org.matrix.chromext.utils.invalidUserScriptUrls
 import org.matrix.chromext.utils.invokeMethod
 import org.matrix.chromext.utils.isChromeXtFrontEnd
@@ -86,6 +89,61 @@ object Listener {
     if (allowedActions.get("front-end")!!.contains(action) && !isChromeXtFrontEnd(url)) return false
     if (allowedActions.get("devtools")!!.contains(action) && !isDevToolsFrontEnd(url)) return false
     return true
+  }
+
+  // TabModel#closeTab(Tab tab, Tab recommendedNextTab, boolean...[, int]), dropped by Chrome 131
+  // but still shipped by older forks.
+  private fun findLegacyCloseTab(model: Class<*>, tab: Class<*>): Method? {
+    fun Method.closesTab() =
+        parameterTypes.firstOrNull() == tab &&
+            parameterTypes.drop(1).all {
+              it == tab || it == Boolean::class.java || it == Int::class.java
+            }
+    return findMethodOrNull(model, true) { name == "closeTab" && closesTab() }
+        ?: findMethodOrNull(model, true) {
+          returnType == Boolean::class.java && parameterTypes.size >= 5 && closesTab()
+        }
+  }
+
+  // TabClosureParams is the only class offering a static Tab factory whose result builds one back,
+  // a shape that survives the renaming of all three classes involved.
+  private fun isTabClosureParams(clazz: Class<*>, tab: Class<*>): Boolean =
+      clazz.declaredMethods.any {
+        Modifier.isStatic(it.modifiers) &&
+            it.parameterTypes contentDeepEquals arrayOf(tab) &&
+            it.returnType.declaredMethods.any { build ->
+              build.parameterTypes.size == 0 && build.returnType == clazz
+            }
+      }
+
+  // Since Chrome 131: TabModel#getTabRemover()#forceCloseTabs(TabClosureParams#closeTab(tab))
+  private fun forceCloseTab(model: Any, tabModel: Class<*>, tab: Class<*>, currentTab: Any) {
+    val getTabRemover =
+        findMethod(tabModel) {
+          parameterTypes.size == 0 &&
+              returnType.declaredMethods.any {
+                it.returnType == Void.TYPE &&
+                    it.parameterTypes.size == 1 &&
+                    isTabClosureParams(it.parameterTypes[0], tab)
+              }
+        }
+    val remover = getTabRemover.invoke(model)!!
+    val forceCloseTabs =
+        findMethod(getTabRemover.returnType) {
+          returnType == Void.TYPE &&
+              parameterTypes.size == 1 &&
+              isTabClosureParams(parameterTypes[0], tab)
+        }
+    val closureParams = forceCloseTabs.parameterTypes[0]
+    val builder =
+        findMethod(closureParams) {
+              Modifier.isStatic(modifiers) && parameterTypes contentDeepEquals arrayOf(tab)
+            }
+            .invoke(null, currentTab)!!
+    val params =
+        findMethod(builder::class.java) { parameterTypes.size == 0 && returnType == closureParams }
+            .invoke(builder)
+    forceCloseTabs.invoke(remover, params)
   }
 
   private fun checkErudaVerison(ctx: Context, callback: (String?) -> Unit) {
@@ -177,19 +235,21 @@ object Listener {
                 parameterTypes.size == 0 && returnType == tabModel
               }
           val model = getCurrentTabModel.invoke(activity)!!
-          val closeTab =
-              findMethod(model::class.java) {
-                returnType == Boolean::class.java &&
-                    parameterTypes contentDeepEquals
-                        arrayOf(
-                            tab,
-                            tab,
-                            Boolean::class.java,
-                            Boolean::class.java,
-                            Boolean::class.java,
-                            Int::class.java)
-              }
-          closeTab.invoke(model, currentTab, null, false, false, false, 0)
+          val legacyClose = findLegacyCloseTab(model::class.java, tab)
+          if (legacyClose != null) {
+            val args =
+                legacyClose.parameterTypes.mapIndexed { i, type ->
+                  when {
+                    i == 0 -> currentTab
+                    type == tab -> null
+                    type == Boolean::class.java -> false
+                    else -> 0
+                  }
+                }
+            legacyClose.invoke(model, *args.toTypedArray())
+          } else {
+            forceCloseTab(model, tabModel, tab, currentTab)
+          }
         } else {
           val msg = "Closing tab ${currentTab} with context ${activity}"
           callback = "console.error(new TypeError('ChromeXt Action failure', {cause: '${msg}'}));"

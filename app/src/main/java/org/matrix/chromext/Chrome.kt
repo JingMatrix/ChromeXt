@@ -66,7 +66,8 @@ object Chrome {
     isMi = packageName == "com.mi.globalbrowser" || packageName == "com.android.browser"
     isQihoo = packageName == "com.qihoo.contents"
     isSamsung = packageName.startsWith("com.sec.android.app.sbrowser")
-    isVivaldi = packageName == "com.vivaldi.browser"
+    // com.vivaldi.browser.snapshot is supported too, and it needs the same special cases as stable
+    isVivaldi = packageName.startsWith("com.vivaldi.browser")
     @Suppress("DEPRECATION") val packageInfo = ctx.packageManager?.getPackageInfo(packageName, 0)
     version = packageInfo?.versionName
     version = (if (version?.startsWith("v") == true) "" else "v") + version

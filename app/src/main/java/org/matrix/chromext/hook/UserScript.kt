@@ -102,6 +102,19 @@ object UserScriptHook : BaseHook() {
           .onFailure { if (BuildConfig.DEBUG) Log.ex(it) }
     }
 
+    if (proxy.mIsLoading == null) {
+      // The field could not be located, so track the loading state ourselves. The name of
+      // loadingStateChanged survives the obfuscation because it is called from the native side, and
+      // it is the only writer of that field.
+      runCatching {
+            findMethod(proxy.tabWebContentsDelegateAndroidImpl) { name == "loadingStateChanged" }
+                // public void loadingStateChanged(boolean toDifferentDocument)
+                .hookAfter { proxy.setLoading(proxy.getTab(it.thisObject), it.args[0] as Boolean) }
+            proxy.startTrackingLoadingState()
+          }
+          .onFailure { Log.ex(it, "Fail to track the loading state of tabs") }
+    }
+
     findMethod(if (Chrome.isSamsung) proxy.tabImpl else proxy.tabWebContentsDelegateAndroidImpl) {
           name == "onUpdateUrl" || name == "onUpdateTargetUrl"
         }
@@ -113,8 +126,7 @@ object UserScriptHook : BaseHook() {
           if (url.isEmpty() && proxy.getUrl != null) {
             url = proxy.parseUrl(proxy.getUrl(tab))!!
           }
-          val isLoading = proxy.mIsLoading.get(tab) as Boolean
-          if (!url.startsWith("chrome") && isLoading) {
+          if (!url.startsWith("chrome") && proxy.isLoading(tab)) {
             ScriptDbManager.invokeScript(url)
           }
         }
@@ -143,10 +155,15 @@ object UserScriptHook : BaseHook() {
           }
         }
 
-    findMethod(proxy.navigationControllerImpl) {
-          name == "loadUrl" || parameterTypes contentDeepEquals arrayOf(proxy.loadUrlParams)
-        }
-        // public void loadUrl(LoadUrlParams params)
+    (findMethodOrNull(proxy.navigationControllerImpl) { name == "loadUrl" }
+            ?: findMethodOrNull(proxy.navigationControllerImpl) {
+              parameterTypes contentDeepEquals arrayOf(proxy.loadUrlParams) &&
+                  returnType.simpleName == "NavigationHandle"
+            }
+            ?: findMethod(proxy.navigationControllerImpl) {
+              parameterTypes contentDeepEquals arrayOf(proxy.loadUrlParams)
+            })
+        // public NavigationHandle loadUrl(LoadUrlParams params)
         .hookBefore {
           val url = proxy.parseUrl(it.args[0])!!
           proxy.userAgentHook(url, it.args[0])
@@ -155,7 +172,8 @@ object UserScriptHook : BaseHook() {
     findMethod(proxy.chromeTabbedActivity, true) { name == "onResume" }
         .hookBefore { Chrome.init(it.thisObject as Context) }
 
-    findMethod(proxy.chromeTabbedActivity) { name == "onStop" }
+    // Edge declares neither onResume nor onStop on its own activity, both come from the superclass
+    findMethod(proxy.chromeTabbedActivity, true) { name == "onStop" }
         .hookBefore {
           ScriptDbManager.updateScriptStorage()
           val cache = HttpResponseCache.getInstalled()

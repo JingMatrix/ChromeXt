@@ -16,6 +16,8 @@ import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.findMethod
+import org.matrix.chromext.utils.findMethodOrNull
+import org.matrix.chromext.utils.firstDeclared
 import org.matrix.chromext.utils.hookBefore
 
 object PreferenceProxy {
@@ -27,16 +29,31 @@ object PreferenceProxy {
   val emptyTabObserver =
       Chrome.load("org.chromium.chrome.browser.login.ChromeHttpAuthHandler").superclass as Class<*>
 
-  private val preference = Chrome.load("androidx.preference.Preference")
-  private val mClickListener =
-      findField(preference) {
-        type == OnClickListener::class.java || type.interfaces.contains(OnClickListener::class.java)
-      }
-  private val setSummary =
-      findMethod(preference) {
-        parameterTypes contentDeepEquals arrayOf(CharSequence::class.java) &&
-            returnType == Void.TYPE
-      }
+  private val preference by lazy { Chrome.load("androidx.preference.Preference") }
+  // Both members below are only ever touched once the settings screen is on screen, and they must
+  // stay lazy: enumerating the members of Preference resolves every parameter type it mentions, and
+  // Edge puts some of those in a split that is not loaded yet when the hooks are installed, so
+  // doing
+  // this eagerly throws NoClassDefFoundError and takes the whole settings integration down with it.
+  private val mClickListener by lazy {
+    findField(preference) {
+      type == OnClickListener::class.java || type.interfaces.contains(OnClickListener::class.java)
+    }
+  }
+  // setSummary shares its (CharSequence)void signature with setTitle, and nothing else tells them
+  // apart once renamed: androidx declares setSummary first, so fall back to declaration order.
+  private val setSummary by lazy {
+    findMethodOrNull(preference) {
+      name == "setSummary" && parameterTypes contentDeepEquals arrayOf(CharSequence::class.java)
+    }
+        ?: preference.declaredMethods
+            .filter {
+              it.parameterTypes contentDeepEquals arrayOf(CharSequence::class.java) &&
+                  it.returnType == Void.TYPE
+            }
+            .run { firstDeclared() ?: first() }
+            .also { it.isAccessible = true }
+  }
   private val twoStatePreference =
       Chrome.load("org.chromium.components.browser_ui.settings.ChromeSwitchPreference").superclass
           as Class<*>

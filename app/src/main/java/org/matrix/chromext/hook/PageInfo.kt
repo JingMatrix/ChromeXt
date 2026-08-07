@@ -3,7 +3,6 @@ package org.matrix.chromext.hook
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
@@ -18,52 +17,84 @@ object PageInfoHook : BaseHook() {
   override fun init() {
 
     if (ContextMenuHook.isInit) return
-    var controller: Any? = null
     val proxy = PageInfoProxy
+    val newRow = proxy.rowConstructor ?: throw NoSuchMethodException("PageInfoRowView(Context)")
+    val title = proxy.mTitle ?: throw NoSuchFieldException("PageInfoRowView.mTitle")
+    val show = proxy.showPageInfo ?: throw NoSuchMethodException("PageInfoController.show")
+    val destroy = proxy.destroy ?: throw NoSuchMethodException("PageInfoController.destroy")
+    if (proxy.nativeCallbacks.isEmpty()) throw NoSuchMethodException("PageInfoController callbacks")
 
-    fun addErudaRow(url: String): ViewGroup {
-      val infoRow =
-          proxy.pageInfoRowView.declaredConstructors[0].newInstance(Chrome.getContext(), null)
-              as ViewGroup
-      infoRow.setVisibility(View.VISIBLE)
-      val icon = proxy.mIcon.get(infoRow) as ImageView
-      icon.setImageResource(R.drawable.ic_devtools)
-      val subTitle = proxy.mSubtitle.get(infoRow) as TextView
-      (subTitle.getParent() as? ViewGroup)?.removeView(subTitle)
-      val title = proxy.mTitle.get(infoRow) as TextView
+    // The row container is looked up by resource id and never kept in a field, and Edge can swap
+    // the whole PageInfoView for a bottom sheet behind a feature flag, so rather than chase it
+    // through the controller we keep the first row built during show() and take its parent.
+    var firstRow: ViewGroup? = null
+    var controller: Any? = null
+    var showing = false
+    var inserted = false
+
+    fun erudaRow(url: String, host: Any, parent: ViewGroup): View {
+      val row = newRow.newInstance(parent.getContext(), null) as ViewGroup
+      row.setVisibility(View.VISIBLE)
+      (proxy.mIcon?.get(row) as? ImageView)?.setImageResource(R.drawable.ic_devtools)
+      val subTitle = proxy.mSubtitle?.get(row) as? TextView
+      (subTitle?.getParent() as? ViewGroup)?.removeView(subTitle)
+      val label = title.get(row) as TextView
+      val onClick: () -> Unit
       if (isChromeXtFrontEnd(url)) {
-        title.setText(R.string.main_menu_developer_tools)
-        infoRow.setOnClickListener {
-          Listener.on("inspectPages")
-          controller!!.invokeMethod() { name == "destroy" }
-        }
+        label.setText(R.string.main_menu_developer_tools)
+        onClick = { Listener.on("inspectPages") }
       } else if (isUserScript(url)) {
-        title.setText(R.string.main_menu_install_script)
-        infoRow.setOnClickListener {
+        label.setText(R.string.main_menu_install_script)
+        onClick = {
           val sandBoxed = shouldBypassSandbox(url)
           Chrome.evaluateJavascript(listOf("Symbol.installScript(true);"), null, null, sandBoxed)
-          controller!!.invokeMethod() { name == "destroy" }
         }
       } else {
-        title.setText(R.string.main_menu_eruda_console)
-        infoRow.setOnClickListener {
-          UserScriptProxy.evaluateJavascript(Local.openEruda)
-          controller!!.invokeMethod() { name == "destroy" }
-        }
+        label.setText(R.string.main_menu_eruda_console)
+        onClick = { UserScriptProxy.evaluateJavascript(Local.openEruda) }
       }
-      return infoRow
+      row.setOnClickListener {
+        onClick()
+        runCatching { destroy.invoke(host) }.onFailure { Log.ex(it) }
+      }
+      return row
     }
 
-    proxy.pageInfoControllerRef.declaredConstructors[0].hookAfter { controller = it.thisObject }
-
-    proxy.pageInfoController.declaredConstructors[0].hookAfter {
-      val url = Chrome.getUrl()!!
-      if (isChromeScheme(url) || controller == null) return@hookAfter
-      (proxy.mRowWrapper.get(proxy.mView.get(it.thisObject)) as LinearLayout).addView(
-          addErudaRow(url))
+    fun insertRow(host: Any) {
+      if (inserted) return
+      val parent = firstRow?.getParent() as? ViewGroup ?: return
+      val url = Chrome.getUrl() ?: return
+      if (isChromeScheme(url)) return
+      inserted = true
+      parent.addView(erudaRow(url, host, parent))
     }
 
-    // readerMode.init(Chrome.load("org.chromium.chrome.browser.dom_distiller.ReaderModeManager"))
+    show.hookBefore {
+      showing = true
+      inserted = false
+      firstRow = null
+      controller = null
+    }
+
+    newRow.hookAfter { if (showing && firstRow == null) firstRow = it.thisObject as ViewGroup }
+
+    // Native runs these while show() is still on the stack, which is both where the controller
+    // instance becomes reachable and the earliest point at which the rows are already laid out.
+    proxy.nativeCallbacks.forEach { callback ->
+      callback.hookAfter {
+        if (!showing) return@hookAfter
+        controller = it.thisObject
+        insertRow(it.thisObject)
+      }
+    }
+
+    show.hookAfter {
+      showing = false
+      controller?.let { host -> insertRow(host) }
+      firstRow = null
+      controller = null
+    }
+
     isInit = true
   }
 }

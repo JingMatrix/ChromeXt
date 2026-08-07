@@ -56,22 +56,42 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     Log.d(lpparam.processName + " started")
     if (lpparam.packageName == "org.matrix.chromext") return
     if (supportedPackages.contains(lpparam.packageName)) {
-      lpparam.classLoader
-          .loadClass("org.chromium.ui.base.WindowAndroid")
-          .declaredConstructors[1]
-          .hookAfter {
-            Chrome.init(it.args[0] as Context, lpparam.packageName)
-            initHooks(UserScriptHook)
-            if (ContextMenuHook.isInit) return@hookAfter
-            runCatching {
-                  if (!Chrome.isVivaldi) initHooks(PreferenceHook)
-                  initHooks(if (Chrome.isEdge || Chrome.isCocCoc) PageInfoHook else PageMenuHook)
-                }
-                .onFailure {
-                  initHooks(ContextMenuHook)
-                  if (BuildConfig.DEBUG && !(Chrome.isSamsung || Chrome.isEdge)) Log.ex(it)
-                }
+      // Every constructor taking a Context, rather than a fixed index into an order the JLS leaves
+      // unspecified: browsers do not agree on how many constructors WindowAndroid has, and Whale in
+      // particular has no one-argument overload, so index 1 there is a test-only constructor the
+      // browser never calls and the whole module stays inert. The overloads delegate into one
+      // another, so hooking all of them just means the callback can run twice, which Chrome.init
+      // and initHooks both already absorb.
+      val windowAndroid = lpparam.classLoader.loadClass("org.chromium.ui.base.WindowAndroid")
+      val constructors =
+          windowAndroid.declaredConstructors.filter {
+            val first = it.parameterTypes.firstOrNull()
+            first != null && Context::class.java.isAssignableFrom(first)
           }
+      if (constructors.isEmpty()) Log.e("No WindowAndroid constructor takes a Context")
+      constructors.forEach { constructor ->
+        constructor.hookAfter {
+          Chrome.init(it.args[0] as Context, lpparam.packageName)
+          // Keep the menu hooks reachable even when the UserScript hook cannot be installed
+          runCatching { initHooks(UserScriptHook) }.onFailure { Log.ex(it) }
+          if (ContextMenuHook.isInit) return@hookAfter
+          // The settings screen and the browser menu are independent features, so a browser that
+          // cannot host our preferences must still get its menu entries. Edge is exactly that case:
+          // it builds its settings programmatically, so PreferenceFragmentCompat carries no
+          // addPreferencesFromResource for PreferenceHook to hook.
+          if (!Chrome.isVivaldi) {
+            runCatching { initHooks(PreferenceHook) }
+                .onFailure { if (BuildConfig.DEBUG && !Chrome.isSamsung) Log.ex(it) }
+          }
+          runCatching {
+                initHooks(if (Chrome.isEdge || Chrome.isCocCoc) PageInfoHook else PageMenuHook)
+              }
+              .onFailure {
+                initHooks(ContextMenuHook)
+                if (BuildConfig.DEBUG && !(Chrome.isSamsung || Chrome.isEdge)) Log.ex(it)
+              }
+        }
+      }
     } else {
       val ctx = AndroidAppHelper.currentApplication()
 
