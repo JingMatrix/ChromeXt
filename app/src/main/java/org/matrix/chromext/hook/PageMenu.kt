@@ -401,10 +401,28 @@ object PageMenuHook : BaseHook() {
         proxy.propertyModel.declaredConstructors
             .firstOrNull {
               it.parameterTypes.size == 1 &&
-                  it.parameterTypes[0].isAssignableFrom(ArrayList::class.java)
+                  (it.parameterTypes[0].isAssignableFrom(ArrayList::class.java) ||
+                      it.parameterTypes[0].isArray)
             }
             ?.also { it.isAccessible = true }
-    // public PropertyModel(List<PropertyKey> keys), the only constructor that registers the keys
+    // public PropertyModel(List<PropertyKey> keys), the only constructor that registers the keys.
+    // M154 dropped it, leaving only the varargs PropertyModel(PropertyKey... keys) to do that job.
+    fun newModelOf(keys: Collection<Any>): Any? {
+      val keysType = modelOfKeys?.parameterTypes?.first() ?: return null
+      if (!keysType.isArray) return modelOfKeys.newInstance(keys.toList())
+      val keyArray = java.lang.reflect.Array.newInstance(keysType.componentType!!, keys.size)
+      keys.forEachIndexed { i, key -> java.lang.reflect.Array.set(keyArray, i, key) }
+      return modelOfKeys.newInstance(keyArray)
+    }
+
+    // Until M153 every value sat in a one field ValueContainer, null until the key was written.
+    // M154 stores the values themselves and marks an unwritten key with a shared static sentinel,
+    // the one static Object field PropertyModel declares, so its presence tells the two apart.
+    val unsetValue =
+        proxy.propertyModel.declaredFields
+            .find { Modifier.isStatic(it.modifiers) && it.type == Any::class.java }
+            ?.also { it.isAccessible = true }
+            ?.get(null)
     val propertySetters =
         proxy.propertyModel.declaredMethods
             .filter {
@@ -477,13 +495,28 @@ object PageMenuHook : BaseHook() {
 
           @Suppress("UNCHECKED_CAST") val menuModels = mItems.get(it.result) as MutableList<Any>
 
-          // Every PropertyModel value is boxed in a one field holder, null until the key is written
+          fun unbox(holder: Any?): Any? {
+            if (holder == null || holder === unsetValue) return null
+            if (unsetValue != null) return holder
+            val boxed = holder::class.java.declaredFields.firstOrNull() ?: return null
+            return boxed.also { it.setAccessible(true) }.get(holder)
+          }
+
           fun propertyOf(item: Any, key: String): Any? {
             @Suppress("UNCHECKED_CAST")
             val properties = mData.get(model.get(item)) as Map<Any, Any?>
-            val holder = properties.entries.find { it.key.toString() == key }?.value ?: return null
-            val boxed = holder::class.java.declaredFields.firstOrNull() ?: return null
-            return boxed.also { it.setAccessible(true) }.get(holder)
+            return unbox(properties.entries.find { it.key.toString() == key }?.value)
+          }
+
+          // Overwrites a value in place, below the setters, for a model that is already on display
+          fun overwrite(entry: MutableMap.MutableEntry<Any, Any?>, value: Any) {
+            if (unsetValue != null) {
+              entry.setValue(value)
+            } else {
+              val holder = entry.value ?: return
+              val boxed = holder::class.java.declaredFields[0]
+              boxed.also { it.setAccessible(true) }.set(holder, value)
+            }
           }
 
           fun menuIdNameOf(item: Any): String? {
@@ -508,17 +541,11 @@ object PageMenuHook : BaseHook() {
                     Log.d("No page info entry to turn into the reader mode one")
                   } else {
                     @Suppress("UNCHECKED_CAST")
-                    val pageInfoModel = mData.get(model.get(pageInfo)) as Map<Any, Any?>
-                    pageInfoModel.forEach {
-                      if (it.value == null) {
-                        return@forEach
-                      }
-                      val _value =
-                          it.value!!::class.java.declaredFields[0].also { it.setAccessible(true) }
-                      if (it.key.toString() == "MENU_ITEM_ID") {
-                        _value.set(it.value, readerMode.ID)
-                      } else if (it.key.toString() == "ICON") {
-                        _value.set(it.value, ctx.resources.getDrawable(R.drawable.ic_book, null))
+                    val pageInfoModel = mData.get(model.get(pageInfo)) as MutableMap<Any, Any?>
+                    pageInfoModel.entries.forEach {
+                      when (it.key.toString()) {
+                        "MENU_ITEM_ID" -> overwrite(it, readerMode.ID)
+                        "ICON" -> overwrite(it, ctx.resources.getDrawable(R.drawable.ic_book, null))
                       }
                     }
                   }
@@ -557,10 +584,10 @@ object PageMenuHook : BaseHook() {
             // dereferences. Better no entry than a malformed one.
             val template =
                 candidates.firstOrNull { mType.get(it) == AppMenuItemType.STANDARD.value }
-            if (template == null || modelOfKeys == null) return null
+            if (template == null) return null
             @Suppress("UNCHECKED_CAST")
             val keys = (mData.get(model.get(template)) as Map<Any, Any?>).keys
-            val menuModel = modelOfKeys.newInstance(keys.toList())
+            val menuModel = newModelOf(keys) ?: return null
             keys.forEach { key ->
               val value =
                   when (key.toString()) {
