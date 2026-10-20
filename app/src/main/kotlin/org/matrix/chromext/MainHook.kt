@@ -80,9 +80,9 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
           runCatching {
             initHooks(
                 when {
-                  // Herond (Jetpack Compose) and Whale (its own menu views) replace the Chromium app
-                  // menu with a custom one that has no View-based ModelList to inject into, so fall
-                  // back to the selection action mode like the WebView based browsers do.
+                  // Herond (Compose) and Whale (custom views) replace the app menu with a surface
+                  // we cannot inject into, so fall back to the selection action mode like the
+                  // WebView based browsers do.
                   Chrome.isHerond || Chrome.isWhale -> ContextMenuHook
                   Chrome.isCocCoc -> PageInfoHook
                   else -> PageMenuHook

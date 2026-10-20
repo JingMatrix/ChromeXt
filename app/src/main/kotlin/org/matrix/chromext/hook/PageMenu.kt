@@ -341,15 +341,18 @@ object PageMenuHook : BaseHook() {
             iconRowMenu.setVisible(true)
           }
 
-          val position =
+          val dividers =
               items
                   .withIndex()
                   .filter {
-                    ctx.resources
-                        .getResourceName(it.value.getItemId())
-                        .endsWith("id/divider_line_id")
+                    runCatching { ctx.resources.getResourceName(it.value.getItemId()) }
+                        .getOrNull()
+                        ?.endsWith("id/divider_line_id") == true
                   }
-                  .map { it.index }[1]
+                  .map { it.index }
+          // Anchor on the second divider as before, but never throw if the menu has fewer: an
+          // unguarded getResourceName or index here would drop the ChromeXt entries wholesale.
+          val position = dividers.getOrNull(1) ?: dividers.lastOrNull() ?: (items.size - 1)
 
           toShow.forEach {
             val newMenuItem: MenuItem = items[items.size - it]

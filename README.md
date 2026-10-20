@@ -6,7 +6,7 @@ Add UserScript and DevTools supports to Chromium based and WebView based browser
 
 ##  How does it work?
 
-We hook the `onUpdateUrl` function in [UserScript.kt](app/src/main/java/org/matrix/chromext/hook/UserScript.kt),
+We hook the `onUpdateUrl` function in [UserScript.kt](app/src/main/kotlin/org/matrix/chromext/hook/UserScript.kt),
 add URL comparison there and evaluate JavaScript using the `javascript:` scheme (or DevTools Protocol when possible).
 
 Chromium based browsers,
@@ -54,13 +54,13 @@ Currently, ChromeXt supports almost all [Tampermonkey APIs](https://www.tampermo
 9. @noframes: note that, to load UserScripts for frames, there must be a script with `@grant frames` on the main page
 
 These APIs are implemented differently from the official ones, please refer to the source files
-[Local.kt](app/src/main/java/org/matrix/chromext/script/Local.kt) and
+[Local.kt](app/src/main/kotlin/org/matrix/chromext/script/Local.kt) and
 [GM.js](app/src/main/assets/GM.js) if you have doubts or questions.
 
 Moreover, there is the powerful (also dangerous) `GM.ChromeXt` API, which must be declared by `@grant GM.ChromeXt` to _unlock_ its usage.
 It is locked by default so that the users are protected from malicious UserScripts exploiting ChromeXt.
 This API allows scripts to use the JavaScript method `ChromeXt.dispatch(action, payload)`, which is fundamental to implement other APIs. (Hence, one can find usage examples in [GM.js](app/src/main/assets/GM.js)).
-Dispatched `action` and `payload` are handled by [Listener.kt](app/src/main/java/org/matrix/chromext/Listener.kt).
+Dispatched `action` and `payload` are handled by [Listener.kt](app/src/main/kotlin/org/matrix/chromext/Listener.kt).
 
 ### UserScripts manager front end
 
@@ -77,7 +77,7 @@ From the three dots page menu, ChromeXt offers you the
 1. `Developer tools` menu for the UserScript manager front end,
 2. `Eruda console` menu for other pages.
 
-For WebView based browsers, these menu items are presented in the context menu.
+For WebView based browsers (and Chromium forks that ship their own page menu, such as Herond and Whale), these menu items are presented in the context menu.
 
 ## Bonus
 
@@ -136,14 +136,15 @@ Note that the DevTools can also change User-Agent.
 ## Contribute to this project
 
 Before you submit your pull-requests, please ensure that the command
-`./gradlew build` or `gradlew.bat build` produces no warnings and no errors.
+`./gradlew build` or `gradlew.bat build` produces no warnings and no errors,
+and run `./gradlew format` to apply the project's [ktfmt](https://github.com/facebook/ktfmt) code style.
 
 Here are corresponding files you might want / need to change:
 1. Front end: [manager.vue](https://github.com/JingMatrix/jingmatrix.github.io/tree/main/components/ChromeXt/manager.vue)
-2. Tampermonkey API: [Local.kt](app/src/main/java/org/matrix/chromext/script/Local.kt)
+2. Tampermonkey API: [Local.kt](app/src/main/kotlin/org/matrix/chromext/script/Local.kt)
 and [GM.js](app/src/main/assets/GM.js)
 3. Eruda configuration: [eruda.js](app/src/main/assets/eruda.js)
-4. Support more WebView based browsers: [WebView.kt](app/src/main/java/org/matrix/chromext/hook/WebView.kt)
+4. Support more WebView based browsers: [WebView.kt](app/src/main/kotlin/org/matrix/chromext/hook/WebView.kt)
 
 ## Development plans
 
