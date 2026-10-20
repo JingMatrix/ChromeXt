@@ -38,14 +38,14 @@ private fun urlMatch(match: String, url: String, strict: Boolean): Boolean {
   }
 
   runCatching {
-        val result =
-            if (regexPattern) {
-              Regex(pattern).containsMatchIn(url)
-            } else {
-              Regex(pattern).matches(url)
-            }
-        return result
-      }
+    val result =
+        if (regexPattern) {
+          Regex(pattern).containsMatchIn(url)
+        } else {
+          Regex(pattern).matches(url)
+        }
+    return result
+  }
       .onFailure { Log.i("Invaid matching rule: ${match}, error: " + it.message) }
   return false
 }
@@ -75,10 +75,7 @@ val invalidUserScriptUrls = mutableListOf<String>()
 
 fun isUserScript(url: String?, path: String? = null): Boolean {
   if (url == null) return false
-  if (url.endsWith(".user.js") ||
-      (Chrome.isEdge &&
-          url.endsWith(".js") &&
-          (url.startsWith("file://") || url.startsWith("content://")))) {
+  if (url.endsWith(".user.js")) {
     if (invalidUserScriptUrls.contains(url)) return false
     invalidUserScriptDomains.forEach { if (url.startsWith("https://" + it) == true) return false }
     return true
@@ -129,6 +126,5 @@ fun parseOrigin(url: String): String? {
 
 fun isChromeScheme(url: String): Boolean {
   val protocol = url.split("://")
-  return (protocol.size > 1 &&
-      arrayOf("chrome", "chrome-native", "edge").contains(protocol.first()))
+  return (protocol.size > 1 && arrayOf("chrome", "chrome-native").contains(protocol.first()))
 }

@@ -30,7 +30,8 @@ object GM {
                   val sep = if (decalre.startsWith("function")) "(" else " ="
                   decalre.split(sep)[0].split(" ").last()
                 },
-                { it })
+                { it },
+            )
   }
 
   fun bootstrap(

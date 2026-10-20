@@ -15,7 +15,7 @@ fun Method.hookMethod(hookCallback: XC_MethodHook): XC_MethodHook.Unhook {
 
 fun Method.hookBefore(
     priority: Int = XCallback.PRIORITY_DEFAULT,
-    hook: Hooker
+    hook: Hooker,
 ): XC_MethodHook.Unhook {
   return this.hookMethod(
       object : XC_MethodHook(priority) {
@@ -30,7 +30,7 @@ fun Method.hookBefore(
 
 fun Method.hookAfter(
     priority: Int = XCallback.PRIORITY_DEFAULT,
-    hooker: Hooker
+    hooker: Hooker,
 ): XC_MethodHook.Unhook {
   return this.hookMethod(
       object : XC_MethodHook(priority) {
@@ -49,7 +49,7 @@ fun Constructor<*>.hookMethod(hookCallback: XC_MethodHook): XC_MethodHook.Unhook
 
 fun Constructor<*>.hookAfter(
     priority: Int = XCallback.PRIORITY_DEFAULT,
-    hooker: Hooker
+    hooker: Hooker,
 ): XC_MethodHook.Unhook {
   return this.hookMethod(
       object : XC_MethodHook(priority) {
@@ -85,7 +85,7 @@ class XposedHookFactory(priority: Int = XCallback.PRIORITY_DEFAULT) : XC_MethodH
 
 fun Method.hookMethod(
     priority: Int = XCallback.PRIORITY_DEFAULT,
-    hook: XposedHookFactory.() -> Unit
+    hook: XposedHookFactory.() -> Unit,
 ): XC_MethodHook.Unhook {
   val factory = XposedHookFactory(priority)
   hook(factory)

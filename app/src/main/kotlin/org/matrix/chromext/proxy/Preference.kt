@@ -32,7 +32,7 @@ object PreferenceProxy {
   private val preference by lazy { Chrome.load("androidx.preference.Preference") }
   // Both members below are only ever touched once the settings screen is on screen, and they must
   // stay lazy: enumerating the members of Preference resolves every parameter type it mentions, and
-  // Edge puts some of those in a split that is not loaded yet when the hooks are installed, so
+  // some browsers put some of those in a split not loaded yet when the hooks are installed, so
   // doing
   // this eagerly throws NoClassDefFoundError and takes the whole settings integration down with it.
   private val mClickListener by lazy {
@@ -100,7 +100,8 @@ object PreferenceProxy {
     setChecked.invoke(
         preferences["gesture_mod"],
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-            sharedPref.getBoolean("gesture_mod", true))
+            sharedPref.getBoolean("gesture_mod", true),
+    )
     setChecked.invoke(preferences["keep_storage"], ScriptDbManager.keepStorage)
 
     var reset_confirming = 1
@@ -113,49 +114,51 @@ object PreferenceProxy {
                     var html =
                         "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<!-- This is an automatically generated file. It will be read and overwritten. DO NOT EDIT! -->\n<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=UTF-8\">\n<TITLE>Bookmarks</TITLE>\n<H1>Bookmarks</H1>\n<DL><p>\n"
                     runCatching {
-                          val data =
-                              JSONObject(FileReader(bookmark).use { it.readText() })
-                                  .getJSONObject("roots")
+                      val data =
+                          JSONObject(FileReader(bookmark).use { it.readText() })
+                              .getJSONObject("roots")
 
-                          val DIV = 10000000
-                          fun loopChildren(folder: JSONObject, indent: String = "\t") {
-                            if (folder.optString("type") == "folder" && folder.has("children")) {
-                              val children = folder.getJSONArray("children")
+                      val DIV = 10000000
+                      fun loopChildren(folder: JSONObject, indent: String = "\t") {
+                        if (folder.optString("type") == "folder" && folder.has("children")) {
+                          val children = folder.getJSONArray("children")
+                          html +=
+                              indent +
+                                  "<DT><H3 ADD_DATE=\"${folder.getLong("date_added") / DIV }\" LAST_MODIFIED=\"${folder.getLong("date_modified") / DIV}\" PERSONAL_TOOLBAR_FOLDER=\"true\">${folder.getString("name")}</H3>\n"
+                          html += indent + "<DL><p>\n"
+                          for (i in 0 until children.length()) {
+                            val item = children.getJSONObject(i)
+                            if (item.getString("type") == "url") {
                               html +=
                                   indent +
-                                      "<DT><H3 ADD_DATE=\"${folder.getLong("date_added") / DIV }\" LAST_MODIFIED=\"${folder.getLong("date_modified") / DIV}\" PERSONAL_TOOLBAR_FOLDER=\"true\">${folder.getString("name")}</H3>\n"
-                              html += indent + "<DL><p>\n"
-                              for (i in 0 until children.length()) {
-                                val item = children.getJSONObject(i)
-                                if (item.getString("type") == "url") {
-                                  html +=
-                                      indent +
-                                          "\t<DT><A HREF=\"${item.getString("url")}\" ADD_DATE=\"${item.getLong("date_added") / DIV }\">${item.getString("name")}</A>\n"
-                                } else if (item.getString("type") == "folder") {
-                                  loopChildren(item, indent + "\t")
-                                }
-                              }
-                              html += indent + "</DL><p>\n"
+                                      "\t<DT><A HREF=\"${item.getString("url")}\" ADD_DATE=\"${item.getLong("date_added") / DIV }\">${item.getString("name")}</A>\n"
+                            } else if (item.getString("type") == "folder") {
+                              loopChildren(item, indent + "\t")
                             }
                           }
-
-                          val bookmarks = data.names()!!
-                          for (i in 0 until bookmarks.length()) {
-                            loopChildren(data.getJSONObject(bookmarks.getString(i)))
-                          }
-
-                          html += "</DL><p>"
-                          File(
-                                  Environment.getExternalStoragePublicDirectory(
-                                      Environment.DIRECTORY_DOWNLOADS),
-                                  "Bookmarks.html")
-                              .writeText(html)
-                          Log.toast(
-                              ctx,
-                              "Bookmarks exported to " +
-                                  Environment.DIRECTORY_DOWNLOADS +
-                                  "/Bookmarks.html")
+                          html += indent + "</DL><p>\n"
                         }
+                      }
+
+                      val bookmarks = data.names()!!
+                      for (i in 0 until bookmarks.length()) {
+                        loopChildren(data.getJSONObject(bookmarks.getString(i)))
+                      }
+
+                      html += "</DL><p>"
+                      File(
+                              Environment.getExternalStoragePublicDirectory(
+                                  Environment.DIRECTORY_DOWNLOADS),
+                              "Bookmarks.html",
+                          )
+                          .writeText(html)
+                      Log.toast(
+                          ctx,
+                          "Bookmarks exported to " +
+                              Environment.DIRECTORY_DOWNLOADS +
+                              "/Bookmarks.html",
+                      )
+                    }
                         .onFailure { Log.ex(it) }
                   } else {
                     Log.toast(ctx, "Bookmarks data not found")
@@ -174,7 +177,8 @@ object PreferenceProxy {
                   with(
                       ctx.getSharedPreferences(
                               Chrome.getContext().packageName + "_preferences",
-                              Context.MODE_PRIVATE)
+                              Context.MODE_PRIVATE,
+                          )
                           .edit()) {
                         putBoolean("developer", false)
                         apply()
@@ -210,7 +214,8 @@ object PreferenceProxy {
                   if (reset_confirming < 3) {
                     Log.toast(
                         ctx,
-                        "Clik ${3 - reset_confirming} more times if you confirm to reset ChromeXt")
+                        "Clik ${3 - reset_confirming} more times if you confirm to reset ChromeXt",
+                    )
                     reset_confirming += 1
                     return
                   }
@@ -227,7 +232,8 @@ object PreferenceProxy {
                   }
                   ctx.deleteDatabase("userscript")
                   Log.toast(ctx, "ChromeXt data are reset")
-                })
+                },
+        )
 
     if (mClickListener.type == OnClickListener::class.java) {
       mClickListener.setAccessible(true)
@@ -238,7 +244,8 @@ object PreferenceProxy {
               override fun onClick(v: View) {
                 listeners[name]?.invoke(pref)
               }
-            })
+            },
+        )
       }
       mClickListener.setAccessible(false)
     } else if (!clickHooked) {

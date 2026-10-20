@@ -17,10 +17,11 @@ import org.matrix.chromext.utils.firstDeclared
 // NoSuchMethod/NoSuchField so that MainHook can fall back to ContextMenuHook.
 object PageInfoProxy {
 
-  private fun load(name: String): Class<*>? =
-      runCatching { Chrome.load("org.chromium.components.page_info." + name) }
-          .onFailure { Log.e("PageInfoProxy: cannot load " + name) }
-          .getOrNull()
+  private fun load(name: String): Class<*>? = runCatching {
+    Chrome.load("org.chromium.components.page_info." + name)
+  }
+      .onFailure { Log.e("PageInfoProxy: cannot load " + name) }
+      .getOrNull()
 
   private val pageInfoRowView = load("PageInfoRowView")
 
@@ -45,12 +46,11 @@ object PageInfoProxy {
           ?.onEach { it.isAccessible = true } ?: emptyList()
 
   // The single static entry point, show(Activity, WebContents, ...), which builds the whole dialog
-  val showPageInfo: Method? =
-      controllerMethods.firstOrNull {
-        Modifier.isStatic(it.modifiers) &&
-            it.returnType == Void.TYPE &&
-            it.parameterTypes.firstOrNull() == Activity::class.java
-      }
+  val showPageInfo: Method? = controllerMethods.firstOrNull {
+    Modifier.isStatic(it.modifiers) &&
+        it.returnType == Void.TYPE &&
+        it.parameterTypes.firstOrNull() == Activity::class.java
+  }
 
   // Native calls these back from within show(), once the dialog view tree has been inflated
   private val callbackNames =
@@ -59,7 +59,7 @@ object PageInfoProxy {
 
   // destroy() unregisters the observer and dismisses the dialog. It takes no argument and is the
   // first method declared in PageInfoController on every build we checked, hence the lowest R8 rank
-  // among the obfuscated no-argument ones: a() in Chrome 151 and Edge 150, b() in CocCoc 155.
+  // among the obfuscated no-argument ones: a() in Chrome 151, b() in CocCoc 155.
   val destroy: Method? =
       controllerMethods
           .filter {

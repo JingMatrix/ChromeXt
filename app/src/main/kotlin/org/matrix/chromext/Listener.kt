@@ -150,20 +150,20 @@ object Listener {
     val url = URL(ERUD_URL + "@latest/eruda.js")
     val connection = url.openConnection() as HttpURLConnection
     runCatching {
-          connection.inputStream.bufferedReader().use {
-            var firstLine = it.readLine()
-            val new_version = Local.getErudaVersion(ctx, firstLine)
-            if (new_version == null) {
-              callback(null)
-            } else if (new_version != Local.eruda_version) {
-              Local.eruda_version = new_version
-              callback(firstLine + "\n" + it.readText())
-            } else {
-              callback("latest")
-            }
-            it.close()
-          }
+      connection.inputStream.bufferedReader().use {
+        var firstLine = it.readLine()
+        val new_version = Local.getErudaVersion(ctx, firstLine)
+        if (new_version == null) {
+          callback(null)
+        } else if (new_version != Local.eruda_version) {
+          Local.eruda_version = new_version
+          callback(firstLine + "\n" + it.readText())
+        } else {
+          callback("latest")
         }
+        it.close()
+      }
+    }
         .onFailure { callback(null) }
   }
 
@@ -172,15 +172,15 @@ object Listener {
     val sourceParts = sourceId.split("/init/")
     if (sourceParts.size > 1) frameId = sourceParts.last()
     runCatching {
-          val data = JSONObject(text)
-          val action = data.getString("action")
-          val key = data.getDouble("key")
-          val payload = data.optString("payload")
-          if (checkPermisson(action, key, currentTab)) {
-            val callback = on(action, payload, currentTab, auxObject, frameId)
-            if (callback != null) Chrome.evaluateJavascript(listOf(callback), currentTab, frameId)
-          }
-        }
+      val data = JSONObject(text)
+      val action = data.getString("action")
+      val key = data.getDouble("key")
+      val payload = data.optString("payload")
+      if (checkPermisson(action, key, currentTab)) {
+        val callback = on(action, payload, currentTab, auxObject, frameId)
+        if (callback != null) Chrome.evaluateJavascript(listOf(callback), currentTab, frameId)
+      }
+    }
         .onFailure { Log.i("${it::class.java.name}: startAction fails with " + text) }
   }
 
@@ -189,7 +189,7 @@ object Listener {
       payload: String = "",
       currentTab: Any? = null,
       auxObject: Any? = null,
-      frameId: String? = null
+      frameId: String? = null,
   ): String? {
     var callback: String? = null
     when (action) {
@@ -216,16 +216,6 @@ object Listener {
         val activity = Chrome.getContext()
         if (WebViewHook.isInit && currentTab != null && auxObject != null) {
           auxObject.invokeMethod(currentTab) { name == "onCloseWindow" }
-        } else if (Chrome.isSamsung &&
-            currentTab != null &&
-            activity::class.java ==
-                Chrome.load("com.sec.android.app.sbrowser.SBrowserMainActivity")) {
-          val manager = activity.invokeMethod { name == "getTabManager" }!!
-          @Suppress("UNCHECKED_CAST")
-          val tabList = manager.invokeMethod { name == "getAllTabList" } as List<Any>
-          tabList
-              .find { it.invokeMethod { name == "getTab" } == currentTab }
-              ?.also { manager.invokeMethod(it) { name == "closeTab" } }
         } else if (currentTab != null &&
             activity::class.java == UserScriptProxy.chromeTabbedActivity) {
           val tab = Chrome.load("org.chromium.chrome.browser.tab.Tab")
@@ -313,11 +303,11 @@ object Listener {
         if (detail.has("image")) {
           Chrome.IO.submit {
             runCatching {
-                  val url = URL(detail.getString("image"))
-                  val connection = url.openConnection() as HttpURLConnection
-                  val bitmap = BitmapFactory.decodeStream(connection.inputStream)
-                  builder.setLargeIcon(Icon.createWithBitmap(bitmap))
-                }
+              val url = URL(detail.getString("image"))
+              val connection = url.openConnection() as HttpURLConnection
+              val bitmap = BitmapFactory.decodeStream(connection.inputStream)
+              builder.setLargeIcon(Icon.createWithBitmap(bitmap))
+            }
                 .onFailure { Log.d("Fail to set notification image: ${it.message}") }
             notificationManager.notify(id, uuid, builder.build())
           }
@@ -363,7 +353,8 @@ object Listener {
                   detail.getJSONObject("request"),
                   uuid,
                   currentTab,
-                  frameId)
+                  frameId,
+              )
           xmlhttpRequests.put(uuid, request)
           Chrome.IO.submit { request.send() }
         }
@@ -514,13 +505,19 @@ object Listener {
         if (detail.has("message")) {
           val message = JSONObject(detail.getString("message"))
           target?.command(
-              message.getInt("id"), message.getString("method"), message.optJSONObject("params"))
+              message.getInt("id"),
+              message.getString("method"),
+              message.optJSONObject("params"),
+          )
         } else {
           fun response(res: JSONObject) {
             if (Chrome.checkTab(currentTab)) {
               Handler(Chrome.getContext().mainLooper).post {
                 Chrome.evaluateJavascript(
-                    listOf("ChromeXt.post('websocket', ${res})"), currentTab, frameId)
+                    listOf("ChromeXt.post('websocket', ${res})"),
+                    currentTab,
+                    frameId,
+                )
               }
             } else {
               target?.close()

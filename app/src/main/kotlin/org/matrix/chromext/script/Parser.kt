@@ -85,7 +85,8 @@ fun parseScript(input: String, storage: String? = null): Script? {
             script.code,
             script.storage,
             lib,
-            script.noframes)
+            script.noframes,
+        )
     return parsed
   }
 }

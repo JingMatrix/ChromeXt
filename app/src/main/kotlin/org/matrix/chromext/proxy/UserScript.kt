@@ -12,7 +12,6 @@ import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.findMethodOrNull
 import org.matrix.chromext.utils.firstDeclared
-import org.matrix.chromext.utils.invokeMethod
 import org.matrix.chromext.utils.parseOrigin
 import org.matrix.chromext.utils.r8Rank
 
@@ -22,40 +21,20 @@ object UserScriptProxy {
   // org/chromium/content_public/browser/LoadUrlParams
 
   val gURL = Chrome.load("org.chromium.url.GURL")
-  val loadUrlParams =
-      if (Chrome.isSamsung) {
-        Chrome.load("com.sec.android.app.sbrowser.tab.LoadUrlParams")
-      } else {
-        Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
-      }
+  val loadUrlParams = Chrome.load("org.chromium.content_public.browser.LoadUrlParams")
   // val tabModelJniBridge = Chrome.load("org.chromium.chrome.browser.tabmodel.TabModelJniBridge")
   val tabWebContentsDelegateAndroidImpl =
-      if (Chrome.isSamsung) {
-        Chrome.load("com.sec.android.app.sbrowser.tab.Tab")
-      } else {
-        Chrome.load("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
-      }
+      Chrome.load("org.chromium.chrome.browser.tab.TabWebContentsDelegateAndroidImpl")
   val navigationControllerImpl =
       Chrome.load("org.chromium.content.browser.framehost.NavigationControllerImpl")
-  val chromeTabbedActivity =
-      if (Chrome.isSamsung) {
-        Chrome.load("com.sec.terrace.TerraceActivity")
-      } else {
-        Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
-      }
-  val tabImpl =
-      if (Chrome.isSamsung) {
-        Chrome.load("com.sec.terrace.Terrace")
-      } else {
-        Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
-      }
+  val chromeTabbedActivity = Chrome.load("org.chromium.chrome.browser.ChromeTabbedActivity")
+  val tabImpl = Chrome.load("org.chromium.chrome.browser.tab.TabImpl")
   private val getId = findMethodOrNull(tabImpl) { name == "getId" }
   // Only consulted when getId is missing, which is never the case on Chrome itself: mId is the
   // first int declared by TabImpl, right after the native pointer. Lazy, so that a browser we
   // cannot make sense of costs us getTabId rather than the whole module.
   private val mId: Field? by lazy {
-    (if (Chrome.isSamsung) tabWebContentsDelegateAndroidImpl else tabImpl)
-        .declaredFields
+    tabImpl.declaredFields
         .filter { !Modifier.isStatic(it.modifiers) }
         .run { find { it.name == "mId" } ?: filter { it.type == Int::class.java }.firstDeclared() }
         ?.also { it.isAccessible = true }
@@ -76,7 +55,8 @@ object UserScriptProxy {
                         filter { it.type == webContents }.firstDeclared()?.let { r8Rank(it.name) }
                             ?: -1,
                         filter { it.type == loadUrlParams }.firstDeclared()?.let { r8Rank(it.name) }
-                            ?: -1)
+                            ?: -1,
+                    )
                 // Without an anchor any boolean is as good as any other, so do not guess.
                 if (anchor < 0) null
                 else
@@ -92,9 +72,8 @@ object UserScriptProxy {
       findMethodOrNull(tabImpl) { name == "getUrl" && returnType == gURL }
           ?: findMethodOrNull(tabImpl) { returnType == gURL && parameterTypes.isEmpty() }
   val loadUrl =
-      findMethod(if (Chrome.isSamsung) tabWebContentsDelegateAndroidImpl else tabImpl) {
-        parameterTypes contentDeepEquals arrayOf(loadUrlParams) &&
-            (Chrome.isSamsung || returnType != Void.TYPE)
+      findMethod(tabImpl) {
+        parameterTypes contentDeepEquals arrayOf(loadUrlParams) && returnType != Void.TYPE
       }
 
   // Chrome keeps none of these names, so fall back to the declaration order recovered from the
@@ -118,7 +97,7 @@ object UserScriptProxy {
   val kMaxURLChars = 2097152
 
   private fun loadUrl(url: String, tab: Any? = Chrome.getTab()) {
-    if (!Chrome.isSamsung && !Chrome.checkTab(tab)) return
+    if (!Chrome.checkTab(tab)) return
     loadUrl.invoke(tab, newLoadUrlParams(url))
   }
 
@@ -167,12 +146,6 @@ object UserScriptProxy {
 
   fun evaluateJavascript(script: String, tab: Any? = Chrome.getTab()): Boolean {
     if (script == "") return true
-    if (Chrome.isSamsung) {
-      mTab.get(tab ?: Chrome.getTab())?.invokeMethod(script, null) {
-        name == "evaluateJavaScriptForTests"
-      }
-      return true
-    }
     if (script.length > kMaxURLChars - 20000) return false
     val code = Uri.encode(script)
     if (code.length < kMaxURLChars - 200) {
@@ -184,7 +157,7 @@ object UserScriptProxy {
   }
 
   fun getTab(delegate: Any): Any? {
-    return if (Chrome.isSamsung) delegate else mTab.get(delegate)
+    return mTab.get(delegate)
   }
 
   fun parseUrl(packed: Any?): String? {
@@ -207,11 +180,7 @@ object UserScriptProxy {
       // Log.d("Change User-Agent header: ${origin}")
       if (ScriptDbManager.userAgents.contains(origin)) {
         val header = "user-agent: ${ScriptDbManager.userAgents.get(origin)}\r\n"
-        if (Chrome.isSamsung) {
-          urlParams.invokeMethod(header) { name == "setVerbatimHeaders" }
-        } else {
-          mVerbatimHeaders?.set(urlParams, header) ?: return false
-        }
+        mVerbatimHeaders?.set(urlParams, header) ?: return false
         return true
       }
     }

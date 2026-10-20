@@ -54,7 +54,7 @@ enum class AppMenuItemType(val value: Int) {
    * The number of menu item types specified above. If you add a menu item type you MUST increment
    * this.
    */
-  NUM_ENTRIES(6)
+  NUM_ENTRIES(6),
 }
 
 enum class EntryPoint(val value: Int) {
@@ -221,40 +221,38 @@ object PageMenuHook : BaseHook() {
         // Only the icon is cosmetic; the id is what makes the button reach readerMode, so a browser
         // whose icon setter we cannot name still gets a working button.
         runCatching {
-              if (button is ImageButton) {
-                button.setImageResource(R.drawable.ic_book)
-              } else {
-                // MaterialButton takes a Drawable, and its setIcon does not survive obfuscation, so
-                // match the signature and keep the inherited background setters out of the way.
-                button.invokeMethod(ctx.getDrawable(R.drawable.ic_book)) {
-                  name == "setIcon" ||
-                      (parameterTypes contentDeepEquals arrayOf(Drawable::class.java) &&
-                          returnType == Void.TYPE &&
-                          !name.startsWith("setBackground"))
-                }
-              }
+          if (button is ImageButton) {
+            button.setImageResource(R.drawable.ic_book)
+          } else {
+            // MaterialButton takes a Drawable, and its setIcon does not survive obfuscation, so
+            // match the signature and keep the inherited background setters out of the way.
+            button.invokeMethod(ctx.getDrawable(R.drawable.ic_book)) {
+              name == "setIcon" ||
+                  (parameterTypes contentDeepEquals arrayOf(Drawable::class.java) &&
+                      returnType == Void.TYPE &&
+                      !name.startsWith("setBackground"))
             }
+          }
+        }
             .onFailure { Log.e("Cannot set the reader mode icon: ${it}") }
         button.setId(readerMode.ID)
       }
 
       runCatching {
-            val onFooterViewInflated =
-                findMethodOrNull(tabbedAppMenuPropertiesDelegate, true) {
-                  parameterTypes.size == 2 && parameterTypes[1] == View::class.java
-                }
-            if (onFooterViewInflated != null) {
-              onFooterViewInflated.hookAfter {
-                brandBookmarkButton(it.thisObject, it.args[1] as? View)
-              }
-            } else {
-              val footerFactory =
-                  findMethod(tabbedAppMenuPropertiesDelegate, true) {
-                    parameterTypes.size == 1 && returnType == View::class.java
-                  }
-              footerFactory.hookAfter { brandBookmarkButton(it.thisObject, it.result as? View) }
+        val onFooterViewInflated =
+            findMethodOrNull(tabbedAppMenuPropertiesDelegate, true) {
+              parameterTypes.size == 2 && parameterTypes[1] == View::class.java
             }
-          }
+        if (onFooterViewInflated != null) {
+          onFooterViewInflated.hookAfter { brandBookmarkButton(it.thisObject, it.args[1] as? View) }
+        } else {
+          val footerFactory =
+              findMethod(tabbedAppMenuPropertiesDelegate, true) {
+                parameterTypes.size == 1 && returnType == View::class.java
+              }
+          footerFactory.hookAfter { brandBookmarkButton(it.thisObject, it.result as? View) }
+        }
+      }
           .onFailure { Log.ex(it, "Cannot reach the Brave app menu footer") }
     }
 
@@ -435,7 +433,8 @@ object PageMenuHook : BaseHook() {
     // declared as a raw HashMap since M150
 
     // Where the data map keeps each property value. Up to M152 every value was boxed in a one-field
-    // container; M153 dropped the containers and stores the value straight in the map, with a single
+    // container; M153 dropped the containers and stores the value straight in the map, with a
+    // single
     // shared sentinel Object (a public static final field) standing in for every unset key. That
     // sentinel field is the tell, and it decides how propertyOf below reads a value back out.
     val rawPropertyStorage =
@@ -507,36 +506,34 @@ object PageMenuHook : BaseHook() {
           // Rebranding the page info entry is cosmetic, so it must never cost us the menu entries
           // that follow: a throw here would be swallowed by the hook and look like a missing menu.
           runCatching {
-                val additionalIcons =
-                    menuModels.firstOrNull()?.let { row -> propertyOf(row, "ADDITIONAL_ICONS") }
-                if (additionalIcons != null && !Chrome.isBrave) {
-                  @Suppress("UNCHECKED_CAST")
-                  val icons = mItems.get(additionalIcons) as ArrayList<Any>
-                  // Vivaldi fills this row with five user configurable quick commands picked from
-                  // kzd.c/kzd.d/kzd.a, and the page info entry is in none of those lists, so a
-                  // positional guess just steals whichever command sits fourth (issue #290).
-                  val pageInfo =
-                      icons.find { menuIdNameOf(it)?.endsWith(":id/info_menu_id") == true }
-                  if (pageInfo == null) {
-                    Log.d("No page info entry to turn into the reader mode one")
-                  } else {
-                    @Suppress("UNCHECKED_CAST")
-                    val pageInfoModel = mData.get(model.get(pageInfo)) as Map<Any, Any?>
-                    pageInfoModel.forEach {
-                      if (it.value == null) {
-                        return@forEach
-                      }
-                      val _value =
-                          it.value!!::class.java.declaredFields[0].also { it.setAccessible(true) }
-                      if (it.key.toString() == "MENU_ITEM_ID") {
-                        _value.set(it.value, readerMode.ID)
-                      } else if (it.key.toString() == "ICON") {
-                        _value.set(it.value, ctx.resources.getDrawable(R.drawable.ic_book, null))
-                      }
-                    }
+            val additionalIcons =
+                menuModels.firstOrNull()?.let { row -> propertyOf(row, "ADDITIONAL_ICONS") }
+            if (additionalIcons != null && !Chrome.isBrave) {
+              @Suppress("UNCHECKED_CAST") val icons = mItems.get(additionalIcons) as ArrayList<Any>
+              // Vivaldi fills this row with five user configurable quick commands picked from
+              // kzd.c/kzd.d/kzd.a, and the page info entry is in none of those lists, so a
+              // positional guess just steals whichever command sits fourth (issue #290).
+              val pageInfo = icons.find { menuIdNameOf(it)?.endsWith(":id/info_menu_id") == true }
+              if (pageInfo == null) {
+                Log.d("No page info entry to turn into the reader mode one")
+              } else {
+                @Suppress("UNCHECKED_CAST")
+                val pageInfoModel = mData.get(model.get(pageInfo)) as Map<Any, Any?>
+                pageInfoModel.forEach {
+                  if (it.value == null) {
+                    return@forEach
+                  }
+                  val _value =
+                      it.value!!::class.java.declaredFields[0].also { it.setAccessible(true) }
+                  if (it.key.toString() == "MENU_ITEM_ID") {
+                    _value.set(it.value, readerMode.ID)
+                  } else if (it.key.toString() == "ICON") {
+                    _value.set(it.value, ctx.resources.getDrawable(R.drawable.ic_book, null))
                   }
                 }
               }
+            }
+          }
               .onFailure { Log.ex(it, "Cannot reach the page info entry of the app menu") }
 
           val skip = menuModels.size <= 10 || isChromeScheme(url)
@@ -563,15 +560,15 @@ object PageMenuHook : BaseHook() {
             // other listeners have to stay unset, or our entry would run the template's action.
             // TITLE is a CharSequence, and Chrome fills it with styled text, not a plain String, so
             // matching on String drops every row (none of the 23 items on M155 qualified).
-            val candidates =
-                menuModels.filter {
-                  propertyOf(it, "TITLE") is CharSequence && propertyOf(it, "ICON") != null
-                }
+            val candidates = menuModels.filter {
+              propertyOf(it, "TITLE") is CharSequence && propertyOf(it, "ICON") != null
+            }
             // Only a STANDARD row will do: the key set is copied wholesale, and a TITLE_BUTTON or
             // BUTTON_ROW template carries keys for buttons we never fill in, which the adapter then
             // dereferences. Better no entry than a malformed one.
-            val template =
-                candidates.firstOrNull { mType.get(it) == AppMenuItemType.STANDARD.value }
+            val template = candidates.firstOrNull {
+              mType.get(it) == AppMenuItemType.STANDARD.value
+            }
             if (template == null || modelOfKeys == null) return null
             @Suppress("UNCHECKED_CAST")
             val keys = (mData.get(model.get(template)) as Map<Any, Any?>).keys
@@ -605,21 +602,28 @@ object PageMenuHook : BaseHook() {
                     Triple(
                         R.id.developer_tools_id,
                         R.string.main_menu_developer_tools,
-                        R.drawable.ic_devtools),
+                        R.drawable.ic_devtools,
+                    ),
                     Triple(
-                        R.id.extension_id, R.string.main_menu_extension, R.drawable.ic_extension))
+                        R.id.extension_id,
+                        R.string.main_menu_extension,
+                        R.drawable.ic_extension,
+                    ),
+                )
               } else if (isUserScript(url)) {
                 listOf(
                     Triple(
                         R.id.install_script_id,
                         R.string.main_menu_install_script,
-                        R.drawable.ic_install_script))
+                        R.drawable.ic_install_script,
+                    ))
               } else {
                 listOf(
                     Triple(
                         R.id.eruda_console_id,
                         R.string.main_menu_eruda_console,
-                        R.drawable.ic_devtools))
+                        R.drawable.ic_devtools,
+                    ))
               }
 
           val menusToAdd = mutableListOf<Any>()

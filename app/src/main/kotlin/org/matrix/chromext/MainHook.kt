@@ -33,13 +33,7 @@ val supportedPackages =
         "com.coccoc.trinhduyet_beta",
         "com.herond.android.browser",
         "com.kiwibrowser.browser",
-        "com.microsoft.emmx",
-        "com.microsoft.emmx.beta",
-        "com.microsoft.emmx.canary",
-        "com.microsoft.emmx.dev",
         "com.naver.whale",
-        "com.sec.android.app.sbrowser",
-        "com.sec.android.app.sbrowser.beta",
         "com.vivaldi.browser",
         "com.vivaldi.browser.snapshot",
         "org.axpos.aosmium",
@@ -49,7 +43,8 @@ val supportedPackages =
         "org.cromite.cromite",
         "org.greatfire.freebrowser",
         "org.triple.banana",
-        "us.spotco.mulch")
+        "us.spotco.mulch",
+    )
 
 class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
   override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -75,20 +70,27 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
           // Keep the menu hooks reachable even when the UserScript hook cannot be installed
           runCatching { initHooks(UserScriptHook) }.onFailure { Log.ex(it) }
           if (ContextMenuHook.isInit) return@hookAfter
-          // The settings screen and the browser menu are independent features, so a browser that
-          // cannot host our preferences must still get its menu entries. Edge is exactly that case:
-          // it builds its settings programmatically, so PreferenceFragmentCompat carries no
-          // addPreferencesFromResource for PreferenceHook to hook.
+          // The settings screen and the browser menu are independent features, kept in separate
+          // runCatching blocks so a browser that cannot host our preferences still gets its menu
+          // entries.
           if (!Chrome.isVivaldi) {
             runCatching { initHooks(PreferenceHook) }
-                .onFailure { if (BuildConfig.DEBUG && !Chrome.isSamsung) Log.ex(it) }
+                .onFailure { if (BuildConfig.DEBUG) Log.ex(it) }
           }
           runCatching {
-                initHooks(if (Chrome.isEdge || Chrome.isCocCoc) PageInfoHook else PageMenuHook)
-              }
+            initHooks(
+                when {
+                  // Herond (Jetpack Compose) and Whale (its own menu views) replace the Chromium app
+                  // menu with a custom one that has no View-based ModelList to inject into, so fall
+                  // back to the selection action mode like the WebView based browsers do.
+                  Chrome.isHerond || Chrome.isWhale -> ContextMenuHook
+                  Chrome.isCocCoc -> PageInfoHook
+                  else -> PageMenuHook
+                })
+          }
               .onFailure {
                 initHooks(ContextMenuHook)
-                if (BuildConfig.DEBUG && !(Chrome.isSamsung || Chrome.isEdge)) Log.ex(it)
+                if (BuildConfig.DEBUG) Log.ex(it)
               }
         }
       }
@@ -109,9 +111,9 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
       if (Chrome.isMi) {
         WebViewHook.WebView = Chrome.load("com.miui.webkit.WebView")
         runCatching {
-              WebViewHook.ViewClient = Chrome.load("com.android.browser.tab.TabWebViewClient")
-              WebViewHook.ChromeClient = Chrome.load("com.android.browser.tab.TabWebChromeClient")
-            }
+          WebViewHook.ViewClient = Chrome.load("com.android.browser.tab.TabWebViewClient")
+          WebViewHook.ChromeClient = Chrome.load("com.android.browser.tab.TabWebChromeClient")
+        }
             .onFailure {
               val miuiAutologinBar = Chrome.load("com.android.browser.MiuiAutologinBar")
               // Use MiuiAutologinBar to find `com.android.browser.tab.Tab`, which can located by
@@ -171,9 +173,9 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     if (WebViewHook.ChromeClient == null || WebViewHook.ViewClient == null) return
     if (WebViewHook.WebView == null) {
       runCatching {
-            WebViewHook.WebView = WebView::class.java
-            WebView.setWebContentsDebuggingEnabled(true)
-          }
+        WebViewHook.WebView = WebView::class.java
+        WebView.setWebContentsDebuggingEnabled(true)
+      }
           .onFailure { if (BuildConfig.DEBUG) Log.ex(it) }
     }
     initHooks(WebViewHook, ContextMenuHook)

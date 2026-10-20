@@ -33,8 +33,10 @@ fun r8Rank(name: String): Int {
 }
 
 // The member declared first in the original source, among the obfuscated ones.
-fun <T : java.lang.reflect.Member> Iterable<T>.firstDeclared(): T? =
-    filter { r8Rank(it.name) != Int.MAX_VALUE }.minByOrNull { r8Rank(it.name) }
+fun <T : java.lang.reflect.Member> Iterable<T>.firstDeclared(): T? = filter {
+  r8Rank(it.name) != Int.MAX_VALUE
+}
+    .minByOrNull { r8Rank(it.name) }
 
 fun findMethod(clz: Class<*>, findSuper: Boolean = false, condition: MethodCondition): Method {
   return findMethodOrNull(clz, findSuper, condition) ?: throw NoSuchMethodException()
@@ -43,7 +45,7 @@ fun findMethod(clz: Class<*>, findSuper: Boolean = false, condition: MethodCondi
 fun findMethodOrNull(
     clz: Class<*>,
     findSuper: Boolean = false,
-    condition: MethodCondition
+    condition: MethodCondition,
 ): Method? {
   var c = clz
   c.declaredMethods

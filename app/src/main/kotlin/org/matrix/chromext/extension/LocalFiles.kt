@@ -35,46 +35,47 @@ object LocalFiles {
     val path = directory.toString() + "/" + id
     val background = extensions.get(id)?.optJSONObject("background")?.optString("page")
     runCatching {
-          connection.inputStream.bufferedReader().use {
-            val requestLine = it.readLine()
-            if (requestLine == null) {
-              connection.close()
-              return
-            }
-            val request = requestLine.split(" ")
-            if (request[0] == "GET" && request[2] == "HTTP/1.1") {
-              val name = request[1]
-              val file = File(path + name)
-              if (!file.exists() && name != "/ChromeXt.js") {
-                connection.outputStream.write("HTTP/1.1 404 Not Found\r\n\r\n".toByteArray())
-              } else if (file.isDirectory() || name.contains("..")) {
-                connection.outputStream.write("HTTP/1.1 403 Forbidden\r\n\r\n".toByteArray())
-              } else {
-                val data =
-                    if (name == "/" + background) {
-                      val html = FileReader(file).use { it.readText() }
-                      "<html><head><script>const extension = ${extensions.get(id)!!.put("html", html)}</script><script src='/ChromeXt.js' type='module'></script></head></html>"
-                          .toByteArray()
-                    } else if (name == "/ChromeXt.js") {
-                      script.toByteArray()
-                    } else {
-                      file.readBytes()
-                    }
-                val type = URLConnection.guessContentTypeFromName(name) ?: "text/plain"
-                val response =
-                    arrayOf(
-                        "HTTP/1.1 200",
-                        "Content-Length: ${data.size}",
-                        "Content-Type: ${type}",
-                        "Access-Control-Allow-Origin: *")
-                connection.outputStream.write(
-                    (response.joinToString("\r\n") + "\r\n\r\n").toByteArray())
-                connection.outputStream.write(data)
-              }
-              connection.close()
-            }
-          }
+      connection.inputStream.bufferedReader().use {
+        val requestLine = it.readLine()
+        if (requestLine == null) {
+          connection.close()
+          return
         }
+        val request = requestLine.split(" ")
+        if (request[0] == "GET" && request[2] == "HTTP/1.1") {
+          val name = request[1]
+          val file = File(path + name)
+          if (!file.exists() && name != "/ChromeXt.js") {
+            connection.outputStream.write("HTTP/1.1 404 Not Found\r\n\r\n".toByteArray())
+          } else if (file.isDirectory() || name.contains("..")) {
+            connection.outputStream.write("HTTP/1.1 403 Forbidden\r\n\r\n".toByteArray())
+          } else {
+            val data =
+                if (name == "/" + background) {
+                  val html = FileReader(file).use { it.readText() }
+                  "<html><head><script>const extension = ${extensions.get(id)!!.put("html", html)}</script><script src='/ChromeXt.js' type='module'></script></head></html>"
+                      .toByteArray()
+                } else if (name == "/ChromeXt.js") {
+                  script.toByteArray()
+                } else {
+                  file.readBytes()
+                }
+            val type = URLConnection.guessContentTypeFromName(name) ?: "text/plain"
+            val response =
+                arrayOf(
+                    "HTTP/1.1 200",
+                    "Content-Length: ${data.size}",
+                    "Content-Type: ${type}",
+                    "Access-Control-Allow-Origin: *",
+                )
+            connection.outputStream.write(
+                (response.joinToString("\r\n") + "\r\n\r\n").toByteArray())
+            connection.outputStream.write(data)
+          }
+          connection.close()
+        }
+      }
+    }
         .onFailure { Log.ex(it) }
   }
 
@@ -86,11 +87,11 @@ object LocalFiles {
       Log.d("Listening at port ${port} for ${id}")
       Chrome.IO.submit {
         runCatching {
-              while (true) {
-                val socket = server.accept()
-                Chrome.IO.submit { serveFiles(id, socket) }
-              }
-            }
+          while (true) {
+            val socket = server.accept()
+            Chrome.IO.submit { serveFiles(id, socket) }
+          }
+        }
             .onFailure {
               Log.ex(it)
               server.close()

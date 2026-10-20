@@ -105,9 +105,7 @@ object ContextMenuHook : BaseHook() {
   }
 
   override fun init() {
-    if (Chrome.isSamsung) {
-      hookActionMode(Chrome.load("com.sec.terrace.content.browser.TinActionModeCallback"))
-    } else if (Chrome.isQihoo) {
+    if (Chrome.isQihoo) {
       val WebViewExtensionClient = Chrome.load("com.qihoo.webkit.extension.WebViewExtensionClient")
       popupWindowFinder =
           WebViewExtensionClient.declaredConstructors.first().hookAfter {
@@ -177,15 +175,22 @@ object ContextMenuHook : BaseHook() {
             val shareImageView = mShareImageView.get(popupWindow) as ImageView
             val erudaImageView =
                 createImageView.invoke(
-                    null, context, listener, getDarkOrNightModeEnabled.invoke(delegate))
-                    as ImageView
+                    null,
+                    context,
+                    listener,
+                    getDarkOrNightModeEnabled.invoke(delegate),
+                ) as ImageView
             erudaImageView.setImageResource(R.drawable.ic_devtools)
             erudaImageView.setId(erudaMenuId)
             erudaImageView.getLayoutParams().height = shareImageView.getMeasuredHeight()
             erudaImageView.getLayoutParams().width = shareImageView.getMeasuredWidth()
             val paddingY = contentView.getMeasuredHeight() - shareImageView.getMeasuredHeight() - 10
             erudaImageView.setPadding(
-                shareImageView.paddingLeft, paddingY / 2, shareImageView.paddingRight, paddingY / 2)
+                shareImageView.paddingLeft,
+                paddingY / 2,
+                shareImageView.paddingRight,
+                paddingY / 2,
+            )
             contentView.addView(erudaImageView)
           }
     } else {

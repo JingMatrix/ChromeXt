@@ -38,11 +38,11 @@ object Chrome {
 
   var isBrave = false
   var isDev = false
-  var isEdge = false
+  var isHerond = false
   var isMi = false
   var isQihoo = false
-  var isSamsung = false
   var isVivaldi = false
+  var isWhale = false
   var isCocCoc = false
 
   var version: String? = null
@@ -62,12 +62,12 @@ object Chrome {
         packageName.startsWith("com.brave.browser") || packageName == "com.herond.android.browser"
     isCocCoc = packageName.startsWith("com.coccoc.trinhduyet")
     isDev = packageName.endsWith("canary") || packageName.endsWith("dev")
-    isEdge = packageName.startsWith("com.microsoft.emmx")
+    isHerond = packageName == "com.herond.android.browser"
     isMi = packageName == "com.mi.globalbrowser" || packageName == "com.android.browser"
     isQihoo = packageName == "com.qihoo.contents"
-    isSamsung = packageName.startsWith("com.sec.android.app.sbrowser")
     // com.vivaldi.browser.snapshot is supported too, and it needs the same special cases as stable
     isVivaldi = packageName.startsWith("com.vivaldi.browser")
+    isWhale = packageName == "com.naver.whale"
     @Suppress("DEPRECATION") val packageInfo = ctx.packageManager?.getPackageInfo(packageName, 0)
     version = packageInfo?.versionName
     version = (if (version?.startsWith("v") == true) "" else "v") + version
@@ -149,10 +149,10 @@ object Chrome {
     var waited = 0
     while (!devToolsReady && waited < limit) {
       runCatching {
-            hitDevTools().close()
-            devToolsReady = true
-            Log.i("DevTools woke up")
-          }
+        hitDevTools().close()
+        devToolsReady = true
+        Log.i("DevTools woke up")
+      }
           .onFailure { Log.d("Waking up DevTools") }
       if (!devToolsReady) Thread.sleep(500)
       waited += 1
@@ -160,7 +160,6 @@ object Chrome {
   }
 
   fun getContext(): Context {
-    if (Chrome.isSamsung) return mContext!!.get()!!
     val activity =
         getTab()?.invokeMethod { name == "getContext" || returnType == Context::class.java }
             as Context?
@@ -197,15 +196,11 @@ object Chrome {
   fun updateTab(tab: Any?) {
     if (tab != null && tab != getTab()) {
       mTab = WeakReference(tab)
-      if (Chrome.isSamsung) {
-        val context = findField(UserScriptProxy.tabImpl) { name == "mContext" }
-        mContext = WeakReference(context.get(UserScriptProxy.mTab.get(tab)) as Context)
-      }
     }
   }
 
   fun getTabId(tab: Any?, url: String? = null): String {
-    if (WebViewHook.isInit || Chrome.isSamsung) {
+    if (WebViewHook.isInit) {
       if (url == null && getContext().mainLooper.getThread() != Thread.currentThread())
           Log.w("Url parameter is missing in a non-UI thread")
       val attached = !WebViewHook.isInit || tab == Chrome.getTab()

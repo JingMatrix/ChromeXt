@@ -32,7 +32,8 @@ class DevToolClient(tabId: String, tag: String? = null) : LocalSocket() {
             "Connection: Upgrade",
             "Upgrade: websocket",
             "Sec-WebSocket-Version: 13",
-            "Sec-WebSocket-Key: ${Base64.encodeToString(randomString(16).toByteArray(), Base64.DEFAULT).trim()}")
+            "Sec-WebSocket-Key: ${Base64.encodeToString(randomString(16).toByteArray(), Base64.DEFAULT).trim()}",
+        )
     Log.d("Start inspecting tab ${tabId}")
     outputStream.write((request.joinToString("\r\n") + "\r\n\r\n").toByteArray())
     val buffer = ByteArray(DEFAULT_BUFFER_SIZE / 8)
@@ -99,38 +100,38 @@ class DevToolClient(tabId: String, tag: String? = null) : LocalSocket() {
     if (listening) Log.w("client was being listened on")
     listening = true
     runCatching {
-          while (!isClosed()) {
-            val type = inputStream.read()
-            if (type == -1) {
-              break
-            } else if (type == (0x80 or 0x1) || type == (0x80 or 0xA)) {
-              var len = inputStream.read()
-              if (len == 0x7e) {
-                len = inputStream.read() shl 8
-                len += inputStream.read()
-              } else if (len == 0x7f) {
-                len = 0
-                for (i in 0 until 8) {
-                  len = len or (inputStream.read() shl (8 * (7 - i)))
-                }
-              } else if (len > 0x7d) {
-                throw Exception("Invalid frame length ${len}")
-              }
-              var offset = 0
-              val buffer = ByteArray(len)
-              while (offset != len) offset += inputStream.read(buffer, offset, len - offset)
-              val frame = String(buffer)
-
-              if (type == (0x80 or 0xA)) {
-                callback(JSONObject(mapOf("pong" to frame)))
-              } else {
-                callback(JSONObject(frame))
-              }
-            } else {
-              throw Exception("Invalid frame type ${type}")
+      while (!isClosed()) {
+        val type = inputStream.read()
+        if (type == -1) {
+          break
+        } else if (type == (0x80 or 0x1) || type == (0x80 or 0xA)) {
+          var len = inputStream.read()
+          if (len == 0x7e) {
+            len = inputStream.read() shl 8
+            len += inputStream.read()
+          } else if (len == 0x7f) {
+            len = 0
+            for (i in 0 until 8) {
+              len = len or (inputStream.read() shl (8 * (7 - i)))
             }
+          } else if (len > 0x7d) {
+            throw Exception("Invalid frame length ${len}")
           }
+          var offset = 0
+          val buffer = ByteArray(len)
+          while (offset != len) offset += inputStream.read(buffer, offset, len - offset)
+          val frame = String(buffer)
+
+          if (type == (0x80 or 0xA)) {
+            callback(JSONObject(mapOf("pong" to frame)))
+          } else {
+            callback(JSONObject(frame))
+          }
+        } else {
+          throw Exception("Invalid frame type ${type}")
         }
+      }
+    }
         .onFailure {
           if (!isClosed()) {
             Log.ex(it, "Listening at tab ${tabId}")
@@ -219,11 +220,7 @@ class WebSocketFrame(msg: String?, opcode: Int = 0x1) {
 fun connectDevTools(client: LocalSocket) {
   val address =
       if (UserScriptHook.isInit) {
-        if (Chrome.isSamsung) {
-          "Terrace_devtools_remote"
-        } else {
-          "chrome_devtools_remote"
-        }
+        "chrome_devtools_remote"
       } else if (Chrome.isMi) {
         "miui_webview_devtools_remote"
       } else if (WebViewHook.isInit) {

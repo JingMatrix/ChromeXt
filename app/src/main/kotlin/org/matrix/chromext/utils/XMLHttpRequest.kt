@@ -18,7 +18,7 @@ class XMLHttpRequest(
     request: JSONObject,
     uuid: Double,
     currentTab: Any?,
-    frameId: String?
+    frameId: String?,
 ) {
   val currentTab = currentTab
   val frameId = frameId
@@ -76,52 +76,52 @@ class XMLHttpRequest(
 
       var data = JSONObject()
       runCatching {
-            if (method != "GET" && request.has("data")) {
-              val input = request.optString("data")
-              val bytes =
-                  if (binary) {
-                    Base64.decode(input, Base64.DEFAULT)
-                  } else {
-                    input.toByteArray()
-                  }
-              setFixedLengthStreamingMode(bytes.size)
-              outputStream.write(bytes)
-            }
-
-            data.put("status", responseCode)
-            data.put("statusText", responseMessage)
-            val headers = headerFields.filter { it.key != null }.mapValues { JSONArray(it.value) }
-            data.put("headers", JSONObject(headers))
-            val binary =
-                responseType !in listOf("", "text", "document", "json") ||
-                    contentEncoding != null ||
-                    (contentType != null &&
-                        contentType.contains("charset") &&
-                        !contentType.contains("utf-8"))
-            data.put("binary", binary)
-
-            val buffer = ByteArray(buffersize * DEFAULT_BUFFER_SIZE)
-            while (true) {
-              var bytes = 0
-              while (buffer.size > bytes) {
-                val b = inputStream.read(buffer, bytes, buffer.size - bytes)
-                if (b == 0 || b == -1) break
-                bytes += b
+        if (method != "GET" && request.has("data")) {
+          val input = request.optString("data")
+          val bytes =
+              if (binary) {
+                Base64.decode(input, Base64.DEFAULT)
+              } else {
+                input.toByteArray()
               }
-              if (bytes == 0) break
-              val chunk =
-                  if (binary) {
-                    Base64.encodeToString(buffer, 0, bytes, Base64.DEFAULT)
-                  } else {
-                    String(buffer, 0, bytes)
-                  }
-              data.put("chunk", chunk)
-              data.put("bytes", bytes)
-              response("progress", data, false)
-              data.remove("headers")
-            }
-            response("load", data)
+          setFixedLengthStreamingMode(bytes.size)
+          outputStream.write(bytes)
+        }
+
+        data.put("status", responseCode)
+        data.put("statusText", responseMessage)
+        val headers = headerFields.filter { it.key != null }.mapValues { JSONArray(it.value) }
+        data.put("headers", JSONObject(headers))
+        val binary =
+            responseType !in listOf("", "text", "document", "json") ||
+                contentEncoding != null ||
+                (contentType != null &&
+                    contentType.contains("charset") &&
+                    !contentType.contains("utf-8"))
+        data.put("binary", binary)
+
+        val buffer = ByteArray(buffersize * DEFAULT_BUFFER_SIZE)
+        while (true) {
+          var bytes = 0
+          while (buffer.size > bytes) {
+            val b = inputStream.read(buffer, bytes, buffer.size - bytes)
+            if (b == 0 || b == -1) break
+            bytes += b
           }
+          if (bytes == 0) break
+          val chunk =
+              if (binary) {
+                Base64.encodeToString(buffer, 0, bytes, Base64.DEFAULT)
+              } else {
+                String(buffer, 0, bytes)
+              }
+          data.put("chunk", chunk)
+          data.put("bytes", bytes)
+          response("progress", data, false)
+          data.remove("headers")
+        }
+        response("load", data)
+      }
           .onFailure {
             if (it is IOException) {
               data.put("type", it::class.java.name)

@@ -24,8 +24,8 @@ object PageInfoHook : BaseHook() {
     val destroy = proxy.destroy ?: throw NoSuchMethodException("PageInfoController.destroy")
     if (proxy.nativeCallbacks.isEmpty()) throw NoSuchMethodException("PageInfoController callbacks")
 
-    // The row container is looked up by resource id and never kept in a field, and Edge can swap
-    // the whole PageInfoView for a bottom sheet behind a feature flag, so rather than chase it
+    // The row container is looked up by resource id and never kept in a field, and some browsers
+    // swap the whole PageInfoView for a bottom sheet behind a feature flag, so rather than chase it
     // through the controller we keep the first row built during show() and take its parent.
     var firstRow: ViewGroup? = null
     var controller: Any? = null

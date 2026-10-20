@@ -153,7 +153,12 @@ object ScriptDbManager {
 
     if (!asyncEvaluation)
         Chrome.evaluateJavascript(
-            listOf(initScript), webView, frameId, bypassSandbox, bypassSandbox)
+            listOf(initScript),
+            webView,
+            frameId,
+            bypassSandbox,
+            bypassSandbox,
+        )
     codes.clear()
     if (asyncEvaluation) codes.add(initScript)
     if (runScripts) {

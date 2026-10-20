@@ -33,22 +33,15 @@ class OpenInChrome : Activity() {
       defaultPackage = avaiblePackages.last()
     }
 
-    val isSamsung = defaultPackage.startsWith("com.sec.android.app.sbrowser")
     val intent: Intent = getIntent()
     val destination: ComponentName =
-        ComponentName(
-            defaultPackage,
-            if (isSamsung) {
-              "com.sec.android.app.sbrowser.SBrowserMainActivity"
-            } else {
-              "com.google.android.apps.chrome.IntentDispatcher"
-            })
+        ComponentName(defaultPackage, "com.google.android.apps.chrome.IntentDispatcher")
 
     if (intent.action == Intent.ACTION_VIEW) {
       intent.setComponent(destination)
       intent.setDataAndType(intent.data, "text/html")
       startActivity(intent)
-    } else if (intent.action == Intent.ACTION_SEND && !isSamsung) {
+    } else if (intent.action == Intent.ACTION_SEND) {
       var text = intent.getStringExtra(Intent.EXTRA_TEXT)
       if (text == null || intent.type != "text/plain") {
         finish()

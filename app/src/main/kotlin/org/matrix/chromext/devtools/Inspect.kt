@@ -7,26 +7,22 @@ import org.matrix.chromext.utils.Log
 fun getInspectPages(): JSONArray? {
   var response = ""
   runCatching {
-        hitDevTools().inputStream.bufferedReader().use {
-          while (true) {
-            val line = it.readLine()
-            if (line.length == 0) {
-              val bufferSize =
-                  response
-                      .split("\n")
-                      .find { it.startsWith("Content-Length") }!!
-                      .substring(15)
-                      .toInt()
-              val buffer = CharArray(bufferSize)
-              it.read(buffer)
-              response = buffer.joinToString("")
-              it.close()
-              break
-            }
-            response += line + "\n"
-          }
+    hitDevTools().inputStream.bufferedReader().use {
+      while (true) {
+        val line = it.readLine()
+        if (line.length == 0) {
+          val bufferSize =
+              response.split("\n").find { it.startsWith("Content-Length") }!!.substring(15).toInt()
+          val buffer = CharArray(bufferSize)
+          it.read(buffer)
+          response = buffer.joinToString("")
+          it.close()
+          break
         }
+        response += line + "\n"
       }
+    }
+  }
       .onFailure {
         Log.ex(it)
         return null
@@ -56,7 +52,7 @@ object DevSessions {
   fun new(
       tabId: String,
       tag: String?,
-      condition: (DevToolClient) -> Boolean = { true }
+      condition: (DevToolClient) -> Boolean = { true },
   ): DevToolClient {
     var client =
         get { it.tabId == tabId && it.tag == tag && condition(it) } ?: DevToolClient(tabId, tag)
