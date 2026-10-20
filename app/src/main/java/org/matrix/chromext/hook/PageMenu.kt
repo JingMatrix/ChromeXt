@@ -399,12 +399,11 @@ object PageMenuHook : BaseHook() {
 
     val modelOfKeys =
         proxy.propertyModel.declaredConstructors
-            .firstOrNull {
-              it.parameterTypes.size == 1 &&
-                  it.parameterTypes[0].isAssignableFrom(ArrayList::class.java)
-            }
+            .firstOrNull { it.parameterTypes.size == 1 && it.parameterTypes[0].isArray }
             ?.also { it.isAccessible = true }
-    // public PropertyModel(List<PropertyKey> keys), the only constructor that registers the keys
+    // public PropertyModel(PropertyKey... keys): the varargs array form is the one R8 keeps on
+    // every version. The List and HashMap single-argument constructors get inlined away (both gone
+    // as of M155), so matching a List parameter finds nothing and the keys never get registered.
     val propertySetters =
         proxy.propertyModel.declaredMethods
             .filter {
@@ -434,6 +433,15 @@ object PageMenuHook : BaseHook() {
 
     val mData = findField(proxy.propertyModel) { Map::class.java.isAssignableFrom(type) }
     // declared as a raw HashMap since M150
+
+    // Where the data map keeps each property value. Up to M152 every value was boxed in a one-field
+    // container; M153 dropped the containers and stores the value straight in the map, with a single
+    // shared sentinel Object (a public static final field) standing in for every unset key. That
+    // sentinel field is the tell, and it decides how propertyOf below reads a value back out.
+    val rawPropertyStorage =
+        proxy.propertyModel.declaredFields.any {
+          Modifier.isStatic(it.modifiers) && it.type == Any::class.java
+        }
 
     val itemConstructor =
         MVCListAdapter_ListItem.declaredConstructors
@@ -477,11 +485,16 @@ object PageMenuHook : BaseHook() {
 
           @Suppress("UNCHECKED_CAST") val menuModels = mItems.get(it.result) as MutableList<Any>
 
-          // Every PropertyModel value is boxed in a one field holder, null until the key is written
           fun propertyOf(item: Any, key: String): Any? {
             @Suppress("UNCHECKED_CAST")
             val properties = mData.get(model.get(item)) as Map<Any, Any?>
             val holder = properties.entries.find { it.key.toString() == key }?.value ?: return null
+            if (rawPropertyStorage) {
+              // The value sits in the map as is; the shared sentinel (a bare Object) marks an unset
+              // key, so anything whose exact class is Object is the sentinel and counts as null.
+              return if (holder.javaClass == Any::class.java) null else holder
+            }
+            // Older builds box the value in a one field holder, null until the key is written.
             val boxed = holder::class.java.declaredFields.firstOrNull() ?: return null
             return boxed.also { it.setAccessible(true) }.get(holder)
           }
@@ -548,9 +561,11 @@ object PageMenuHook : BaseHook() {
             // PropertyModel needs to build an empty one of the same shape. Only the properties
             // buildModelForStandardMenuItem itself writes get filled in: CLICK_HANDLER and the
             // other listeners have to stay unset, or our entry would run the template's action.
+            // TITLE is a CharSequence, and Chrome fills it with styled text, not a plain String, so
+            // matching on String drops every row (none of the 23 items on M155 qualified).
             val candidates =
                 menuModels.filter {
-                  propertyOf(it, "TITLE") is String && propertyOf(it, "ICON") != null
+                  propertyOf(it, "TITLE") is CharSequence && propertyOf(it, "ICON") != null
                 }
             // Only a STANDARD row will do: the key set is copied wholesale, and a TITLE_BUTTON or
             // BUTTON_ROW template carries keys for buttons we never fill in, which the adapter then
@@ -560,7 +575,12 @@ object PageMenuHook : BaseHook() {
             if (template == null || modelOfKeys == null) return null
             @Suppress("UNCHECKED_CAST")
             val keys = (mData.get(model.get(template)) as Map<Any, Any?>).keys
-            val menuModel = modelOfKeys.newInstance(keys.toList())
+            // The surviving constructor is varargs PropertyKey[], so the keys have to go in through
+            // an array of exactly that component type, not a List and not an Object[].
+            val keyType = modelOfKeys.parameterTypes[0].componentType
+            val keyArray = java.lang.reflect.Array.newInstance(keyType, keys.size)
+            keys.forEachIndexed { i, key -> java.lang.reflect.Array.set(keyArray, i, key) }
+            val menuModel = modelOfKeys.newInstance(keyArray)
             keys.forEach { key ->
               val value =
                   when (key.toString()) {
