@@ -1,8 +1,4 @@
-plugins {
-  id("com.android.application")
-  id("org.jetbrains.kotlin.android")
-  id("com.ncorti.ktfmt.gradle")
-}
+plugins { id("com.android.application") }
 
 android {
   compileSdk = 35
@@ -42,7 +38,8 @@ android {
             "UnsafeIntentLaunch",
             "SetJavaScriptEnabled",
             "UnspecifiedRegisterReceiverFlag",
-            "Usability:Icons")
+            "Usability:Icons",
+        )
   }
 }
 
