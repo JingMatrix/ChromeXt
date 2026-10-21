@@ -14,6 +14,7 @@
 		<package android:name="com.naver.whale"/>
 		<package android:name="com.vivaldi.browser"/>
 		<package android:name="com.vivaldi.browser.snapshot"/>
+		<package android:name="io.github.jqssun.helium"/>
 		<package android:name="org.bromite.bromite"/>
 		<package android:name="org.chromium.thorium"/>
 		<package android:name="org.cromite.cromite"/>

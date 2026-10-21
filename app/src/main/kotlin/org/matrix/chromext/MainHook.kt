@@ -36,6 +36,7 @@ val supportedPackages =
         "com.naver.whale",
         "com.vivaldi.browser",
         "com.vivaldi.browser.snapshot",
+        "io.github.jqssun.helium",
         "org.axpos.aosmium",
         "org.bromite.bromite",
         "org.chromium.chrome",
