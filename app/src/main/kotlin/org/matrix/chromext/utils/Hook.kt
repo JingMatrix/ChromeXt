@@ -47,6 +47,21 @@ fun Constructor<*>.hookMethod(hookCallback: XC_MethodHook): XC_MethodHook.Unhook
   return XposedBridge.hookMethod(this, hookCallback)
 }
 
+fun Constructor<*>.hookBefore(
+    priority: Int = XCallback.PRIORITY_DEFAULT,
+    hooker: Hooker
+): XC_MethodHook.Unhook {
+  return this.hookMethod(
+      object : XC_MethodHook(priority) {
+        override fun beforeHookedMethod(param: MethodHookParam) =
+            try {
+              hooker(param)
+            } catch (thr: Throwable) {
+              Log.ex(thr)
+            }
+      })
+}
+
 fun Constructor<*>.hookAfter(
     priority: Int = XCallback.PRIORITY_DEFAULT,
     hooker: Hooker,
