@@ -22,7 +22,7 @@ Note for WebView based browsers users: you _only_ need to enable this module for
 
 ChromeXt requires **Xposed framework**.
 
-For root users, install [LSPosed](https://github.com/JingMatrix/LSPosed) first,
+For root users, install [Vector](https://github.com/JingMatrix/Vector) first,
 pick up the latest built APK from my repo's [GitHub Actions](https://github.com/JingMatrix/ChromeXt/actions) and install it.
 
 For non-root users,
