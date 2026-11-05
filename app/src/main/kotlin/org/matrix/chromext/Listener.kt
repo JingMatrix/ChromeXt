@@ -21,6 +21,7 @@ import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlin.math.sign
 import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.devtools.DevSessions
@@ -32,8 +33,10 @@ import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.Local
+import org.matrix.chromext.script.Script
 import org.matrix.chromext.script.ScriptDbHelper
 import org.matrix.chromext.script.ScriptDbManager
+import org.matrix.chromext.script.compareVersions
 import org.matrix.chromext.script.parseScript
 import org.matrix.chromext.utils.ERUD_URL
 import org.matrix.chromext.utils.Log
@@ -53,7 +56,7 @@ object Listener {
   val xmlhttpRequests = mutableMapOf<Double, XMLHttpRequest>()
   val allowedActions =
       mapOf(
-          "userscript" to listOf("block", "installScript"),
+          "userscript" to listOf("block", "checkScript", "installScript"),
           "front-end" to listOf("inspect_pages", "userscript", "extension"),
           "devtools" to listOf("websocket"),
       )
@@ -167,6 +170,18 @@ object Listener {
         .onFailure { callback(null) }
   }
 
+  private fun installAction(script: Script): Pair<String, String> {
+    val installed = ScriptDbManager.scripts.find { it.id == script.id } ?: return "Install" to ""
+    val old = installed.version
+    val new = script.version
+    if (old == null || new == null) return "Update" to ""
+    return when (compareVersions(new, old).sign) {
+      1 -> "Update" to " from ${old} to ${new}"
+      -1 -> "Downgrade" to " from ${old} to ${new}"
+      else -> "Reinstall" to ""
+    }
+  }
+
   fun startAction(text: String, currentTab: Any? = null, auxObject: Any? = null, sourceId: String) {
     var frameId: String? = null
     val sourceParts = sourceId.split("/init/")
@@ -256,17 +271,29 @@ object Listener {
           (activity as Activity).window.decorView.requestFocus()
         }
       }
+      "checkScript" -> {
+        val script = parseScript(payload, downloadRequire = false)
+        if (script != null) {
+          val (action, change) = installAction(script)
+          callback = "Symbol.installScript.prompt('${action}', ${JSONObject.quote(change)});"
+        }
+      }
       "installScript" -> {
         val script = parseScript(payload)
         if (script == null) {
           callback = "alert('Invalid UserScript');"
         } else {
-          Log.i("Install script ${script.id}")
+          val (action, change) = installAction(script)
+          val name = script.id.substringAfterLast(":")
+          val message = "${action.removeSuffix("e")}ed ${name}${change}"
+          Log.i(message)
           ScriptDbManager.apply {
             insert(script)
             scripts.removeAll(scripts.filter { it.id == script.id })
             scripts.add(script)
           }
+          val ctx = Chrome.getContext()
+          Handler(ctx.mainLooper).post { Log.toast(ctx, message) }
         }
       }
       "notification" -> {

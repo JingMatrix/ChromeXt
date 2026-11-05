@@ -13,7 +13,7 @@ private val blocksReg =
         """(?<metablock>[\S\s]*?// ==UserScript==\r?\n[\S\s]*?\r?\n// ==/UserScript==\s+)(?<code>[\S\s]*)""")
 private val metaReg = Regex("""^//\s+@(?<key>[\w-]+)(\s+(?<value>.+))?""")
 
-fun parseScript(input: String, storage: String? = null): Script? {
+fun parseScript(input: String, storage: String? = null, downloadRequire: Boolean = true): Script? {
   val blockMatchGroup = blocksReg.matchEntire(input)?.groups
   if (blockMatchGroup == null) {
     return null
@@ -31,6 +31,7 @@ fun parseScript(input: String, storage: String? = null): Script? {
         val code = blockMatchGroup[2]?.value as String
         var storage: JSONObject? = null
         var noframes = false
+        var version: String? = null
       }
   script.meta.split("\n").forEach {
     val metaMatchGroup = metaReg.matchEntire(it)?.groups
@@ -47,6 +48,7 @@ fun parseScript(input: String, storage: String? = null): Script? {
           "exclude" -> script.exclude.add(value)
           "require" -> script.require.add(value)
           "noframes" -> script.noframes = true
+          "version" -> script.version = value.trim()
         }
       } else {
         when (key) {
@@ -74,7 +76,8 @@ fun parseScript(input: String, storage: String? = null): Script? {
     return null
   } else {
     val lib = mutableListOf<String>()
-    Chrome.IO.submit { script.require.forEach { runCatching { lib.add(downloadLib(it)) } } }
+    if (downloadRequire)
+        Chrome.IO.submit { script.require.forEach { runCatching { lib.add(downloadLib(it)) } } }
     val parsed =
         Script(
             script.namespace + ":" + script.name,
@@ -86,9 +89,24 @@ fun parseScript(input: String, storage: String? = null): Script? {
             script.storage,
             lib,
             script.noframes,
+            script.version,
         )
     return parsed
   }
+}
+
+fun compareVersions(a: String, b: String): Int {
+  val x = a.split('.', '-', '+', '_')
+  val y = b.split('.', '-', '+', '_')
+  for (i in 0 until maxOf(x.size, y.size)) {
+    val p = x.getOrElse(i) { "0" }
+    val q = y.getOrElse(i) { "0" }
+    val m = p.toLongOrNull()
+    val n = q.toLongOrNull()
+    val order = if (m != null && n != null) m.compareTo(n) else p.compareTo(q)
+    if (order != 0) return order
+  }
+  return 0
 }
 
 private fun downloadLib(libUrl: String): String {
