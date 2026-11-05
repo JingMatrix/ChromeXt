@@ -99,6 +99,17 @@ function fixDialog() {
   }
   dialog.append(div);
   installScript();
+  installScript.prompt = (action, change) => {
+    yes.textContent = action;
+    text.textContent =
+      action == "Reinstall"
+        ? "This UserScript is already installed. Reinstall it?"
+        : `${action} this UserScript${change}?`;
+  };
+  Symbol.ChromeXt.dispatch(
+    "checkScript",
+    document.querySelector("#meta").innerText
+  );
 }
 
 async function prepareDOM() {
