@@ -100,11 +100,23 @@ fun resolveContentUrl(url: String): String {
 }
 
 private val trustedHosts =
-    listOf("jingmatrix.github.io", "jianyu-ma.onrender.com", "jianyu-ma.netlify.app")
+    listOf(
+        // jingmatrix.github.io now answers with a 301 to this domain, so the browser never shows
+        // the github.io URL and the front end has to be recognised under its new name as well.
+        "jing.matrix-transformation.dev",
+        "jingmatrix.github.io",
+        "jianyu-ma.onrender.com",
+        "jianyu-ma.netlify.app",
+    )
 
 fun isChromeXtFrontEnd(url: String?): Boolean {
-  if (url == null || !url.endsWith("/ChromeXt/")) return false
-  trustedHosts.forEach { if (url == "https://" + it + "/ChromeXt/") return true }
+  if (url == null) return false
+  // The host is still matched exactly, which is what grants the page access to GM.ChromeXt; only
+  // the one fixed path is compared without regard to case, because the netlify mirror lower cases
+  // it to /chromext/ before serving the very same page.
+  trustedHosts.forEach {
+    if (url.equals("https://" + it + "/ChromeXt/", ignoreCase = true)) return true
+  }
   return false
 }
 

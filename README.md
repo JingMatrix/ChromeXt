@@ -64,7 +64,7 @@ Dispatched `action` and `payload` are handled by [Listener.kt](app/src/main/kotl
 
 ### UserScripts manager front end
 
-To manage scripts installed by `ChromeXt`, here are a simple front end hosted on [github.io](https://jingmatrix.github.io/ChromeXt/) and two mirrors of it (in case that you have connection issues): [onrender.com](https://jianyu-ma.onrender.com/ChromeXt/), [netlify.app](https://jianyu-ma.netlify.app/ChromeXt/).
+To manage scripts installed by `ChromeXt`, here are a simple front end hosted on [matrix-transformation.dev](https://jing.matrix-transformation.dev/ChromeXt/) (also reachable through its former address [github.io](https://jingmatrix.github.io/ChromeXt/), which now redirects there) and two mirrors of it (in case that you have connection issues): [onrender.com](https://jianyu-ma.onrender.com/ChromeXt/), [netlify.app](https://jianyu-ma.netlify.app/ChromeXt/).
 
 ### Edit scripts before installing them
 
