@@ -555,6 +555,63 @@ function __chromextCreateApi(cfg) {
     },
   };
 
+  // Commands pushed by Kotlin for this tab: replies, messages, port traffic and raw code
+  function maybeParse(value) {
+    if (typeof value !== "string") return value;
+    if (value === "") return null;
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      return value;
+    }
+  }
+
+  function handleCommand(item) {
+    if (!item) return;
+    try {
+      if (item.type === "resolve") {
+        globalThis.__chromextResolve(item.uuid, item.ok, item.value);
+      } else if (item.type === "deliver") {
+        const deliver = hooks.deliver[ID];
+        if (deliver) deliver(maybeParse(item.message), item.sender, item.uuid);
+      } else if (item.type === "portMessage") {
+        if (globalThis.__chromextPortMessage)
+          globalThis.__chromextPortMessage(item.portId, maybeParse(item.message));
+      } else if (item.type === "portDisconnect") {
+        if (globalThis.__chromextPortDisconnect) globalThis.__chromextPortDisconnect(item.portId);
+      } else if (item.type === "eval") {
+        (0, eval)(item.code);
+      }
+    } catch (error) {
+      console.error("chromext command failed", error, item);
+    }
+  }
+
+  // Each extension polls for itself: the loop lives in this closure, so the page can host several
+  // extensions without one of them draining the commands of another.
+  if (CONTENT) {
+    let busy = false;
+    const tick = () => {
+      if (busy) return;
+      busy = true;
+      const timeout = new Promise((resolve, reject) =>
+        setTimeout(() => reject(new Error("poll timeout")), 4000)
+      );
+      Promise.race([post("runtime.poll", []), timeout])
+        .then((items) => {
+          (items || []).forEach(handleCommand);
+        })
+        .catch(() => {})
+        .then(() => {
+          busy = false;
+          const delay = document.visibilityState === "visible" ? 400 : 1500;
+          setTimeout(tick, delay);
+        });
+    };
+    setTimeout(tick, 300 + Math.random() * 200);
+  }
+
   api.browser = api;
+  api.__handleCommand = handleCommand;
   return api;
 }

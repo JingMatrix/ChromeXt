@@ -143,7 +143,7 @@ object Extensions {
   }
 
   /** Install an unpacked (zipped) extension from any stream. */
-  fun install(input: InputStream, fileName: String? = null): Extension {
+  fun install(input: InputStream, fileName: String? = null, expectedId: String? = null): Extension {
     val tmp = File(root, ".install-${System.currentTimeMillis()}")
     try {
       tmp.deleteRecursively()
@@ -161,7 +161,12 @@ object Extensions {
                       "manifest.json not found in ${fileName ?: "archive"}")
       val manifestFile = File(source, "manifest.json")
       val manifest = JSONObject(manifestFile.readText().removePrefix("\uFEFF"))
-      val id = extensionId(manifest) ?: sanitizeId(manifest.optString("name", "extension"))
+      val id =
+          expectedId
+              ?: extensionId(manifest)
+              ?: sanitizeId(
+                  runCatching { Extension(source).name }
+                      .getOrElse { manifest.optString("name", "extension") })
       val target = File(root, id)
       if (tmp != source) {
         // Move the nested directory out of the temporary one
@@ -245,8 +250,87 @@ object Extensions {
 
   /** Install a .crx downloaded from the Web Store. */
   fun installCrx(bytes: ByteArray): Extension {
+    val id = crxId(bytes)
     val payload = stripCrxHeader(bytes)
-    return install(payload.inputStream())
+    return install(payload.inputStream(), expectedId = id)
+  }
+
+  private fun readVarint(data: ByteArray, start: Int): Pair<Long, Int>? {
+    var value = 0L
+    var shift = 0
+    var index = start
+    while (index < data.size && shift < 64) {
+      val byte = data[index].toInt() and 0xFF
+      value = value or ((byte and 0x7F).toLong() shl shift)
+      index += 1
+      if (byte and 0x80 == 0) return value to index
+      shift += 7
+    }
+    return null
+  }
+
+  private fun idFromBytes(bytes: ByteArray): String {
+    val sb = StringBuilder()
+    bytes.forEach { byte ->
+      val value = byte.toInt() and 0xFF
+      sb.append('a' + (value shr 4)).append('a' + (value and 0x0F))
+    }
+    return sb.toString()
+  }
+
+  /** The extension id lives in the CRX3 signed header, in a nested protobuf message. */
+  private fun crxId(crx: ByteArray): String? {
+    if (crx.size < 16 || String(crx, 0, 4, Charsets.US_ASCII) != "Cr24") return null
+    if ((crx[4].toInt() and 0xFF) != 3) return null
+    val headerLength =
+        (crx[8].toInt() and 0xFF) or
+            ((crx[9].toInt() and 0xFF) shl 8) or
+            ((crx[10].toInt() and 0xFF) shl 16) or
+            ((crx[11].toInt() and 0xFF) shl 24)
+    val end = minOf(crx.size, 12 + headerLength)
+    var signedHeader: ByteArray? = null
+    var index = 12
+    while (index < end) {
+      val (tag, afterTag) = readVarint(crx, index) ?: return null
+      index = afterTag
+      val field = (tag shr 3).toInt()
+      when ((tag and 7).toInt()) {
+        0 -> index = readVarint(crx, index)?.second ?: return null
+        2 -> {
+          val (length, afterLength) = readVarint(crx, index) ?: return null
+          index = afterLength
+          if (field == 10000) {
+            signedHeader = crx.copyOfRange(index, minOf(end, index + length.toInt()))
+          }
+          index += length.toInt()
+        }
+        1 -> index += 8
+        5 -> index += 4
+        else -> return null
+      }
+    }
+    val data = signedHeader ?: return null
+    index = 0
+    while (index < data.size) {
+      val (tag, afterTag) = readVarint(data, index) ?: return null
+      index = afterTag
+      val field = (tag shr 3).toInt()
+      when ((tag and 7).toInt()) {
+        0 -> index = readVarint(data, index)?.second ?: return null
+        2 -> {
+          val (length, afterLength) = readVarint(data, index) ?: return null
+          index = afterLength
+          if (field == 1 && length == 16L) {
+            return idFromBytes(data.copyOfRange(index, index + 16))
+          }
+          index += length.toInt()
+        }
+        1 -> index += 8
+        5 -> index += 4
+        else -> return null
+      }
+    }
+    return null
   }
 
   private fun stripCrxHeader(bytes: ByteArray): ByteArray {

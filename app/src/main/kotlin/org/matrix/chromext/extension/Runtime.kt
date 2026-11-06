@@ -77,10 +77,14 @@ object ExtensionRuntime {
               "${JSONObject.quote(uuid)}, $ok, ${JSONObject.quote(json)});")
       return
     }
+    // Replies go straight back to the tab that asked: the poll loop drains the outbox, so a queued
+    // reply would wait for itself.
     val code = "__chromextResolve(${JSONObject.quote(uuid)}, $ok, ${JSONObject.quote(json)});"
-    val tab = source.tab
-    if (tab == null) Chrome.evaluateJavascript(listOf(code), null, source.frameId)
-    else deliver(tab, code)
+    Chrome.evaluateJavascript(listOf(code), source.tab, source.frameId)
+  }
+
+  private fun push(extension: String, tab: Int, item: JSONObject) {
+    Outbox.push(extension, tab, item)
   }
 
   private fun handle(payload: JSONObject, source: Source) {
@@ -130,6 +134,7 @@ object ExtensionRuntime {
         Extensions.saveStorage(extension.id)
         send(source, uuid, true, null)
       }
+      "runtime.poll" -> poll(source, uuid, extension)
       "runtime.sendMessage" -> {
         if (source.host) {
           send(source, uuid, false, "No receiving end for runtime.sendMessage")
@@ -148,25 +153,19 @@ object ExtensionRuntime {
       "tabs.sendMessage" -> {
         val tabId = args.opt(0)?.toString() ?: ""
         val tab = findTab(tabId)
-        val sender = sender(extension, source)
-        val code =
-            "(function(){var h=globalThis.__chromextHooks;" +
-                "if(h&&h.deliver&&h.deliver[${JSONObject.quote(extension.id)}]){" +
-                "h.deliver[${JSONObject.quote(extension.id)}](${jsonOf(args.opt(1))}, $sender," +
-                " ${JSONObject.quote(uuid)});}else{" +
-                "globalThis.__chromextResolve(${JSONObject.quote(uuid)}, false," +
-                " \"No receiving end\");}})();"
-        val delivered =
-            if (tab != null) {
-              deliver(tab, code)
-              true
-            } else {
-              Chrome.evaluateJavascriptInTabId(tabId, code)
-            }
-        if (!delivered) {
-          send(source, uuid, false, "Cannot evaluate in tab $tabId")
+        if (tab == null) {
+          send(source, uuid, false, "No tab with id $tabId")
           return
         }
+        val sender = sender(extension, source)
+        push(
+            extension.id,
+            tabId(tab),
+            JSONObject()
+                .put("type", "deliver")
+                .put("message", jsonOf(args.opt(1)))
+                .put("sender", sender)
+                .put("uuid", uuid))
         pending[uuid] = { ok, value -> send(source, uuid, ok, value) }
       }
       "tabs.query" -> {
@@ -193,14 +192,24 @@ object ExtensionRuntime {
         val info = args.optJSONObject(1) ?: JSONObject()
         val url = info.optString("url")
         if (url.isNotEmpty()) {
-          if (tab != null) deliver(tab, "location.href=${JSONObject.quote(url)};")
+          if (tab != null)
+              push(
+                  extension.id,
+                  tabId(tab),
+                  JSONObject()
+                      .put("type", "eval")
+                      .put("code", "location.href=${JSONObject.quote(url)};"))
           else openInNewTab(url)
         }
         send(source, uuid, true, null)
       }
       "tabs.reload" -> {
         val tab = findTab(args.opt(0)?.toString() ?: "") ?: source.tab
-        if (tab != null) deliver(tab, "location.reload();")
+        if (tab != null)
+            push(
+                extension.id,
+                tabId(tab),
+                JSONObject().put("type", "eval").put("code", "location.reload();"))
         send(source, uuid, true, null)
       }
       "tabs.remove" -> send(source, uuid, false, "tabs.remove is not supported yet")
@@ -209,7 +218,9 @@ object ExtensionRuntime {
         val tab = findTab(args.opt(0)?.toString() ?: "") ?: source.tab
         val details = args.optJSONObject(1) ?: JSONObject()
         val code = details.optString("code")
-        if (tab != null && code.isNotEmpty()) deliver(tab, code)
+        if (tab != null && code.isNotEmpty()) {
+          push(extension.id, tabId(tab), JSONObject().put("type", "eval").put("code", code))
+        }
         send(source, uuid, true, JSONArray())
       }
       "extension.getBackgroundPage" -> send(source, uuid, true, null)
@@ -310,29 +321,31 @@ object ExtensionRuntime {
    * case for a message coming from the background page, so the DevTools session is preferred and
    * the injection channel only serves as a last resort.
    */
-  private fun deliver(tab: Any, code: String) {
-    val id = tabId(tab)
-    if (id != 0 && Chrome.evaluateJavascriptInTabId(id.toString(), code)) return
-    if (PageJs.evaluate(tab, code)) return
-    Chrome.evaluateJavascript(listOf(code), tab)
-  }
-
   private fun deliverToContent(
       source: Source,
       portId: String,
       message: String?,
       disconnect: Boolean = false,
   ) {
-    val code =
-        if (disconnect)
-            "globalThis.__chromextPortDisconnect && globalThis.__chromextPortDisconnect(" +
-                "${JSONObject.quote(portId)});"
+    val tab = source.tab ?: return
+    val item =
+        if (disconnect) JSONObject().put("type", "portDisconnect").put("portId", portId)
         else
-            "globalThis.__chromextPortMessage && globalThis.__chromextPortMessage(" +
-                "${JSONObject.quote(portId)}, $message);"
+            JSONObject()
+                .put("type", "portMessage")
+                .put("portId", portId)
+                .put("message", message ?: "")
+    push(source.extension, tabId(tab), item)
+  }
+
+  /** Answer a poll from a content script: hand over everything queued for its tab. */
+  private fun poll(source: Source, uuid: String, extension: Extension) {
     val tab = source.tab
-    if (tab == null) Chrome.evaluateJavascript(listOf(code), null, source.frameId)
-    else deliver(tab, code)
+    if (tab == null) {
+      send(source, uuid, true, JSONArray())
+      return
+    }
+    send(source, uuid, true, Outbox.drain(extension.id, tabId(tab)))
   }
 
   private fun sender(extension: Extension, source: Source): JSONObject {

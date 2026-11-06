@@ -26,6 +26,7 @@ async function probe() {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log("CXBG got " + JSON.stringify(message) + " sender=" + JSON.stringify(sender));
   if (!message || typeof message !== "object") return;
   if (message.type === "ping") {
     sendResponse({ pong: true, from: "background", at: Date.now() });

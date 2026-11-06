@@ -1,7 +1,9 @@
 (function () {
   const rows = [];
   function add(name, ok, detail) {
-    rows.push({ name: name, ok: ok, detail: detail === undefined ? "" : String(detail) });
+    const text = detail === undefined ? "" : String(detail);
+    rows.push({ name: name, ok: ok, detail: text });
+    console.log("CXTEST " + (ok ? "PASS" : "FAIL") + " [" + name + "] " + text.slice(0, 160));
   }
 
   function panel() {
@@ -82,7 +84,8 @@
       const timer = setTimeout(() => {
         add("port 双向通信", false, "超时");
         resolve();
-      }, 5000);
+        // the first message of a session pays for opening the host tab
+      }, 15000);
       try {
         const port = chrome.runtime.connect({ name: "self-test" });
         port.onMessage.addListener((message) => {
@@ -108,13 +111,9 @@
     }
 
     const root = panel();
-    rows.forEach((row) => {
-      console.log(
-        "CXTEST " + (row.ok ? "PASS" : "FAIL") + " [" + row.name + "] " + row.detail.slice(0, 160)
-      );
-    });
 
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      console.log("CXCS onMessage: " + JSON.stringify(message));
       if (message && message.type === "fromBackground") {
         add("后台 → 内容脚本", true, message.text);
         root.remove();
@@ -122,8 +121,9 @@
         sendResponse({ received: true });
       }
     });
-    chrome.runtime.sendMessage({ type: "tabsMessage" }, () => {
-      if (chrome.runtime.lastError) add("后台 → 内容脚本", false, chrome.runtime.lastError.message);
+    chrome.runtime.sendMessage({ type: "tabsMessage" }, (response) => {
+      console.log("CXTEST tabsMessage response: " + JSON.stringify(response) +
+        " error: " + (chrome.runtime.lastError && chrome.runtime.lastError.message));
     });
   }
 
@@ -132,12 +132,7 @@
       run().catch((error) => {
         add("自检异常", false, String(error));
         panel();
-        rows.forEach((row) => {
-      console.log(
-        "CXTEST " + (row.ok ? "PASS" : "FAIL") + " [" + row.name + "] " + row.detail.slice(0, 160)
-      );
-    });
-      });
+          });
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", start, { once: true });
   } else {

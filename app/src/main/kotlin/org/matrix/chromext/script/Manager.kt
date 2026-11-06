@@ -172,7 +172,8 @@ object ScriptDbManager {
           }
       // WebExtensions content scripts run after UserScripts, in their own closure per extension
       runCatching {
-        Extensions.matching(url).forEach { (extension, contentScript) ->
+        val matched = Extensions.matching(url)
+        matched.forEach { (extension, contentScript) ->
           if (frameId != null && !contentScript.allFrames) return@forEach
           ChromeApi.bootstrap(extension, contentScript)?.let { codes.add(it) }
         }

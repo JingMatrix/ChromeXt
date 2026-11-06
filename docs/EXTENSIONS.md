@@ -15,7 +15,7 @@ Branch: local `master` at `b71fc3e` plus the changes described below.
 | Messaging | `runtime.sendMessage` (content → background, with response), `runtime.onMessage` | ✅ |
 | Ports | `runtime.connect` / `onConnect`, `postMessage`, `onDisconnect` | ✅ bidirectional |
 | Tabs | `tabs.query`, `tabs.get`, `tabs.getCurrent`, `tabs.create`, `tabs.update`, `tabs.reload` | ✅ |
-| Tabs (continued) | `tabs.sendMessage` (background → content) | ⚠️ only when the target tab is in the foreground |
+| Tabs (continued) | `tabs.sendMessage` (background → content) | ✅ through the content script's own poll loop |
 | Misc | `permissions.contains/getAll`, `action.setBadgeText` (stored, no UI), `contextMenus.create` (stored, no UI) | 🟡 accepted, limited |
 
 ### Verified with a real extension
@@ -56,6 +56,12 @@ user tab (any site)                       host tab (http://127.0.0.1:<port>/host
 * **Content scripts talk over the existing ChromeXt channel**: the shim calls
   `Symbol.<random>.unlock(<key>).dispatch('ext', payload)`, which ChromeXt already routes from
   `addMessageToConsole`; replies come back through `__chromextResolve(uuid, ok, value)`.
+* **Pushing into a page uses the page's own channel.** `javascript:` navigations are dropped for
+  background tabs, and Chrome 156 removed `WebContents#evaluateJavaScript` (only the internal
+  `onEvaluateJavaScriptResult` is left), while the DevTools endpoint serves one client and then
+  stops answering. So content scripts poll `runtime.poll` (400 ms visible, 1.5 s hidden) and Kotlin
+  hands them whatever was queued for that tab: replies, `tabs.sendMessage` traffic, port messages
+  and raw code.
 * **Per-extension scope.** The bundle runs in
   `(function(chrome, browser){ … })(api, api)`, so several extensions can coexist on one page
   without touching each other's globals.
@@ -66,8 +72,8 @@ user tab (any site)                       host tab (http://127.0.0.1:<port>/host
 /storage/emulated/0/Android/data/<browser>/files/Extension/<id>/
 ```
 
-`<id>` is either the 32-letter Chrome Web Store id (derived from the manifest `key`) or a slug
-of the manifest name. Storage of `chrome.storage` lives next to it, in
+`<id>` is the 32-letter Chrome Web Store id, taken from the CRX3 signed header (or derived from
+the manifest `key`), and a slug of the resolved manifest name only as a last resort. Storage of `chrome.storage` lives next to it, in
 `/data/data/<browser>/files/ExtensionStorage/<id>.json`.
 
 Open the manager: **page menu (⋮) → Extensions** — the entry is injected on every page (it used to
@@ -96,8 +102,8 @@ Three ways to install:
   `onUpdateUrl`).
 * Content scripts run in the page's world, not in an isolated world, so a hostile page can
   observe or tamper with them. Same trade-off ChromeXt already makes for UserScripts.
-* `tabs.sendMessage` into a background tab depends on the DevTools session and is not reliable
-  yet; messaging from content script to background (the common direction) is solid.
+* Delivering into a content script goes through a poll loop (see below), so it costs up to half a
+  second of latency and one IPC round trip per poll while a page has extensions.
 * Extensions keep a tab open (`host.html`). Closing it stops every background page; the next
   message reopens it.
 

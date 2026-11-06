@@ -98,6 +98,16 @@ object ChromeApi {
     if (js.isEmpty() && css.isEmpty()) return null
     return buildString {
       append(";(function(){\n")
+      // ChromeXt injects again on every URL update, and a second copy would steal the message
+      // handlers of the first one
+      append(
+          "if (globalThis.__chromextInjected === undefined) globalThis.__chromextInjected = {};\n")
+      append("if (globalThis.__chromextInjected[")
+      append(JSONObject.quote(extension.id))
+      append("]) return;\n")
+      append("globalThis.__chromextInjected[")
+      append(JSONObject.quote(extension.id))
+      append("] = true;\n")
       append("const __CHROMEXT_CFG__ = ").append(config(extension, "content")).append(";\n")
       append("function __chromextBridge(payload){\n")
       append("  var t = Symbol[").append(JSONObject.quote(Local.name)).append("];\n")
@@ -113,6 +123,7 @@ object ChromeApi {
         append(";(document.head||document.documentElement).appendChild(s);}catch(e){}})();\n")
       }
       append("var __api = __chromextCreateApi(__CHROMEXT_CFG__);\n")
+
       append("(function(chrome, browser){\n")
       js.forEach { append(it).append("\n;\n") }
       append("})(__api, __api);\n")
