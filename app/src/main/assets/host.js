@@ -100,6 +100,14 @@ window.__chromextHostPortOpen = function (extension, portId, name, sender) {
   });
 };
 
+window.__chromextHostContextMenu = function (extension, info, tab) {
+  return forward(extension, { type: "contextMenu", ext: extension, info: info, tab: tab });
+};
+
+window.__chromextHostAction = function (extension, tab) {
+  return forward(extension, { type: "action", ext: extension, tab: tab });
+};
+
 window.__chromextHostWebRequest = function (extension, kind, details, requestId) {
   return forward(extension, {
     type: "webRequest",

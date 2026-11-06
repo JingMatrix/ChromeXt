@@ -138,6 +138,7 @@ object Extensions {
   fun uninstall(id: String): Boolean {
     val extension = byId(id) ?: return false
     Blocking.forget(id)
+    ExtensionRuntime.forget(id)
     ExtServer.stop(extension)
     storageCache.remove(id)
     runCatching { File(storageDir, "$id.json").delete() }

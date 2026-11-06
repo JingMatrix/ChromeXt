@@ -27,6 +27,7 @@ object ExtensionRuntime {
   private val ports = mutableMapOf<String, Source>()
   private val contextMenus = mutableMapOf<String, MutableList<JSONObject>>()
   private val badges = mutableMapOf<String, String>()
+  private val popups = mutableMapOf<String, String>()
 
   // ---- entry points ----------------------------------------------------------
 
@@ -311,10 +312,14 @@ object ExtensionRuntime {
         Log.d("Badge of ${extension.id}: '${badges[extension.id]}'")
         send(source, uuid, true, null)
       }
+      "action.setPopup" -> {
+        val details = args.optJSONObject(0) ?: JSONObject()
+        popups[extension.id] = details.optString("popup")
+        send(source, uuid, true, null)
+      }
       "action.setBadgeBackgroundColor",
       "action.setTitle",
       "action.setIcon",
-      "action.setPopup",
       "action.enable",
       "action.disable" -> send(source, uuid, true, null)
       "contextMenus.create" -> {
@@ -494,7 +499,8 @@ object ExtensionRuntime {
   private fun tabTitle(tab: Any): String =
       runCatching { tab.javaClass.getMethod("getTitle").invoke(tab) as? String }.getOrNull() ?: ""
 
-  private fun openInNewTab(url: String): Boolean {
+  /** Open a url in a fresh browser tab. */
+  fun openInNewTab(url: String): Boolean {
     if (url.isEmpty()) return false
     return runCatching {
           val intent =
@@ -509,6 +515,21 @@ object ExtensionRuntime {
   }
 
   fun menuItems(extension: String): List<JSONObject> = contextMenus[extension] ?: emptyList()
+
+  /** The popup of an extension: the value it set itself, then the one in the manifest. */
+  fun popupOf(extension: Extension): String {
+    popups[extension.id]?.let { if (it.isNotEmpty()) return it }
+    val manifest = extension.manifest
+    return manifest.optJSONObject("action")?.optString("default_popup")
+        ?: manifest.optJSONObject("browser_action")?.optString("default_popup")
+        ?: manifest.optJSONObject("page_action")?.optString("default_popup")
+        ?: ""
+  }
+
+  fun forget(extension: String) {
+    contextMenus.remove(extension)
+    popups.remove(extension)
+  }
 
   fun badge(extension: String): String = badges[extension] ?: ""
 }

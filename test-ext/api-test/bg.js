@@ -79,3 +79,22 @@ if (chrome.webRequest && chrome.webRequest.onBeforeRequest) {
     ["blocking"]
   );
 }
+
+// A context menu row and an action row, both shown in ChromeXt's page menu
+if (chrome.contextMenus) {
+  chrome.contextMenus.onClicked.addListener((info, tab) => {
+    console.log("CXBG contextMenus.onClicked " + JSON.stringify(info) + " tab=" + (tab && tab.id));
+  });
+  chrome.contextMenus.create({
+    id: "cx-test-item",
+    title: "ChromeXt 测试菜单项",
+    contexts: ["page"],
+  });
+}
+
+const actionApi = chrome.action || chrome.browserAction;
+if (actionApi && actionApi.onClicked) {
+  actionApi.onClicked.addListener((tab) => {
+    console.log("CXBG action.onClicked tab=" + (tab && tab.id));
+  });
+}

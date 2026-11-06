@@ -61,6 +61,10 @@ object ChromeApi {
     append("      } else {\n")
     append("        console.warn('No message listener for ' + data.ext);\n")
     append("      }\n")
+    append("    } else if (data.type === 'contextMenu' || data.type === 'action') {\n")
+    append("      var hook = (globalThis.__chromextUiHooks || {})[data.type];\n")
+    append("      hook = hook && hook[data.ext];\n")
+    append("      if (hook) hook(data);\n")
     append("    } else if (data.type === 'webRequest') {\n")
     append("      var hook = (globalThis.__chromextWebRequest || {})[data.ext];\n")
     append("      if (hook) hook(data.kind, data.details, data.requestId);\n")
@@ -94,6 +98,34 @@ object ChromeApi {
     append("})();\n")
   }
 
+  /** Just the shim, for pages the extension itself serves, such as its popup. */
+  fun shimOnly(extension: Extension): String = buildString {
+    append(";(function(){\n")
+    // Do not let a second copy (from the init script) take over the handlers
+    append("if (globalThis.__chromextInjected === undefined) globalThis.__chromextInjected = {};\n")
+    append("if (globalThis.__chromextInjected[").append(JSONObject.quote(extension.id))
+    append("]) return;\n")
+    append("globalThis.__chromextInjected[").append(JSONObject.quote(extension.id))
+    append("] = true;\n")
+    append("const __CHROMEXT_CFG__ = ").append(config(extension, "content")).append(";\n")
+    append("function __chromextBridge(payload){\n")
+    append("  var t = Symbol[").append(JSONObject.quote(Local.name)).append("];\n")
+    append("  var api = t;\n")
+    append("  try { var u = t.unlock(").append(Local.key).append("); if (u) api = u; }")
+    append(" catch (e) { api = t; }\n")
+    append("  api.dispatch('ext', payload);\n")
+    append("}\n")
+    append(shim()).append("\n")
+    append("var __api = __chromextCreateApi(__CHROMEXT_CFG__);\n")
+    append("globalThis.chrome = __api;\n")
+    append("globalThis.browser = __api;\n")
+    append("})();\n")
+  }
+
+  /** The extension owning a page url, when that page is one of the files it serves. */
+  fun ownerOf(url: String): Extension? =
+      Extensions.enabled().firstOrNull { url.startsWith(ExtServer.origin(it) + "/") }
+
   /** One content script bundle: shim + declared files, sharing a private scope. */
   fun bootstrap(extension: Extension, contentScript: ContentScript): String? {
     val js = contentScript.js.mapNotNull { extension.readText(it) }
@@ -113,11 +145,19 @@ object ChromeApi {
       append("] = true;\n")
       append("const __CHROMEXT_CFG__ = ").append(config(extension, "content")).append(";\n")
       append("function __chromextBridge(payload){\n")
-      append("  var t = Symbol[").append(JSONObject.quote(Local.name)).append("];\n")
-      append("  var api = t;\n")
-      append("  try { var u = t.unlock(").append(Local.key).append("); if (u) api = u; }")
+      append("  var tries = 0;\n")
+      append("  var send = function () {\n")
+      append("    var t = Symbol[").append(JSONObject.quote(Local.name)).append("];\n")
+      append("    if (!t) {\n")
+      append("      if (tries++ < 100) return setTimeout(send, 50);\n")
+      append("      throw new Error('ChromeXt is not available on this page');\n")
+      append("    }\n")
+      append("    var api = t;\n")
+      append("    try { var u = t.unlock(").append(Local.key).append("); if (u) api = u; }")
       append(" catch (e) { api = t; }\n")
-      append("  api.dispatch('ext', payload);\n")
+      append("    api.dispatch('ext', payload);\n")
+      append("  };\n")
+      append("  send();\n")
       append("}\n")
       append(shim()).append("\n")
       css.forEach { style ->

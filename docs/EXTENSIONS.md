@@ -84,6 +84,21 @@ Three ways to install:
    uid, e.g. `chown -R 10347:1078 …` for Chrome).
 3. Both are picked up on the next browser start; *刷新* in the manager re-scans without restart.
 
+## Menus and the action row
+
+ChromeXt injects its own rows into the browser page menu, so extension UI rides on the same hook:
+
+* every item created with `contextMenus.create` becomes a row (only the `page` context exists here —
+  there is no selection, link or image information to match on), and clicking it dispatches
+  `contextMenus.onClicked` with `{menuItemId, pageUrl, frameId}` plus the tab.
+* every extension that declares `action` / `browser_action` / `page_action` gets a row named after
+  it. Chrome never draws the toolbar icon of an unpacked extension, so this is where its popup
+  lives: `default_popup` (or `action.setPopup`) is opened in a new tab, and an extension without a
+  popup gets `action.onClicked` instead.
+* popups and options pages are served by ChromeXt itself and get `/__chromext__.js` inserted after
+  `<head>`, so `chrome.*` is available at parse time; the shim waits for ChromeXt's init script to
+  land before dispatching, which happens slightly later for these pages.
+
 ## Request filtering
 
 Chrome fetches sub-resources in the network service, in C++, and ships **no Java HTTP layer at all**

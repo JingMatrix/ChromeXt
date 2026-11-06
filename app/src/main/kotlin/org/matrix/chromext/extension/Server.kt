@@ -333,13 +333,22 @@ object ExtServer {
     val response =
         when {
           path == "/__chromext__.js" || path == "/ChromeXt.js" ->
-              HttpResponse.text(ChromeApi.script(extension), "text/javascript; charset=utf-8")
+              HttpResponse.text(
+                  if (request.query["host"] == "1") ChromeApi.script(extension)
+                  else ChromeApi.shimOnly(extension),
+                  "text/javascript; charset=utf-8")
           path == "/" || path.isEmpty() ->
               HttpResponse.text(backgroundDocument(extension), "text/html; charset=utf-8")
           else -> {
             val file = extension.file(path)
             if (!file.isFile || !file.canonicalPath.startsWith(extension.dir.canonicalPath)) {
               HttpResponse(404, body = "Not found: $path".toByteArray())
+            } else if (file.name.endsWith(".html") || file.name.endsWith(".htm")) {
+              // Popups and option pages expect chrome.* before their own scripts run
+              HttpResponse(
+                  200,
+                  contentType(file.name),
+                  body = withShim(file.readText().removePrefix("\uFEFF"), extension).toByteArray())
             } else {
               HttpResponse(200, contentType(file.name), body = file.readBytes())
             }
@@ -349,10 +358,26 @@ object ExtServer {
         response.status, response.contentType, response.body, response.headers + cors)
   }
 
+  /** Insert the shim right after the head of an extension html page. */
+  private fun withShim(html: String, extension: Extension): String {
+    val shim = "<script src=\"/__chromext__.js$version\"></script>"
+    val head = Regex("<head[^>]*>", RegexOption.IGNORE_CASE).find(html)
+    if (head != null) {
+      return html.substring(0, head.range.last + 1) + shim + html.substring(head.range.last + 1)
+    }
+    val root = Regex("<html[^>]*>", RegexOption.IGNORE_CASE).find(html)
+    if (root != null) {
+      return html.substring(0, root.range.last + 1) + shim + html.substring(root.range.last + 1)
+    }
+    return shim + html
+  }
+
+  private val version: String
+    get() = "?v=" + hostToken
+
   private fun backgroundDocument(extension: Extension): String {
     // The process token busts any cache the WebView kept from an earlier run
-    val version = "?v=" + hostToken
-    val shim = "<script src=\"/__chromext__.js$version\"></script>"
+    val shim = "<script src=\"/__chromext__.js?host=1&v=$hostToken\"></script>"
     val page = extension.backgroundPage
     if (page != null) {
       val html = extension.readText(page) ?: return "<html><body>Missing ${page}</body></html>"

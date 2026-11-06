@@ -741,5 +741,28 @@ function __chromextCreateApi(cfg) {
   api.browser = api;
   api.__handleCommand = handleCommand;
   (globalThis.__chromextWebRequest || (globalThis.__chromextWebRequest = {}))[ID] = onWebRequest;
+
+  // Click reports for menus and for the extension's own row, delivered by the host page
+  const uiHooks = globalThis.__chromextUiHooks || (globalThis.__chromextUiHooks = {});
+  const contextMenuHook = uiHooks.contextMenu || (uiHooks.contextMenu = {});
+  const actionHook = uiHooks.action || (uiHooks.action = {});
+  contextMenuHook[ID] = (data) => {
+    contextMenus.onClicked._listeners.slice().forEach((fn) => {
+      try {
+        fn(data.info, data.tab && data.tab.tab);
+      } catch (error) {
+        console.error(error);
+      }
+    });
+  };
+  actionHook[ID] = (data) => {
+    (api.action.onClicked._listeners || []).slice().forEach((fn) => {
+      try {
+        fn(data.tab && data.tab.tab);
+      } catch (error) {
+        console.error(error);
+      }
+    });
+  };
   return api;
 }
