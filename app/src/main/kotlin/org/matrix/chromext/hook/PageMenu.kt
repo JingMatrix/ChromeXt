@@ -17,6 +17,7 @@ import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
 import org.matrix.chromext.R
 import org.matrix.chromext.Resource
+import org.matrix.chromext.extension.Menus
 import org.matrix.chromext.proxy.PageMenuProxy
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.Local
@@ -116,6 +117,7 @@ object PageMenuHook : BaseHook() {
         readerMode.activate()
         return true
       }
+      if (Menus.dispatch(id)) return true
       when (ctx.resources.getResourceName(id)) {
         "org.matrix.chromext:id/extension_id" -> {
           Listener.on("extension")
@@ -554,7 +556,12 @@ object PageMenuHook : BaseHook() {
                 ?.invoke(menuModel, key, value)
           }
 
-          fun standardMenuItem(id: Int, titleId: Int, iconResId: Int): Any? {
+          fun standardMenuItem(
+              id: Int,
+              titleId: Int,
+              iconResId: Int,
+              title: CharSequence? = null,
+          ): Any? {
             if (buildModelForStandardMenuItem != null)
                 return buildModelForStandardMenuItem.invoke(delegate, id, titleId, iconResId)
             // Any menu item already in the list knows the full key set of a menu item, which is all
@@ -585,7 +592,7 @@ object PageMenuHook : BaseHook() {
               val value =
                   when (key.toString()) {
                     "MENU_ITEM_ID" -> id
-                    "TITLE" -> ctx.getString(titleId)
+                    "TITLE" -> title ?: ctx.getString(titleId)
                     "ICON" -> ctx.resources.getDrawable(iconResId, null)
                     "ENABLED" -> true
                     "ICON_COLOR_RES",
@@ -599,36 +606,34 @@ object PageMenuHook : BaseHook() {
             return menuModel
           }
 
+          // The extension manager is one of our own pages, so its entry is offered everywhere
           val entries =
-              if (isChromeXtFrontEnd(url)) {
-                listOf(
-                    Triple(
-                        R.id.developer_tools_id,
-                        R.string.main_menu_developer_tools,
-                        R.drawable.ic_devtools,
-                    ),
-                    Triple(
-                        R.id.extension_id,
-                        R.string.main_menu_extension,
-                        R.drawable.ic_extension,
-                    ),
-                )
-              } else if (isUserScript(url)) {
-                listOf(
-                    Triple(
-                        R.id.install_script_id,
-                        R.string.main_menu_install_script,
-                        R.drawable.ic_install_script,
-                    ))
-              } else {
-                listOf(
-                    Triple(
-                        R.id.eruda_console_id,
-                        R.string.main_menu_eruda_console,
-                        R.drawable.ic_devtools,
-                    ))
-              }
+              mutableListOf(
+                  Triple(R.id.extension_id, R.string.main_menu_extension, R.drawable.ic_extension))
+          if (isChromeXtFrontEnd(url)) {
+            entries.add(
+                Triple(
+                    R.id.developer_tools_id,
+                    R.string.main_menu_developer_tools,
+                    R.drawable.ic_devtools,
+                ))
+          } else if (isUserScript(url)) {
+            entries.add(
+                Triple(
+                    R.id.install_script_id,
+                    R.string.main_menu_install_script,
+                    R.drawable.ic_install_script,
+                ))
+          } else {
+            entries.add(
+                Triple(
+                    R.id.eruda_console_id,
+                    R.string.main_menu_eruda_console,
+                    R.drawable.ic_devtools,
+                ))
+          }
 
+          Log.d("Page menu entries: " + entries.joinToString { it.second.toString() })
           val menusToAdd = mutableListOf<Any>()
           entries.forEach { (id, titleId, iconResId) ->
             val menuModel = standardMenuItem(id, titleId, iconResId)
@@ -638,6 +643,19 @@ object PageMenuHook : BaseHook() {
             }
             menusToAdd.add(newListItem(AppMenuItemType.STANDARD.value, menuModel))
           }
+          // Rows contributed by extensions: their context menus and their action/popup
+          runCatching { Menus.entries(url) }
+              .getOrElse { emptyList() }
+              .forEach { row ->
+                val menuModel =
+                    standardMenuItem(
+                        row.id, R.string.main_menu_extension, R.drawable.ic_extension, row.title)
+                if (menuModel == null) {
+                  Log.e("Cannot build a menu row for ${row.extension}")
+                  return@forEach
+                }
+                menusToAdd.add(newListItem(AppMenuItemType.STANDARD.value, menuModel))
+              }
 
           // Chrome renumbered AppMenuItemType, DIVIDER moved from 5 to 7 in M151, so anchor on the
           // divider resource ids and keep the ordinal only as a fallback for forks

@@ -3,17 +3,34 @@ package org.matrix.chromext.utils
 import android.content.Context
 import android.util.Log
 import android.widget.Toast
-import de.robv.android.xposed.XposedBridge
 import java.lang.ref.WeakReference
 import org.matrix.chromext.BuildConfig
 import org.matrix.chromext.TAG
+
+/**
+ * Logging that works both inside the hooked browser and in ChromeXt's own process.
+ *
+ * `de.robv.android.xposed.XposedBridge` is a compile only dependency, so the host service cannot
+ * touch it at all: reaching it there throws `NoClassDefFoundError` and takes the process down.
+ */
+private object XposedLog {
+  private val available: Boolean = runCatching {
+    Class.forName("de.robv.android.xposed.XposedBridge")
+  }
+      .isSuccess
+
+  fun log(message: String) {
+    if (!available) return
+    runCatching { de.robv.android.xposed.XposedBridge.log(message) }
+  }
+}
 
 object Log {
   private var lastToast: WeakReference<Toast>? = null
 
   fun i(msg: String) {
     Log.i(TAG, msg)
-    XposedBridge.log("ChromeXt logging: " + msg)
+    XposedLog.log("ChromeXt logging: $msg")
   }
 
   fun d(msg: String, full: Boolean = false) {
@@ -32,12 +49,12 @@ object Log {
 
   fun e(msg: String) {
     Log.e(TAG, msg)
-    XposedBridge.log("ChromeXt error: " + msg)
+    XposedLog.log("ChromeXt error: $msg")
   }
 
   fun ex(thr: Throwable, msg: String = "") {
     Log.e(TAG, msg, thr)
-    XposedBridge.log("ChromeXt exception caught: [${msg}] " + thr.toString())
+    XposedLog.log("ChromeXt exception caught: [$msg] $thr")
   }
 
   fun toast(context: Context, msg: String) {

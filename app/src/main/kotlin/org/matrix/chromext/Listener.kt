@@ -27,7 +27,8 @@ import org.matrix.chromext.devtools.DevSessions
 import org.matrix.chromext.devtools.DevToolClient
 import org.matrix.chromext.devtools.getInspectPages
 import org.matrix.chromext.devtools.hitDevTools
-import org.matrix.chromext.extension.LocalFiles
+import org.matrix.chromext.extension.ExtServer
+import org.matrix.chromext.extension.ExtensionRuntime
 import org.matrix.chromext.hook.UserScriptHook
 import org.matrix.chromext.hook.WebViewHook
 import org.matrix.chromext.proxy.UserScriptProxy
@@ -56,6 +57,7 @@ object Listener {
           "userscript" to listOf("block", "installScript"),
           "front-end" to listOf("inspect_pages", "userscript", "extension"),
           "devtools" to listOf("websocket"),
+          "extension" to listOf("ext"),
       )
   val tabNotification = mutableMapOf<Int, Any>()
 
@@ -489,13 +491,18 @@ object Listener {
           }
         }
       }
+      "ext" -> {
+        // WebExtensions shim: all replies are asynchronous, see ExtensionRuntime
+        ExtensionRuntime.dispatch(payload, currentTab, frameId)
+      }
       "extension" -> {
         if (payload == "") {
-          if (BuildConfig.DEBUG) {
-            callback = "ChromeXt.post('extension', ${LocalFiles.start()});"
-          } else {
-            Log.toast(Chrome.getContext(), "Work in progress, might be ready in the future :)")
-          }
+          // The manager is a local page, opened in a new tab so that the current page survives
+          runCatching { ExtServer.openManager() }
+              .onFailure {
+                Log.ex(it, "Fail to open the extension manager")
+                Log.toast(Chrome.getContext(), "Fail to open the extension manager")
+              }
         }
       }
       "websocket" -> {

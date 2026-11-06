@@ -24,7 +24,10 @@
 	</queries>
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- The extension host runs in this process and talks to the loopback server -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
+        android:usesCleartextTraffic="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name">
         <meta-data
@@ -40,6 +43,10 @@
         <meta-data
             android:name="xposedscope"
 			android:resource="@array/xposedscope" />
+		<service
+			android:name=".extension.HostService"
+			android:exported="true"
+			android:process=":host" />
 		<activity android:name=".OpenInChrome"
 			android:label="@string/view_in_chrome"
 			android:theme="@android:style/Theme.NoDisplay"

@@ -1,0 +1,51 @@
+{
+  "manifest_version": 2,
+  "name": "ChromeXt API Test",
+  "version": "1.0.0",
+  "description": "Exercises the ChromeXt WebExtensions bridge from a content script and a background page.",
+  "default_locale": "zh_CN",
+  "background": {
+    "scripts": [
+      "bg.js"
+    ],
+    "persistent": true
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*/*"
+      ],
+      "js": [
+        "cs.js"
+      ],
+      "css": [
+        "cs.css"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "permissions": [
+    "storage",
+    "tabs",
+    "webRequest",
+    "webRequestBlocking",
+    "declarativeNetRequest",
+    "*://*/*"
+  ],
+  "icons": {
+    "128": "icon.svg"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "test",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "browser_action": {
+    "default_title": "ChromeXt API Test"
+  }
+}

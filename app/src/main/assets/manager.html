@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>ChromeXt 扩展</title>
+    <link rel="stylesheet" href="manager.css" />
+  </head>
+  <body>
+    <header>
+      <h1>扩展</h1>
+      <button id="reload" class="ghost">刷新</button>
+    </header>
+
+    <main>
+      <section class="installer">
+        <label class="file">
+          <input type="file" id="file" accept=".zip,.crx,application/zip,application/x-chrome-extension" />
+          <span>从文件安装 .zip / .crx</span>
+        </label>
+        <div class="row">
+          <input id="store" placeholder="Chrome 应用店 ID 或链接" autocomplete="off" />
+          <button id="fetch">安装</button>
+        </div>
+        <p class="hint">扩展会解包到下面的目录，可直接用文件管理器增删。</p>
+      </section>
+
+      <section id="list" class="list"></section>
+      <p id="dir" class="hint"></p>
+    </main>
+
+    <div id="msg" class="msg"></div>
+
+    <script>
+      const TOKEN = "__TOKEN__";
+    </script>
+    <script src="manager.js"></script>
+  </body>
+</html>

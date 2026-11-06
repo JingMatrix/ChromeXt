@@ -96,6 +96,23 @@ object UserScriptProxy {
 
   val kMaxURLChars = 2097152
 
+  /** Navigate a tab, e.g. to follow an extension redirect. */
+  fun navigate(tab: Any?, url: String) {
+    if (tab == null) return
+    runCatching { loadUrl.invoke(tab, newLoadUrlParams(url)) }
+        .onFailure { Log.ex(it, "Fail to navigate to $url") }
+  }
+
+  /** Stop the current load, used when an extension blocks a navigation. */
+  fun stopLoading(tab: Any?) {
+    if (tab == null) return
+    runCatching {
+      findMethodOrNull(tab::class.java, true) { name == "stopLoading" && parameterTypes.isEmpty() }
+          ?.invoke(tab)
+    }
+        .onFailure { Log.ex(it, "Fail to stop loading") }
+  }
+
   private fun loadUrl(url: String, tab: Any? = Chrome.getTab()) {
     if (!Chrome.checkTab(tab)) return
     loadUrl.invoke(tab, newLoadUrlParams(url))

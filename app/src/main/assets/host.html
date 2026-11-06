@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ChromeXt 扩展宿主</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 18px;
+        background: #121215;
+        color: #ececf1;
+        font: 14px/1.6 -apple-system, "Noto Sans SC", Roboto, sans-serif;
+      }
+      h1 { font-size: 17px; margin: 0 0 6px; }
+      p { color: #9a9aa5; margin: 4px 0; font-size: 12px; word-break: break-all; }
+      code { color: #8ab4f8; }
+    </style>
+  </head>
+  <body>
+    <h1>ChromeXt 扩展宿主</h1>
+    <p>这个页面由 ChromeXt 自己在独立进程里打开，不需要你操作。</p>
+    <div id="status"></div>
+    <script>
+      const TOKEN = "__TOKEN__";
+      const HOST_TOKEN = "__HOST_TOKEN__";
+      const EXTENSIONS = __EXT_LIST__;
+    </script>
+    <script src="host.js"></script>
+  </body>
+</html>

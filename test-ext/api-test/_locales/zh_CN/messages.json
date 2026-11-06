@@ -1,0 +1,7 @@
+{
+  "hello": { "message": "你好，来自 i18n 的消息" },
+  "greet": {
+    "message": "你好 $1",
+    "placeholders": { "1": { "content": "$1" } }
+  }
+}

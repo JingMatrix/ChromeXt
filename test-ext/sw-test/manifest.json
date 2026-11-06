@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "ChromeXt SW Test",
+  "version": "1.0.0",
+  "description": "An idle MV3 service worker: used to check that ChromeXt stops it and starts it again on demand.",
+  "background": { "service_worker": "sw.js" },
+  "content_scripts": [
+    {
+      "matches": ["*://*/*"],
+      "js": ["cs.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["storage"]
+}

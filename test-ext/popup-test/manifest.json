@@ -1,0 +1,8 @@
+{
+  "manifest_version": 2,
+  "name": "ChromeXt Popup Test",
+  "version": "1.0.0",
+  "description": "Checks that an extension popup opened from ChromeXt's page menu has the chrome.* shim.",
+  "browser_action": { "default_title": "ChromeXt Popup Test", "default_popup": "popup.html" },
+  "permissions": ["storage", "tabs"]
+}

@@ -1,0 +1,37 @@
+#cx-test-panel {
+  position: fixed;
+  right: 12px;
+  bottom: 88px;
+  z-index: 2147483647;
+  width: min(92vw, 380px);
+  max-height: 52vh;
+  overflow: auto;
+  background: #10131a;
+  color: #e6e6ea;
+  font: 12px/1.5 ui-monospace, monospace;
+  border: 1px solid #2b3242;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  padding: 10px 12px;
+}
+#cx-test-panel header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #2b3242;
+  margin-bottom: 6px;
+}
+#cx-test-panel header span { flex: 1; }
+#cx-test-panel header button {
+  font: inherit;
+  color: #9aa4b2;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+#cx-test-panel .row { display: flex; gap: 6px; padding: 1px 0; }
+#cx-test-panel .ok { color: #6ee7a8; }
+#cx-test-panel .fail { color: #ff8d8d; }
+#cx-test-panel .detail { color: #8b93a3; word-break: break-all; }

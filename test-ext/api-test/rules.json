@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||example.com/blocked",
+      "resourceTypes": ["main_frame"]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 5,
+    "action": { "type": "allow" },
+    "condition": {
+      "urlFilter": "||example.com/blocked-allowed",
+      "resourceTypes": ["main_frame"]
+    }
+  },
+  {
+    "id": 3,
+    "priority": 1,
+    "action": { "type": "redirect", "redirect": { "url": "https://example.com/" } },
+    "condition": {
+      "urlFilter": "||example.com/redirect-me",
+      "resourceTypes": ["main_frame"]
+    }
+  }
+]
