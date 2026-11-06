@@ -427,7 +427,14 @@ object ExtServer {
       val list = JSONArray()
       Extensions.enabled()
           .filter { it.hasBackground }
-          .forEach { list.put(JSONObject().put("id", it.id).put("port", portOf(it))) }
+          .forEach {
+            list.put(
+                JSONObject()
+                    .put("id", it.id)
+                    .put("port", portOf(it))
+                    // A MV3 worker is stopped when idle, a MV2 page stays alive
+                    .put("worker", it.isServiceWorker))
+          }
       return HttpResponse.asset(
           "host.html",
           mapOf(

@@ -133,6 +133,7 @@ class Extension(val dir: File) {
   val backgroundPage: String?
   val backgroundScripts: List<String>
   val backgroundIsModule: Boolean
+  val isServiceWorker: Boolean
   val contentScripts: List<ContentScript>
   val dnrRuleResources: List<String>
   val webAccessibleResources: List<String>
@@ -168,10 +169,12 @@ class Extension(val dir: File) {
         }
       }
       backgroundIsModule = background.optString("type") == "module"
+      isServiceWorker = background.optString("service_worker").isNotEmpty()
     } else {
       backgroundPage = null
       backgroundScripts = emptyList()
       backgroundIsModule = false
+      isServiceWorker = false
     }
 
     val scripts = manifest.optJSONArray("content_scripts")

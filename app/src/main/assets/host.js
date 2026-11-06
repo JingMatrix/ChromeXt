@@ -7,6 +7,11 @@
 const status = document.getElementById("status");
 const frames = {};
 const readyFrames = new Set();
+// MV3 semantics: a worker is stopped after half a minute without events and restarted on demand
+const IDLE_MS = 30000;
+const workers = new Set(EXTENSIONS.filter((e) => e.worker).map((e) => e.id));
+const suspended = new Set();
+const lastActivity = {};
 const pendingByExtension = {};
 const buffered = [];
 let ready = false;
@@ -24,6 +29,46 @@ function report(payload) {
   }).catch((error) => console.error("host: cannot report to ChromeXt", error));
 }
 
+function touch(extension) {
+  lastActivity[extension] = Date.now();
+}
+
+function frameUrl(extension) {
+  return "http://127.0.0.1:" + extension.port + "/?v=" + encodeURIComponent(HOST_TOKEN);
+}
+
+function suspend(extension) {
+  const frame = frames[extension];
+  if (!frame) return;
+  console.log("host: suspend " + extension);
+  suspended.add(extension);
+  readyFrames.delete(extension);
+  // Removing the frame is what really ends the worker: pointing it elsewhere leaves the old
+  // document running in some Chromium versions
+  frame.remove();
+  delete frames[extension];
+}
+
+function wake(extension) {
+  if (!suspended.has(extension)) return;
+  const entry = EXTENSIONS.find((e) => e.id === extension);
+  if (!entry) return;
+  console.log("host: wake " + extension);
+  suspended.delete(extension);
+  touch(extension);
+  createFrame(entry);
+}
+
+function sweepIdleWorkers() {
+  const now = Date.now();
+  workers.forEach((extension) => {
+    if (suspended.has(extension) || !readyFrames.has(extension)) return;
+    if (now - (lastActivity[extension] || 0) > IDLE_MS) suspend(extension);
+  });
+}
+
+setInterval(sweepIdleWorkers, 5000);
+
 function runCommand(code) {
   try {
     (0, eval)(code);
@@ -32,14 +77,19 @@ function runCommand(code) {
   }
 }
 
-EXTENSIONS.forEach((extension) => {
+function createFrame(extension) {
   const frame = document.createElement("iframe");
-  // The version busts the cache of the background document kept from an earlier run
-  frame.src = "http://127.0.0.1:" + extension.port + "/?v=" + encodeURIComponent(HOST_TOKEN);
+  frame.src = frameUrl(extension);
   frame.dataset.ext = extension.id;
   frame.style.cssText = "width:1px;height:1px;border:0;position:absolute;left:-20px;top:-20px;";
   document.body.append(frame);
   frames[extension.id] = frame;
+  touch(extension.id);
+  return frame;
+}
+
+EXTENSIONS.forEach((extension) => {
+  createFrame(extension);
   line(extension.id + " → http://127.0.0.1:" + extension.port + "/");
 });
 
@@ -54,8 +104,11 @@ function sendToFrame(extension, payload) {
 }
 
 function forward(extension, payload) {
+  touch(extension);
   if (!readyFrames.has(extension)) {
     (pendingByExtension[extension] || (pendingByExtension[extension] = [])).push(payload);
+    // A stopped worker has to be started before it can receive anything
+    wake(extension);
     return true;
   }
   return sendToFrame(extension, payload);
@@ -66,6 +119,7 @@ window.addEventListener("message", (event) => {
   if (!data) return;
   if (data.type === "ready") {
     line("后台页就绪：" + data.ext);
+    touch(data.ext);
     readyFrames.add(data.ext);
     const waiting = pendingByExtension[data.ext] || [];
     delete pendingByExtension[data.ext];
@@ -73,6 +127,7 @@ window.addEventListener("message", (event) => {
     return;
   }
   data.host = true;
+  touch(data.ext);
   report(data);
 });
 
@@ -133,6 +188,7 @@ async function poll() {
       return;
     }
     const data = await response.json();
+    sweepIdleWorkers();
     (data.commands || []).forEach((code) => {
       if (ready) runCommand(code);
       else buffered.push(code);

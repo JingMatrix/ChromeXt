@@ -99,6 +99,17 @@ ChromeXt injects its own rows into the browser page menu, so extension UI rides 
   `<head>`, so `chrome.*` is available at parse time; the shim waits for ChromeXt's init script to
   land before dispatching, which happens slightly later for these pages.
 
+## Service worker lifecycle
+
+An MV3 `service_worker` is not a page that lives forever: ChromeXt unloads its iframe after 30
+seconds without events and rebuilds it when something arrives. Events that wake a worker are
+messages (`runtime.sendMessage` / `tabs.sendMessage`), menu clicks, action clicks and `webRequest`
+queries — anything that goes through the host page.
+
+Because the worker is gone between events, only the events registered *before* an event can be
+replayed, which is exactly Chrome's contract: a worker re-registers its listeners on start, and the
+event that woke it is delivered once it reports ready again.
+
 ## Request filtering
 
 Chrome fetches sub-resources in the network service, in C++, and ships **no Java HTTP layer at all**
@@ -131,9 +142,14 @@ the host as soon as extensions are loaded to keep that window short.
 
 * `webRequest`, `declarativeNetRequest`, `scripting` (MV3) and `action` popups are not
   implemented; blocking extensions (uBlock Origin) will not work.
-* MV3 `service_worker` runs as a normal page: no event-driven wake-up, so an extension that
-  relies on being suspended and restarted may misbehave. `importScripts` is polyfilled with
-  `document.write`.
+* MV3 `service_worker` runs as a page that is **stopped after 30 s without events** and started
+  again when one arrives (a message, a menu click, an action click). The state goes with it, as it
+  would in Chrome: ports are dropped and in-memory globals are lost. Waking costs the time it takes
+  to load the worker (~100 ms), so a `webRequest` cancel that has to wake a worker may miss its
+  window. `importScripts` is polyfilled with `document.write`.
+* The idle sweep runs inside the host page, and Android freezes that process when the browser is
+  idle, which stops the sweep as well; a frozen host page is not running anything either, so the
+  effect is the same. Delivery pokes the process back to life (`HostClient.poke`).
 * `run_at` is ignored: everything is injected at `document_idle` (ChromeXt injects on
   `onUpdateUrl`).
 * Content scripts run in the page's world, not in an isolated world, so a hostile page can

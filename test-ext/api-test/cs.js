@@ -1,4 +1,7 @@
 (function () {
+  // The visual report is only drawn on the page this extension serves itself, every other site
+  // just gets the CXTEST lines in logcat
+  const SHOW_PANEL = location.pathname.endsWith("/test.html");
   const rows = [];
   function add(name, ok, detail) {
     const text = detail === undefined ? "" : String(detail);
@@ -126,14 +129,16 @@
       add("cosmetic 隐藏", false, error.message);
     }
 
-    const root = panel();
+    const root = SHOW_PANEL ? panel() : null;
 
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       console.log("CXCS onMessage: " + JSON.stringify(message));
       if (message && message.type === "fromBackground") {
         add("后台 → 内容脚本", true, message.text);
-        root.remove();
-        panel();
+        if (root) {
+          root.remove();
+          panel();
+        }
         sendResponse({ received: true });
       }
     });
@@ -147,7 +152,7 @@
   const start = () =>
       run().catch((error) => {
         add("自检异常", false, String(error));
-        panel();
+        if (SHOW_PANEL) panel();
           });
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", start, { once: true });
