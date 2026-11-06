@@ -111,7 +111,15 @@ async function refresh() {
   try {
     const data = await api("list");
     render(data.extensions);
-    dir.textContent = "扩展目录：" + data.directory;
+    let host = "";
+    try {
+      const state = await api("state");
+      const names = { running: "运行中", starting: "启动中", stopped: "未启动" };
+      host = " ｜ 宿主进程：" + (names[state.background] || state.background);
+    } catch (error) {
+      // the status is a nicety, never block the list on it
+    }
+    dir.textContent = "扩展目录：" + data.directory + host;
   } catch (error) {
     toast("读取失败：" + error.message);
   }

@@ -19,13 +19,11 @@
   </head>
   <body>
     <h1>ChromeXt 扩展宿主</h1>
-    <p>这个页面承载扩展的后台页，请保持打开（切到后台即可，不要关闭）。</p>
+    <p>这个页面由 ChromeXt 自己在独立进程里打开，不需要你操作。</p>
     <div id="status"></div>
     <script>
       const TOKEN = "__TOKEN__";
       const EXTENSIONS = __EXT_LIST__;
-      const CHROMEXT_NAME = "__NAME__";
-      const CHROMEXT_KEY = __KEY__;
     </script>
     <script src="host.js"></script>
   </body>

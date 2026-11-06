@@ -30,41 +30,34 @@ floating panel plus a `CXTEST PASS|FAIL [name] detail` line in logcat.
 ## Architecture
 
 ```
-user tab (any site)                       host tab (http://127.0.0.1:<port>/host.html)
-┌────────────────────────────┐            ┌───────────────────────────────────────────┐
-│ init script (ChromeXt)     │            │ host.js                                   │
-│  └ content script bundle   │            │  ├ iframe  http://127.0.0.1:<portA>/  ──► ext A background page
-│      chrome.* shim         │            │  ├ iframe  http://127.0.0.1:<portB>/  ──► ext B background page
-│            │               │            │  └ polls /_api/poll, forwards postMessage │
-│            │ dispatch      │            └───────────────────────────────────────────┘
-│            ▼               │                          ▲   ▲
-│  console.debug channel ────┼──► Kotlin (ExtensionRuntime) ┘   │
-└────────────────────────────┘       │  storage, tabs, i18n     │ HostQueue
-                                     └──────────────────────────┘
+browser process (hooked)                   ChromeXt's own process (:host)
+┌───────────────────────────┐              ┌──────────────────────────────────────────┐
+│ init script (ChromeXt)    │              │ HostService → WebView → host.html        │
+│  └ content script bundle  │              │  ├ iframe http://127.0.0.1:<portA>/ → A  │
+│      chrome.* shim        │              │  ├ iframe http://127.0.0.1:<portB>/ → B  │
+│            │ dispatch     │              │  └ long-polls /_api/poll for commands    │
+│            ▼              │              └──────────────────────────────────────────┘
+│  console.debug channel ───┼──► Kotlin (ExtensionRuntime)  ── storage, tabs, i18n
+└───────────────────────────┘        ▲   │
+        loopback HTTP server ────────┘   └──► /_api/hostmsg (reports from the host page)
 ```
 
-* **No WebView.** Instantiating `android.webkit.WebView` inside the browser process aborts
-  Chrome: the WebView provider's native library is loaded next to Chromium's own and the
-  `JNI_OnLoad` fails (`org.chromium.base.JniAndroid$UncaughtExceptionException`). Verified
-  twice; do not reintroduce it.
-* **Background pages live in a dedicated tab** (`host.html`) as one iframe per extension,
-  each served from a **separate loopback port** so that every extension gets its own origin
-  (`localStorage`, ES modules, relative fetches behave like `chrome-extension://`).
-* **Kotlin never evaluates into the host tab.** Commands are queued and the host page
-  long-polls `/_api/poll` for them. This survives background tabs, where `javascript:`
-  navigations are dropped.
-* **Content scripts talk over the existing ChromeXt channel**: the shim calls
-  `Symbol.<random>.unlock(<key>).dispatch('ext', payload)`, which ChromeXt already routes from
-  `addMessageToConsole`; replies come back through `__chromextResolve(uuid, ok, value)`.
-* **Pushing into a page uses the page's own channel.** `javascript:` navigations are dropped for
-  background tabs, and Chrome 156 removed `WebContents#evaluateJavaScript` (only the internal
-  `onEvaluateJavaScriptResult` is left), while the DevTools endpoint serves one client and then
-  stops answering. So content scripts poll `runtime.poll` (400 ms visible, 1.5 s hidden) and Kotlin
-  hands them whatever was queued for that tab: replies, `tabs.sendMessage` traffic, port messages
-  and raw code.
-* **Per-extension scope.** The bundle runs in
-  `(function(chrome, browser){ … })(api, api)`, so several extensions can coexist on one page
-  without touching each other's globals.
+* **The background pages live in ChromeXt's own process**, in a `Service` (`extension/HostService.kt`,
+  `android:process=":host"`) that the browser binds to. That is the only place a `WebView` can be
+  used: instantiating one inside the browser process loads the WebView provider's native library
+  next to Chromium's own and aborts the browser (`JniAndroid$UncaughtExceptionException`, verified on
+  Chrome 156 / Android 16). A browser tab is not an option either — a new tab steals the foreground,
+  piles up across restarts, and Chrome cannot revive a restored-but-unloaded tab without selecting it.
+  A bound service needs no notification, dies with the browser, and keeps the tab strip untouched.
+* **One loopback port per extension**, so every extension keeps its own origin (`localStorage`, ES
+  modules, relative `fetch` behave like `chrome-extension://`).
+* **Both directions go through the loopback server**: the host page long-polls `/_api/poll` for
+  commands (deliveries, replies, port traffic, raw code) and reports back with `POST /_api/hostmsg`.
+  Content scripts keep using the ChromeXt action channel (`Symbol.<random>.unlock(<key>).dispatch`)
+  and poll `runtime.poll` for whatever is queued for their tab.
+* **Per-extension scope.** The bundle runs in `(function(chrome, browser){ … })(api, api)`, so several
+  extensions can coexist on one page without touching each other's globals, and each extension runs
+  its own poll loop (a page-wide one would let the last loaded extension drain everybody's queue).
 
 ## Where extensions live
 
@@ -104,8 +97,8 @@ Three ways to install:
   observe or tamper with them. Same trade-off ChromeXt already makes for UserScripts.
 * Delivering into a content script goes through a poll loop (see below), so it costs up to half a
   second of latency and one IPC round trip per poll while a page has extensions.
-* Extensions keep a tab open (`host.html`). Closing it stops every background page; the next
-  message reopens it.
+* The host process is a bound service of ChromeXt: it stops when the browser does, so background
+  pages restart (and re-register their listeners) on the next browser start.
 
 ## Building
 
@@ -127,3 +120,12 @@ am force-stop com.android.chrome   # the module is loaded per process
 ```
 
 Logs: `logcat -s ChromeXt:*`, the test extension additionally prints `CXTEST …` lines.
+
+## Process and permission notes
+
+* `HostService` needs `android.permission.INTERNET` (it is the process that talks HTTP to the
+  loopback server) and the application sets `android:usesCleartextTraffic="true"`; without it the
+  WebView refuses to open `http://127.0.0.1:…`.
+* `Log` no longer touches `XposedBridge` unconditionally: the Xposed API is a compile-only
+  dependency and referencing it in ChromeXt's own process throws `NoClassDefFoundError`.
+* `HostService` only loads urls that start with `http://127.0.0.1:`, whatever the caller passes.

@@ -386,11 +386,72 @@ object Chrome {
   /**
    * Find the tab model of the activity.
    *
-   * `getDeclaredMethods` throws on ChromeTabbedActivity, whose signatures reference platform types
-   * that are absent from the browser process, so named lookups are used instead.
+   * Chrome 156 keeps the accessor under an obfuscated name, but the signature is still readable, so
+   * the model is recognised by shape: an object offering `getCount()` and `getTabAt(int)`, or a
+   * selector offering a no-argument method that returns one.
    */
   private fun findTabModel(activity: android.app.Activity): Any? {
     var clazz: Class<*>? = activity::class.java
+    while (clazz != null) {
+      val methods = runCatching { clazz!!.declaredMethods.toList() }.getOrElse { emptyList() }
+      for (method in methods) {
+        if (method.parameterTypes.isNotEmpty()) continue
+        val type = method.returnType ?: continue
+        if (isTabModel(type)) {
+          runCatching {
+            method.isAccessible = true
+            method.invoke(activity)
+          }
+              .getOrNull()
+              ?.let {
+                return it
+              }
+        } else {
+          val getter = selectorGetter(type) ?: continue
+          val selector =
+              runCatching {
+                method.isAccessible = true
+                method.invoke(activity)
+              }
+                  .getOrNull() ?: continue
+          runCatching {
+            getter.isAccessible = true
+            getter.invoke(selector)
+          }
+              .getOrNull()
+              ?.let {
+                return it
+              }
+        }
+      }
+      clazz = clazz.superclass
+    }
+    // The activity may hold the selector in a field instead of handing it out
+    clazz = activity::class.java
+    while (clazz != null) {
+      val fields = runCatching { clazz!!.declaredFields.toList() }.getOrElse { emptyList() }
+      for (field in fields) {
+        if (java.lang.reflect.Modifier.isStatic(field.modifiers)) continue
+        val getter = selectorGetter(field.type) ?: continue
+        val selector =
+            runCatching {
+              field.isAccessible = true
+              field.get(activity)
+            }
+                .getOrNull() ?: continue
+        runCatching {
+          getter.isAccessible = true
+          getter.invoke(selector)
+        }
+            .getOrNull()
+            ?.let {
+              return it
+            }
+      }
+      clazz = clazz.superclass
+    }
+    // Fall back to names, should a future build hide the model behind an unusual signature
+    clazz = activity::class.java
     while (clazz != null) {
       for (name in tabAccessorNames) {
         val value =
@@ -413,14 +474,20 @@ object Chrome {
 
   /** Every tab of the current tab model, as real Tab objects (no DevTools needed). */
   fun tabList(): List<Any> {
-    val registered = synchronized(knownTabs) { knownTabs.toList() }
-    if (registered.isNotEmpty()) return registered
-    val activity = activity() ?: return emptyList()
+    fromModel()?.let {
+      return it
+    }
+    return synchronized(knownTabs) { knownTabs.toList() }
+  }
+
+  /** Every tab known to the model, restored ones included. */
+  private fun fromModel(): List<Any>? {
+    val activity = activity() ?: return null
     val model =
         findTabModel(activity)
             ?: run {
               Log.d("tabList: no tab model on ${activity::class.java.name}")
-              return emptyList()
+              return null
             }
     val count = runCatching {
       model.javaClass.getMethod("getCount").invoke(model) as Int

@@ -10,7 +10,6 @@ import java.net.URLConnection
 import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
-import org.matrix.chromext.script.Local
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.randomString
 
@@ -74,6 +73,13 @@ object ExtServer {
 
   val token: String = randomString(24)
 
+  /** Per process value appended to the host url: a page carrying another one is stale. */
+  val hostToken: String = randomString(10)
+
+  fun hostPath(): String = "http://$LOOPBACK:$managerPort/host.html"
+
+  fun hostUrl(): String = hostPath() + "?p=" + hostToken
+
   val managerPort: Int
     get() {
       startManager()
@@ -118,7 +124,7 @@ object ExtServer {
 
   fun startManager() {
     if (manager != null) return
-    val server = bind()
+    val server = bindHost()
     manager = server
     accept(server) { request -> serveManager(request) }
     Log.i("Extension manager served at http://$LOOPBACK:${server.localPort}/manager.html")
@@ -127,6 +133,42 @@ object ExtServer {
   fun startAll() {
     startManager()
     Extensions.enabled().filter { it.hasBackground }.forEach { portOf(it) }
+  }
+
+  /**
+   * A stable port for the host page.
+   *
+   * The host tab is reused across browser restarts, which only works when its url does not change,
+   * so a previously used port is preferred and recorded.
+   */
+  private fun bindHost(): ServerSocket {
+    val prefs =
+        Chrome.getContext().getSharedPreferences("ChromeXt", android.content.Context.MODE_PRIVATE)
+    val saved = prefs.getInt("extensionHostPort", 0)
+    val candidates = buildList {
+      if (saved != 0) add(saved)
+      addAll(15243..15263)
+    }
+    candidates.forEach { port ->
+      runCatching { bindPort(port) }
+          .onSuccess {
+            if (it.localPort != saved)
+                prefs.edit().putInt("extensionHostPort", it.localPort).apply()
+            Log.i("Extension host listens on port ${it.localPort}")
+            return it
+          }
+          .onFailure { Log.d("Port $port is taken: ${it.message}") }
+    }
+    val socket = bind()
+    prefs.edit().putInt("extensionHostPort", socket.localPort).apply()
+    return socket
+  }
+
+  private fun bindPort(port: Int): ServerSocket {
+    val socket = ServerSocket()
+    socket.reuseAddress = true
+    socket.bind(InetSocketAddress(InetAddress.getByName(LOOPBACK), port))
+    return socket
   }
 
   private fun bind(): ServerSocket {
@@ -344,19 +386,15 @@ object ExtServer {
           .filter { it.hasBackground }
           .forEach { list.put(JSONObject().put("id", it.id).put("port", portOf(it))) }
       return HttpResponse.asset(
-          "host.html",
-          mapOf(
-              "__EXT_LIST__" to list.toString(),
-              "__TOKEN__" to token,
-              "__NAME__" to Local.name,
-              "__KEY__" to Local.key.toString()))
+          "host.html", mapOf("__EXT_LIST__" to list.toString(), "__TOKEN__" to token))
     }
     return when {
       path == "/manager.js" -> HttpResponse.asset("manager.js")
       path == "/manager.css" -> HttpResponse.asset("manager.css")
       path == "/host.js" -> HttpResponse.asset("host.js")
       path.startsWith("/_api/") -> {
-        if (request.query["token"] != token && request.headers["x-token"] != token) {
+        val open = path == "/_api/state"
+        if (!open && request.query["token"] != token && request.headers["x-token"] != token) {
           HttpResponse(403, body = "Bad token".toByteArray())
         } else {
           runCatching { ManagerApi.handle(path.removePrefix("/_api/"), request) }
@@ -405,6 +443,19 @@ object ManagerApi {
         Extensions.reload()
         ExtServer.startAll()
         HttpResponse.json(list())
+      }
+      "state" ->
+          HttpResponse.json(
+              JSONObject()
+                  .put("background", Background.status())
+                  .put("queue", HostQueue.size())
+                  .put("hostPath", ExtServer.hostPath())
+                  .put("hostUrl", ExtServer.hostUrl())
+                  .put("extensions", Extensions.enabled().size))
+      "hostmsg" -> {
+        val payload = request.body.toString(Charsets.UTF_8)
+        ExtensionRuntime.dispatch(payload, null, null)
+        HttpResponse.json(JSONObject().put("ok", true))
       }
       "poll" -> {
         val commands = HostQueue.take(20000)
@@ -462,6 +513,8 @@ object HostQueue {
       lock.notifyAll()
     }
   }
+
+  fun size(): Int = synchronized(lock) { pending.size }
 
   fun take(timeoutMs: Long): List<String> {
     synchronized(lock) {

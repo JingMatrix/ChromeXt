@@ -351,7 +351,7 @@ object ExtensionRuntime {
   private fun sender(extension: Extension, source: Source): JSONObject {
     val json = JSONObject().put("id", extension.id)
     if (source.host) {
-      json.put("url", Background.hostUrl())
+      json.put("url", ExtServer.hostUrl())
       json.put("origin", ExtServer.origin(extension))
       return json
     }
