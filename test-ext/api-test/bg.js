@@ -36,6 +36,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     probe().then(sendResponse, (error) => sendResponse({ error: String(error) }));
     return true;
   }
+  if (message.type === "cosmetic") {
+    // Hide the probe element on this origin from now on, through the ChromeXt namespace
+    const origin = sender && sender.url ? new URL(sender.url).origin : "*";
+    chrome.chromeXt
+      .addCosmeticRules(origin, ["#cx-hide-target"])
+      .then(() => sendResponse({ registered: true }), (error) => sendResponse({ error: String(error) }));
+    return true;
+  }
   if (message.type === "tabsMessage" && sender.tab) {
     chrome.tabs.sendMessage(
       sender.tab.id,
@@ -54,3 +62,20 @@ chrome.runtime.onConnect.addListener((port) => {
     port.postMessage({ echo: message, from: "background" });
   });
 });
+
+// webRequest: ChromeXt only sees top level navigations, so that is what fires here
+console.log("CXBG webRequest api: " + typeof chrome.webRequest);
+if (chrome.webRequest && chrome.webRequest.onBeforeRequest) {
+  chrome.webRequest.onBeforeRequest.addListener(
+    (details) => {
+      console.log("CXBG webRequest " + details.type + " " + details.url);
+      if (details.url.indexOf("/wr-block") !== -1) {
+        console.log("CXBG webRequest cancels " + details.url);
+        return { cancel: true };
+      }
+      return {};
+    },
+    { urls: ["*://*/*"], types: ["main_frame"] },
+    ["blocking"]
+  );
+}

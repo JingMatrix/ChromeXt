@@ -73,6 +73,15 @@ object ExtServer {
 
   val token: String = randomString(24)
 
+  /** When the host page last polled, used to notice that it stopped (frozen or killed). */
+  @Volatile
+  var lastPollAt: Long = 0L
+    private set
+
+  fun notePoll() {
+    lastPollAt = System.currentTimeMillis()
+  }
+
   /** Per process value appended to the host url: a page carrying another one is stale. */
   val hostToken: String = randomString(10)
 
@@ -313,7 +322,12 @@ object ExtServer {
       }
 
   private fun serveExtension(extension: Extension, request: HttpRequest): HttpResponse {
-    val cors = mapOf("Access-Control-Allow-Origin" to "*", "Access-Control-Allow-Headers" to "*")
+    val cors =
+        mapOf(
+            "Access-Control-Allow-Origin" to "*",
+            "Access-Control-Allow-Headers" to "*",
+            // Extension files are edited in place while developing, never cache them
+            "Cache-Control" to "no-store")
     if (request.method == "OPTIONS") return HttpResponse(204, body = ByteArray(0), headers = cors)
     val path = request.path
     val response =
@@ -336,7 +350,9 @@ object ExtServer {
   }
 
   private fun backgroundDocument(extension: Extension): String {
-    val shim = "<script src=\"/__chromext__.js\"></script>"
+    // The process token busts any cache the WebView kept from an earlier run
+    val version = "?v=" + hostToken
+    val shim = "<script src=\"/__chromext__.js$version\"></script>"
     val page = extension.backgroundPage
     if (page != null) {
       val html = extension.readText(page) ?: return "<html><body>Missing ${page}</body></html>"
@@ -356,7 +372,9 @@ object ExtServer {
     }
     val type = if (extension.backgroundIsModule) " type=\"module\"" else ""
     val scripts =
-        extension.backgroundScripts.joinToString("\n") { "<script$type src=\"/$it\"></script>" }
+        extension.backgroundScripts.joinToString("\n") {
+          "<script$type src=\"/$it$version\"></script>"
+        }
     return """
         |<!DOCTYPE html>
         |<html>
@@ -386,7 +404,11 @@ object ExtServer {
           .filter { it.hasBackground }
           .forEach { list.put(JSONObject().put("id", it.id).put("port", portOf(it))) }
       return HttpResponse.asset(
-          "host.html", mapOf("__EXT_LIST__" to list.toString(), "__TOKEN__" to token))
+          "host.html",
+          mapOf(
+              "__EXT_LIST__" to list.toString(),
+              "__TOKEN__" to token,
+              "__HOST_TOKEN__" to hostToken))
     }
     return when {
       path == "/manager.js" -> HttpResponse.asset("manager.js")
@@ -453,11 +475,19 @@ object ManagerApi {
                   .put("hostUrl", ExtServer.hostUrl())
                   .put("extensions", Extensions.enabled().size))
       "hostmsg" -> {
+        if (request.query["p"] != ExtServer.hostToken) {
+          // A host page left over from an earlier browser process
+          return HttpResponse(403, body = "Stale host page".toByteArray())
+        }
         val payload = request.body.toString(Charsets.UTF_8)
         ExtensionRuntime.dispatch(payload, null, null)
         HttpResponse.json(JSONObject().put("ok", true))
       }
       "poll" -> {
+        if (request.query["p"] != ExtServer.hostToken) {
+          return HttpResponse(403, body = "Stale host page".toByteArray())
+        }
+        ExtServer.notePoll()
         val commands = HostQueue.take(20000)
         HttpResponse.json(JSONObject().put("commands", JSONArray(commands)))
       }

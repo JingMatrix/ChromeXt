@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.http.HttpResponseCache
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.Listener
+import org.matrix.chromext.extension.Blocking
 import org.matrix.chromext.proxy.UserScriptProxy
 import org.matrix.chromext.script.Local
 import org.matrix.chromext.script.ScriptDbManager
@@ -52,6 +53,8 @@ object UserScriptHook : BaseHook() {
             url = proxy.parseUrl(proxy.getUrl(tab))!!
           }
           if (!url.startsWith("chrome") && proxy.isLoading(tab)) {
+            // Extensions get to veto or redirect the navigation before anything is injected
+            if (Blocking.enforce(tab, url)) return@hookAfter
             ScriptDbManager.invokeScript(url)
           }
         }

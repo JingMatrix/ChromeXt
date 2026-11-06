@@ -34,7 +34,8 @@ class HostService : Service() {
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-    intent?.getStringExtra(EXTRA_URL)?.let { load(it) }
+    // Being started at all is what unfreezes the process; only load if the page is gone
+    if (webView == null) intent?.getStringExtra(EXTRA_URL)?.let { load(it) }
     return START_NOT_STICKY
   }
 
@@ -66,7 +67,8 @@ class HostService : Service() {
       databaseEnabled = true
       allowFileAccess = false
       allowContentAccess = false
-      cacheMode = WebSettings.LOAD_DEFAULT
+      // Extension files are served from disk and edited in place, never serve a stale copy
+      cacheMode = WebSettings.LOAD_NO_CACHE
       mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
       userAgentString = userAgentString + " ChromeXt"
     }

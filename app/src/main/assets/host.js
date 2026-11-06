@@ -18,7 +18,7 @@ function line(text) {
 }
 
 function report(payload) {
-  fetch("/_api/hostmsg?token=" + encodeURIComponent(TOKEN), {
+  fetch("/_api/hostmsg?token=" + encodeURIComponent(TOKEN) + "&p=" + encodeURIComponent(HOST_TOKEN), {
     method: "POST",
     body: JSON.stringify(payload),
   }).catch((error) => console.error("host: cannot report to ChromeXt", error));
@@ -34,7 +34,8 @@ function runCommand(code) {
 
 EXTENSIONS.forEach((extension) => {
   const frame = document.createElement("iframe");
-  frame.src = "http://127.0.0.1:" + extension.port + "/";
+  // The version busts the cache of the background document kept from an earlier run
+  frame.src = "http://127.0.0.1:" + extension.port + "/?v=" + encodeURIComponent(HOST_TOKEN);
   frame.dataset.ext = extension.id;
   frame.style.cssText = "width:1px;height:1px;border:0;position:absolute;left:-20px;top:-20px;";
   document.body.append(frame);
@@ -99,13 +100,30 @@ window.__chromextHostPortOpen = function (extension, portId, name, sender) {
   });
 };
 
+window.__chromextHostWebRequest = function (extension, kind, details, requestId) {
+  return forward(extension, {
+    type: "webRequest",
+    ext: extension,
+    kind: kind,
+    details: details,
+    requestId: requestId,
+  });
+};
+
 window.__chromextHostPort = function (extension, portId, type, message) {
   return forward(extension, { type: type, ext: extension, portId: portId, message: message });
 };
 
 async function poll() {
   try {
-    const response = await fetch("/_api/poll?token=" + encodeURIComponent(TOKEN));
+    const response = await fetch(
+      "/_api/poll?token=" + encodeURIComponent(TOKEN) + "&p=" + encodeURIComponent(HOST_TOKEN)
+    );
+    if (response.status === 403) {
+      // Another browser process owns the host now
+      line("这个宿主页已失效，可以关闭");
+      return;
+    }
     const data = await response.json();
     (data.commands || []).forEach((code) => {
       if (ready) runCommand(code);

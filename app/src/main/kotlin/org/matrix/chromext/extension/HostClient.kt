@@ -56,6 +56,29 @@ object HostClient {
         .also { if (!it) connecting = false }
   }
 
+  private var lastPoke = 0L
+
+  /**
+   * Wake the host process.
+   *
+   * Android freezes a background process even when it holds a binding, and a frozen host page stops
+   * polling, so every delivery pokes the service when the polls have gone quiet.
+   */
+  fun poke(url: String) {
+    val now = System.currentTimeMillis()
+    if (now - lastPoke < 3000) return
+    lastPoke = now
+    val context = runCatching { Chrome.getContext() }.getOrNull() ?: return
+    runCatching {
+      val intent =
+          Intent()
+              .setComponent(ComponentName(PACKAGE, HostService::class.java.name))
+              .putExtra(HostService.EXTRA_URL, url)
+      context.startService(intent)
+    }
+        .onFailure { Log.d("Cannot poke the host service: ${it.message}") }
+  }
+
   fun release() {
     val context = runCatching { Chrome.getContext() }.getOrNull() ?: return
     connection?.let { runCatching { context.unbindService(it) } }

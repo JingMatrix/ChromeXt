@@ -110,6 +110,22 @@
       add("tabs.query", false, error.message);
     }
 
+    // Cosmetic hiding: hand the selector to ChromeXt, then check the next load hides it
+    try {
+      const target = document.createElement("div");
+      target.id = "cx-hide-target";
+      target.textContent = "SHOULD BE HIDDEN";
+      document.documentElement.append(target);
+      const hidden = getComputedStyle(target).display === "none";
+      add("cosmetic 隐藏", hidden, hidden ? "display:none" : "仍然可见");
+      if (!hidden && !localStorage.getItem("cx.cosmetic")) {
+        localStorage.setItem("cx.cosmetic", "1");
+        chrome.runtime.sendMessage({ type: "cosmetic" });
+      }
+    } catch (error) {
+      add("cosmetic 隐藏", false, error.message);
+    }
+
     const root = panel();
 
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

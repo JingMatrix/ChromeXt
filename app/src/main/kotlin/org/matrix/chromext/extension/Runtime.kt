@@ -135,6 +135,69 @@ object ExtensionRuntime {
         send(source, uuid, true, null)
       }
       "runtime.poll" -> poll(source, uuid, extension)
+      "webRequest.register" -> {
+        val kind = args.optString(0)
+        val filter = args.optJSONObject(1) ?: JSONObject()
+        val spec = args.optJSONArray(2) ?: JSONArray()
+        Blocking.register(extension.id, kind, filter, spec)
+        send(source, uuid, true, null)
+      }
+      "webRequest.respond" -> {
+        Blocking.onAnswer(args.optString(0), args.optBoolean(1, false))
+        send(source, uuid, true, null)
+      }
+      "webRequest.redirect" -> {
+        Blocking.onRedirect(args.optString(0), args.optString(1))
+        send(source, uuid, true, null)
+      }
+      "dnr.updateDynamicRules" -> {
+        val options = args.optJSONObject(0) ?: JSONObject()
+        val storage = Extensions.storage(extension.id)
+        val existing = storage.optJSONArray("__dnrDynamic") ?: JSONArray()
+        val removed =
+            options.optJSONArray("removeRuleIds")?.let { array ->
+              (0 until array.length()).map { array.optInt(it) }.toSet()
+            } ?: emptySet()
+        val kept = JSONArray()
+        (0 until existing.length())
+            .mapNotNull { existing.optJSONObject(it) }
+            .filter { !removed.contains(it.optInt("id", -1)) }
+            .forEach { kept.put(it) }
+        options.optJSONArray("addRules")?.let { array ->
+          (0 until array.length()).mapNotNull { array.optJSONObject(it) }.forEach { kept.put(it) }
+        }
+        storage.put("__dnrDynamic", kept)
+        Extensions.saveStorage(extension.id)
+        send(source, uuid, true, null)
+      }
+      "dnr.getDynamicRules" -> {
+        send(
+            source,
+            uuid,
+            true,
+            Extensions.storage(extension.id).optJSONArray("__dnrDynamic") ?: JSONArray())
+      }
+      "cosmetic.add" -> {
+        // Persistent element hiding, applied by ChromeXt on every page of that origin
+        val detail = args.optJSONObject(0) ?: JSONObject()
+        val origin = detail.optString("origin", "*")
+        val selectors = detail.optJSONArray("selectors") ?: JSONArray()
+        val prefs =
+            Chrome.getContext()
+                .getSharedPreferences("CosmeticFilter", android.content.Context.MODE_PRIVATE)
+        val current = runCatching {
+          JSONArray(prefs.getString(origin, "[]"))
+        }
+            .getOrElse { JSONArray() }
+        val merged = sortedSetOf<String>()
+        (0 until current.length()).forEach { merged.add(current.optString(it)) }
+        (0 until selectors.length()).forEach { merged.add(selectors.optString(it)) }
+        val updated = JSONArray()
+        merged.filter { it.isNotEmpty() }.forEach { updated.put(it) }
+        prefs.edit().putString(origin, updated.toString()).apply()
+        org.matrix.chromext.script.ScriptDbManager.cosmeticFilters[origin] = updated.toString()
+        send(source, uuid, true, null)
+      }
       "runtime.sendMessage" -> {
         if (source.host) {
           send(source, uuid, false, "No receiving end for runtime.sendMessage")

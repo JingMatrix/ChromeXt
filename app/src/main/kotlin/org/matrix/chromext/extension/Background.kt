@@ -13,11 +13,13 @@ object Background {
   private var ready = false
   private var binding = false
 
-  fun isReady(): Boolean = ready
+  private fun alive(): Boolean = ready && System.currentTimeMillis() - ExtServer.lastPollAt < 15000
+
+  fun isReady(): Boolean = alive()
 
   fun status(): String =
       when {
-        ready -> "running"
+        alive() -> "running"
         binding -> "starting"
         else -> "stopped"
       }
@@ -35,6 +37,10 @@ object Background {
   /** Queue code for the host page. */
   fun evaluate(code: String): Boolean {
     ensure()
+    // A frozen host page stops polling: poke it so the command is picked up
+    if (System.currentTimeMillis() - ExtServer.lastPollAt > 4000) {
+      HostClient.poke(ExtServer.hostUrl())
+    }
     HostQueue.push(code)
     return true
   }

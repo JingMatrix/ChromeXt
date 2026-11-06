@@ -64,6 +64,9 @@ object Extensions {
               .onFailure { Log.e("Fail to load extension ${sub.name}: ${it.message}") }
         }
     Log.i("Loaded ${list.size} extension(s): ${list.joinToString { it.id }}")
+    // Start the host right away: extensions register their webRequest listeners there, and the
+    // first navigation of a session would otherwise happen before they exist
+    if (enabled().any { it.hasBackground }) runCatching { Background.ensure() }
   }
 
   fun byId(id: String): Extension? {
@@ -83,6 +86,7 @@ object Extensions {
 
   fun setEnabled(id: String, enabled: Boolean) {
     enabledState[id] = enabled
+    if (!enabled) Blocking.forget(id)
     prefs.edit().putBoolean("enabled.$id", enabled).apply()
     if (!enabled) ExtServer.stop(byId(id))
   }
@@ -133,6 +137,7 @@ object Extensions {
 
   fun uninstall(id: String): Boolean {
     val extension = byId(id) ?: return false
+    Blocking.forget(id)
     ExtServer.stop(extension)
     storageCache.remove(id)
     runCatching { File(storageDir, "$id.json").delete() }

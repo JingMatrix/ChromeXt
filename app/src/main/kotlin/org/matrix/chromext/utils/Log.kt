@@ -16,7 +16,8 @@ import org.matrix.chromext.TAG
 private object XposedLog {
   private val available: Boolean = runCatching {
     Class.forName("de.robv.android.xposed.XposedBridge")
-  }.isSuccess
+  }
+      .isSuccess
 
   fun log(message: String) {
     if (!available) return

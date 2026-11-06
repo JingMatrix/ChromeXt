@@ -84,6 +84,34 @@ Three ways to install:
    uid, e.g. `chown -R 10347:1078 …` for Chrome).
 3. Both are picked up on the next browser start; *刷新* in the manager re-scans without restart.
 
+## Request filtering
+
+Chrome fetches sub-resources in the network service, in C++, and ships **no Java HTTP layer at all**
+(neither `base.apk` nor `split_chrome.apk` contains Cronet or any `UrlRequest`), so a Java hook cannot
+see or stop an image, script or XHR. What is reachable is the navigation itself, so that is what
+ChromeXt filters:
+
+* `declarativeNetRequest`: the rulesets listed in `declarative_net_request.rule_resources` plus the
+  rules added with `updateDynamicRules` are matched against the url the tab is about to load.
+  `block` stops the load, `redirect` navigates to the target, `allow` and priority are honoured
+  (a higher priority `allow` overrides a `block`). Matching supports `urlFilter` (`||`, `|`, `*`,
+  `^`), `regexFilter`, `resourceTypes`/`excludedResourceTypes` (main_frame only), `requestMethods`
+  and `domains`/`excludedDomains`.
+* `webRequest`: the whole API surface exists so extensions do not break, and every event is a real
+  `Event`. `onBeforeRequest` is fired for main_frame with a `blocking` listener: returning
+  `{cancel: true}` or `{redirectUrl: …}` stops or diverts the load. Because the listener lives in the
+  background page, the answer arrives after the load started — the page is stopped a few
+  milliseconds later, which is still before it renders. Nothing else is visible, so
+  `onBeforeSendHeaders`, `onHeadersReceived` and friends never fire.
+* **Element hiding** is ChromeXt specific: an extension can call
+  `chrome.chromeXt.addCosmeticRules(origin, [selectors])`, which feeds the same cosmetic filter store
+  the eruda based AdBlocker uses, and the selectors are injected as CSS on the next load of that
+  origin.
+
+Cold start: `webRequest` listeners only exist once the background page has loaded, so the very first
+navigation of a browser session is filtered by `declarativeNetRequest` rules only. ChromeXt starts
+the host as soon as extensions are loaded to keep that window short.
+
 ## Known limitations
 
 * `webRequest`, `declarativeNetRequest`, `scripting` (MV3) and `action` popups are not

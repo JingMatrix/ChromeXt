@@ -134,6 +134,7 @@ class Extension(val dir: File) {
   val backgroundScripts: List<String>
   val backgroundIsModule: Boolean
   val contentScripts: List<ContentScript>
+  val dnrRuleResources: List<String>
   val webAccessibleResources: List<String>
   val permissionWarnings: List<String>
   val icons: Map<String, String>
@@ -180,6 +181,16 @@ class Extension(val dir: File) {
             (0 until scripts.length())
                 .mapNotNull { scripts.optJSONObject(it) }
                 .mapNotNull { ContentScript.parse(it) }
+
+    dnrRuleResources =
+        manifest.optJSONObject("declarative_net_request")?.optJSONArray("rule_resources")?.let {
+            resources ->
+          (0 until resources.length()).mapNotNull { index ->
+            val entry = resources.optJSONObject(index) ?: return@mapNotNull null
+            if (entry.optBoolean("enabled", true)) entry.optString("path").ifEmpty { null }
+            else null
+          }
+        } ?: emptyList()
 
     webAccessibleResources =
         when (val resources = manifest.opt("web_accessible_resources")) {

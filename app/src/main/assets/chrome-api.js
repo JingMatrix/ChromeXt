@@ -579,6 +579,10 @@ function __chromextCreateApi(cfg) {
           globalThis.__chromextPortMessage(item.portId, maybeParse(item.message));
       } else if (item.type === "portDisconnect") {
         if (globalThis.__chromextPortDisconnect) globalThis.__chromextPortDisconnect(item.portId);
+      } else if (item.type === "webRequest") {
+        const hook = (globalThis.__chromextWebRequest || {})[item.ext];
+        console.log("CX webRequest " + item.kind + " hook=" + !!hook);
+        if (hook) hook(item.kind, item.details, item.requestId);
       } else if (item.type === "eval") {
         (0, eval)(item.code);
       }
@@ -611,7 +615,131 @@ function __chromextCreateApi(cfg) {
     setTimeout(tick, 300 + Math.random() * 200);
   }
 
+  // ---- webRequest -----------------------------------------------------------
+  // Only top level navigations are visible to ChromeXt, so the events fire for those and the
+  // blocking listener can answer {cancel: true} (applied with a short grace period).
+
+  const webRequestEvents = {};
+  function webRequestEvent(kind) {
+    if (!webRequestEvents[kind]) {
+      const base = event();
+      const addListener = base.addListener;
+      base.addListener = (fn, filter, extra) => {
+        addListener(fn);
+        raw({
+          ext: ID,
+          action: "webRequest.register",
+          args: [kind, filter || {}, extra || []],
+          uuid: "",
+        });
+      };
+      webRequestEvents[kind] = base;
+    }
+    return webRequestEvents[kind];
+  }
+
+  function onWebRequest(kind, details, requestId) {
+    const listeners = (webRequestEvents[kind] && webRequestEvents[kind]._listeners) || [];
+    if (listeners.length === 0) {
+      raw({ ext: ID, action: "webRequest.respond", args: [requestId, false], uuid: "" });
+      return;
+    }
+    let cancel = false;
+    for (const listener of listeners) {
+      try {
+        const result = listener(details);
+        if (kind === "onBeforeRequest" && result && result.cancel) cancel = true;
+        if (kind === "onBeforeRequest" && result && typeof result.redirectUrl === "string") {
+          raw({ ext: ID, action: "webRequest.redirect", args: [requestId, result.redirectUrl], uuid: "" });
+          return;
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    raw({ ext: ID, action: "webRequest.respond", args: [requestId, cancel], uuid: "" });
+  }
+  api.__onWebRequest = onWebRequest;
+
+  const webRequest = {
+    onBeforeRequest: webRequestEvent("onBeforeRequest"),
+    onBeforeSendHeaders: webRequestEvent("onBeforeSendHeaders"),
+    onSendHeaders: webRequestEvent("onSendHeaders"),
+    onHeadersReceived: webRequestEvent("onHeadersReceived"),
+    onResponseStarted: webRequestEvent("onResponseStarted"),
+    onBeforeRedirect: webRequestEvent("onBeforeRedirect"),
+    onCompleted: webRequestEvent("onCompleted"),
+    onErrorOccurred: webRequestEvent("onErrorOccurred"),
+    onAuthRequired: webRequestEvent("onAuthRequired"),
+    handlerBehaviorChanged: (callback) => wrap(Promise.resolve(), callback),
+    MAX_HANDLER_BEHAVIOR_CHANGED_CALLS_PER_10_MINUTES: 20,
+    ResourceType: {
+      MAIN_FRAME: "main_frame",
+      SUB_FRAME: "sub_frame",
+      STYLESHEET: "stylesheet",
+      SCRIPT: "script",
+      IMAGE: "image",
+      FONT: "font",
+      OBJECT: "object",
+      XMLHTTPREQUEST: "xmlhttprequest",
+      PING: "ping",
+      CSP_REPORT: "csp_report",
+      MEDIA: "media",
+      WEBSOCKET: "websocket",
+      OTHER: "other",
+    },
+  };
+
+  // ---- declarativeNetRequest ------------------------------------------------
+  // Static rulesets live in the manifest and are matched by ChromeXt on the top level navigation;
+  // sub-resources are out of reach, see Blocking.kt.
+
+  const dnr = {
+    onRuleMatchedDebug: event(),
+    getDynamicRules: (callback) => wrap(post("dnr.getDynamicRules", []), callback),
+    updateDynamicRules: (options, callback) => wrap(post("dnr.updateDynamicRules", [options || {}]), callback),
+    getSessionRules: (callback) => wrap(Promise.resolve([]), callback),
+    updateSessionRules: (options, callback) => wrap(Promise.resolve(), callback),
+    getEnabledRulesets: (callback) =>
+      wrap(
+        Promise.resolve(
+          Array.isArray(MANIFEST.declarative_net_request)
+            ? (MANIFEST.declarative_net_request.rule_resources || []).map((r) => r.id)
+            : []
+        ),
+        callback
+      ),
+    updateEnabledRulesets: (options, callback) => wrap(Promise.resolve(), callback),
+    getAvailableStaticRuleCount: (callback) => wrap(Promise.resolve(30000), callback),
+    isRegexSupported: (regexOptions, callback) => {
+      let supported = true;
+      try {
+        new RegExp(regexOptions.regex);
+      } catch (error) {
+        supported = false;
+      }
+      return wrap(Promise.resolve({ isSupported: supported }), callback);
+    },
+    getMatchedRules: (filter, callback) => wrap(Promise.resolve({ rulesMatchedInfo: [] }), callback),
+    RuleActionType: { BLOCK: "block", REDIRECT: "redirect", ALLOW: "allow", UPGRADE_SCHEME: "upgradeScheme", MODIFY_HEADERS: "modifyHeaders", ALLOW_ALL_REQUESTS: "allowAllRequests" },
+    RequestMethod: { CONNECT: "connect", DELETE: "delete", GET: "get", HEAD: "head", OPTIONS: "options", PATCH: "patch", POST: "post", PUT: "put" },
+    ResourceType: webRequest.ResourceType,
+    RuleCondition: {},
+    MAX_NUMBER_OF_DYNAMIC_AND_SESSION_RULES: 5000,
+  };
+
+  api.webRequest = webRequest;
+  api.declarativeNetRequest = dnr;
+
+  // ChromeXt specific escape hatch, namespaced so it cannot collide with a WebExtension API
+  api.chromeXt = {
+    addCosmeticRules: (origin, selectors, callback) =>
+      wrap(post("cosmetic.add", [{ origin: origin || "*", selectors: selectors || [] }]), callback),
+    version: () => MANIFEST.version,
+  };
+
   api.browser = api;
   api.__handleCommand = handleCommand;
+  (globalThis.__chromextWebRequest || (globalThis.__chromextWebRequest = {}))[ID] = onWebRequest;
   return api;
 }
