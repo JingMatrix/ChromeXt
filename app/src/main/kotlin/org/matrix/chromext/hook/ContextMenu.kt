@@ -23,6 +23,7 @@ import org.matrix.chromext.utils.*
 object ContextMenuHook : BaseHook() {
 
   val erudaMenuId = 31415926
+  private val extensionsMenuId = 31415927
   private var text: WeakReference<TextView>? = null
 
   private fun openEruda(url: String) {
@@ -75,6 +76,15 @@ object ContextMenuHook : BaseHook() {
           mId.setAccessible(true)
           mId.set(erudaMenu, erudaMenuId)
           erudaMenu.setOnMenuItemClickListener(clickListnerFactory(mode, url!!))
+
+          // The extension manager is always reachable
+          val extensionMenu = menu.add(R.string.main_menu_extension)
+          mId.set(extensionMenu, extensionsMenuId)
+          extensionMenu.setOnMenuItemClickListener {
+            Listener.on("extension")
+            mode.finish()
+            true
+          }
         }
   }
 

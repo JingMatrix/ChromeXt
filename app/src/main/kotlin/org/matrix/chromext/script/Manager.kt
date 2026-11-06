@@ -9,6 +9,8 @@ import android.os.Build
 import org.json.JSONArray
 import org.json.JSONObject
 import org.matrix.chromext.Chrome
+import org.matrix.chromext.extension.ChromeApi
+import org.matrix.chromext.extension.Extensions
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
 import org.matrix.chromext.utils.isChromeXtFrontEnd
@@ -168,6 +170,14 @@ object ScriptDbManager {
             if (it.grant.contains("frames")) framesGranted = true
             GM.bootstrap(it, codes)
           }
+      // WebExtensions content scripts run after UserScripts, in their own closure per extension
+      runCatching {
+        Extensions.matching(url).forEach { (extension, contentScript) ->
+          if (frameId != null && !contentScript.allFrames) return@forEach
+          ChromeApi.bootstrap(extension, contentScript)?.let { codes.add(it) }
+        }
+      }
+          .onFailure { Log.ex(it, "Fail to inject extension content scripts") }
       if (!asyncEvaluation) Chrome.evaluateJavascript(codes, webView, frameId)
     }
     if (asyncEvaluation)

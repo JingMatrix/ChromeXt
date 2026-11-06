@@ -599,36 +599,34 @@ object PageMenuHook : BaseHook() {
             return menuModel
           }
 
+          // The extension manager is one of our own pages, so its entry is offered everywhere
           val entries =
-              if (isChromeXtFrontEnd(url)) {
-                listOf(
-                    Triple(
-                        R.id.developer_tools_id,
-                        R.string.main_menu_developer_tools,
-                        R.drawable.ic_devtools,
-                    ),
-                    Triple(
-                        R.id.extension_id,
-                        R.string.main_menu_extension,
-                        R.drawable.ic_extension,
-                    ),
-                )
-              } else if (isUserScript(url)) {
-                listOf(
-                    Triple(
-                        R.id.install_script_id,
-                        R.string.main_menu_install_script,
-                        R.drawable.ic_install_script,
-                    ))
-              } else {
-                listOf(
-                    Triple(
-                        R.id.eruda_console_id,
-                        R.string.main_menu_eruda_console,
-                        R.drawable.ic_devtools,
-                    ))
-              }
+              mutableListOf(
+                  Triple(R.id.extension_id, R.string.main_menu_extension, R.drawable.ic_extension))
+          if (isChromeXtFrontEnd(url)) {
+            entries.add(
+                Triple(
+                    R.id.developer_tools_id,
+                    R.string.main_menu_developer_tools,
+                    R.drawable.ic_devtools,
+                ))
+          } else if (isUserScript(url)) {
+            entries.add(
+                Triple(
+                    R.id.install_script_id,
+                    R.string.main_menu_install_script,
+                    R.drawable.ic_install_script,
+                ))
+          } else {
+            entries.add(
+                Triple(
+                    R.id.eruda_console_id,
+                    R.string.main_menu_eruda_console,
+                    R.drawable.ic_devtools,
+                ))
+          }
 
+          Log.d("Page menu entries: " + entries.joinToString { it.second.toString() })
           val menusToAdd = mutableListOf<Any>()
           entries.forEach { (id, titleId, iconResId) ->
             val menuModel = standardMenuItem(id, titleId, iconResId)

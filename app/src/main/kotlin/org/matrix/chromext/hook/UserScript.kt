@@ -46,6 +46,7 @@ object UserScriptHook : BaseHook() {
         .hookAfter {
           val tab = proxy.getTab(it.thisObject)!!
           Chrome.updateTab(tab)
+          Chrome.registerTab(tab)
           var url = proxy.parseUrl(it.args[0])!!
           if (url.isEmpty() && proxy.getUrl != null) {
             url = proxy.parseUrl(proxy.getUrl(tab))!!

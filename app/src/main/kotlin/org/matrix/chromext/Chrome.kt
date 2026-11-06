@@ -33,6 +33,7 @@ import org.matrix.chromext.utils.invokeMethod
 
 object Chrome {
   private var mContext: WeakReference<Context>? = null
+  private var mActivity: WeakReference<android.app.Activity>? = null
   private var mTab: WeakReference<Any>? = null
   private var devToolsReady = false
 
@@ -49,11 +50,14 @@ object Chrome {
   var packageName: String? = null
 
   val IO = Executors.newCachedThreadPool()
+  // Tabs seen by the hooks, since Chrome 156 no longer hands out its tab model by name
+  private val knownTabs = java.util.Collections.newSetFromMap(java.util.WeakHashMap<Any, Boolean>())
   val cookieStore = CookieManager().getCookieStore()
 
   fun init(ctx: Context, packageName: String? = null) {
     val initialized = mContext != null
     mContext = WeakReference(ctx)
+    if (ctx is android.app.Activity) mActivity = WeakReference(ctx)
 
     if (initialized || packageName == null) return
     this.packageName = packageName
@@ -194,9 +198,16 @@ object Chrome {
   }
 
   fun updateTab(tab: Any?) {
+    registerTab(tab)
     if (tab != null && tab != getTab()) {
       mTab = WeakReference(tab)
     }
+  }
+
+  /** Remember a tab so that extension APIs can enumerate tabs without the tab model. */
+  fun registerTab(tab: Any?) {
+    if (tab == null) return
+    synchronized(knownTabs) { knownTabs.add(tab) }
   }
 
   fun getTabId(tab: Any?, url: String? = null): String {
@@ -329,6 +340,120 @@ object Chrome {
       if (tabs.size > 1 || !excludeSelf)
           tabs.forEach { evaluateJavascriptDevTools(listOf(code), it, false) }
     }
+  }
+
+  /** The activity hosting the browser UI, unwrapping context wrappers. */
+  fun activity(): android.app.Activity? {
+    mActivity?.get()?.let {
+      return it
+    }
+    var ctx: android.content.Context? = runCatching { getContext() }.getOrNull()
+    while (ctx is android.content.ContextWrapper) {
+      if (ctx is android.app.Activity) {
+        mActivity = WeakReference(ctx)
+        return ctx
+      }
+      ctx = ctx.baseContext
+    }
+    return ctx as? android.app.Activity
+  }
+
+  /** Whether a type looks like Chromium's tab model, whatever the obfuscation calls it. */
+  private fun isTabModel(type: Class<*>?): Boolean {
+    if (type == null || type.isPrimitive || type.isArray || type == String::class.java) return false
+    val methods = runCatching { type.methods }.getOrNull() ?: return false
+    val count = methods.any {
+      it.name == "getCount" && it.parameterTypes.isEmpty() && it.returnType == Int::class.java
+    }
+    val tabAt = methods.any {
+      it.name == "getTabAt" &&
+          it.parameterTypes.size == 1 &&
+          it.parameterTypes[0] == Int::class.java
+    }
+    return count && tabAt
+  }
+
+  private val tabAccessorNames =
+      listOf("getTabModelSelector", "getCurrentTabModel", "getTabModel", "getTabModelSupplier")
+
+  /** A type exposing a no-argument method that hands out a tab model, i.e. a model selector. */
+  private fun selectorGetter(type: Class<*>?): java.lang.reflect.Method? {
+    if (type == null || type.isPrimitive || type.isArray) return null
+    val methods = runCatching { type.methods }.getOrNull() ?: return null
+    return methods.firstOrNull { it.parameterTypes.isEmpty() && isTabModel(it.returnType) }
+  }
+
+  /**
+   * Find the tab model of the activity.
+   *
+   * `getDeclaredMethods` throws on ChromeTabbedActivity, whose signatures reference platform types
+   * that are absent from the browser process, so named lookups are used instead.
+   */
+  private fun findTabModel(activity: android.app.Activity): Any? {
+    var clazz: Class<*>? = activity::class.java
+    while (clazz != null) {
+      for (name in tabAccessorNames) {
+        val value =
+            runCatching {
+              clazz!!.getDeclaredMethod(name).apply { isAccessible = true }.invoke(activity)
+            }
+                .getOrNull() ?: continue
+        if (isTabModel(value.javaClass)) return value
+        val getter = selectorGetter(value.javaClass) ?: continue
+        runCatching { getter.invoke(value) }
+            .getOrNull()
+            ?.let {
+              return it
+            }
+      }
+      clazz = clazz.superclass
+    }
+    return null
+  }
+
+  /** Every tab of the current tab model, as real Tab objects (no DevTools needed). */
+  fun tabList(): List<Any> {
+    val registered = synchronized(knownTabs) { knownTabs.toList() }
+    if (registered.isNotEmpty()) return registered
+    val activity = activity() ?: return emptyList()
+    val model =
+        findTabModel(activity)
+            ?: run {
+              Log.d("tabList: no tab model on ${activity::class.java.name}")
+              return emptyList()
+            }
+    val count = runCatching {
+      model.javaClass.getMethod("getCount").invoke(model) as Int
+    }
+        .getOrElse {
+          Log.d("tabList: no count: ${it.message}")
+          return emptyList()
+        }
+    val tabAt = runCatching {
+      model.javaClass.getMethod("getTabAt", Int::class.java)
+    }
+        .getOrElse {
+          Log.d("tabList: no getTabAt: ${it.message}")
+          return emptyList()
+        }
+    return (0 until count).mapNotNull { runCatching { tabAt.invoke(model, it) }.getOrNull() }
+  }
+
+  /** Every inspectable page, as reported by the DevTools endpoint. */
+  fun pages(): List<JSONObject> {
+    wakeUpDevTools()
+    val pages = runCatching { getInspectPages() }.getOrNull() ?: return emptyList()
+    return (0 until pages.length()).mapNotNull { pages.optJSONObject(it) }
+  }
+
+  /** Evaluate code in a page designated by its DevTools id, without needing its tab object. */
+  fun evaluateJavascriptInTabId(tabId: String, code: String): Boolean {
+    if (code.isEmpty()) return false
+    IO.submit {
+      runCatching { evaluateJavascriptDevTools(listOf(code), tabId, false) }
+          .onFailure { Log.ex(it, "Fail to evaluate in tab $tabId") }
+    }
+    return true
   }
 
   private fun filterTabs(condition: JSONObject.() -> Boolean): List<String> {
