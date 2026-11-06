@@ -2,7 +2,7 @@ import com.ncorti.ktfmt.gradle.TrailingCommaManagementStrategy
 import com.ncorti.ktfmt.gradle.tasks.KtfmtFormatTask
 
 plugins {
-  id("com.android.application") version "9.4.1" apply false
+  id("com.android.application") version "9.5.0" apply false
   id("com.ncorti.ktfmt.gradle") version "0.27.0"
 }
 
