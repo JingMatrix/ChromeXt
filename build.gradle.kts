@@ -3,7 +3,7 @@ import com.ncorti.ktfmt.gradle.tasks.KtfmtFormatTask
 
 plugins {
   id("com.android.application") version "9.4.1" apply false
-  id("com.ncorti.ktfmt.gradle") version "0.27.0"
+  id("com.ncorti.ktfmt.gradle") version "0.28.0"
 }
 
 // Keep the existing meta style: ktfmt 0.27 otherwise defaults to rewriting the whole tree with
