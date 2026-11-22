@@ -6,4 +6,5 @@
 	<string name="main_menu_install_script">Install UserScript</string>
 	<string name="main_menu_developer_tools">Developer tools</string>
 	<string name="main_menu_eruda_console">Eruda console</string>
+	<string name="main_menu_userscripts">UserScripts</string>
 </resources>

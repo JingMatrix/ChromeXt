@@ -2,6 +2,11 @@
 
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 	<item
+		android:id="@+id/userscripts_id"
+		android:visible="false"
+		android:title="@string/main_menu_userscripts"
+		android:icon="@drawable/ic_userscripts" />
+	<item
 		android:id="@+id/developer_tools_id"
 		android:visible="false"
 		android:title="@string/main_menu_developer_tools"

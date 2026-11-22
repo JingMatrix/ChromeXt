@@ -125,6 +125,7 @@ object PageMenuHook : BaseHook() {
           Chrome.evaluateJavascript(listOf("Symbol.installScript(true);"), null, null, sandBoxed)
         }
         "org.matrix.chromext:id/developer_tools_id" -> Listener.on("inspectPages")
+        "org.matrix.chromext:id/userscripts_id" -> Listener.on("openManager")
         "org.matrix.chromext:id/eruda_console_id" ->
             UserScriptProxy.evaluateJavascript(Local.openEruda)
         "${ctx.packageName}:id/reload_menu_id" -> {
@@ -341,6 +342,9 @@ object PageMenuHook : BaseHook() {
             iconRowMenu.setVisible(true)
           }
 
+          // Ordinary pages list the built-in UserScripts manager above the Eruda console
+          if (toShow == listOf(1)) toShow.add(5)
+
           val dividers =
               items
                   .withIndex()
@@ -359,7 +363,8 @@ object PageMenuHook : BaseHook() {
             newMenuItem.setVisible(true)
             items.add(position + 1, newMenuItem)
           }
-          for (i in 0..3) items.removeLast()
+          // Drop the inflated copies of all the entries of main_menu.xml
+          for (i in 0..4) items.removeLast()
         }
 
     // Inflate for MVC UI model
@@ -622,6 +627,11 @@ object PageMenuHook : BaseHook() {
                     ))
               } else {
                 listOf(
+                    Triple(
+                        R.id.userscripts_id,
+                        R.string.main_menu_userscripts,
+                        R.drawable.ic_userscripts,
+                    ),
                     Triple(
                         R.id.eruda_console_id,
                         R.string.main_menu_eruda_console,

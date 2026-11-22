@@ -8,6 +8,7 @@ import java.util.WeakHashMap
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.script.ScriptDbManager
 import org.matrix.chromext.utils.Log
+import org.matrix.chromext.utils.MANAGER_URL
 import org.matrix.chromext.utils.findField
 import org.matrix.chromext.utils.findMethod
 import org.matrix.chromext.utils.findMethodOrNull
@@ -100,6 +101,8 @@ object UserScriptProxy {
     if (!Chrome.checkTab(tab)) return
     loadUrl.invoke(tab, newLoadUrlParams(url))
   }
+
+  fun openManager(tab: Any? = null) = loadUrl(MANAGER_URL, tab ?: Chrome.getTab())
 
   // Fallback for when mIsLoading cannot be located: UserScriptHook then hooks loadingStateChanged,
   // whose name the obfuscation preserves because it is called from the native side, and feeds the

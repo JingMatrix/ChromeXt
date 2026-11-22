@@ -109,8 +109,22 @@ private val trustedHosts =
         "jianyu-ma.netlify.app",
     )
 
+// The built-in UserScripts manager. Its page is only ever opened by ChromeXt through
+// NavigationController#loadUrl: Chrome refuses top-level navigations to data: URLs started by a
+// page, so no web page can bring a tab to this exact URL. The media type parameter tags the page
+// for the DevTools listing, and every character is already escaped, so the URL Chrome reports back
+// is the very same string.
+const val MANAGER_URL =
+    "data:text/html;chromext=manager;charset=utf-8," +
+        "%3C!DOCTYPE%20html%3E%3Chtml%20lang%3Den%3E%3Cmeta%20name%3Dviewport%20" +
+        "content%3D%22width%3Ddevice-width%2Cinitial-scale%3D1%22%3E" +
+        "%3Ctitle%3EChromeXt%20UserScripts%3C%2Ftitle%3E%3Cbody%3E%3C%2Fbody%3E%3C%2Fhtml%3E"
+
+fun isBuiltinManager(url: String?) = url == MANAGER_URL
+
 fun isChromeXtFrontEnd(url: String?): Boolean {
   if (url == null) return false
+  if (isBuiltinManager(url)) return true
   // The host is still matched exactly, which is what grants the page access to GM.ChromeXt; only
   // the one fixed path is compared without regard to case, because the netlify mirror lower cases
   // it to /chromext/ before serving the very same page.

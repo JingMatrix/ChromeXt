@@ -96,6 +96,7 @@ object Local {
   val encoding: String
   val initChromeXt: String
   val openEruda: String
+  val manager: String
   val cspRule: String
   val cosmeticFilter: String
   val key = Random.nextDouble()
@@ -127,6 +128,7 @@ object Local {
                 .use { it.readText() }
                 .replaceFirst("Symbol.ChromeXt", "Symbol." + name)
                 .replaceFirst("ChromeXtUnlockKeyForEruda", key.toString())
+    manager = ctx.assets.open("manager.js").bufferedReader().use { it.readText() }
     encoding = ctx.assets.open("encoding.js").bufferedReader().use { it.readText() }
     eruda_version = getErudaVersion()
     val localScript =

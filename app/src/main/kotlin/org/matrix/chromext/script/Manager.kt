@@ -11,6 +11,7 @@ import org.json.JSONObject
 import org.matrix.chromext.Chrome
 import org.matrix.chromext.utils.Log
 import org.matrix.chromext.utils.invokeMethod
+import org.matrix.chromext.utils.isBuiltinManager
 import org.matrix.chromext.utils.isChromeXtFrontEnd
 import org.matrix.chromext.utils.isDevToolsFrontEnd
 import org.matrix.chromext.utils.isUserScript
@@ -141,6 +142,7 @@ object ScriptDbManager {
 
     if (trustedPage) {
       codes.add("globalThis.ChromeXt = Symbol.ChromeXt;")
+      if (isBuiltinManager(url)) codes.add(Local.manager)
     } else if (runScripts) {
       codes.add("Symbol.ChromeXt.lock(${Local.key}, '${Local.name}');")
     }

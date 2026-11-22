@@ -463,7 +463,7 @@ eruda.Info = class extends eruda.Info {
         this._$el.find("#new_script")[0].click();
       })
       .on("click", ".eruda-userscripts .eruda-icon-eye", (_e) => {
-        window.open("https://jingmatrix.github.io/ChromeXt/");
+        ChromeXt.dispatch("openManager");
       })
       .on("click", ".eruda-check-update", (_e) => {
         ChromeXt.dispatch("updateEruda");
