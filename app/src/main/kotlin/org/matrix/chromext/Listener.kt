@@ -445,6 +445,14 @@ object Listener {
               else -> null
             }
       }
+      "openManager" -> {
+        if (UserScriptHook.isInit) {
+          UserScriptProxy.openManager(currentTab)
+        } else {
+          // WebView based browsers have no navigation controller to load the built-in page with
+          callback = "window.open('https://jing.matrix-transformation.dev/ChromeXt/');"
+        }
+      }
       "inspectPages" -> {
         if (WebViewHook.isInit) WebView.setWebContentsDebuggingEnabled(true)
         Chrome.IO.submit {
